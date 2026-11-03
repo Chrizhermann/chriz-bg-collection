@@ -25,7 +25,7 @@ const EXTRACTION_CACHE_NAMESPACE: &str = "sha256-v3";
 static TEMPORARY_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 /// Resource limits applied before any archive entry is written.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub struct ArchiveLimits {
     /// Maximum number of path components in one entry.
     pub max_depth: usize,
@@ -39,14 +39,54 @@ pub struct ArchiveLimits {
     pub max_compression_ratio: u64,
 }
 
+impl ArchiveLimits {
+    /// The general limits, which [`Default`] gives.
+    pub const GENERAL: Self = Self {
+        max_depth: 32,
+        max_entries: 100_000,
+        max_entry_uncompressed_bytes: 2 * 1024 * 1024 * 1024,
+        max_total_uncompressed_bytes: 8 * 1024 * 1024 * 1024,
+        max_compression_ratio: 1_000,
+    };
+}
+
 impl Default for ArchiveLimits {
     fn default() -> Self {
+        Self::GENERAL
+    }
+}
+
+/// How much a changed archive's entry count and sizes may grow over the reviewed limits.
+const SERVED_LIMIT_GROWTH: usize = 16;
+
+impl ArchiveLimits {
+    /// Limits for an archive whose download differs from the reviewed one.
+    ///
+    /// Reviewed limits are tight bounds around the reviewed archive, so a normal update that
+    /// adds files would fail them. A changed archive may have sixteen times the reviewed entry
+    /// count and sizes, and always at least the general limits (100,000 entries, 2 GiB per file,
+    /// 8 GiB in total). Depth and compression ratio keep the larger of the reviewed and the
+    /// general limit (32 levels, 1,000:1), so the guard against archive bombs still holds.
+    pub fn for_served_archive(&self) -> Self {
+        let general = Self::default();
+        let growth = SERVED_LIMIT_GROWTH as u64;
         Self {
-            max_depth: 32,
-            max_entries: 100_000,
-            max_entry_uncompressed_bytes: 2 * 1024 * 1024 * 1024,
-            max_total_uncompressed_bytes: 8 * 1024 * 1024 * 1024,
-            max_compression_ratio: 1_000,
+            max_depth: self.max_depth.max(general.max_depth),
+            max_entries: self
+                .max_entries
+                .saturating_mul(SERVED_LIMIT_GROWTH)
+                .max(general.max_entries),
+            max_entry_uncompressed_bytes: self
+                .max_entry_uncompressed_bytes
+                .saturating_mul(growth)
+                .max(general.max_entry_uncompressed_bytes),
+            max_total_uncompressed_bytes: self
+                .max_total_uncompressed_bytes
+                .saturating_mul(growth)
+                .max(general.max_total_uncompressed_bytes),
+            max_compression_ratio: self
+                .max_compression_ratio
+                .max(general.max_compression_ratio),
         }
     }
 }
@@ -142,6 +182,22 @@ struct ExtractionContract<'a> {
     expected_roots: &'a [String],
     expected_tp2_paths: &'a [String],
     limits: &'a ArchiveLimits,
+    /// Present only for a changed download, so that reviewed extractions keep their identity.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    layout: Option<&'static str>,
+}
+
+/// Layout rule recorded in the contract of a changed download's extraction.
+const SERVED_LAYOUT_RULE: &str = "served-v1";
+
+/// Which payload layout an extraction accepts.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum LayoutRule {
+    /// Exactly the reviewed layout: the payload at the root or below one folder holding
+    /// every file, and every TP2 inside the publish roots declared.
+    Reviewed,
+    /// A changed download: see [`extract_served_archive`].
+    Served,
 }
 
 struct ExtractionIdentity<'a> {
@@ -189,6 +245,466 @@ pub fn extract_archive_with_stop(
     extraction_cache: &Path,
     requirements: &ArchiveRequirements,
     stop: &StopSignal,
+) -> Result<(ExtractedArtifact, Option<CacheRepair>), AcquireError> {
+    extract_with_rule(
+        archive_path,
+        extraction_cache,
+        requirements,
+        stop,
+        LayoutRule::Reviewed,
+    )
+}
+
+/// [`extract_archive_with_stop`] for an archive whose download differs from the reviewed one;
+/// `requirements` name the served archive's own digest and usually
+/// [`ArchiveLimits::for_served_archive`].
+///
+/// Every guard that protects this computer holds as before: entry names must be portable
+/// relative paths (no traversal, absolute or drive paths, reserved device names or
+/// case-insensitive duplicates), links and other special entries are refused, and the entry
+/// count, sizes, depth and compression ratio are bounded before anything is written. What may
+/// differ is where the reviewed payload sits. The reviewed rule is tried first; when it finds no
+/// single place, the payload may sit below any chain of folders, also beside other files, as
+/// long as exactly one place holds every reviewed TP2 path and publish root. Files outside that
+/// place are not extracted. A TP2 inside the publish roots that the recipe does not declare is
+/// accepted only when its installer name differs from every declared one, so WeiDU cannot pick
+/// it instead of the reviewed installer.
+pub fn extract_served_archive(
+    archive_path: &Path,
+    extraction_cache: &Path,
+    requirements: &ArchiveRequirements,
+    stop: &StopSignal,
+) -> Result<(ExtractedArtifact, Option<CacheRepair>), AcquireError> {
+    extract_with_rule(
+        archive_path,
+        extraction_cache,
+        requirements,
+        stop,
+        LayoutRule::Served,
+    )
+}
+
+/// Why a downloaded file that differs from its pin is clearly not an archive of `format`: it
+/// does not begin like one, as an error page served in its place does not, or its framing is
+/// incomplete, as after a transfer that ended early without announcing its length. `None` when
+/// it is framed like a complete archive; unpacking still checks everything else.
+///
+/// Both checks are the ones unpacking would fail first, so a file refused here could never be
+/// installed, while asking the link again may still give the real archive.
+///
+/// A self-extracting RAR archive is test-read file by file, but only within `limits`, the
+/// limits it would be unpacked with: before a file's data is read, its announced size, the
+/// running total and its compression ratio must fit them, and the test never reads more than
+/// they allow. An archive beyond them is left to unpacking, which refuses it without reading
+/// any file's data. `stop` ends the test ([`AcquireError::StoppedWhileChecking`]), and a
+/// failure to read the file here is this computer's ([`AcquireError::Io`]).
+pub(super) fn served_container_problem(
+    path: &Path,
+    format: ArchiveFormat,
+    limits: &ArchiveLimits,
+    stop: &StopSignal,
+) -> Result<Option<String>, AcquireError> {
+    let mut start = [0_u8; 32];
+    let mut length = 0;
+    let mut file = File::open(path).map_err(|source| AcquireError::Io {
+        action: "open downloaded file",
+        path: path.to_path_buf(),
+        source,
+    })?;
+    while length < start.len() {
+        let read = file
+            .read(&mut start[length..])
+            .map_err(|source| AcquireError::Io {
+                action: "read downloaded file",
+                path: path.to_path_buf(),
+                source,
+            })?;
+        if read == 0 {
+            break;
+        }
+        length += read;
+    }
+    let start = &start[..length];
+    match format {
+        ArchiveFormat::Zip | ArchiveFormat::Iemod => {
+            if !start.starts_with(b"PK\x03\x04") {
+                return Ok(Some(format!(
+                    "it does not begin like a ZIP archive but with {}",
+                    describe_start(start)
+                )));
+            }
+            match ZipArchive::new(file) {
+                Ok(_) => Ok(None),
+                // Reading past the end or seeking to a place the file does not have is what a
+                // directory that the cut-off end describes wrongly leads to; any other failure
+                // is this computer's.
+                Err(zip::result::ZipError::Io(source))
+                    if !matches!(
+                        source.kind(),
+                        std::io::ErrorKind::UnexpectedEof
+                            | std::io::ErrorKind::InvalidInput
+                            | std::io::ErrorKind::InvalidData
+                    ) =>
+                {
+                    Err(AcquireError::Io {
+                        action: "read downloaded ZIP archive",
+                        path: path.to_path_buf(),
+                        source,
+                    })
+                }
+                Err(error) => Ok(Some(format!("it is not a complete ZIP archive ({error})"))),
+            }
+        }
+        ArchiveFormat::SelfExtractingRar => {
+            if !start.starts_with(b"MZ") {
+                return Ok(Some(format!(
+                    "it does not begin like a self-extracting RAR archive but with {}",
+                    describe_start(start)
+                )));
+            }
+            drop(file);
+            rar_container_problem(path, limits, stop)
+        }
+    }
+}
+
+/// The first bytes of a file, for a message: as text when they are text, else in hex.
+fn describe_start(start: &[u8]) -> String {
+    if start.is_empty() {
+        return "no bytes at all".to_owned();
+    }
+    if start
+        .iter()
+        .all(|byte| byte.is_ascii_graphic() || byte.is_ascii_whitespace())
+    {
+        let text = start
+            .iter()
+            .map(|byte| {
+                if byte.is_ascii_whitespace() {
+                    ' '
+                } else {
+                    char::from(*byte)
+                }
+            })
+            .collect::<String>();
+        return format!("the text \"{}\"", text.trim());
+    }
+    let bytes = start
+        .iter()
+        .take(8)
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<Vec<_>>();
+    format!("the bytes {}", bytes.join(" "))
+}
+
+/// An open UnRAR archive, closed when dropped.
+#[cfg(windows)]
+struct RarHandle(*const unrar_sys::Handle);
+
+#[cfg(windows)]
+impl Drop for RarHandle {
+    fn drop(&mut self) {
+        unsafe { unrar_sys::RARCloseArchive(self.0) };
+    }
+}
+
+/// Opens `path` with UnRAR. The handle is closed when the result is dropped, also when UnRAR
+/// returns one for a file it then finds is no archive: an unclosed handle would keep the file
+/// open, so it could not be removed. `Err` carries UnRAR's open result.
+#[cfg(windows)]
+fn open_rar(path: &Path, mode: u32) -> Result<(RarHandle, unrar_sys::OpenArchiveDataEx), u32> {
+    let path = WideCString::from_os_str(path).map_err(|_| unrar_sys::ERAR_EOPEN as u32)?;
+    let mut open = unrar_sys::OpenArchiveDataEx::new(path.as_ptr().cast(), mode);
+    let handle = unsafe { unrar_sys::RAROpenArchiveEx(std::ptr::from_mut(&mut open).cast_const()) };
+    if handle.is_null() {
+        return Err(open.open_result);
+    }
+    let handle = RarHandle(handle);
+    if open.open_result != unrar_sys::ERAR_SUCCESS as u32 {
+        return Err(open.open_result);
+    }
+    Ok((handle, open))
+}
+
+/// [`open_rar`] for unpacking: a file that UnRAR cannot open as an archive is refused as such,
+/// while a failure of this computer stays an I/O error, so that the step stops for a retry.
+#[cfg(windows)]
+fn open_rar_archive(
+    archive_path: &Path,
+    mode: u32,
+) -> Result<(RarHandle, unrar_sys::OpenArchiveDataEx), AcquireError> {
+    open_rar(archive_path, mode).map_err(|code| {
+        if rar_local_failure(code.into()) {
+            rar_local_error("open archive with UnRAR", archive_path, code.into())
+        } else {
+            AcquireError::ArchiveFormat {
+                path: archive_path.to_path_buf(),
+                message: format!("UnRAR open failed with code {code}"),
+            }
+        }
+    })
+}
+
+/// Whether an UnRAR result reports a failure of this computer, not of the archive: too little
+/// memory, or a file that could not be opened (as while another program holds it), created,
+/// closed, read or written.
+///
+/// UnRAR gives a failed read (code 18) also for some fatal errors of its own, such as a failed
+/// seek, so that code alone does not prove the computer at fault; but it proves no damage
+/// either. Damage has codes of its own, a bad checksum or header (12) or an unknown format, so a
+/// failed read stays a failure that a resume retries instead of making the archive unusable.
+#[cfg(windows)]
+fn rar_local_failure(code: i64) -> bool {
+    [
+        unrar_sys::ERAR_NO_MEMORY,
+        unrar_sys::ERAR_EOPEN,
+        unrar_sys::ERAR_ECREATE,
+        unrar_sys::ERAR_ECLOSE,
+        unrar_sys::ERAR_EREAD,
+        unrar_sys::ERAR_EWRITE,
+    ]
+    .into_iter()
+    .any(|local| code == i64::from(local))
+}
+
+#[cfg(windows)]
+fn rar_local_error(action: &'static str, path: &Path, code: i64) -> AcquireError {
+    AcquireError::Io {
+        action,
+        path: path.to_path_buf(),
+        source: std::io::Error::other(format!("UnRAR code {code}")),
+    }
+}
+
+/// Whether UnRAR finds every file of a self-extracting RAR archive complete and intact, as
+/// `unrar t` tests an archive. Its headers alone do not show a transfer that ended early: the
+/// last file is merely cut short, which only reading its data reveals. An archive that
+/// unpacking refuses whatever its state, such as a solid or a split one, is left to unpacking,
+/// which says why; asking its link again could not help.
+///
+/// Nothing is decompressed beyond `limits`: before a file is tested, the entry count, its
+/// announced size, the running total of announced sizes and its compression ratio must fit
+/// them, as unpacking checks them, and the test stops at the announced size, which they bound.
+/// At the first entry beyond them the check ends without a problem, since unpacking refuses
+/// the archive for it without reading any file's data.
+#[cfg(windows)]
+fn rar_container_problem(
+    path: &Path,
+    limits: &ArchiveLimits,
+    stop: &StopSignal,
+) -> Result<Option<String>, AcquireError> {
+    let (handle, open) = match open_rar(path, unrar_sys::RAR_OM_EXTRACT) {
+        Ok(opened) => opened,
+        Err(code) if rar_local_failure(i64::from(code)) => {
+            return Err(rar_local_error(
+                "open the download with UnRAR",
+                path,
+                code.into(),
+            ));
+        }
+        Err(code) => {
+            return Ok(Some(format!(
+                "UnRAR cannot open it as an archive (code {code})"
+            )))
+        }
+    };
+    if open.flags
+        & (unrar_sys::ROADF_VOLUME
+            | unrar_sys::ROADF_FIRSTVOLUME
+            | unrar_sys::ROADF_ENCHEADERS
+            | unrar_sys::ROADF_SOLID)
+        != 0
+    {
+        return Ok(None);
+    }
+    let stopped = || AcquireError::StoppedWhileChecking {
+        path: path.to_path_buf(),
+    };
+    let mut total = 0_u64;
+    for index in 0..=limits.max_entries {
+        if stop.requested() {
+            return Err(stopped());
+        }
+        let mut header = unrar_sys::HeaderDataEx::default();
+        let code = unsafe {
+            unrar_sys::RARReadHeaderEx(handle.0, std::ptr::from_mut(&mut header).cast_const())
+        };
+        if code == unrar_sys::ERAR_END_ARCHIVE {
+            return Ok(None);
+        }
+        if code != unrar_sys::ERAR_SUCCESS {
+            if rar_local_failure(code.into()) {
+                return Err(rar_local_error(
+                    "read the download with UnRAR",
+                    path,
+                    code.into(),
+                ));
+            }
+            return Ok(Some(format!(
+                "its archive is damaged or ends early (UnRAR code {code})"
+            )));
+        }
+        if index == limits.max_entries
+            || header.flags
+                & (unrar_sys::RHDF_SPLITBEFORE
+                    | unrar_sys::RHDF_SPLITAFTER
+                    | unrar_sys::RHDF_ENCRYPTED
+                    | unrar_sys::RHDF_SOLID)
+                != 0
+            || header.redir_type != 0
+        {
+            return Ok(None);
+        }
+        let announced = if header.flags & unrar_sys::RHDF_DIRECTORY != 0 {
+            0
+        } else {
+            let announced = (u64::from(header.unp_size_high) << 32) | u64::from(header.unp_size);
+            let packed = (u64::from(header.pack_size_high) << 32) | u64::from(header.pack_size);
+            let within_total = total
+                .checked_add(announced)
+                .filter(|sum| *sum <= limits.max_total_uncompressed_bytes);
+            match within_total {
+                Some(sum)
+                    if announced <= limits.max_entry_uncompressed_bytes
+                        && announced
+                            <= packed.max(1).saturating_mul(limits.max_compression_ratio) =>
+                {
+                    total = sum;
+                    announced
+                }
+                _ => return Ok(None),
+            }
+        };
+        let mut tested = RarTestState {
+            length: 0,
+            budget: announced,
+            refused: false,
+            stopped: false,
+            stop,
+        };
+        unsafe {
+            unrar_sys::RARSetCallback(
+                handle.0,
+                Some(rar_test_callback),
+                std::ptr::from_mut(&mut tested) as unrar_sys::LPARAM,
+            )
+        };
+        let process = unsafe {
+            unrar_sys::RARProcessFileW(
+                handle.0,
+                unrar_sys::RAR_TEST,
+                std::ptr::null(),
+                std::ptr::null(),
+            )
+        };
+        unsafe { unrar_sys::RARSetCallback(handle.0, None, 0) };
+        if tested.stopped {
+            return Err(stopped());
+        }
+        if process != unrar_sys::ERAR_SUCCESS && rar_local_failure(process.into()) {
+            return Err(rar_local_error(
+                "test the download with UnRAR",
+                path,
+                process.into(),
+            ));
+        }
+        if process != unrar_sys::ERAR_SUCCESS || tested.refused || tested.length != announced {
+            let name = unsafe {
+                WideCString::from_ptr_truncate(header.filename_w.as_ptr(), header.filename_w.len())
+            }
+            .to_string_lossy()
+            .replace('\\', "/");
+            let entry = if name.is_empty() {
+                "an entry".to_owned()
+            } else {
+                format!("`{name}`")
+            };
+            let detail = if tested.refused {
+                format!("{entry} gives more than its {announced} bytes or asks for a password")
+            } else if tested.length < announced {
+                format!(
+                    "{entry} ends after {} of its {announced} bytes",
+                    tested.length
+                )
+            } else if process == unrar_sys::ERAR_BAD_DATA {
+                format!("{entry} fails its checksum")
+            } else {
+                format!("UnRAR stops at {entry}")
+            };
+            return Ok(Some(format!(
+                "its archive is damaged or ends early: {detail} (UnRAR code {process})"
+            )));
+        }
+    }
+    Ok(None)
+}
+
+/// What testing one RAR entry produced: its length, and whether it gave more than its budget,
+/// asked for something a test cannot answer, or was stopped.
+#[cfg(windows)]
+struct RarTestState<'a> {
+    length: u64,
+    /// The most the test may produce: the entry's announced size, which the archive limits
+    /// bound before the test starts.
+    budget: u64,
+    refused: bool,
+    stopped: bool,
+    stop: &'a StopSignal,
+}
+
+/// Counts the data UnRAR tests without keeping it, up to the entry's budget; a password or
+/// volume request is refused, and a stop ends the test.
+#[cfg(windows)]
+extern "C" fn rar_test_callback(
+    message: unrar_sys::UINT,
+    user_data: unrar_sys::LPARAM,
+    _data: unrar_sys::LPARAM,
+    length: unrar_sys::LPARAM,
+) -> std::os::raw::c_int {
+    if user_data == 0 {
+        return -1;
+    }
+    let state = unsafe { &mut *(user_data as *mut RarTestState<'_>) };
+    if state.stop.requested() {
+        state.stopped = true;
+        return -1;
+    }
+    let next = if message == unrar_sys::UCM_PROCESSDATA {
+        u64::try_from(length)
+            .ok()
+            .and_then(|chunk| state.length.checked_add(chunk))
+            .filter(|next| *next <= state.budget)
+    } else {
+        None
+    };
+    match next {
+        Some(next) => {
+            state.length = next;
+            0
+        }
+        None => {
+            state.refused = true;
+            -1
+        }
+    }
+}
+
+/// Self-extracting RAR archives are unpacked only by the Windows installer, which checks them.
+#[cfg(not(windows))]
+fn rar_container_problem(
+    _path: &Path,
+    _limits: &ArchiveLimits,
+    _stop: &StopSignal,
+) -> Result<Option<String>, AcquireError> {
+    Ok(None)
+}
+
+fn extract_with_rule(
+    archive_path: &Path,
+    extraction_cache: &Path,
+    requirements: &ArchiveRequirements,
+    stop: &StopSignal,
+    rule: LayoutRule,
 ) -> Result<(ExtractedArtifact, Option<CacheRepair>), AcquireError> {
     validate_limits(&requirements.limits)?;
     let expected_roots = normalize_expected_paths(&requirements.expected_roots, "root")?;
@@ -272,7 +788,7 @@ pub fn extract_archive_with_stop(
     // safety policies. A stricter policy must validate the archive anew, not reuse a tree
     // accepted under broader limits. Legacy digest-only namespaces remain untouched.
     let contract_sha256 =
-        extraction_contract_sha256(requirements, &expected_roots, &expected_tp2_paths)?;
+        extraction_contract_sha256(requirements, &expected_roots, &expected_tp2_paths, rule)?;
     let identity = ExtractionIdentity {
         digest: &digest,
         contract_sha256: &contract_sha256,
@@ -318,17 +834,18 @@ pub fn extract_archive_with_stop(
                 path: archive_path.to_path_buf(),
                 source,
             })?;
-            let mut archive =
-                ZipArchive::new(file).map_err(|source| AcquireError::ArchiveFormat {
-                    path: archive_path.to_path_buf(),
-                    message: source.to_string(),
-                })?;
+            let file = TrackedArchiveFile::new(file);
+            let failed = file.failed();
+            let mut archive = ZipArchive::new(file)
+                .map_err(|source| zip_error(source, failed.get(), "read archive", archive_path))?;
             validate_central_directory(
                 &mut archive,
                 snapshot.path(),
+                &failed,
                 &expected_roots,
                 &expected_tp2_paths,
                 &requirements.limits,
+                rule,
             )?
         }
         ArchiveFormat::SelfExtractingRar => validate_rar_entries(
@@ -336,6 +853,7 @@ pub fn extract_archive_with_stop(
             &expected_roots,
             &expected_tp2_paths,
             &requirements.limits,
+            rule,
         )?,
     };
 
@@ -411,6 +929,7 @@ fn extraction_contract_sha256(
     requirements: &ArchiveRequirements,
     expected_roots: &[String],
     expected_tp2_paths: &[String],
+    rule: LayoutRule,
 ) -> Result<String, AcquireError> {
     // Named, fixed-order fields and JSON string/array framing avoid ambiguous concatenation.
     // Paths have already been validated, case-folded, separator-normalized, and sorted.
@@ -421,6 +940,7 @@ fn extraction_contract_sha256(
         expected_roots,
         expected_tp2_paths,
         limits: &requirements.limits,
+        layout: (rule == LayoutRule::Served).then_some(SERVED_LAYOUT_RULE),
     };
     let bytes = serde_json::to_vec(&contract).map_err(|error| {
         AcquireError::InvalidRequest(format!("could not encode extraction contract: {error}"))
@@ -537,12 +1057,16 @@ fn snapshot_archive(
     Ok((snapshot, length, hex::encode(hash.finalize()), prefix))
 }
 
+/// `file_failed` turns `true` once reading the archive file failed, which makes a failure here
+/// this computer's instead of the archive's.
 fn validate_central_directory<R: Read + std::io::Seek>(
     archive: &mut ZipArchive<R>,
     archive_path: &Path,
+    file_failed: &std::cell::Cell<bool>,
     expected_roots: &[String],
     expected_tp2_paths: &[String],
     limits: &ArchiveLimits,
+    rule: LayoutRule,
 ) -> Result<(Vec<ValidatedEntry>, Option<String>), AcquireError> {
     if archive.len() > limits.max_entries {
         return Err(AcquireError::ArchiveLimitExceeded(format!(
@@ -557,10 +1081,7 @@ fn validate_central_directory<R: Read + std::io::Seek>(
     for index in 0..archive.len() {
         let entry = archive
             .by_index_raw(index)
-            .map_err(|source| AcquireError::ArchiveFormat {
-                path: archive_path.to_path_buf(),
-                message: source.to_string(),
-            })?;
+            .map_err(|source| zip_error(source, file_failed.get(), "read archive", archive_path))?;
         let archive_name = entry.name().to_owned();
         let normalized = normalize_relative_path(&archive_name, entry.is_dir())?;
         let depth = normalized.split('/').count();
@@ -638,64 +1159,13 @@ fn validate_central_directory<R: Read + std::io::Seek>(
         });
     }
 
-    let keys: Vec<_> = destination_kinds.keys().cloned().collect();
-    for key in &keys {
-        if destination_kinds.get(key) == Some(&false) {
-            let prefix = format!("{key}/");
-            if keys.iter().any(|other| other.starts_with(&prefix)) {
-                return Err(AcquireError::UnsafeArchiveEntry {
-                    entry: key.clone(),
-                    message: "file/directory prefix collision".to_owned(),
-                });
-            }
-        }
-    }
-
-    let wrapper = select_wrapper(&entries, expected_roots, expected_tp2_paths)?;
-    let wrapper_key = wrapper.as_ref().map(|value| casefold(value));
-    if let Some(wrapper_key) = wrapper_key.as_deref() {
-        entries.retain(|entry| casefold(&entry.archive_path) != wrapper_key);
-    }
-    for entry in &mut entries {
-        if let Some(wrapper_key) = wrapper_key.as_deref() {
-            let archive_key = casefold(&entry.archive_path);
-            let prefix = format!("{wrapper_key}/");
-            if !archive_key.starts_with(&prefix) {
-                return Err(AcquireError::ArchiveLayout(format!(
-                    "entry `{}` is outside wrapper `{}`",
-                    entry.archive_path,
-                    wrapper.as_deref().unwrap_or_default()
-                )));
-            }
-            let first_separator = entry.archive_path.find('/').ok_or_else(|| {
-                AcquireError::ArchiveLayout("wrapper directory contains no payload".to_owned())
-            })?;
-            entry.relative_path = entry.archive_path[first_separator + 1..].to_owned();
-        }
-    }
-
-    let expected_tp2_keys: BTreeSet<_> = expected_tp2_paths
-        .iter()
-        .map(|path| casefold(path))
-        .collect();
-    for entry in entries.iter().filter(|entry| !entry.is_directory) {
-        let key = casefold(&entry.relative_path);
-        let inside_publish_root = expected_roots
-            .iter()
-            .any(|root| path_is_within_root(root, &entry.relative_path));
-        if inside_publish_root && key.ends_with(".tp2") && !expected_tp2_keys.contains(&key) {
-            return Err(AcquireError::ArchiveLayout(format!(
-                "undeclared TP2 `{}`",
-                entry.relative_path
-            )));
-        }
-    }
-    entries.retain(|entry| {
-        expected_roots
-            .iter()
-            .any(|root| path_is_within_root(root, &entry.relative_path))
-    });
-    Ok((entries, wrapper))
+    finalize_entry_inventory(
+        entries,
+        destination_kinds,
+        expected_roots,
+        expected_tp2_paths,
+        rule,
+    )
 }
 
 #[cfg(not(windows))]
@@ -704,6 +1174,7 @@ fn validate_rar_entries(
     _expected_roots: &[String],
     _expected_tp2_paths: &[String],
     _limits: &ArchiveLimits,
+    _rule: LayoutRule,
 ) -> Result<(Vec<ValidatedEntry>, Option<String>), AcquireError> {
     Err(AcquireError::ArchiveFormat {
         path: archive_path.to_path_buf(),
@@ -718,26 +1189,10 @@ fn validate_rar_entries(
     expected_roots: &[String],
     expected_tp2_paths: &[String],
     limits: &ArchiveLimits,
+    rule: LayoutRule,
 ) -> Result<(Vec<ValidatedEntry>, Option<String>), AcquireError> {
-    let path = WideCString::from_os_str(archive_path).map_err(|_| {
-        AcquireError::InvalidRequest("RAR archive path contains a NUL character".to_owned())
-    })?;
-    let mut open =
-        unrar_sys::OpenArchiveDataEx::new(path.as_ptr().cast(), unrar_sys::RAR_OM_LIST_INCSPLIT);
-    let handle = unsafe { unrar_sys::RAROpenArchiveEx(std::ptr::from_mut(&mut open).cast_const()) };
-    if handle.is_null() || open.open_result != unrar_sys::ERAR_SUCCESS as u32 {
-        return Err(AcquireError::ArchiveFormat {
-            path: archive_path.to_path_buf(),
-            message: format!("UnRAR open failed with code {}", open.open_result),
-        });
-    }
-    struct Guard(*const unrar_sys::Handle);
-    impl Drop for Guard {
-        fn drop(&mut self) {
-            unsafe { unrar_sys::RARCloseArchive(self.0) };
-        }
-    }
-    let _guard = Guard(handle);
+    let (rar, open) = open_rar_archive(archive_path, unrar_sys::RAR_OM_LIST_INCSPLIT)?;
+    let handle = rar.0;
     if open.flags & (unrar_sys::ROADF_VOLUME | unrar_sys::ROADF_FIRSTVOLUME) != 0 {
         return Err(AcquireError::ArchiveFormat {
             path: archive_path.to_path_buf(),
@@ -767,6 +1222,13 @@ fn validate_rar_entries(
         };
         if code == unrar_sys::ERAR_END_ARCHIVE {
             break;
+        }
+        if code != unrar_sys::ERAR_SUCCESS && rar_local_failure(code.into()) {
+            return Err(rar_local_error(
+                "read archive headers with UnRAR",
+                archive_path,
+                code.into(),
+            ));
         }
         if code != unrar_sys::ERAR_SUCCESS {
             return Err(AcquireError::ArchiveFormat {
@@ -882,6 +1344,13 @@ fn validate_rar_entries(
                 std::ptr::null(),
             )
         };
+        if process != unrar_sys::ERAR_SUCCESS && rar_local_failure(process.into()) {
+            return Err(rar_local_error(
+                "skip archive entry with UnRAR",
+                archive_path,
+                process.into(),
+            ));
+        }
         if process != unrar_sys::ERAR_SUCCESS {
             return Err(AcquireError::ArchiveFormat {
                 path: archive_path.to_path_buf(),
@@ -894,6 +1363,7 @@ fn validate_rar_entries(
         destination_kinds,
         expected_roots,
         expected_tp2_paths,
+        rule,
     )
 }
 
@@ -902,43 +1372,77 @@ fn finalize_entry_inventory(
     destination_kinds: BTreeMap<String, bool>,
     expected_roots: &[String],
     expected_tp2_paths: &[String],
+    rule: LayoutRule,
 ) -> Result<(Vec<ValidatedEntry>, Option<String>), AcquireError> {
-    let keys: Vec<_> = destination_kinds.keys().cloned().collect();
-    for key in &keys {
-        if destination_kinds.get(key) == Some(&false) {
-            let prefix = format!("{key}/");
-            if keys.iter().any(|other| other.starts_with(&prefix)) {
-                return Err(AcquireError::UnsafeArchiveEntry {
-                    entry: key.clone(),
-                    message: "file/directory prefix collision".to_owned(),
-                });
-            }
+    for (key, _) in destination_kinds
+        .iter()
+        .filter(|(_, is_directory)| !**is_directory)
+    {
+        // Keys that start with `key/` sort right at or after `key/`, so the first key from
+        // there on is one of them whenever any exists.
+        let prefix = format!("{key}/");
+        if destination_kinds
+            .range(prefix.clone()..)
+            .next()
+            .is_some_and(|(other, _)| other.starts_with(&prefix))
+        {
+            return Err(AcquireError::UnsafeArchiveEntry {
+                entry: key.clone(),
+                message: "file/directory prefix collision".to_owned(),
+            });
         }
     }
-    let wrapper = select_wrapper(&entries, expected_roots, expected_tp2_paths)?;
+    let files = FileIndex::new(&entries);
+    let wrapper = match rule {
+        LayoutRule::Reviewed => select_wrapper(&files, expected_roots, expected_tp2_paths)?,
+        LayoutRule::Served => select_served_prefix(&files, expected_roots, expected_tp2_paths)?,
+    };
     let wrapper_key = wrapper.as_ref().map(|value| casefold(value));
-    if let Some(wrapper_key) = wrapper_key.as_deref() {
-        entries.retain(|entry| casefold(&entry.archive_path) != wrapper_key);
-    }
-    for entry in &mut entries {
-        if let Some(wrapper_key) = wrapper_key.as_deref() {
-            let prefix = format!("{wrapper_key}/");
-            if !casefold(&entry.archive_path).starts_with(&prefix) {
-                return Err(AcquireError::ArchiveLayout(format!(
-                    "entry `{}` is outside wrapper `{}`",
-                    entry.archive_path,
-                    wrapper.as_deref().unwrap_or_default()
-                )));
+    match (rule, wrapper_key.as_deref()) {
+        (_, None) => {}
+        (LayoutRule::Reviewed, Some(wrapper_key)) => {
+            entries.retain(|entry| casefold(&entry.archive_path) != wrapper_key);
+            for entry in &mut entries {
+                let prefix = format!("{wrapper_key}/");
+                if !casefold(&entry.archive_path).starts_with(&prefix) {
+                    return Err(AcquireError::ArchiveLayout(format!(
+                        "entry `{}` is outside wrapper `{}`",
+                        entry.archive_path,
+                        wrapper.as_deref().unwrap_or_default()
+                    )));
+                }
+                let separator = entry.archive_path.find('/').ok_or_else(|| {
+                    AcquireError::ArchiveLayout("wrapper directory contains no payload".to_owned())
+                })?;
+                entry.relative_path = entry.archive_path[separator + 1..].to_owned();
             }
-            let separator = entry.archive_path.find('/').ok_or_else(|| {
-                AcquireError::ArchiveLayout("wrapper directory contains no payload".to_owned())
-            })?;
-            entry.relative_path = entry.archive_path[separator + 1..].to_owned();
+        }
+        (LayoutRule::Served, Some(prefix_key)) => {
+            // Only what lies below the payload folder is extracted: the folders leading to it
+            // and anything beside them stay in the archive.
+            let depth = prefix_key.split('/').count();
+            let prefix = format!("{prefix_key}/");
+            entries.retain_mut(|entry| {
+                if !casefold(&entry.archive_path).starts_with(&prefix) {
+                    return false;
+                }
+                match entry.archive_path.splitn(depth + 1, '/').nth(depth) {
+                    Some(relative) => {
+                        entry.relative_path = relative.to_owned();
+                        true
+                    }
+                    None => false,
+                }
+            });
         }
     }
     let expected_tp2_keys: BTreeSet<_> = expected_tp2_paths
         .iter()
         .map(|path| casefold(path))
+        .collect();
+    let declared_installers: BTreeSet<_> = expected_tp2_keys
+        .iter()
+        .map(|path| installer_name(path))
         .collect();
     for entry in entries.iter().filter(|entry| !entry.is_directory) {
         let key = casefold(&entry.relative_path);
@@ -946,6 +1450,11 @@ fn finalize_entry_inventory(
             .iter()
             .any(|root| path_is_within_root(root, &entry.relative_path));
         if inside && key.ends_with(".tp2") && !expected_tp2_keys.contains(&key) {
+            // A changed archive may bring another installer, but never one that WeiDU could
+            // find under the name of a reviewed installer.
+            if rule == LayoutRule::Served && !declared_installers.contains(installer_name(&key)) {
+                continue;
+            }
             return Err(AcquireError::ArchiveLayout(format!(
                 "undeclared TP2 `{}`",
                 entry.relative_path
@@ -960,31 +1469,80 @@ fn finalize_entry_inventory(
     Ok((entries, wrapper))
 }
 
+/// An archive's regular files: their paths as spelled in the archive, in entry order, and
+/// their case-folded paths sorted, so that layout checks are lookups instead of scans.
+struct FileIndex<'a> {
+    paths: Vec<&'a str>,
+    keys: BTreeSet<String>,
+}
+
+impl<'a> FileIndex<'a> {
+    fn new(entries: &'a [ValidatedEntry]) -> Self {
+        let paths: Vec<&str> = entries
+            .iter()
+            .filter(|entry| !entry.is_directory)
+            .map(|entry| entry.archive_path.as_str())
+            .collect();
+        let keys = paths.iter().map(|path| casefold(path)).collect();
+        Self { paths, keys }
+    }
+
+    /// Whether a case-folded file path equals `key`.
+    fn contains(&self, key: &str) -> bool {
+        self.keys.contains(key)
+    }
+
+    /// Whether a case-folded file path starts with `prefix`. Such paths sort right at or after
+    /// `prefix`, so the first path from there on is one of them whenever any exists.
+    fn any_starts_with(&self, prefix: &str) -> bool {
+        self.keys
+            .range::<str, _>((
+                std::ops::Bound::Included(prefix),
+                std::ops::Bound::Unbounded,
+            ))
+            .next()
+            .is_some_and(|key| key.starts_with(prefix))
+    }
+
+    /// Whether every case-folded file path starts with `prefix`. Those paths form one run in
+    /// sorted order, so the first and the last path decide.
+    fn all_start_with(&self, prefix: &str) -> bool {
+        match (self.keys.first(), self.keys.last()) {
+            (Some(first), Some(last)) => first.starts_with(prefix) && last.starts_with(prefix),
+            _ => true,
+        }
+    }
+}
+
 fn select_wrapper(
-    entries: &[ValidatedEntry],
+    files: &FileIndex<'_>,
     expected_roots: &[String],
     expected_tp2_paths: &[String],
 ) -> Result<Option<String>, AcquireError> {
-    let files: Vec<_> = entries
-        .iter()
-        .filter(|entry| !entry.is_directory)
-        .map(|entry| entry.archive_path.as_str())
-        .collect();
     let mut candidates = Vec::<Option<String>>::new();
-    if layout_matches(&files, None, expected_roots, expected_tp2_paths) {
+    if layout_matches(files, None, expected_roots, expected_tp2_paths) {
         candidates.push(None);
     }
     let mut wrappers = BTreeMap::<String, String>::new();
-    for path in &files {
+    for path in &files.paths {
         if let Some((first, _)) = path.split_once('/') {
             wrappers
                 .entry(casefold(first))
                 .or_insert_with(|| first.to_owned());
         }
     }
-    for wrapper in wrappers.into_values() {
+    // A wrapper must hold every file, so only a folder that the first file lies below can
+    // pass; checking that first keeps this linear in the number of top-level folders.
+    let first_file = files.paths.first().map(|path| casefold(path));
+    for (key, wrapper) in wrappers {
+        if first_file
+            .as_deref()
+            .is_some_and(|first| !first.starts_with(&format!("{key}/")))
+        {
+            continue;
+        }
         if layout_matches(
-            &files,
+            files,
             Some(wrapper.as_str()),
             expected_roots,
             expected_tp2_paths,
@@ -1004,41 +1562,203 @@ fn select_wrapper(
 }
 
 fn layout_matches(
-    files: &[&str],
+    files: &FileIndex<'_>,
     wrapper: Option<&str>,
     expected_roots: &[String],
     expected_tp2_paths: &[String],
 ) -> bool {
-    let prefix = wrapper.map(|value| format!("{}/", casefold(value)));
-    let stripped: Vec<String> = files
-        .iter()
-        .filter_map(|path| {
-            let key = casefold(path);
-            match prefix.as_deref() {
-                Some(prefix) => key.strip_prefix(prefix).map(str::to_owned),
-                None => Some(key),
+    if let Some(wrapper) = wrapper {
+        if !files.all_start_with(&format!("{}/", casefold(wrapper))) {
+            return false;
+        }
+    }
+    layout_matches_below(files, wrapper, expected_roots, expected_tp2_paths)
+}
+
+/// The folder chain in front of the reviewed payload inside a changed archive.
+///
+/// The reviewed rule comes first. When it finds no single place, every place where the first
+/// reviewed TP2 path ends (or, for an archive without TP2 files, where the first publish root
+/// occurs) is a candidate, and exactly one candidate must hold every reviewed TP2 path and
+/// publish root. No candidate, or more than one, fails instead of guessing.
+fn select_served_prefix(
+    files: &FileIndex<'_>,
+    expected_roots: &[String],
+    expected_tp2_paths: &[String],
+) -> Result<Option<String>, AcquireError> {
+    if let Ok(prefix) = select_wrapper(files, expected_roots, expected_tp2_paths) {
+        return Ok(prefix);
+    }
+    let (anchor, anchor_ends_path) = match expected_tp2_paths.first() {
+        Some(tp2) => (tp2, true),
+        None => (
+            expected_roots.first().ok_or_else(|| {
+                AcquireError::ArchiveLayout("no reviewed payload path to look for".to_owned())
+            })?,
+            false,
+        ),
+    };
+    let anchor: Vec<String> = anchor.split('/').map(casefold).collect();
+    let mut candidates = BTreeMap::<String, Option<String>>::new();
+    for path in &files.paths {
+        let components: Vec<&str> = path.split('/').collect();
+        let keys: Vec<String> = components.iter().map(|part| casefold(part)).collect();
+        if keys.len() < anchor.len() {
+            continue;
+        }
+        let last_start = keys.len() - anchor.len();
+        let starts = if anchor_ends_path {
+            last_start..=last_start
+        } else {
+            0..=last_start
+        };
+        for start in starts {
+            if keys[start..start + anchor.len()] == anchor[..] {
+                let prefix = (start > 0).then(|| components[..start].join("/"));
+                candidates
+                    .entry(prefix.as_deref().map(casefold).unwrap_or_default())
+                    .or_insert(prefix);
             }
+        }
+    }
+    let mut matching: Vec<Option<String>> = candidates
+        .into_values()
+        .filter(|prefix| {
+            layout_matches_below(files, prefix.as_deref(), expected_roots, expected_tp2_paths)
         })
         .collect();
-    if wrapper.is_some() && stripped.len() != files.len() {
-        return false;
+    match matching.len() {
+        1 => Ok(matching.pop().expect("one candidate")),
+        0 => Err(AcquireError::ArchiveLayout(format!(
+            "the reviewed `{}` was not found together with every reviewed payload path",
+            anchor.join("/")
+        ))),
+        _ => Err(AcquireError::ArchiveLayout(
+            "the reviewed payload was found in more than one place".to_owned(),
+        )),
     }
+}
+
+/// Whether every reviewed TP2 path and publish root exists below `prefix`; other files may lie
+/// beside it.
+fn layout_matches_below(
+    files: &FileIndex<'_>,
+    prefix: Option<&str>,
+    expected_roots: &[String],
+    expected_tp2_paths: &[String],
+) -> bool {
+    // A file's path with `prefix/` removed equals `path` exactly when its whole case-folded
+    // path equals the case-folded prefix, `/` and the case-folded `path`.
+    let prefix = prefix
+        .map(|value| format!("{}/", casefold(value)))
+        .unwrap_or_default();
     expected_tp2_paths
         .iter()
-        .all(|expected| stripped.iter().any(|path| path == &casefold(expected)))
+        .all(|expected| files.contains(&format!("{prefix}{}", casefold(expected))))
         && expected_roots.iter().all(|root| {
-            let root = casefold(root);
-            let prefix = format!("{root}/");
-            stripped
-                .iter()
-                .any(|path| path == &root || path.starts_with(&prefix))
+            let root = format!("{prefix}{}", casefold(root));
+            files.contains(&root) || files.any_starts_with(&format!("{root}/"))
         })
+}
+
+/// The installer name WeiDU derives from a TP2 file: its file name without a `setup-` prefix
+/// and the `.tp2` extension. `key` is already case-folded.
+fn installer_name(key: &str) -> &str {
+    let file = key.rsplit('/').next().unwrap_or(key);
+    let stem = file.strip_suffix(".tp2").unwrap_or(file);
+    stem.strip_prefix("setup-").unwrap_or(stem)
 }
 
 fn path_is_within_root(root: &str, path: &str) -> bool {
     let root = casefold(root);
     let path = casefold(path);
     path == root || path.starts_with(&format!("{root}/"))
+}
+
+/// The archive file being unpacked, remembering whether reading it failed. A failure while an
+/// entry is unpacked is then either this computer's, when the file could not be read, or the
+/// archive's, when its data does not decompress or fails its checksum.
+struct TrackedArchiveFile<R = File> {
+    file: R,
+    failed: std::rc::Rc<std::cell::Cell<bool>>,
+}
+
+impl<R> TrackedArchiveFile<R> {
+    fn new(file: R) -> Self {
+        Self {
+            file,
+            failed: std::rc::Rc::default(),
+        }
+    }
+
+    /// Becomes `true` once reading or seeking the file failed.
+    fn failed(&self) -> std::rc::Rc<std::cell::Cell<bool>> {
+        std::rc::Rc::clone(&self.failed)
+    }
+}
+
+impl<R: Read> Read for TrackedArchiveFile<R> {
+    fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+        self.file
+            .read(buffer)
+            .inspect_err(|_| self.failed.set(true))
+    }
+}
+
+impl<R: std::io::Seek> std::io::Seek for TrackedArchiveFile<R> {
+    fn seek(&mut self, position: std::io::SeekFrom) -> std::io::Result<u64> {
+        // A seek before the start of the file follows an offset in the archive, not a failure
+        // of this computer.
+        std::io::Seek::seek(&mut self.file, position).inspect_err(|error| {
+            if error.kind() != std::io::ErrorKind::InvalidInput {
+                self.failed.set(true);
+            }
+        })
+    }
+}
+
+/// A ZIP library failure while `action` on `path`: an I/O error of this computer when reading
+/// the archive file failed (`file_failed`), otherwise the archive's format.
+fn zip_error(
+    error: zip::result::ZipError,
+    file_failed: bool,
+    action: &'static str,
+    path: &Path,
+) -> AcquireError {
+    match error {
+        zip::result::ZipError::Io(source) if file_failed => AcquireError::Io {
+            action,
+            path: path.to_path_buf(),
+            source,
+        },
+        error => AcquireError::ArchiveFormat {
+            path: path.to_path_buf(),
+            message: error.to_string(),
+        },
+    }
+}
+
+/// A failure while reading the unpacked data of `entry` from `archive_path`: an I/O error of
+/// this computer when reading the archive file failed (`file_failed`), otherwise damaged data,
+/// such as a deflate stream that does not decode or a checksum that does not match.
+fn unpacked_read_error(
+    source: std::io::Error,
+    file_failed: bool,
+    archive_path: &Path,
+    entry: &str,
+) -> AcquireError {
+    if file_failed {
+        AcquireError::Io {
+            action: "read archive for unpacking",
+            path: archive_path.to_path_buf(),
+            source,
+        }
+    } else {
+        AcquireError::CorruptArchiveData {
+            entry: entry.to_owned(),
+            message: source.to_string(),
+        }
+    }
 }
 
 fn extract_zip_entries(
@@ -1053,10 +1773,10 @@ fn extract_zip_entries(
         path: archive_path.to_path_buf(),
         source,
     })?;
-    let mut archive = ZipArchive::new(file).map_err(|source| AcquireError::ArchiveFormat {
-        path: archive_path.to_path_buf(),
-        message: source.to_string(),
-    })?;
+    let file = TrackedArchiveFile::new(file);
+    let failed = file.failed();
+    let mut archive = ZipArchive::new(file)
+        .map_err(|source| zip_error(source, failed.get(), "read archive", archive_path))?;
     let mut records = Vec::new();
     for plan in entries.iter().filter(|entry| !entry.is_directory) {
         let output = join_relative(temporary, &plan.relative_path);
@@ -1068,13 +1788,14 @@ fn extract_zip_entries(
             path: parent.to_path_buf(),
             source,
         })?;
-        let mut input =
-            archive
-                .by_index(plan.index)
-                .map_err(|source| AcquireError::ArchiveFormat {
-                    path: PathBuf::from(&plan.archive_path),
-                    message: source.to_string(),
-                })?;
+        let mut input = archive.by_index(plan.index).map_err(|source| {
+            zip_error(
+                source,
+                failed.get(),
+                "read archive entry",
+                Path::new(&plan.archive_path),
+            )
+        })?;
         let mut output_file = File::create(&output).map_err(|source| AcquireError::Io {
             action: "create extracted file",
             path: output.clone(),
@@ -1084,10 +1805,8 @@ fn extract_zip_entries(
         let mut length = 0_u64;
         let mut buffer = [0_u8; BUFFER_SIZE];
         loop {
-            let read = input.read(&mut buffer).map_err(|source| AcquireError::Io {
-                action: "read compressed archive entry",
-                path: PathBuf::from(&plan.archive_path),
-                source,
+            let read = input.read(&mut buffer).map_err(|source| {
+                unpacked_read_error(source, failed.get(), archive_path, &plan.archive_path)
             })?;
             if read == 0 {
                 break;
@@ -1095,10 +1814,12 @@ fn extract_zip_entries(
             length = length.checked_add(read as u64).ok_or_else(|| {
                 AcquireError::ArchiveLimitExceeded("extracted length overflowed u64".to_owned())
             })?;
+            // The central directory was checked, so data that decodes to another length is
+            // damaged, as data that fails its checksum is.
             if length > plan.size {
-                return Err(AcquireError::ArchiveFormat {
-                    path: PathBuf::from(&plan.archive_path),
-                    message: "entry produced more bytes than its central-directory size".to_owned(),
+                return Err(AcquireError::CorruptArchiveData {
+                    entry: plan.archive_path.clone(),
+                    message: "it produced more bytes than its central-directory size".to_owned(),
                 });
             }
             output_file
@@ -1111,9 +1832,9 @@ fn extract_zip_entries(
             hash.update(&buffer[..read]);
         }
         if length != plan.size {
-            return Err(AcquireError::ArchiveFormat {
-                path: PathBuf::from(&plan.archive_path),
-                message: format!("entry announced {} bytes but produced {length}", plan.size),
+            return Err(AcquireError::CorruptArchiveData {
+                entry: plan.archive_path.clone(),
+                message: format!("it announced {} bytes but produced {length}", plan.size),
             });
         }
         output_file.sync_all().map_err(|source| AcquireError::Io {
@@ -1151,7 +1872,67 @@ struct RarCallbackState {
     hash: Sha256,
     length: u64,
     expected_length: u64,
+    /// What the archive did wrong.
     error: Option<String>,
+    /// Writing the unpacked data failed on this computer, as on a full disk: an I/O failure
+    /// that a retry may not have, never a reason to call the archive unusable.
+    write_error: Option<std::io::Error>,
+}
+
+#[cfg(windows)]
+impl RarCallbackState {
+    fn new(output: Option<File>, expected_length: u64) -> Self {
+        Self {
+            output,
+            hash: Sha256::new(),
+            length: 0,
+            expected_length,
+            error: None,
+            write_error: None,
+        }
+    }
+
+    /// Why UnRAR's processing of the entry at `entry` (inside the archive) failed, written to
+    /// `output` (on this computer), once it returned `process`: a failure of this computer stays
+    /// an I/O error; a damaged entry is damaged data; anything else the archive's format.
+    fn failure(&mut self, process: i32, entry: &str, output: &Path) -> Option<AcquireError> {
+        if let Some(source) = self.write_error.take() {
+            return Some(AcquireError::Io {
+                action: "write extracted RAR file",
+                path: output.to_path_buf(),
+                source,
+            });
+        }
+        if let Some(message) = self.error.take() {
+            return Some(AcquireError::ArchiveFormat {
+                path: PathBuf::from(entry),
+                message,
+            });
+        }
+        if process == unrar_sys::ERAR_SUCCESS {
+            return None;
+        }
+        if rar_local_failure(process.into()) {
+            return Some(rar_local_error(
+                "unpack archive entry with UnRAR",
+                output,
+                process.into(),
+            ));
+        }
+        if process == unrar_sys::ERAR_BAD_DATA {
+            return Some(AcquireError::CorruptArchiveData {
+                entry: entry.to_owned(),
+                message: format!("UnRAR found its data damaged (code {process})"),
+            });
+        }
+        Some(AcquireError::ArchiveFormat {
+            path: PathBuf::from(entry),
+            message: format!(
+                "UnRAR returned {process}; entry announced {} bytes but produced {}",
+                self.expected_length, self.length
+            ),
+        })
+    }
 }
 
 #[cfg(windows)]
@@ -1198,7 +1979,7 @@ extern "C" fn rar_callback(
         return -1;
     };
     if let Err(error) = output.write_all(bytes) {
-        state.error = Some(format!("write extracted RAR file: {error}"));
+        state.write_error = Some(error);
         return -1;
     }
     state.hash.update(bytes);
@@ -1214,25 +1995,8 @@ fn extract_rar_entries(
     wrapper_directory: Option<String>,
     identity: &ExtractionIdentity<'_>,
 ) -> Result<(), AcquireError> {
-    let path = WideCString::from_os_str(archive_path).map_err(|_| {
-        AcquireError::InvalidRequest("RAR archive path contains a NUL character".to_owned())
-    })?;
-    let mut open =
-        unrar_sys::OpenArchiveDataEx::new(path.as_ptr().cast(), unrar_sys::RAR_OM_EXTRACT);
-    let handle = unsafe { unrar_sys::RAROpenArchiveEx(std::ptr::from_mut(&mut open).cast_const()) };
-    if handle.is_null() || open.open_result != unrar_sys::ERAR_SUCCESS as u32 {
-        return Err(AcquireError::ArchiveFormat {
-            path: archive_path.to_path_buf(),
-            message: format!("UnRAR open failed with code {}", open.open_result),
-        });
-    }
-    struct Guard(*const unrar_sys::Handle);
-    impl Drop for Guard {
-        fn drop(&mut self) {
-            unsafe { unrar_sys::RARCloseArchive(self.0) };
-        }
-    }
-    let _guard = Guard(handle);
+    let (rar, open) = open_rar_archive(archive_path, unrar_sys::RAR_OM_EXTRACT)?;
+    let handle = rar.0;
     if open.flags
         & (unrar_sys::ROADF_VOLUME
             | unrar_sys::ROADF_FIRSTVOLUME
@@ -1260,6 +2024,13 @@ fn extract_rar_entries(
         };
         if code == unrar_sys::ERAR_END_ARCHIVE {
             break;
+        }
+        if code != unrar_sys::ERAR_SUCCESS && rar_local_failure(code.into()) {
+            return Err(rar_local_error(
+                "read archive headers with UnRAR",
+                archive_path,
+                code.into(),
+            ));
         }
         if code != unrar_sys::ERAR_SUCCESS {
             return Err(AcquireError::ArchiveFormat {
@@ -1298,13 +2069,7 @@ fn extract_rar_entries(
                 path: output.clone(),
                 source,
             })?;
-            let mut state = RarCallbackState {
-                output: Some(output_file),
-                hash: Sha256::new(),
-                length: 0,
-                expected_length: plan.size,
-                error: None,
-            };
+            let mut state = RarCallbackState::new(Some(output_file), plan.size);
             unsafe {
                 unrar_sys::RARSetCallback(
                     handle,
@@ -1321,13 +2086,10 @@ fn extract_rar_entries(
                 )
             };
             unsafe { unrar_sys::RARSetCallback(handle, None, 0) };
-            if let Some(message) = state.error {
-                return Err(AcquireError::ArchiveFormat {
-                    path: PathBuf::from(&plan.archive_path),
-                    message,
-                });
+            if let Some(failure) = state.failure(process, &plan.archive_path, &output) {
+                return Err(failure);
             }
-            if process != unrar_sys::ERAR_SUCCESS || state.length != plan.size {
+            if state.length != plan.size {
                 return Err(AcquireError::ArchiveFormat {
                     path: PathBuf::from(&plan.archive_path),
                     message: format!(
@@ -1370,13 +2132,7 @@ fn extract_rar_entries(
             });
             extracted_indices.insert(index);
         } else {
-            let mut state = RarCallbackState {
-                output: None,
-                hash: Sha256::new(),
-                length: 0,
-                expected_length: 0,
-                error: None,
-            };
+            let mut state = RarCallbackState::new(None, 0);
             unsafe {
                 unrar_sys::RARSetCallback(
                     handle,
@@ -1398,6 +2154,13 @@ fn extract_rar_entries(
                     path: archive_path.to_path_buf(),
                     message,
                 });
+            }
+            if process != unrar_sys::ERAR_SUCCESS && rar_local_failure(process.into()) {
+                return Err(rar_local_error(
+                    "skip archive entry with UnRAR",
+                    archive_path,
+                    process.into(),
+                ));
             }
             if process != unrar_sys::ERAR_SUCCESS {
                 return Err(AcquireError::ArchiveFormat {
@@ -1858,6 +2621,508 @@ pub(super) fn casefold(value: &str) -> String {
     value.to_lowercase()
 }
 
+#[cfg(test)]
+mod layout_scale_tests {
+    use super::*;
+
+    /// Entries in archive order; a path ending in `/` is a directory entry.
+    fn entries(paths: &[String]) -> (Vec<ValidatedEntry>, BTreeMap<String, bool>) {
+        let mut entries = Vec::with_capacity(paths.len());
+        let mut kinds = BTreeMap::new();
+        for (index, path) in paths.iter().enumerate() {
+            let (path, is_directory) = match path.strip_suffix('/') {
+                Some(directory) => (directory, true),
+                None => (path.as_str(), false),
+            };
+            assert!(
+                kinds.insert(casefold(path), is_directory).is_none(),
+                "duplicate test entry {path}"
+            );
+            entries.push(ValidatedEntry {
+                index,
+                archive_path: path.to_owned(),
+                relative_path: path.to_owned(),
+                size: 1,
+                is_directory,
+            });
+        }
+        (entries, kinds)
+    }
+
+    fn strings(values: &[&str]) -> Vec<String> {
+        values.iter().map(|value| (*value).to_owned()).collect()
+    }
+
+    fn inventory(
+        paths: &[String],
+        roots: &[&str],
+        tp2s: &[&str],
+        rule: LayoutRule,
+    ) -> Result<(Vec<ValidatedEntry>, Option<String>), AcquireError> {
+        let (entries, kinds) = entries(paths);
+        finalize_entry_inventory(entries, kinds, &strings(roots), &strings(tp2s), rule)
+    }
+
+    /// A mod payload of `count` files below `prefix` (empty for the archive root), spread over
+    /// a few hundred folders, with its installer.
+    fn payload(prefix: &str, count: usize) -> Vec<String> {
+        let mut paths = vec![format!("{prefix}mymod/setup-mymod.tp2")];
+        paths.extend((1..count).map(|n| format!("{prefix}mymod/data{}/file{n}.bin", n % 300)));
+        paths
+    }
+
+    fn layout_message(
+        result: Result<(Vec<ValidatedEntry>, Option<String>), AcquireError>,
+    ) -> String {
+        match result {
+            Err(AcquireError::ArchiveLayout(message)) => message,
+            other => panic!("expected a layout error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn reviewed_wrapper_is_found_among_150000_entries() {
+        let mut paths = vec!["Mod-V2/".to_owned()];
+        paths.extend(payload("Mod-V2/", 150_000));
+        // A differently spelled folder name later on keeps the first spelling.
+        paths.push("MOD-v2/mymod/readme.txt".to_owned());
+
+        let (entries, wrapper) = inventory(
+            &paths,
+            &["mymod"],
+            &["mymod/setup-mymod.tp2"],
+            LayoutRule::Reviewed,
+        )
+        .unwrap();
+
+        assert_eq!(wrapper.as_deref(), Some("Mod-V2"));
+        assert_eq!(entries.len(), 150_001);
+        assert!(entries
+            .iter()
+            .any(|entry| entry.relative_path == "mymod/setup-mymod.tp2"));
+    }
+
+    #[test]
+    fn reviewed_root_payload_beside_many_top_level_folders() {
+        let mut paths = payload("", 100_000);
+        paths.extend((0..50_000).map(|n| format!("extra{n}/notes.txt")));
+
+        let (entries, wrapper) = inventory(
+            &paths,
+            &["mymod"],
+            &["mymod/setup-mymod.tp2"],
+            LayoutRule::Reviewed,
+        )
+        .unwrap();
+
+        assert_eq!(wrapper, None);
+        assert_eq!(entries.len(), 100_000);
+    }
+
+    #[test]
+    fn reviewed_payload_both_at_the_root_and_below_a_wrapper_stays_refused() {
+        // Everything lies below `mymod/`, and `mymod/setup-mymod.tp2` exists both with and
+        // without that folder stripped.
+        let mut paths = payload("mymod/", 150_000);
+        paths.push("mymod/setup-mymod.tp2".to_owned());
+
+        let message = layout_message(inventory(
+            &paths,
+            &["mymod"],
+            &["mymod/setup-mymod.tp2"],
+            LayoutRule::Reviewed,
+        ));
+
+        assert_eq!(message, "more than one possible TP2 payload root was found");
+    }
+
+    #[test]
+    fn reviewed_payload_beside_many_top_level_folders_without_a_root_payload_is_refused() {
+        let mut paths: Vec<String> = (0..50_000).map(|n| format!("extra{n}/notes.txt")).collect();
+        paths.extend(payload("Wrapped/", 100_000));
+
+        let message = layout_message(inventory(
+            &paths,
+            &["mymod"],
+            &["mymod/setup-mymod.tp2"],
+            LayoutRule::Reviewed,
+        ));
+
+        assert_eq!(
+            message,
+            "expected TP2 paths were not found under an exact payload root"
+        );
+    }
+
+    /// 25,000 places that end in the first reviewed TP2 path, each a candidate prefix (50,000
+    /// files), and 50,000 payload files in each place that also holds the second installer.
+    fn served_archive(complete_places: &[&str]) -> Vec<String> {
+        let mut paths = Vec::new();
+        for n in 0..25_000 {
+            paths.push(format!("copies/{n}/mymod/setup-mymod.tp2"));
+            paths.push(format!("copies/{n}/mymod/readme.txt"));
+        }
+        for place in complete_places {
+            paths.extend(payload(&format!("{place}/"), 50_000));
+            paths.push(format!("{place}/other/setup-other.tp2"));
+        }
+        paths
+    }
+
+    const SERVED_ROOTS: &[&str] = &["mymod", "other"];
+    const SERVED_TP2S: &[&str] = &["mymod/setup-mymod.tp2", "other/setup-other.tp2"];
+
+    #[test]
+    fn served_prefix_is_found_among_many_candidates() {
+        let paths = served_archive(&["Release/Final Build"]);
+        assert!(paths.len() > 100_000);
+
+        let (entries, prefix) =
+            inventory(&paths, SERVED_ROOTS, SERVED_TP2S, LayoutRule::Served).unwrap();
+
+        assert_eq!(prefix.as_deref(), Some("Release/Final Build"));
+        assert_eq!(entries.len(), 50_001);
+        assert!(entries
+            .iter()
+            .any(|entry| entry.relative_path == "other/setup-other.tp2"));
+    }
+
+    #[test]
+    fn served_payload_in_two_places_among_many_candidates_stays_refused() {
+        let paths = served_archive(&["Release/Final Build", "Release/Old Build"]);
+
+        let message = layout_message(inventory(
+            &paths,
+            SERVED_ROOTS,
+            SERVED_TP2S,
+            LayoutRule::Served,
+        ));
+
+        assert_eq!(
+            message,
+            "the reviewed payload was found in more than one place"
+        );
+    }
+
+    #[test]
+    fn prefix_collision_is_found_among_150000_entries() {
+        let mut paths = payload("", 150_000);
+        // Siblings that sort between `mymod/data7` and `mymod/data7/` must not hide the clash.
+        paths.push("mymod/data7-old/file.bin".to_owned());
+        paths.push("mymod/data7".to_owned());
+
+        let result = inventory(
+            &paths,
+            &["mymod"],
+            &["mymod/setup-mymod.tp2"],
+            LayoutRule::Reviewed,
+        );
+
+        match result {
+            Err(AcquireError::UnsafeArchiveEntry { entry, message }) => {
+                assert_eq!(entry, "mymod/data7");
+                assert_eq!(message, "file/directory prefix collision");
+            }
+            other => panic!("expected a prefix collision, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn root_lookups_ignore_folders_that_only_share_the_name_start() {
+        let paths = strings(&["mymod-old/a.txt", "mymod0/b.txt", "setup-mymod.tp2"]);
+
+        let message = layout_message(inventory(
+            &paths,
+            &["mymod"],
+            &["setup-mymod.tp2"],
+            LayoutRule::Reviewed,
+        ));
+
+        assert_eq!(
+            message,
+            "expected TP2 paths were not found under an exact payload root"
+        );
+    }
+
+    /// The scanning implementation these lookups replaced, kept as the reference.
+    mod reference {
+        use super::super::*;
+
+        pub(super) fn prefix_collision(kinds: &BTreeMap<String, bool>) -> Option<String> {
+            let keys: Vec<_> = kinds.keys().cloned().collect();
+            keys.iter()
+                .find(|key| {
+                    kinds.get(*key) == Some(&false) && {
+                        let prefix = format!("{key}/");
+                        keys.iter().any(|other| other.starts_with(&prefix))
+                    }
+                })
+                .cloned()
+        }
+
+        fn files(entries: &[ValidatedEntry]) -> Vec<&str> {
+            entries
+                .iter()
+                .filter(|entry| !entry.is_directory)
+                .map(|entry| entry.archive_path.as_str())
+                .collect()
+        }
+
+        pub(super) fn select_wrapper(
+            entries: &[ValidatedEntry],
+            roots: &[String],
+            tp2s: &[String],
+        ) -> Result<Option<String>, AcquireError> {
+            let files = files(entries);
+            let mut candidates = Vec::<Option<String>>::new();
+            if layout_matches(&files, None, roots, tp2s, true) {
+                candidates.push(None);
+            }
+            let mut wrappers = BTreeMap::<String, String>::new();
+            for path in &files {
+                if let Some((first, _)) = path.split_once('/') {
+                    wrappers
+                        .entry(casefold(first))
+                        .or_insert_with(|| first.to_owned());
+                }
+            }
+            for wrapper in wrappers.into_values() {
+                if layout_matches(&files, Some(wrapper.as_str()), roots, tp2s, true) {
+                    candidates.push(Some(wrapper));
+                }
+            }
+            match candidates.len() {
+                1 => Ok(candidates.pop().unwrap()),
+                0 => Err(AcquireError::ArchiveLayout(
+                    "expected TP2 paths were not found under an exact payload root".to_owned(),
+                )),
+                _ => Err(AcquireError::ArchiveLayout(
+                    "more than one possible TP2 payload root was found".to_owned(),
+                )),
+            }
+        }
+
+        /// `layout_matches` with `whole`, `layout_matches_below` without.
+        fn layout_matches(
+            files: &[&str],
+            wrapper: Option<&str>,
+            roots: &[String],
+            tp2s: &[String],
+            whole: bool,
+        ) -> bool {
+            let prefix = wrapper.map(|value| format!("{}/", casefold(value)));
+            let stripped: Vec<String> = files
+                .iter()
+                .filter_map(|path| {
+                    let key = casefold(path);
+                    match prefix.as_deref() {
+                        Some(prefix) => key.strip_prefix(prefix).map(str::to_owned),
+                        None => Some(key),
+                    }
+                })
+                .collect();
+            if whole && wrapper.is_some() && stripped.len() != files.len() {
+                return false;
+            }
+            tp2s.iter()
+                .all(|expected| stripped.iter().any(|path| path == &casefold(expected)))
+                && roots.iter().all(|root| {
+                    let root = casefold(root);
+                    let prefix = format!("{root}/");
+                    stripped
+                        .iter()
+                        .any(|path| path == &root || path.starts_with(&prefix))
+                })
+        }
+
+        pub(super) fn select_served_prefix(
+            entries: &[ValidatedEntry],
+            roots: &[String],
+            tp2s: &[String],
+        ) -> Result<Option<String>, AcquireError> {
+            if let Ok(prefix) = select_wrapper(entries, roots, tp2s) {
+                return Ok(prefix);
+            }
+            let files = files(entries);
+            let (anchor, anchor_ends_path) = match tp2s.first() {
+                Some(tp2) => (tp2, true),
+                None => (
+                    roots.first().ok_or_else(|| {
+                        AcquireError::ArchiveLayout(
+                            "no reviewed payload path to look for".to_owned(),
+                        )
+                    })?,
+                    false,
+                ),
+            };
+            let anchor: Vec<String> = anchor.split('/').map(casefold).collect();
+            let mut candidates = BTreeMap::<String, Option<String>>::new();
+            for path in &files {
+                let components: Vec<&str> = path.split('/').collect();
+                let keys: Vec<String> = components.iter().map(|part| casefold(part)).collect();
+                if keys.len() < anchor.len() {
+                    continue;
+                }
+                let last_start = keys.len() - anchor.len();
+                let starts = if anchor_ends_path {
+                    last_start..=last_start
+                } else {
+                    0..=last_start
+                };
+                for start in starts {
+                    if keys[start..start + anchor.len()] == anchor[..] {
+                        let prefix = (start > 0).then(|| components[..start].join("/"));
+                        candidates
+                            .entry(prefix.as_deref().map(casefold).unwrap_or_default())
+                            .or_insert(prefix);
+                    }
+                }
+            }
+            let mut matching: Vec<Option<String>> = candidates
+                .into_values()
+                .filter(|prefix| layout_matches(&files, prefix.as_deref(), roots, tp2s, false))
+                .collect();
+            match matching.len() {
+                1 => Ok(matching.pop().unwrap()),
+                0 => Err(AcquireError::ArchiveLayout(format!(
+                    "the reviewed `{}` was not found together with every reviewed payload path",
+                    anchor.join("/")
+                ))),
+                _ => Err(AcquireError::ArchiveLayout(
+                    "the reviewed payload was found in more than one place".to_owned(),
+                )),
+            }
+        }
+    }
+
+    /// Deterministic pseudo-random numbers, enough to vary small synthetic archives.
+    struct Lcg(u64);
+
+    impl Lcg {
+        fn below(&mut self, bound: usize) -> usize {
+            self.0 = self
+                .0
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            ((self.0 >> 33) % bound as u64) as usize
+        }
+    }
+
+    #[test]
+    fn lookups_decide_exactly_like_the_scans_they_replace() {
+        // Folder names that differ only in case, sort right beside one another (`-`, `.` and
+        // `0` around `/`), or change under whole-string lowercasing (final sigma).
+        const PARTS: &[&str] = &[
+            "a", "A", "a-b", "a.b", "a0", "mymod", "MyMod", "other", "ΑΣ", "ας", "wrap", "Wrap",
+        ];
+        const FILES: &[&str] = &[
+            "setup-mymod.tp2",
+            "setup-other.tp2",
+            "x.txt",
+            "Σ",
+            "a",
+            "mymod",
+        ];
+        const ROOT_SETS: &[&[&str]] = &[&["mymod"], &["mymod", "other"], &["a"], &["ΑΣ"], &[]];
+        const TP2_SETS: &[&[&str]] = &[
+            &["mymod/setup-mymod.tp2"],
+            &["mymod/setup-mymod.tp2", "other/setup-other.tp2"],
+            &["setup-mymod.tp2"],
+            &["ΑΣ/Σ"],
+            &[],
+        ];
+        let mut random = Lcg(0x5eed);
+        let mut outcomes = BTreeMap::<&str, usize>::new();
+        for _ in 0..10_000 {
+            let mut paths = Vec::new();
+            let mut seen = BTreeSet::new();
+            for _ in 0..1 + random.below(12) {
+                let depth = random.below(4);
+                let mut path: Vec<&str> = (0..depth)
+                    .map(|_| PARTS[random.below(PARTS.len())])
+                    .collect();
+                let is_directory = depth > 0 && random.below(6) == 0;
+                if !is_directory {
+                    path.push(FILES[random.below(FILES.len())]);
+                }
+                let path = path.join("/");
+                if seen.insert(casefold(&path)) {
+                    paths.push(if is_directory {
+                        format!("{path}/")
+                    } else {
+                        path
+                    });
+                }
+            }
+            let roots = strings(ROOT_SETS[random.below(ROOT_SETS.len())]);
+            let tp2s = strings(TP2_SETS[random.below(TP2_SETS.len())]);
+            let (entries, kinds) = entries(&paths);
+            let context = format!("{paths:?} roots {roots:?} tp2s {tp2s:?}");
+
+            let expected_collision = reference::prefix_collision(&kinds);
+            for rule in [LayoutRule::Reviewed, LayoutRule::Served] {
+                let collision = match finalize_entry_inventory(
+                    entries.clone(),
+                    kinds.clone(),
+                    &roots,
+                    &tp2s,
+                    rule,
+                ) {
+                    Err(AcquireError::UnsafeArchiveEntry { entry, message }) => {
+                        assert_eq!(message, "file/directory prefix collision", "{context}");
+                        Some(entry)
+                    }
+                    _ => None,
+                };
+                assert_eq!(collision, expected_collision, "{context}");
+            }
+
+            let files = FileIndex::new(&entries);
+            let wrapper = format!("{:?}", select_wrapper(&files, &roots, &tp2s));
+            assert_eq!(
+                wrapper,
+                format!("{:?}", reference::select_wrapper(&entries, &roots, &tp2s)),
+                "{context}"
+            );
+            let served = format!("{:?}", select_served_prefix(&files, &roots, &tp2s));
+            assert_eq!(
+                served,
+                format!(
+                    "{:?}",
+                    reference::select_served_prefix(&entries, &roots, &tp2s)
+                ),
+                "{context}"
+            );
+            if expected_collision.is_some() {
+                *outcomes.entry("collision").or_default() += 1;
+            }
+            let wrapper_outcome = if wrapper == "Ok(None)" {
+                "root payload"
+            } else if wrapper.starts_with("Ok(Some") {
+                "wrapper"
+            } else if wrapper.contains("more than one") {
+                "ambiguous wrapper"
+            } else {
+                "no wrapper"
+            };
+            *outcomes.entry(wrapper_outcome).or_default() += 1;
+            if wrapper.starts_with("Err") {
+                let served_outcome = if served.starts_with("Ok(Some") {
+                    "served prefix"
+                } else if served.contains("more than one place") {
+                    "ambiguous served prefix"
+                } else {
+                    "no served prefix"
+                };
+                *outcomes.entry(served_outcome).or_default() += 1;
+            }
+        }
+        // Every decision occurs, so the comparison covers each branch.
+        assert_eq!(outcomes.len(), 8, "{outcomes:?}");
+        assert!(outcomes.values().all(|count| *count >= 10), "{outcomes:?}");
+    }
+}
+
 #[cfg(all(test, windows))]
 mod rar_safety_tests {
     use super::*;
@@ -1866,13 +3131,7 @@ mod rar_safety_tests {
     fn callback_rejects_overproduction_before_writing_the_chunk() {
         let temporary = tempfile::NamedTempFile::new().unwrap();
         let output = temporary.reopen().unwrap();
-        let mut state = RarCallbackState {
-            output: Some(output),
-            hash: Sha256::new(),
-            length: 0,
-            expected_length: 3,
-            error: None,
-        };
+        let mut state = RarCallbackState::new(Some(output), 3);
         let bytes = [1_u8, 2, 3, 4];
         let result = rar_callback(
             unrar_sys::UCM_PROCESSDATA,
@@ -1884,6 +3143,68 @@ mod rar_safety_tests {
         assert_eq!(result, -1);
         assert_eq!(state.length, 0);
         assert_eq!(fs::read(temporary.path()).unwrap(), Vec::<u8>::new());
+        assert!(matches!(
+            state.failure(unrar_sys::ERAR_UNKNOWN, "mod/a.txt", temporary.path()),
+            Some(AcquireError::ArchiveFormat { .. })
+        ));
+    }
+
+    /// Writing an unpacked file can fail on this computer, as on a full disk. That failure
+    /// stays an I/O error, so the step stops and a resume tries again; it never makes the
+    /// archive count as unusable, which would leave its mod out for good.
+    #[test]
+    fn a_local_write_failure_while_unpacking_stays_an_io_error() {
+        let temporary = tempfile::NamedTempFile::new().unwrap();
+        // A handle opened only for reading cannot be written, as a full disk cannot.
+        let read_only = File::open(temporary.path()).unwrap();
+        let mut state = RarCallbackState::new(Some(read_only), 4);
+        let bytes = [1_u8, 2, 3, 4];
+        let result = rar_callback(
+            unrar_sys::UCM_PROCESSDATA,
+            std::ptr::from_mut(&mut state) as unrar_sys::LPARAM,
+            bytes.as_ptr() as unrar_sys::LPARAM,
+            bytes.len() as unrar_sys::LPARAM,
+        );
+
+        assert_eq!(result, -1);
+        // UnRAR reports a stopped callback with a code of its own; the write failure decides.
+        match state.failure(unrar_sys::ERAR_UNKNOWN, "mod/a.txt", temporary.path()) {
+            Some(AcquireError::Io { action, path, .. }) => {
+                assert_eq!(action, "write extracted RAR file");
+                assert_eq!(path, temporary.path());
+            }
+            other => panic!("expected a local I/O error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn damaged_rar_data_is_corrupt_data_and_unrar_local_failures_are_io() {
+        let mut state = RarCallbackState::new(None, 7);
+        assert!(matches!(
+            state.failure(unrar_sys::ERAR_BAD_DATA, "mod/a.txt", Path::new("out")),
+            Some(AcquireError::CorruptArchiveData { entry, .. }) if entry == "mod/a.txt"
+        ));
+        // A failed read (18) proves no damage, though UnRAR also reports some fatal errors of
+        // its own with it, so it stays a failure that a resume retries.
+        for code in [
+            unrar_sys::ERAR_NO_MEMORY,
+            unrar_sys::ERAR_EOPEN,
+            unrar_sys::ERAR_ECREATE,
+            unrar_sys::ERAR_ECLOSE,
+            unrar_sys::ERAR_EREAD,
+            unrar_sys::ERAR_EWRITE,
+        ] {
+            assert!(
+                matches!(
+                    state.failure(code, "mod/a.txt", Path::new("out")),
+                    Some(AcquireError::Io { .. })
+                ),
+                "{code}"
+            );
+        }
+        assert!(state
+            .failure(unrar_sys::ERAR_SUCCESS, "mod/a.txt", Path::new("out"))
+            .is_none());
     }
 
     #[test]
@@ -1897,5 +3218,500 @@ mod rar_safety_tests {
 
         assert_eq!(fs::read(snapshot.path()).unwrap(), b"MZoriginal");
         assert_eq!(digest, hex::encode(Sha256::digest(b"MZoriginal")));
+    }
+}
+
+#[cfg(test)]
+mod served_container_tests {
+    use std::io::Write;
+
+    use super::*;
+
+    fn problem(bytes: &[u8], format: ArchiveFormat) -> Option<String> {
+        problem_within(bytes, format, &ArchiveLimits::default())
+    }
+
+    fn problem_within(
+        bytes: &[u8],
+        format: ArchiveFormat,
+        limits: &ArchiveLimits,
+    ) -> Option<String> {
+        let temporary = tempfile::NamedTempFile::new().unwrap();
+        fs::write(temporary.path(), bytes).unwrap();
+        served_container_problem(temporary.path(), format, limits, &StopSignal::never()).unwrap()
+    }
+
+    fn zip(text: &[u8]) -> Vec<u8> {
+        let mut writer = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+        writer
+            .start_file("Mod/readme.txt", zip::write::SimpleFileOptions::default())
+            .unwrap();
+        writer.write_all(text).unwrap();
+        writer.finish().unwrap().into_inner()
+    }
+
+    #[test]
+    fn a_complete_zip_or_iemod_is_framed_like_one() {
+        let archive = zip(b"a release");
+        assert_eq!(problem(&archive, ArchiveFormat::Zip), None);
+        assert_eq!(problem(&archive, ArchiveFormat::Iemod), None);
+    }
+
+    #[test]
+    fn a_page_empty_file_or_program_is_no_zip() {
+        assert_eq!(
+            problem(b"<!DOCTYPE html>\r\n<html>\t<body>", ArchiveFormat::Zip).as_deref(),
+            Some("it does not begin like a ZIP archive but with the text \"<!DOCTYPE html>  <html> <body>\"")
+        );
+        assert_eq!(
+            problem(b"", ArchiveFormat::Iemod).as_deref(),
+            Some("it does not begin like a ZIP archive but with no bytes at all")
+        );
+        assert_eq!(
+            problem(b"MZ\x90\x00\x03\x00\x00\x00\x04\x00", ArchiveFormat::Zip).as_deref(),
+            Some("it does not begin like a ZIP archive but with the bytes 4d 5a 90 00 03 00 00 00")
+        );
+    }
+
+    #[test]
+    fn a_zip_that_ends_early_is_not_complete() {
+        let archive = zip(b"a release whose transfer ended early");
+        let found = problem(&archive[..archive.len() - 30], ArchiveFormat::Zip).unwrap();
+        assert!(
+            found.starts_with("it is not a complete ZIP archive ("),
+            "{found}"
+        );
+    }
+
+    #[test]
+    fn a_self_extractor_must_begin_like_a_program() {
+        assert_eq!(
+            problem(b"PK\x03\x04", ArchiveFormat::SelfExtractingRar).as_deref(),
+            Some("it does not begin like a self-extracting RAR archive but with the bytes 50 4b 03 04")
+        );
+    }
+
+    #[cfg(windows)]
+    fn crc32(bytes: &[u8]) -> u32 {
+        let mut crc = !0_u32;
+        for byte in bytes {
+            crc ^= u32::from(*byte);
+            for _ in 0..8 {
+                crc = (crc >> 1) ^ (0xedb8_8320 & 0_u32.wrapping_sub(crc & 1));
+            }
+        }
+        !crc
+    }
+
+    #[cfg(windows)]
+    fn rar4_header(kind: u8, flags: u16, body: &[u8]) -> Vec<u8> {
+        let size = u16::try_from(7 + body.len()).unwrap();
+        let mut protected = vec![kind];
+        protected.extend_from_slice(&flags.to_le_bytes());
+        protected.extend_from_slice(&size.to_le_bytes());
+        protected.extend_from_slice(body);
+        let mut header = (crc32(&protected) as u16).to_le_bytes().to_vec();
+        header.extend(protected);
+        header
+    }
+
+    /// A stored RAR4 self-extractor with one file, as `tests/rar_archive.rs` builds them.
+    #[cfg(windows)]
+    fn rar4_sfx(name: &str, payload: &[u8]) -> Vec<u8> {
+        rar4_sfx_announcing(&[(name, payload, payload.len() as u32, crc32(payload))])
+    }
+
+    /// A stored RAR4 self-extractor whose files announce the given unpacked sizes and CRCs,
+    /// which need not be those of their stored bytes.
+    #[cfg(windows)]
+    fn rar4_sfx_announcing(entries: &[(&str, &[u8], u32, u32)]) -> Vec<u8> {
+        let mut bytes = vec![b'M', b'Z'];
+        bytes.resize(128, 0);
+        bytes.extend_from_slice(b"Rar!\x1a\x07\x00");
+        bytes.extend(rar4_header(0x73, 0, &[0; 6]));
+        for (name, payload, announced, crc) in entries {
+            let mut body = Vec::new();
+            body.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+            body.extend_from_slice(&announced.to_le_bytes());
+            body.push(2);
+            body.extend_from_slice(&crc.to_le_bytes());
+            body.extend_from_slice(&0_u32.to_le_bytes());
+            body.push(20);
+            body.push(0x30);
+            body.extend_from_slice(&(name.len() as u16).to_le_bytes());
+            body.extend_from_slice(&0x20_u32.to_le_bytes());
+            body.extend_from_slice(name.as_bytes());
+            bytes.extend(rar4_header(0x74, 0x8000, &body));
+            bytes.extend_from_slice(payload);
+        }
+        bytes.extend(rar4_header(0x7b, 0, &[]));
+        bytes
+    }
+
+    /// A changed self-extractor whose headers announce more than the limits it would be
+    /// unpacked with is never test-read: its data is not decompressed at all, and the check
+    /// leaves it to unpacking, which refuses it from its headers alone. Each archive here would
+    /// be reported as damaged if it were test-read, so `None` proves that it was not.
+    #[cfg(windows)]
+    #[test]
+    fn a_self_extractor_beyond_its_limits_is_refused_by_unpacking_without_being_test_read() {
+        let payload: &[u8] = b"BACKUP ~evandra/backup~";
+        let crc = crc32(payload);
+        let general = ArchiveLimits::default();
+        // One file announcing 3 GiB, more than one file may have, and one announcing a
+        // compression ratio above 1,000:1; both store only 23 bytes.
+        for announced in [3 * 1024 * 1024 * 1024_u32, 100_000] {
+            let archive =
+                rar4_sfx_announcing(&[("evandra/setup-evandra.tp2", payload, announced, crc)]);
+            assert_eq!(
+                problem_within(&archive, ArchiveFormat::SelfExtractingRar, &general),
+                None,
+                "{announced}"
+            );
+            let temporary = tempfile::TempDir::new().unwrap();
+            let path = temporary.path().join("evandra.exe");
+            fs::write(&path, &archive).unwrap();
+            let unpacked = extract_served_archive(
+                &path,
+                &temporary.path().join("cache"),
+                &ArchiveRequirements {
+                    artifact_sha256: hex::encode(Sha256::digest(&archive)),
+                    format: ArchiveFormat::SelfExtractingRar,
+                    expected_roots: vec!["evandra".to_owned()],
+                    expected_tp2_paths: vec!["evandra/setup-evandra.tp2".to_owned()],
+                    limits: general,
+                    mode: ArchiveMode::Public,
+                },
+                &StopSignal::never(),
+            );
+            assert!(
+                matches!(unpacked, Err(AcquireError::ArchiveLimitExceeded(_))),
+                "{unpacked:?}"
+            );
+        }
+
+        // The second file is damaged, which a test would find; but its size passes the total,
+        // or it is one file more than the archive may have.
+        let damaged = rar4_sfx_announcing(&[
+            ("evandra/one.txt", payload, payload.len() as u32, crc),
+            ("evandra/two.txt", payload, payload.len() as u32, crc ^ 1),
+        ]);
+        for limits in [
+            ArchiveLimits {
+                max_total_uncompressed_bytes: 30,
+                ..general
+            },
+            ArchiveLimits {
+                max_entries: 1,
+                ..general
+            },
+        ] {
+            assert_eq!(
+                problem_within(&damaged, ArchiveFormat::SelfExtractingRar, &limits),
+                None,
+                "{limits:?}"
+            );
+        }
+        // Within its limits the same archive is test-read, and the damage found.
+        assert_eq!(
+            problem(&damaged, ArchiveFormat::SelfExtractingRar).as_deref(),
+            Some(
+                "its archive is damaged or ends early: `evandra/two.txt` fails its checksum \
+                 (UnRAR code 12)"
+            )
+        );
+    }
+
+    /// UnRAR returns a handle also for a file that it then finds is no archive. The check closes
+    /// it, so the refused download can be removed: an open handle would keep it from being
+    /// deleted, and the refusal would fail on every attempt.
+    #[cfg(windows)]
+    #[test]
+    fn a_program_that_is_no_archive_can_be_removed_after_its_check() {
+        let temporary = tempfile::TempDir::new().unwrap();
+        let path = temporary.path().join("download.part");
+        fs::write(&path, b"MZ\x90\x00 just a program").unwrap();
+
+        let found = served_container_problem(
+            &path,
+            ArchiveFormat::SelfExtractingRar,
+            &ArchiveLimits::default(),
+            &StopSignal::never(),
+        )
+        .unwrap();
+
+        assert!(
+            found
+                .as_deref()
+                .is_some_and(|found| found.starts_with("UnRAR cannot open it as an archive")),
+            "{found:?}"
+        );
+        fs::remove_file(&path).unwrap();
+    }
+
+    /// A file that cannot be read, here because another handle holds an exclusive lock on all
+    /// of it, is this computer's failure: UnRAR reports it with its read failure (18) when it
+    /// opens the file, and neither the check of a download nor unpacking takes that for a
+    /// damaged or foreign archive, which would ask the link again or leave the mod out. Both
+    /// stop for a retry, and once the file can be read again it passes.
+    #[cfg(windows)]
+    #[test]
+    fn an_archive_file_that_cannot_be_read_stops_for_a_retry() {
+        let archive = rar4_sfx("evandra/setup-evandra.tp2", b"BACKUP ~evandra/backup~");
+        let temporary = tempfile::TempDir::new().unwrap();
+        let path = temporary.path().join("evandra.exe");
+        fs::write(&path, &archive).unwrap();
+        let holder = File::open(&path).unwrap();
+        holder.lock().unwrap();
+
+        let checked = rar_container_problem(&path, &ArchiveLimits::default(), &StopSignal::never());
+        assert!(
+            matches!(&checked, Err(AcquireError::Io { source, .. }) if source.to_string() == "UnRAR code 18"),
+            "{checked:?}"
+        );
+        let opened = open_rar_archive(&path, unrar_sys::RAR_OM_EXTRACT).map(|_| ());
+        assert!(
+            matches!(&opened, Err(AcquireError::Io { source, .. }) if source.to_string() == "UnRAR code 18"),
+            "{opened:?}"
+        );
+
+        holder.unlock().unwrap();
+        assert_eq!(
+            rar_container_problem(&path, &ArchiveLimits::default(), &StopSignal::never()).unwrap(),
+            None
+        );
+        assert!(open_rar_archive(&path, unrar_sys::RAR_OM_EXTRACT).is_ok());
+    }
+
+    /// A stop ends the check of a changed self-extractor, before a file is tested or while one
+    /// is, instead of reading the rest of the archive.
+    #[cfg(windows)]
+    #[test]
+    fn a_stop_ends_the_check_of_a_self_extractor() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        let archive = rar4_sfx("evandra/setup-evandra.tp2", b"BACKUP ~evandra/backup~");
+        let temporary = tempfile::NamedTempFile::new().unwrap();
+        fs::write(temporary.path(), &archive).unwrap();
+        let check = |stop: &StopSignal| {
+            served_container_problem(
+                temporary.path(),
+                ArchiveFormat::SelfExtractingRar,
+                &ArchiveLimits::default(),
+                stop,
+            )
+        };
+
+        let stopped = check(&StopSignal::new(|| true));
+        assert!(
+            matches!(&stopped, Err(AcquireError::StoppedWhileChecking { path }) if path == temporary.path()),
+            "{stopped:?}"
+        );
+        // The first question comes before the file is tested; the test itself asks next.
+        let questions = Arc::new(AtomicUsize::new(0));
+        let asked = Arc::clone(&questions);
+        let during_the_test = check(&StopSignal::new(move || {
+            asked.fetch_add(1, Ordering::SeqCst) >= 1
+        }));
+        assert!(
+            matches!(
+                during_the_test,
+                Err(AcquireError::StoppedWhileChecking { .. })
+            ),
+            "{during_the_test:?}"
+        );
+        assert_eq!(questions.load(Ordering::SeqCst), 2);
+        assert_eq!(check(&StopSignal::never()).unwrap(), None);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn a_self_extractor_is_framed_like_one_only_when_complete() {
+        let archive = rar4_sfx("evandra/setup-evandra.tp2", b"BACKUP ~evandra/backup~");
+        assert_eq!(problem(&archive, ArchiveFormat::SelfExtractingRar), None);
+
+        // A program without an archive, and an archive whose file ends early.
+        let program = problem(
+            b"MZ\x90\x00 just a program",
+            ArchiveFormat::SelfExtractingRar,
+        );
+        assert!(
+            program
+                .as_deref()
+                .is_some_and(|found| found.starts_with("UnRAR cannot open it as an archive")),
+            "{program:?}"
+        );
+        let cut = problem(
+            &archive[..archive.len() - 14],
+            ArchiveFormat::SelfExtractingRar,
+        );
+        assert_eq!(
+            cut.as_deref(),
+            Some(
+                "its archive is damaged or ends early: `evandra/setup-evandra.tp2` ends after \
+                 16 of its 23 bytes (UnRAR code 12)"
+            )
+        );
+
+        // A file whose bytes changed on the way fails its checksum.
+        let mut damaged = archive.clone();
+        let payload_start = archive.len() - 7 - 23;
+        damaged[payload_start + 3] ^= 0x20;
+        assert_eq!(
+            problem(&damaged, ArchiveFormat::SelfExtractingRar).as_deref(),
+            Some(
+                "its archive is damaged or ends early: `evandra/setup-evandra.tp2` fails its \
+                 checksum (UnRAR code 12)"
+            )
+        );
+    }
+
+    /// The fixture above stores its file; real packages compress theirs. Run with
+    /// `CHRIZ_TEST_RAR_SFX` naming a published self-extracting RAR mod package.
+    #[cfg(windows)]
+    #[test]
+    fn a_real_self_extractor_is_complete_and_cut_copies_are_not_when_explicitly_supplied() {
+        let Some(path) = std::env::var_os("CHRIZ_TEST_RAR_SFX") else {
+            return;
+        };
+        let path = PathBuf::from(path);
+        assert_eq!(
+            served_container_problem(
+                &path,
+                ArchiveFormat::SelfExtractingRar,
+                &ArchiveLimits::default(),
+                &StopSignal::never()
+            )
+            .unwrap(),
+            None
+        );
+        let bytes = fs::read(&path).unwrap();
+        let half = problem(&bytes[..bytes.len() / 2], ArchiveFormat::SelfExtractingRar);
+        let mut flipped = bytes.clone();
+        flipped[bytes.len() * 3 / 4] ^= 0x5a;
+        let flipped = problem(&flipped, ArchiveFormat::SelfExtractingRar);
+        for found in [&half, &flipped] {
+            assert!(
+                found
+                    .as_deref()
+                    .is_some_and(|found| found.starts_with("its archive is damaged or ends early")),
+                "{found:?}"
+            );
+        }
+        println!("half: {half:?}; one byte changed: {flipped:?}");
+    }
+}
+
+#[cfg(test)]
+mod unpack_failure_tests {
+    use std::io::{Cursor, Seek, SeekFrom};
+    use std::ops::Range;
+
+    use super::*;
+
+    /// An archive file whose bytes in `failing` cannot be read, as on a failing disk.
+    struct FailingDisk {
+        bytes: Cursor<Vec<u8>>,
+        failing: Range<u64>,
+    }
+
+    impl Read for FailingDisk {
+        fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+            let position = self.bytes.position();
+            if self.failing.contains(&position) {
+                return Err(std::io::Error::other("the disk could not be read"));
+            }
+            let end = if position < self.failing.start {
+                self.failing.start
+            } else {
+                u64::MAX
+            };
+            let readable = usize::try_from(end - position).unwrap_or(usize::MAX);
+            let length = buffer.len().min(readable);
+            self.bytes.read(&mut buffer[..length])
+        }
+    }
+
+    impl Seek for FailingDisk {
+        fn seek(&mut self, position: SeekFrom) -> std::io::Result<u64> {
+            self.bytes.seek(position)
+        }
+    }
+
+    /// One entry of 64 KiB that deflate cannot shrink to nothing, and where its data starts.
+    fn archive(method: CompressionMethod) -> (Vec<u8>, usize) {
+        let data: Vec<u8> = (0..64 * 1024_u32)
+            .map(|index| (index.wrapping_mul(2_654_435_761) >> 13) as u8)
+            .collect();
+        let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        writer
+            .start_file(
+                "mod/data.bin",
+                zip::write::SimpleFileOptions::default().compression_method(method),
+            )
+            .unwrap();
+        writer.write_all(&data).unwrap();
+        let bytes = writer.finish().unwrap().into_inner();
+        let name = usize::from(u16::from_le_bytes([bytes[26], bytes[27]]));
+        let extra = usize::from(u16::from_le_bytes([bytes[28], bytes[29]]));
+        (bytes, 30 + name + extra)
+    }
+
+    /// Reads the entry the way unpacking does and classifies its failure the same way.
+    fn unpack<R: Read + Seek>(file: R) -> Result<usize, AcquireError> {
+        let file = TrackedArchiveFile::new(file);
+        let failed = file.failed();
+        let archive_path = Path::new("download.zip");
+        let mut archive = ZipArchive::new(file)
+            .map_err(|source| zip_error(source, failed.get(), "read archive", archive_path))?;
+        let mut entry = archive.by_index(0).map_err(|source| {
+            zip_error(
+                source,
+                failed.get(),
+                "read archive entry",
+                Path::new("mod/data.bin"),
+            )
+        })?;
+        let mut length = 0;
+        let mut buffer = [0_u8; 4096];
+        loop {
+            let read = entry.read(&mut buffer).map_err(|source| {
+                unpacked_read_error(source, failed.get(), archive_path, "mod/data.bin")
+            })?;
+            if read == 0 {
+                return Ok(length);
+            }
+            length += read;
+        }
+    }
+
+    /// A changed archive whose data fails its checksum or does not decompress is damaged, an
+    /// unusable download; a disk that fails while the same data is read is this computer's
+    /// failure, which a retry may not have.
+    #[test]
+    fn damaged_data_and_a_failing_disk_are_told_apart() {
+        for method in [CompressionMethod::Stored, CompressionMethod::Deflated] {
+            let (bytes, data_start) = archive(method);
+            assert_eq!(unpack(Cursor::new(bytes.clone())).unwrap(), 64 * 1024);
+
+            let mut damaged = bytes.clone();
+            damaged[data_start + 100] ^= 0x55;
+            let found = unpack(Cursor::new(damaged));
+            assert!(
+                matches!(&found, Err(AcquireError::CorruptArchiveData { entry, .. }) if entry == "mod/data.bin"),
+                "{method:?}: {found:?}"
+            );
+
+            let start = data_start as u64 + 512;
+            let found = unpack(FailingDisk {
+                bytes: Cursor::new(bytes),
+                failing: start..start + 1,
+            });
+            assert!(
+                matches!(&found, Err(AcquireError::Io { action, .. }) if *action == "read archive for unpacking"),
+                "{method:?}: {found:?}"
+            );
+        }
     }
 }

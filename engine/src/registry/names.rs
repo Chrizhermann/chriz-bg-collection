@@ -25,31 +25,66 @@ pub const DEFAULT_INSTALLATION_NAME: &str = "Chriz Easy BG";
 /// Maximum accepted length in Unicode scalar values, excluding edge whitespace.
 pub const MAX_INSTALLATION_NAME_CHARACTERS: usize = 80;
 
-/// Validate and trim a player-provided name. This does not check other installs.
-pub fn normalize_display_name(name: &str) -> Result<String, RegistryError> {
-    let name = name.trim();
-    let detail = if name.is_empty() {
-        Some("Enter a name for this installation.")
-    } else if name.chars().count() > MAX_INSTALLATION_NAME_CHARACTERS {
-        Some("Keep the installation name to 80 characters or fewer.")
-    } else if name.chars().any(char::is_control) {
-        Some("Installation names cannot contain control characters.")
-    } else if matches!(name, "." | "..")
-        || name.chars().any(|character| {
-            matches!(
-                character,
-                '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*'
-            )
+/// Characters Windows does not allow in a folder name; a name replaces each with `-`.
+const FORBIDDEN_NAME_CHARACTERS: [char; 9] = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
+
+/// Turns a player-provided name into one CEBG can store, without refusing it: edge whitespace
+/// and control characters are dropped, each of `< > : " / \ | ? *` becomes `-`, and the name is
+/// cut to 80 characters. `None` when nothing but whitespace or dots is left; callers then use
+/// [`DEFAULT_INSTALLATION_NAME`]. This does not check other installs.
+pub fn sanitize_display_name(name: &str) -> Option<String> {
+    let cleaned: String = name
+        .chars()
+        .filter(|character| !character.is_control())
+        .map(|character| {
+            if FORBIDDEN_NAME_CHARACTERS.contains(&character) {
+                '-'
+            } else {
+                character
+            }
         })
-    {
-        Some("Installation names cannot contain < > : \" / \\ | ? * or consist only of dots.")
-    } else {
+        .collect();
+    let cut: String = cleaned
+        .trim()
+        .chars()
+        .take(MAX_INSTALLATION_NAME_CHARACTERS)
+        .collect();
+    let name = cut.trim_end();
+    if name.chars().all(|character| character == '.') {
         None
-    };
-    match detail {
-        Some(detail) => Err(RegistryError::InvalidName(detail.to_owned())),
-        None => Ok(name.to_owned()),
+    } else {
+        Some(name.to_owned())
     }
+}
+
+/// [`sanitize_display_name`], with [`DEFAULT_INSTALLATION_NAME`] for a name that has nothing
+/// left. This does not check other installs; the registry numbers a name that is taken.
+pub fn normalize_display_name(name: &str) -> String {
+    sanitize_display_name(name).unwrap_or_else(|| DEFAULT_INSTALLATION_NAME.to_owned())
+}
+
+/// Whether a stored name is one an earlier or the current installer could have saved. Names
+/// saved before names were sanitized followed these rules, so they stay readable.
+fn is_stored_display_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.trim() == name
+        && name.chars().count() <= MAX_INSTALLATION_NAME_CHARACTERS
+        && !name.chars().any(char::is_control)
+        && !matches!(name, "." | "..")
+        && !name
+            .chars()
+            .any(|character| FORBIDDEN_NAME_CHARACTERS.contains(&character))
+}
+
+/// `base`, or `base (number)` cut so that the whole name stays within 80 characters.
+fn numbered_display_name(base: &str, number: u32) -> String {
+    if number == 1 {
+        return base.to_owned();
+    }
+    let suffix = format!(" ({number})");
+    let keep = MAX_INSTALLATION_NAME_CHARACTERS - suffix.chars().count();
+    let base: String = base.chars().take(keep).collect();
+    format!("{}{suffix}", base.trim_end())
 }
 
 fn name_key(name: &str) -> String {
@@ -92,22 +127,22 @@ impl ManagedInstallRegistry {
         ))
     }
 
-    /// Check a proposed name against completed, failed, incomplete and unavailable copies.
-    /// This is advisory; creation and rename repeat the check under the registry name lock.
+    /// The name a proposed name would be saved as: sanitized ([`normalize_display_name`]) and,
+    /// when a completed, failed, incomplete or unavailable copy already has it, numbered
+    /// ` (2)`, ` (3)`, … This is advisory; creation and rename repeat it under the name lock.
     pub fn validate_display_name(
         &self,
         name: &str,
         excluding_install_id: Option<&str>,
     ) -> Result<String, RegistryError> {
-        let name = normalize_display_name(name)?;
+        let name = normalize_display_name(name);
         let identities = self.named_identities()?;
         if let Some(id) = excluding_install_id {
             if !identities.contains_key(id) {
                 return Err(unknown_installation());
             }
         }
-        check_unused(&identities, &name, excluding_install_id)?;
-        Ok(name)
+        unused_display_name(&identities, &name, excluding_install_id)
     }
 
     /// Resolve an editable display name without changing any immutable identity record.
@@ -119,20 +154,22 @@ impl ManagedInstallRegistry {
             .ok_or_else(unknown_installation)
     }
 
-    /// Rename one registered copy, including unavailable copies, without moving files.
+    /// Rename one registered copy, including unavailable copies, without moving files. The
+    /// name is sanitized and numbered like [`Self::validate_display_name`]; the saved name is
+    /// returned.
     pub fn rename_display_name(
         &self,
         install_id: &str,
         name: &str,
     ) -> Result<String, RegistryError> {
         validate_identifier(install_id, "install id", &self.names_root)?;
-        let name = normalize_display_name(name)?;
+        let name = normalize_display_name(name);
         let _guard = self.lock_names()?;
         let identities = self.named_identities()?;
         let identity = identities
             .get(install_id)
             .ok_or_else(unknown_installation)?;
-        check_unused(&identities, &name, Some(install_id))?;
+        let name = unused_display_name(&identities, &name, Some(install_id))?;
         self.write_name(install_id, &identity.root, &name)?;
         Ok(name)
     }
@@ -141,7 +178,8 @@ impl ManagedInstallRegistry {
     ///
     /// The pointer is written first. If the process exits before the display sidecar
     /// is durable, its frozen recipe still supplies the same chosen name. A resumed
-    /// campaign never overwrites a later display-only rename with the frozen name.
+    /// campaign never overwrites a later display-only rename with the frozen name. A new
+    /// campaign whose name another copy took in the meantime is saved numbered, never refused.
     pub fn publish_campaign_named(
         &self,
         created: &CampaignCreated,
@@ -162,15 +200,13 @@ impl ManagedInstallRegistry {
             if self
                 .read_name(&created.install_id, &created.managed_root)?
                 .is_none()
+                && is_stored_display_name(&existing.name)
             {
-                if let Ok(existing_name) = normalize_display_name(&existing.name) {
-                    self.write_name(&created.install_id, &created.managed_root, &existing_name)?;
-                }
+                self.write_name(&created.install_id, &created.managed_root, &existing.name)?;
             }
             return Ok(path);
         }
-        let name = normalize_display_name(name)?;
-        check_unused(&identities, &name, None)?;
+        let name = unused_display_name(&identities, &normalize_display_name(name), None)?;
         let path = self.publish_campaign(created)?;
         self.write_name(&created.install_id, &created.managed_root, &name)?;
         Ok(path)
@@ -283,14 +319,13 @@ impl ManagedInstallRegistry {
                 path.display()
             )));
         }
-        let name = normalize_display_name(&record.display_name)?;
-        if name != record.display_name {
+        if !is_stored_display_name(&record.display_name) {
             return Err(RegistryError::InvalidRecord(format!(
                 "installation name metadata is not normalized at {}",
                 path.display()
             )));
         }
-        Ok(Some(name))
+        Ok(Some(record.display_name))
     }
 
     fn write_name(&self, install_id: &str, root: &Path, name: &str) -> Result<(), RegistryError> {
@@ -324,20 +359,24 @@ impl ManagedInstallRegistry {
     }
 }
 
-fn check_unused(
+/// The first of `name`, `name (2)`, `name (3)`, … that no other copy has, compared without
+/// case. Run under the name lock where the result is written.
+fn unused_display_name(
     identities: &BTreeMap<String, NamedIdentity>,
     name: &str,
     excluding_id: Option<&str>,
-) -> Result<(), RegistryError> {
-    if let Some((install_id, _)) = identities.iter().find(|(id, entry)| {
-        Some(id.as_str()) != excluding_id && name_key(&entry.name) == name_key(name)
-    }) {
-        return Err(RegistryError::DuplicateName {
-            name: name.to_owned(),
-            install_id: install_id.clone(),
-        });
+) -> Result<String, RegistryError> {
+    for number in 1..=10_000 {
+        let candidate = numbered_display_name(name, number);
+        if !identities.iter().any(|(id, entry)| {
+            Some(id.as_str()) != excluding_id && name_key(&entry.name) == name_key(&candidate)
+        }) {
+            return Ok(candidate);
+        }
     }
-    Ok(())
+    Err(RegistryError::InvalidName(
+        "No unused installation name is available.".to_owned(),
+    ))
 }
 
 fn legacy_campaign_name(root: &Path) -> String {

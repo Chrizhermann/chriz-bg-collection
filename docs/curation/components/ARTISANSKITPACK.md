@@ -2,9 +2,10 @@
 
 Listed at reference version **6.0**; refreshed for the selected fork release
 **chriz-v1.3.1** (`ac718614991e34b4f720807bec5edc96266c6c5e`). The recipes pin
-**v4.81a-dev.85928f9-chriz.5** (tag commit `10a4a29`, pinned 2026-10-29), whose TP2
-declares the same 59 components in the same order as listed here. Against chriz.1 it
-changes four things, the first three only when the EEex weapon usability is installed:
+**v4.81a-dev.85928f9-chriz.6** (tag commit `d70d213`, pinned 2026-11-02), which replaced
+chriz.5 (tag commit `10a4a29`, pinned 2026-10-29); its TP2 declares the same 59 components
+in the same order as listed here. Against chriz.1 it changes five things, the first three
+only when the EEex weapon usability is installed:
 
 - chriz.2: every sorcerer kit, the Dragon Disciple included, can equip daggers,
   quarterstaves, darts and slings without proficiency pips again, like mages. Since
@@ -43,10 +44,21 @@ changes four things, the first three only when the EEex weapon usability is inst
   [ARTISANSKITPACK_TWEAK](ARTISANSKITPACK_TWEAK.md)). The fork's labs passed on three
   BG2:EE 2.7.3.0 games with EEex 1.3.1; EET and installations without EEex were not
   covered.
+- chriz.6: the Shapeshifter's white and greater white werewolf forms (Shapeshifter
+  Overhaul `5110`/`5111` animations) no longer crash the game. Their attack 1 files
+  `werewolf_white/C0W2A1.BAM` and `werewolf_greater_white/C0W5A1.BAM` were copies of
+  the `A1E` files, without frames for the five base directions; when BG2:EE 2.7.3.0
+  draws such an empty cycle near a wall, it builds the sprite's FX rectangle from
+  uninitialized values and the wall clipping crashes the game or corrupts memory (seen in
+  play and reproduced in a lab on 2026-11-02). Both files are now copies of the same
+  fur's attack 2, so in those five directions attack 1 shows attack 2's art. A fork test
+  checks every werewolf animation for empty direction cycles. Only the two files and the
+  three VERSION lines change.
 
 No component, order or decision changes. Existing installations are not changed by
-chriz.3, chriz.4 or chriz.5, which have no tail patch (Christopher, 2026-10-26 and
-2026-10-27: new installations only; chriz.5's release notes say the same); chriz.2's
+chriz.3, chriz.4, chriz.5 or chriz.6, which have no tail patch (Christopher, 2026-10-26
+and 2026-10-27: new installations only; chriz.5's and chriz.6's release notes say the
+same); chriz.2's
 sorcerer fix has one, `AKCB_SORCERER_WEAPONS`,
 which the collection does not install.
 59 entries, 47 reference-installed. ✓ = installed in the reference. Subgroup = choose one.

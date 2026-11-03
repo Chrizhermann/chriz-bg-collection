@@ -225,6 +225,9 @@ fn candidate(
     }
 }
 
+/// An answer the fake engine stored: managed root, install id, decision id, token and answer.
+type StoredAnswer = (PathBuf, String, String, String, bg_engine::decision::Answer);
+
 struct FakeBridgeEngine {
     bg1: PathBuf,
     bg2: PathBuf,
@@ -237,6 +240,14 @@ struct FakeBridgeEngine {
     install_released: Mutex<bool>,
     profile_repairs: Mutex<Vec<String>>,
     profile_repair_result: Mutex<Result<bool, String>>,
+    profile_folders: Mutex<Vec<String>>,
+    profile_folder_error: Mutex<Option<String>>,
+    /// The question a campaign waits for, as the engine would report it.
+    decision: Mutex<Option<bg_engine::cli::DecisionStatus>>,
+    /// Every answer stored.
+    answers: Mutex<Vec<StoredAnswer>>,
+    /// What a resume ends with; complete by default.
+    resume_status: Mutex<Option<CampaignStatus>>,
 }
 
 impl FakeBridgeEngine {
@@ -253,6 +264,11 @@ impl FakeBridgeEngine {
             install_released: Mutex::new(false),
             profile_repairs: Mutex::new(Vec::new()),
             profile_repair_result: Mutex::new(Ok(false)),
+            profile_folders: Mutex::new(Vec::new()),
+            profile_folder_error: Mutex::new(None),
+            decision: Mutex::new(None),
+            answers: Mutex::new(Vec::new()),
+            resume_status: Mutex::new(None),
         }
     }
 
@@ -437,6 +453,17 @@ impl BridgeEngine for FakeBridgeEngine {
         self.profile_repair_result.lock().unwrap().clone()
     }
 
+    fn prepare_profile_folder(&self, record: &ManagedInstallRecord) -> Result<PathBuf, String> {
+        self.profile_folders
+            .lock()
+            .unwrap()
+            .push(record.install_id.clone());
+        match self.profile_folder_error.lock().unwrap().as_ref() {
+            Some(error) => Err(error.clone()),
+            None => Ok(record.managed_save_root.clone()),
+        }
+    }
+
     fn discover(&self, _recipe: &Path) -> Result<Vec<GameCandidate>, bg_engine::cli::CliError> {
         Ok(vec![
             candidate(
@@ -567,8 +594,105 @@ impl BridgeEngine for FakeBridgeEngine {
             install_id: "install-fixture".to_owned(),
             managed_root: managed_root.to_path_buf(),
             plan_sha256: "11".repeat(32),
-            status: CampaignStatus::Complete,
+            status: self
+                .resume_status
+                .lock()
+                .unwrap()
+                .clone()
+                .unwrap_or(CampaignStatus::Complete),
         })
+    }
+
+    fn inspect_decision(
+        &self,
+        _managed_root: &Path,
+        expected_install_id: &str,
+    ) -> Result<Option<bg_engine::cli::DecisionStatus>, bg_engine::cli::CliError> {
+        Ok(self
+            .decision
+            .lock()
+            .unwrap()
+            .clone()
+            .filter(|decision| decision.install_id == expected_install_id))
+    }
+
+    fn answer_decision(
+        &self,
+        managed_root: &Path,
+        expected_install_id: &str,
+        decision_id: &str,
+        token: &str,
+        answer: bg_engine::decision::Answer,
+    ) -> Result<(), bg_engine::cli::CliError> {
+        self.answers.lock().unwrap().push((
+            managed_root.to_path_buf(),
+            expected_install_id.to_owned(),
+            decision_id.to_owned(),
+            token.to_owned(),
+            answer,
+        ));
+        Ok(())
+    }
+}
+
+/// A changed installer tool from a host the recipe did not review, as the ledger and the
+/// engine's `check-decision` describe it.
+fn unreviewed_tool_question() -> bg_engine::decision::Question {
+    bg_engine::decision::Question {
+        kind: bg_engine::decision::QuestionKind::UnreviewedTool,
+        artifact_id: "weidu".to_owned(),
+        artifact_kind: bg_engine::orchestrator::ArtifactKind::Tool,
+        reviewed: bg_engine::session::FrozenIdentity {
+            id: "weidu".to_owned(),
+            version: "249.00".to_owned(),
+            sha256: "33".repeat(32),
+            length: 10,
+        },
+        served: Some(bg_engine::decision::ServedDownload {
+            filename: Some("weidu.zip".to_owned()),
+            length: 12,
+            sha256: "44".repeat(32),
+            link: "https://example.invalid/weidu.zip".to_owned(),
+            final_url: "https://mirror.example.invalid/weidu.zip".to_owned(),
+            hosts: vec![
+                "example.invalid".to_owned(),
+                "mirror.example.invalid".to_owned(),
+            ],
+            unreviewed_hosts: vec!["mirror.example.invalid".to_owned()],
+        }),
+        reason: None,
+        leave_out: None,
+    }
+}
+
+fn unreviewed_tool_status(install_id: &str, decision_id: &str) -> bg_engine::cli::DecisionStatus {
+    use bg_engine::cli::{AnswerText, DecisionStatus, QuestionTexts};
+    use bg_engine::decision::Answer;
+    let question = unreviewed_tool_question();
+    DecisionStatus {
+        install_id: install_id.to_owned(),
+        step_id: "acquire:weidu".to_owned(),
+        decision_id: decision_id.to_owned(),
+        token: question.token(),
+        texts: QuestionTexts {
+            message: "A newer version of WeiDU was found. The reviewed version is no longer available at this link. Install it anyway? It came from mirror.example.invalid, which the collection did not review. If you're not sure, stop the installation.".to_owned(),
+            details: vec!["File: weidu.zip".to_owned()],
+            answers: vec![
+                AnswerText {
+                    answer: Answer::Yes,
+                    label: "Install it".to_owned(),
+                },
+                AnswerText {
+                    answer: Answer::No,
+                    label: "Stop the installation".to_owned(),
+                },
+            ],
+            focus: Answer::No,
+            after_no: "You chose to stop. Resume this installation to check the download again."
+                .to_owned(),
+        },
+        question,
+        answer: None,
     }
 }
 
@@ -951,7 +1075,11 @@ fn discovery_groups_roles_and_selects_each_candidate_independently() {
         discovery.bg1_candidates[0].build.as_deref(),
         Some("2.7.3.0")
     );
-    assert!(!discovery.bg2_candidates[0].eligible);
+    assert!(discovery.bg1_candidates[0].tested);
+    // A GOG copy is usable, with its "less tested" warning; it is not the tested setup.
+    assert!(discovery.bg2_candidates[0].eligible);
+    assert!(!discovery.bg2_candidates[0].tested);
+    assert!(discovery.bg2_candidates[0].label.contains("less tested"));
 }
 
 #[test]
@@ -969,8 +1097,13 @@ fn explicit_game_paths_are_inspected_by_the_engine_before_projection() {
         game.canonicalize().unwrap()
     );
     assert!(!inspected.path.starts_with(r"\\?\"));
-    assert!(!inspected.eligible);
-    assert!(!inspected.findings.is_empty());
+    // The fixture's program has no readable version: a warning, not a stop.
+    assert!(inspected.eligible);
+    assert!(!inspected.tested);
+    assert!(inspected
+        .findings
+        .iter()
+        .any(|finding| finding.contains("game version")));
 }
 
 #[test]
@@ -1541,12 +1674,58 @@ fn destination_checks_use_registered_candidates_and_never_create_the_target() {
     fs::create_dir(&occupied).expect("create occupied destination");
     fs::write(occupied.join("existing.txt"), b"owned by somebody else")
         .expect("write occupied fixture");
-    let occupied_error = bridge.inspect_destination(
-        &occupied,
-        &discovery.selected_bg1_id,
-        &discovery.selected_bg2_id,
+    let occupied_inspected = bridge
+        .inspect_destination(
+            &occupied,
+            &discovery.selected_bg1_id,
+            &discovery.selected_bg2_id,
+        )
+        .expect("a folder with files gets a new folder inside it");
+    assert!(occupied_inspected.safe);
+    assert_eq!(occupied_inspected.title, "Ready to install");
+    assert_eq!(
+        occupied_inspected.path,
+        display_windows_path(&occupied.canonicalize().unwrap().join("Chriz Easy BG")).unwrap()
     );
-    assert_eq!(occupied_error.unwrap_err().code, "destination_unsafe");
+    assert_eq!(
+        occupied_inspected.note.as_deref(),
+        Some("This folder already has files, so CEBG installs into a new folder inside it.")
+    );
+    assert!(!occupied.join("Chriz Easy BG").exists());
+    assert_eq!(
+        fs::read(occupied.join("existing.txt")).unwrap(),
+        b"owned by somebody else"
+    );
+
+    // Taken names, folders or files alike, are skipped.
+    fs::create_dir(occupied.join("Chriz Easy BG")).unwrap();
+    fs::write(occupied.join("Chriz Easy BG (2)"), b"a file").unwrap();
+    let numbered = bridge
+        .inspect_destination(
+            &occupied,
+            &discovery.selected_bg1_id,
+            &discovery.selected_bg2_id,
+        )
+        .expect("the next free folder name");
+    assert_eq!(
+        numbered.path,
+        display_windows_path(&occupied.canonicalize().unwrap().join("Chriz Easy BG (3)")).unwrap()
+    );
+
+    // A file is still no install folder.
+    let file = cache.parent().unwrap().join("a-file");
+    fs::write(&file, b"not a folder").unwrap();
+    assert_eq!(
+        bridge
+            .inspect_destination(
+                &file,
+                &discovery.selected_bg1_id,
+                &discovery.selected_bg2_id
+            )
+            .unwrap_err()
+            .code,
+        "destination_unsafe"
+    );
 
     let inspected = bridge
         .inspect_destination(
@@ -1558,7 +1737,109 @@ fn destination_checks_use_registered_candidates_and_never_create_the_target() {
     assert!(inspected.safe);
     assert_eq!(inspected.title, "Ready to install");
     assert!(inspected.detail.contains("will create this folder"));
+    assert_eq!(inspected.note, None);
     assert!(!missing_parent.exists());
+}
+
+#[test]
+fn a_steam_or_program_files_destination_warns_but_stays_usable() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let cache = recipe.parent().unwrap().join("cache");
+    fs::create_dir(&cache).expect("create cache fixture");
+    let bg1 = recipe.parent().unwrap().join("clean-bg1");
+    let bg2 = recipe.parent().unwrap().join("clean-bg2");
+    fs::create_dir(&bg1).expect("create BG1 fixture");
+    fs::create_dir(&bg2).expect("create BG2 fixture");
+    let engine = Arc::new(FakeBridgeEngine::new(bg1, bg2));
+    let bridge = NativeBridge::with_engine(recipe.clone(), "recommended", &cache, engine);
+    let discovery = bridge.discover_games().expect("register discovered games");
+
+    for folder in [
+        "SteamLibrary/steamapps/common/Chriz Easy BG",
+        "Program Files/Chriz Easy BG",
+        "Program Files (x86)/Chriz Easy BG",
+    ] {
+        let destination = recipe.parent().unwrap().join(folder);
+        let inspected = bridge
+            .inspect_destination(
+                &destination,
+                &discovery.selected_bg1_id,
+                &discovery.selected_bg2_id,
+            )
+            .unwrap_or_else(|error| panic!("{folder}: {error:?}"));
+        assert!(inspected.safe, "{folder}");
+        assert_eq!(inspected.title, "Ready to install");
+        let note = inspected.note.expect("a warning about the folder");
+        assert!(note.contains("Steam or Windows may change files"), "{note}");
+        assert!(note.contains("a folder elsewhere is safer"), "{note}");
+        assert!(inspected.detail.contains(&note), "{}", inspected.detail);
+        assert!(!destination.exists());
+    }
+    let ordinary = bridge
+        .inspect_destination(
+            &recipe
+                .parent()
+                .unwrap()
+                .join("Games/steam-free/Chriz Easy BG"),
+            &discovery.selected_bg1_id,
+            &discovery.selected_bg2_id,
+        )
+        .unwrap();
+    assert_eq!(ordinary.note, None);
+}
+
+#[test]
+fn a_folder_with_files_is_frozen_and_started_as_its_new_inner_folder() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let cache = recipe.parent().unwrap().join("cache");
+    fs::create_dir(&cache).expect("create cache fixture");
+    let bg1 = recipe.parent().unwrap().join("clean-bg1");
+    let bg2 = recipe.parent().unwrap().join("clean-bg2");
+    fs::create_dir(&bg1).expect("create BG1 fixture");
+    fs::create_dir(&bg2).expect("create BG2 fixture");
+    let chosen = recipe.parent().unwrap().join("Games");
+    fs::create_dir(&chosen).unwrap();
+    fs::write(chosen.join("other game.txt"), b"the player's").unwrap();
+    let engine = Arc::new(FakeBridgeEngine::new(bg1, bg2));
+    let bridge = NativeBridge::with_engine(recipe, "recommended", &cache, engine.clone());
+    let discovery = bridge.discover_games().expect("register discovered games");
+    let inspected = bridge
+        .inspect_destination(
+            &chosen,
+            &discovery.selected_bg1_id,
+            &discovery.selected_bg2_id,
+        )
+        .unwrap();
+    let inner = chosen.canonicalize().unwrap().join("Chriz Easy BG");
+    assert_eq!(inspected.path, display_windows_path(&inner).unwrap());
+
+    // The app freezes the path the inspection answered; the start re-inspects it unchanged.
+    let review = bridge
+        .freeze_review(
+            "Chriz Easy BG",
+            &NormalizedSelection {
+                platform: "windows".to_owned(),
+                features: Default::default(),
+                inputs: Default::default(),
+            },
+            Path::new(&inspected.path),
+            &discovery.selected_bg1_id,
+            &discovery.selected_bg2_id,
+        )
+        .expect("freeze review");
+    assert!(
+        Path::new(&review.destination).ends_with("Games/Chriz Easy BG"),
+        "{}",
+        review.destination
+    );
+    bridge
+        .start_build(&review.review_token, |_| {})
+        .expect("start the frozen inner folder");
+    engine.release_install();
+    assert_eq!(
+        fs::read(chosen.join("other game.txt")).unwrap(),
+        b"the player's"
+    );
 }
 
 #[test]
@@ -1636,6 +1917,22 @@ fn manual_archive_selection_uses_only_the_trusted_recipe_identity_and_owned_cach
         bytes
     );
     assert_eq!(fs::read(selected).expect("read original selection"), bytes);
+
+    // A newer file than the reviewed one, which once was refused, is published as chosen.
+    let newer = temp.path().join("manual-fixture-newer.zip");
+    fs::write(&newer, b"a newer manual fixture archive").unwrap();
+    let supplied = bridge
+        .supply_manual_archive("manual-fixture", Some(newer))
+        .expect("supply a newer manual archive")
+        .expect("manual archive response");
+    assert_eq!(
+        supplied.length,
+        b"a newer manual fixture archive".len() as u64
+    );
+    assert_eq!(
+        fs::read(temp.path().join(".chriz-cache/manual/manual-fixture.zip")).unwrap(),
+        b"a newer manual fixture archive"
+    );
     assert_eq!(
         bridge
             .supply_manual_archive("not-a-recipe-artifact", Some(temp.path().join("missing")))
@@ -1689,7 +1986,7 @@ fn manual_picker_filter_accepts_each_declared_archive_kind_without_executing_sfx
 }
 
 #[test]
-fn manual_download_inspection_is_selection_scoped_deduped_read_only_and_exact() {
+fn manual_download_inspection_is_selection_scoped_deduped_read_only_and_accepts_a_newer_file() {
     let (temp, recipe) = recipe_with_profiles();
     let expected = b"exact manual fixture";
     make_eefixpack_manual(&recipe, "eefix-official.zip", expected);
@@ -1727,23 +2024,19 @@ fn manual_download_inspection_is_selection_scoped_deduped_read_only_and_exact() 
 
     let cached = cache.join("manual/eefix-official.zip");
     fs::create_dir_all(cached.parent().unwrap()).unwrap();
-    fs::write(&cached, b"short").unwrap();
-    let wrong_length = bridge.inspect_manual_downloads(&selection).unwrap();
-    assert!(!wrong_length[0].ready);
-    assert!(wrong_length[0]
-        .detail
-        .as_deref()
-        .unwrap()
-        .contains("length"));
-
-    fs::write(&cached, vec![b'x'; expected.len()]).unwrap();
-    let wrong_hash = bridge.inspect_manual_downloads(&selection).unwrap();
-    assert!(!wrong_hash[0].ready);
-    assert!(wrong_hash[0]
-        .detail
-        .as_deref()
-        .unwrap()
-        .contains("does not match"));
+    // A different file, for example a newer version, once blocked the installation; now it is
+    // ready and installed as chosen, with a note that says so.
+    for different in [b"short".to_vec(), vec![b'x'; expected.len()]] {
+        fs::write(&cached, &different).unwrap();
+        let chosen = bridge.inspect_manual_downloads(&selection).unwrap();
+        assert!(chosen[0].ready);
+        let note = chosen[0].detail.as_deref().unwrap();
+        assert!(note.contains("differs from the reviewed version"), "{note}");
+        assert!(
+            note.contains(&format!("{} bytes", different.len())),
+            "{note}"
+        );
+    }
 
     fs::write(&cached, expected).unwrap();
     let ready = bridge.inspect_manual_downloads(&selection).unwrap();
@@ -1898,7 +2191,7 @@ fn managed_actions_reload_only_the_exact_available_registry_identity() {
         "recommended",
         cache,
         app_data,
-        engine,
+        engine.clone(),
         system.clone(),
     );
     let cards = bridge.list_managed_installations().unwrap();
@@ -1932,9 +2225,16 @@ fn managed_actions_reload_only_the_exact_available_registry_identity() {
         .unwrap()
         .starts_with(r"\\?\"));
     assert_eq!(cards[0].completed_at_millis, Some(1));
+    let save_root = managed.parent().unwrap().join("saves");
+    let expected_profile = display_windows_path(&save_root).unwrap();
+    assert_eq!(
+        cards[0].profile_path.as_deref(),
+        Some(expected_profile.as_str())
+    );
 
     bridge.launch_install("install-task23", false).unwrap();
     bridge.open_install_folder("install-task23").unwrap();
+    bridge.open_profile_folder("install-task23").unwrap();
     assert_eq!(
         system.launches.lock().unwrap().as_slice(),
         &[(
@@ -1944,7 +2244,11 @@ fn managed_actions_reload_only_the_exact_available_registry_identity() {
     );
     assert_eq!(
         system.folders.lock().unwrap().as_slice(),
-        &[canonical_managed]
+        &[canonical_managed, save_root]
+    );
+    assert_eq!(
+        engine.profile_folders.lock().unwrap().as_slice(),
+        ["install-task23"]
     );
     assert_eq!(
         bridge
@@ -2703,6 +3007,40 @@ fn stale_managed_install_is_listed_but_cannot_be_launched_or_opened() {
             .code,
         "managed_install_stale"
     );
+    assert_eq!(
+        bridge
+            .open_profile_folder("install-stale")
+            .unwrap_err()
+            .code,
+        "managed_install_stale"
+    );
+}
+
+#[test]
+fn profile_folder_opens_only_after_the_engine_proves_it_belongs_to_the_install() {
+    let fixture = RadarLaunchFixture::new();
+    assert_eq!(
+        fixture
+            .bridge
+            .open_profile_folder("not-a-registry-id")
+            .unwrap_err()
+            .code,
+        "managed_install_unknown"
+    );
+    assert!(fixture.engine.profile_folders.lock().unwrap().is_empty());
+
+    *fixture.engine.profile_folder_error.lock().unwrap() =
+        Some("ownership marker belongs to a different managed installation".to_owned());
+    let error = fixture
+        .bridge
+        .open_profile_folder("radar-fixture")
+        .unwrap_err();
+    assert_eq!(error.code, "profile_folder_unavailable");
+    assert_eq!(
+        fixture.engine.profile_folders.lock().unwrap().as_slice(),
+        ["radar-fixture"]
+    );
+    assert!(fixture.system.folders.lock().unwrap().is_empty());
 }
 
 #[test]
@@ -2970,4 +3308,159 @@ fn missing_release_keys_and_endpoints_are_clear_non_destructive_update_state() {
     assert_eq!(update.managed_copies.len(), 1);
     assert_eq!(update.managed_copies[0].install_id, "install-update-state");
     assert_eq!(update.managed_copies[0].state, "unknown");
+}
+
+/// A campaign whose ledger holds a question is listed as waiting for an answer and stays
+/// resumable; the bridge shows the engine's question with its texts and token, and stores the
+/// player's answer for exactly that installation.
+#[test]
+fn a_waiting_question_is_listed_shown_and_answered_through_the_bridge() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let root = recipe.parent().unwrap().to_path_buf();
+    let cache = root.join("cache");
+    let app_data = root.join("app-data");
+    let waiting =
+        publish_started_campaign(&app_data, &root.join("waiting"), &cache, "install-waiting");
+    waiting
+        .append(SessionEvent::StepStarted {
+            step_id: "acquire:weidu".to_owned(),
+            attempt: 1,
+        })
+        .unwrap();
+    let question = unreviewed_tool_question();
+    let decision_id = question.decision_id("acquire:weidu", 1);
+    waiting
+        .append(SessionEvent::DecisionRequired {
+            step_id: "acquire:weidu".to_owned(),
+            attempt: 1,
+            decision_id: decision_id.clone(),
+            question: Box::new(question),
+        })
+        .unwrap();
+    let engine = Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2")));
+    *engine.decision.lock().unwrap() =
+        Some(unreviewed_tool_status("install-waiting", &decision_id));
+    let bridge = NativeBridge::with_engine_and_system(
+        recipe,
+        "recommended",
+        &cache,
+        app_data,
+        engine.clone(),
+        Arc::new(RecordingBridgeSystem::default()),
+    );
+
+    let cards = bridge.list_managed_installations().unwrap();
+    assert_eq!(cards.len(), 1);
+    assert_eq!(cards[0].status, "Waiting for your answer");
+    assert!(cards[0].resumable);
+
+    let pending = bridge
+        .get_pending_decision("install-waiting")
+        .unwrap()
+        .expect("the question");
+    let wire = serde_json::to_value(&pending).unwrap();
+    assert_eq!(wire["installId"], "install-waiting");
+    assert_eq!(wire["decisionId"], decision_id.as_str());
+    assert_eq!(wire["token"], unreviewed_tool_question().token());
+    assert_eq!(wire["kind"], "unreviewed_tool");
+    assert_eq!(wire["artifactId"], "weidu");
+    assert_eq!(wire["focus"], "no");
+    assert_eq!(
+        wire["answers"],
+        json!([
+            { "answer": "yes", "label": "Install it" },
+            { "answer": "no", "label": "Stop the installation" },
+        ])
+    );
+    assert_eq!(wire["details"], json!(["File: weidu.zip"]));
+    assert!(wire["message"]
+        .as_str()
+        .unwrap()
+        .ends_with("If you're not sure, stop the installation."));
+    assert_eq!(
+        wire["afterNo"],
+        "You chose to stop. Resume this installation to check the download again."
+    );
+    assert_eq!(wire["answered"], serde_json::Value::Null);
+
+    bridge
+        .answer_decision(
+            "install-waiting",
+            &decision_id,
+            &pending.token,
+            bg_engine::decision::Answer::Yes,
+        )
+        .unwrap();
+    let canonical = root.join("waiting").canonicalize().unwrap();
+    assert_eq!(
+        engine.answers.lock().unwrap().as_slice(),
+        &[(
+            canonical,
+            "install-waiting".to_owned(),
+            decision_id.clone(),
+            pending.token.clone(),
+            bg_engine::decision::Answer::Yes,
+        )]
+    );
+    // The answer arrives as the engine's spelling.
+    assert_eq!(
+        serde_json::from_value::<bg_engine::decision::Answer>(json!("leave_out")).unwrap(),
+        bg_engine::decision::Answer::LeaveOut
+    );
+
+    let unknown = bridge.get_pending_decision("install-unknown");
+    assert_eq!(unknown.unwrap_err().code, "managed_install_unknown");
+    let unknown = bridge.answer_decision(
+        "install-unknown",
+        &decision_id,
+        &pending.token,
+        bg_engine::decision::Answer::No,
+    );
+    assert_eq!(unknown.unwrap_err().code, "managed_install_unknown");
+}
+
+/// A resume that stops for a question ends as resumable and waiting, not as a failure: the run
+/// snapshot reports it without an error.
+#[test]
+fn a_resume_that_stops_for_a_question_is_waiting_not_failed() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let root = recipe.parent().unwrap().to_path_buf();
+    let cache = root.join("cache");
+    let app_data = root.join("app-data");
+    publish_started_campaign(&app_data, &root.join("asking"), &cache, "install-asking");
+    let engine = Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2")));
+    let question = unreviewed_tool_question();
+    *engine.resume_status.lock().unwrap() = Some(CampaignStatus::DecisionRequired {
+        step_id: "acquire:weidu".to_owned(),
+        decision_id: question.decision_id("acquire:weidu", 1),
+        question: Box::new(question),
+    });
+    let bridge = NativeBridge::with_engine_and_system(
+        recipe,
+        "recommended",
+        &cache,
+        app_data,
+        engine,
+        Arc::new(RecordingBridgeSystem::default()),
+    );
+
+    let started = bridge.resume_build("install-asking", |_| {}).unwrap();
+
+    let deadline = Instant::now() + Duration::from_secs(2);
+    let snapshot = loop {
+        let snapshot = bridge.get_run_snapshot(&started.run_id).unwrap();
+        if snapshot.report.is_some() {
+            break snapshot;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "worker did not publish its report"
+        );
+        std::thread::sleep(Duration::from_millis(5));
+    };
+    assert_eq!(snapshot.status, "decision_required");
+    assert!(snapshot.error.is_none(), "{:?}", snapshot.error);
+    let wire = serde_json::to_value(snapshot.report.unwrap()).unwrap();
+    assert_eq!(wire["status"]["status"], "decision_required");
+    assert_eq!(wire["status"]["step_id"], "acquire:weidu");
 }

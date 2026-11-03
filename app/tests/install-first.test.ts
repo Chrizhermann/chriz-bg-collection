@@ -24,7 +24,6 @@ import type {
 import {
   automaticInstallationPath,
   installationReadiness,
-  validateInstallationName,
 } from "../src/state";
 
 function cleanDiscovery(): GameDiscovery {
@@ -154,12 +153,52 @@ describe("CEBG install-first experience", () => {
 
     const location = getByLabelText(root, "Install location") as HTMLInputElement;
     await user.clear(location);
-    await user.type(location, "C:\\SteamApps\\Chriz Easy BG");
+    await user.type(location, "C:\\");
     fireEvent.change(location);
 
     await waitFor(() => expect(getByText(root, "Choose a separate install location")).toBeTruthy());
-    expect(getByText(root, "The collection cannot be built inside a store-managed game folder.")).toBeTruthy();
+    expect(getByText(root, "Choose a complete folder path, such as D:\\Games\\Chriz Easy BG.")).toBeTruthy();
     expect((getByRole(root, "button", { name: "Install Chriz Easy BG" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("shows a calm note for a Steam folder and keeps Install available", async () => {
+    const root = document.createElement("div");
+    document.body.append(root);
+    await mountApp(root, new InstallBackend());
+
+    fireEvent.change(getByLabelText(root, "Install location"), { target: { value: "C:\\SteamApps\\Chriz Easy BG" } });
+
+    await waitFor(() => expect(getByText(root, "Steam or Windows may change files in this folder, so a folder elsewhere is safer. CEBG can still install here.")).toBeTruthy());
+    expect(root.querySelector("#install-location-note")?.getAttribute("role")).toBe("status");
+    expect(queryByText(root, "Choose a separate install location")).toBeNull();
+    await waitFor(() => expect((getByRole(root, "button", { name: "Install Chriz Easy BG" }) as HTMLButtonElement).disabled).toBe(false));
+  });
+
+  it("installs into the folder the inspection answered when the chosen folder has files", async () => {
+    class OccupiedBackend extends InstallBackend {
+      override inspectDestination(path: string): Promise<DestinationEvaluation> {
+        if (path.endsWith("\\Chriz Easy BG")) {
+          return Promise.resolve({ path, safe: true, title: "Ready to install", detail: "CEBG will create this folder when installation starts, then repeat its safety checks." });
+        }
+        const inner = `${path}\\Chriz Easy BG`;
+        const note = "This folder already has files, so CEBG installs into a new folder inside it.";
+        return Promise.resolve({ path: inner, safe: true, title: "Ready to install", detail: note, note });
+      }
+    }
+    const backend = new OccupiedBackend();
+    const root = document.createElement("div");
+    document.body.append(root);
+    await mountApp(root, backend);
+
+    fireEvent.change(getByLabelText(root, "Install location"), { target: { value: "D:\\Games" } });
+
+    await waitFor(() => expect((getByLabelText(root, "Install location") as HTMLInputElement).value).toBe("D:\\Games\\Chriz Easy BG"));
+    expect(getByText(root, "This folder already has files, so CEBG installs into a new folder inside it.")).toBeTruthy();
+    const install = () => getByRole(root, "button", { name: "Install Chriz Easy BG" }) as HTMLButtonElement;
+    await waitFor(() => expect(install().disabled).toBe(false));
+    fireEvent.click(install());
+    await waitFor(() => expect(backend.freezeCalls).toHaveLength(1));
+    expect(backend.freezeCalls[0]!.path).toBe("D:\\Games\\Chriz Easy BG");
   });
 
   it("keeps multiple detected sources selectable and their findings collapsed", async () => {
@@ -203,11 +242,25 @@ describe("CEBG install-first experience", () => {
     };
     const [bg1, bg2] = [cleanDiscovery().bg1Candidates[0]!, cleanDiscovery().bg2Candidates[0]!];
 
-    expect(installationReadiness({ starting: false, name: "Chriz Easy BG", bg1, bg2, destination, evaluation, evaluationPending: false })).toBe(true);
-    expect(installationReadiness({ starting: false, name: "Chriz Easy BG", bg1, bg2, destination, evaluation, evaluationPending: true })).toBe(false);
-    expect(installationReadiness({ starting: false, name: "Chriz Easy BG", bg1, bg2, destination: { ...destination, safe: false }, evaluation, evaluationPending: false })).toBe(false);
-    expect(installationReadiness({ starting: true, name: "Chriz Easy BG", bg1, bg2, destination, evaluation, evaluationPending: false })).toBe(false);
-    expect(installationReadiness({ starting: false, name: "Bad|Name", bg1, bg2, destination, evaluation, evaluationPending: false })).toBe(false);
+    expect(installationReadiness({ starting: false, bg1, bg2, destination, evaluation, evaluationPending: false })).toBe(true);
+    expect(installationReadiness({ starting: false, bg1, bg2, destination, evaluation, evaluationPending: true })).toBe(false);
+    expect(installationReadiness({ starting: false, bg1, bg2, destination: { ...destination, safe: false }, evaluation, evaluationPending: false })).toBe(false);
+    expect(installationReadiness({ starting: true, bg1, bg2, destination, evaluation, evaluationPending: false })).toBe(false);
+  });
+
+  it("saves any install name in a usable form and keeps Install available", async () => {
+    const root = document.createElement("div");
+    document.body.append(root);
+    await mountApp(root, new InstallBackend());
+    await waitFor(() => expect((getByRole(root, "button", { name: "Install Chriz Easy BG" }) as HTMLButtonElement).disabled).toBe(false));
+
+    for (const [typed, saved] of [["Bad|Name?", "Bad-Name-"], ["   ", "Chriz Easy BG"], ["..", "Chriz Easy BG"]] as const) {
+      fireEvent.change(getByLabelText(root, "Install name"), { target: { value: typed } });
+      await waitFor(() => expect(getByText(root, `Will be saved as “${saved}”.`)).toBeTruthy());
+      expect(getByLabelText(root, "Install name").getAttribute("aria-invalid")).toBeNull();
+      expect(queryByRole(root, "alert")).toBeNull();
+      await waitFor(() => expect((getByRole(root, "button", { name: "Install Chriz Easy BG" }) as HTMLButtonElement).disabled).toBe(false));
+    }
   });
 
   it("preserves choices through Customize and returns to the installation", async () => {
@@ -337,11 +390,6 @@ describe("CEBG install-first experience", () => {
     fireEvent.change(renamed);
     expect((getByLabelText(root, "Install location") as HTMLInputElement).value).toBe("D:\\Games\\Stream BG");
 
-    expect(validateInstallationName("Bad<Name")).toMatch(/cannot contain/i);
-    expect(validateInstallationName("\u0001name")).toMatch(/control/i);
-    expect(validateInstallationName("   ")).toMatch(/enter/i);
-    expect(validateInstallationName(".")).toMatch(/folder/i);
-    expect(validateInstallationName("Ordinary — 이름")).toBeNull();
     expect(automaticInstallationPath("C:\\Users\\Player\\Games\\Chriz Easy BG", "Ordinary — 이름")).toBe("C:\\Users\\Player\\Games\\Ordinary — 이름");
   });
 });

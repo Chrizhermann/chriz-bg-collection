@@ -76,7 +76,7 @@ function versionRow(
   const row = element("article", "update-row");
   if (["available", "requires-app", "local-available"].includes(state) && availableVersion !== null) row.classList.add("available");
   const installed = element("div", "update-installed");
-  installed.append(element("h2", undefined, title), element("p", undefined, currentVersion === null ? "Not installed" : `${currentLabel}: ${currentVersion === "bundled" ? "Bundled alpha" : currentVersion}`));
+  installed.append(element("h2", undefined, title), element("p", undefined, currentVersion === null ? "Not installed" : `${currentLabel}: ${currentVersion === "bundled" ? "Bundled with CEBG" : currentVersion}`));
   if (note !== undefined) installed.append(element("p", "update-purpose", note));
   const latest = element("div", "update-latest");
   if (availableVersion !== null) {
@@ -191,7 +191,7 @@ export function updatesScreen(updates: UpdateSummary, actions: UpdateActions, ch
   checkStatus.setAttribute("role", "status");
   checkStatus.textContent = installing ? "Installing the update…"
     : checking ? "Checking for updates…"
-    : updates.networkState === "unconfigured" ? "Online updates aren't enabled in this alpha yet."
+    : updates.networkState === "unconfigured" ? "Online updates aren't enabled in this version yet."
     : updates.networkState === "offline" ? "Could not connect. Try checking again when you're online."
     : updates.checkedAt === null ? "Not checked yet." : `Last checked: ${new Date(updates.checkedAt).toLocaleString()}`;
   page.append(checkStatus);

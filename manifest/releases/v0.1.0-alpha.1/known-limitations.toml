@@ -102,3 +102,10 @@ approved_by = "Christopher"
 approved_on = "2026-09-29"
 reason = "The narrower authored fallback does not supply Evandra's core; the generated production recipe enables this released default with that exact core."
 user_facing_limitation = "Evandra's custom portrait is available in the generated full recipe only."
+
+[[omissions]]
+feature_id = "feature:chriz-bg-modpack:component-130"
+approved_by = "Christopher"
+approved_on = "2026-11-03"
+reason = "BG1 NPC Project left the defaults (Christopher, 2026-11-03). This guard protects only its Kivan quest dialogue from SCS, so it stays mandatory and installs automatically once BG1 NPC Project's banters and quests are ticked."
+user_facing_limitation = "The Kivan sea-elf quest guard is installed only when BG1 NPC Project's banters and quests are selected."

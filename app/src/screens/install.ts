@@ -8,7 +8,7 @@ import type {
   SelectionEvaluation,
 } from "../contracts";
 import { actionButton, element, screenIntro } from "../components/app-shell";
-import { installationReadiness, validateInstallationName } from "../state";
+import { installationReadiness, sourceStatus, sourceVersionNote } from "../state";
 import { invalidBreakpoints } from "../components/manual-checkpoints";
 
 export interface InstallScreenModel {
@@ -16,7 +16,8 @@ export interface InstallScreenModel {
   readonly selectedBg1Id: string;
   readonly selectedBg2Id: string;
   readonly installationName: string;
-  readonly installationNameError?: string | null;
+  /** "Will be saved as “…”." when the name is saved in another form; never blocks. */
+  readonly installationNameNote?: string | null;
   readonly destination: DestinationEvaluation;
   readonly evaluation: SelectionEvaluation | null;
   readonly evaluationPending: boolean;
@@ -63,7 +64,7 @@ function manualDownloadPanel(model: InstallScreenModel, actions: InstallScreenAc
   heading.id = "manual-download-title";
   panel.append(
     heading,
-    element("p", "manual-download-intro", "CEBG cannot redistribute this mod. Download its official file, then choose that file here so CEBG can verify it."),
+    element("p", "manual-download-intro", "CEBG cannot redistribute this mod. Download its file from the mod's page, then choose that file here. A newer version than the one named below works too."),
   );
 
   for (const requirement of model.manualDownloads) {
@@ -75,7 +76,7 @@ function manualDownloadPanel(model: InstallScreenModel, actions: InstallScreenAc
       element("h3", undefined, requirement.ready ? `${requirement.title} is ready` : requirement.title),
       element("p", undefined, requirement.detail ?? (requirement.ready
         ? "The official file passed its identity check."
-        : "Choose the exact official file shown below.")),
+        : "Choose the file you downloaded. The name below is the version the collection was tested with.")),
       element("p", "manual-download-file", `${requirement.filename} (${formatFileSize(requirement.length)})`),
     );
     const status = element("p", `manual-download-status ${requirement.ready ? "is-ready" : "needs-file"}`, requirement.ready ? "Verified and ready" : "File required");
@@ -126,7 +127,12 @@ function sourceCard(
   const copy = element("div", "source-card-heading");
   copy.append(element("p", "source-title", title));
   copy.append(element("h2", undefined, candidate === undefined ? "Source needed" : candidates.length === 1 ? "Found source" : "Choose source"));
-  const status = element("span", `source-status ${candidate?.eligible === true ? "ok" : "warning"}`, candidate?.eligible === true ? "Ready" : "Needs attention");
+  const usable = sourceStatus(candidate);
+  const status = element(
+    "span",
+    `source-status ${usable === "ready" ? "ok" : "warning"}`,
+    usable === "ready" ? "Ready" : usable === "less-tested" ? "Less tested" : "Needs attention",
+  );
   card.append(copy, status);
 
   if (candidates.length > 1 || (candidate === undefined && candidates.length > 0)) {
@@ -154,6 +160,9 @@ function sourceCard(
   }
 
   card.append(element("p", "path", candidate?.path ?? "No installation detected"));
+  if (usable === "less-tested") {
+    card.append(element("p", "source-note", "You can install from this copy. It differs from the tested setup; Details says how."));
+  }
   const details = element("details", "source-details");
   details.append(element("summary", undefined, "Details"));
   if (candidate === undefined) {
@@ -161,7 +170,7 @@ function sourceCard(
   } else if (candidate.findings.length === 0) {
     details.append(element("p", "finding", "No additional findings."));
   } else {
-    for (const finding of candidate.findings) details.append(element("p", `finding ${candidate.eligible ? "ok" : "warning"}`, finding));
+    for (const finding of candidate.findings) details.append(element("p", `finding ${usable === "ready" ? "ok" : "warning"}`, finding));
   }
   const changeSource = actionButton("Change source", () => actions.browseSource(game), "quiet compact");
   changeSource.setAttribute("aria-label", game === "bg1" ? "Change Baldur's Gate source" : "Change Baldur's Gate II source");
@@ -192,6 +201,15 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
     sourceCard("bg1", "Baldur's Gate + Siege of Dragonspear", model.discovery.bg1Candidates, model.selectedBg1Id, model.starting, actions),
     sourceCard("bg2", "Baldur's Gate II", model.discovery.bg2Candidates, model.selectedBg2Id, model.starting, actions),
   );
+  const versionNote = sourceVersionNote(
+    selectedCandidate(model.discovery.bg1Candidates, model.selectedBg1Id),
+    selectedCandidate(model.discovery.bg2Candidates, model.selectedBg2Id),
+  );
+  if (versionNote !== null) {
+    const note = element("p", "source-note source-version-note", versionNote);
+    note.setAttribute("role", "status");
+    sources.append(note);
+  }
 
   const settings = element("section", "install-settings card");
   settings.append(element("h2", undefined, "Your installation"));
@@ -200,11 +218,11 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
   const location = field("Install location", "install-location", model.destination.path);
   name.input.disabled = model.starting;
   location.input.disabled = model.starting;
-  const nameError = model.installationNameError ?? validateInstallationName(model.installationName);
-  const nameHelp = element("p", nameError === null ? "field-help" : "field-error", nameError ?? "This name also labels your installation in CEBG.");
+  const nameNote = model.installationNameNote ?? null;
+  const nameHelp = element("p", "field-help", nameNote ?? "This name also labels your installation in CEBG.");
   nameHelp.id = "install-name-help";
+  nameHelp.setAttribute("aria-live", "polite");
   name.input.setAttribute("aria-describedby", nameHelp.id);
-  if (nameError !== null) name.input.setAttribute("aria-invalid", "true");
   name.wrapper.append(nameHelp);
   name.input.addEventListener("change", () => void actions.changeName(name.input.value));
   const locationControls = element("div", "location-controls");
@@ -215,6 +233,15 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
   locationHelp.id = "install-location-help";
   location.input.setAttribute("aria-describedby", locationHelp.id);
   location.wrapper.append(locationHelp);
+  if (model.destination.safe && model.destination.note) {
+    // A usable folder CEBG still has something to say about: it installs into a new folder
+    // inside it, or Steam or Windows may change files there.
+    const locationNote = element("p", "field-help", model.destination.note);
+    locationNote.id = "install-location-note";
+    locationNote.setAttribute("role", "status");
+    location.input.setAttribute("aria-describedby", `${locationHelp.id} ${locationNote.id}`);
+    location.wrapper.append(locationNote);
+  }
   if (!model.destination.safe) {
     const locationFinding = element("div", "location-finding");
     locationFinding.id = "install-location-finding";
@@ -277,9 +304,8 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
 
   const bg1 = selectedCandidate(model.discovery.bg1Candidates, model.selectedBg1Id);
   const bg2 = selectedCandidate(model.discovery.bg2Candidates, model.selectedBg2Id);
-  const selectionReady = nameError === null && installationReadiness({
+  const selectionReady = installationReadiness({
     starting: model.starting,
-    name: model.installationName,
     bg1,
     bg2,
     destination: model.destination,

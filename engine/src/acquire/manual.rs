@@ -77,6 +77,51 @@ pub fn provide_manual_archive(
     })
 }
 
+/// Inspect one explicit user-selected file without expecting particular bytes: its length and
+/// SHA-256, after the same regular-file checks as [`provide_manual_archive`].
+pub fn inspect_manual_archive(path: &Path) -> Result<VerifiedManualArchive, AcquireError> {
+    inspect_existing_destination(path)?.ok_or_else(|| AcquireError::Io {
+        action: "inspect manual archive",
+        path: path.to_path_buf(),
+        source: io::Error::from(io::ErrorKind::NotFound),
+    })
+}
+
+/// A manual archive published as the player chose it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ChosenManualArchive {
+    /// The published copy and its identity.
+    pub archive: VerifiedManualArchive,
+    /// Whether it is exactly the reviewed archive; otherwise a newer or different file.
+    pub reviewed: bool,
+}
+
+/// Publish the file the player chose for a manual download, like a newer file under a mod's
+/// official link: the reviewed archive, or another one no larger than `max_length`, which is
+/// installed and recorded under its own checksum. The copy is verified as
+/// [`publish_manual_archive`] verifies the reviewed one.
+pub fn publish_chosen_manual_archive(
+    selected: &Path,
+    destination: &Path,
+    reviewed_sha256: &str,
+    reviewed_length: u64,
+    max_length: u64,
+) -> Result<ChosenManualArchive, AcquireError> {
+    let reviewed_sha256 = validate_digest(reviewed_sha256)?;
+    let chosen = inspect_manual_archive(selected)?;
+    if chosen.length > max_length {
+        return Err(AcquireError::InvalidRequest(format!(
+            "the chosen file has {} bytes, more than the {max_length} bytes a newer version of this archive may have",
+            chosen.length
+        )));
+    }
+    let archive = publish_manual_archive(selected, destination, &chosen.sha256, chosen.length)?;
+    Ok(ChosenManualArchive {
+        reviewed: archive.sha256 == reviewed_sha256 && archive.length == reviewed_length,
+        archive,
+    })
+}
+
 /// Verify one explicit selection and publish an independent copy at an installer-owned path.
 ///
 /// Invalid selected bytes never create or replace the destination. A valid existing destination

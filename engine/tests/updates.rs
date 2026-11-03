@@ -451,26 +451,25 @@ fn alpha20_requires_the_feature_group_app_and_waits_for_the_next_playthrough() {
 }
 
 #[test]
-fn alpha22_supersedes_alpha20_requires_the_alpha22_app_and_waits_for_the_next_playthrough() {
+fn release_0_1_0_supersedes_alpha20_requires_the_0_1_0_app_and_waits_for_the_next_playthrough() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
     let curated = root.join("recipes/curated-full-current");
-    let ledger = load_release(&curated.join("releases/v0.1.0-alpha.22/ledger.toml")).unwrap();
-    let source = load_release(&root.join("manifest/releases/v0.1.0-alpha.22/ledger.toml")).unwrap();
+    let ledger = load_release(&curated.join("releases/v0.1.0/ledger.toml")).unwrap();
+    let source = load_release(&root.join("manifest/releases/v0.1.0/ledger.toml")).unwrap();
     assert_eq!(ledger, source);
-    assert_eq!(ledger.version, "0.1.0-alpha.22");
-    assert_eq!(
-        bg_engine::cli::recipe_release_version(&curated)
-            .unwrap()
-            .as_deref(),
-        Some("0.1.0-alpha.22")
-    );
-    // Alpha.21 was an app-only release that shipped the alpha.20 recipe.
+    assert_eq!(ledger.version, "0.1.0");
+    assert_eq!(ledger.published_at, "2026-11-02T00:00:00Z");
+    // The bundled recipe moved on to 0.1.1 (November 3); 0.1.0's ledger stays as published.
+    // Alpha.21 was an app-only release that shipped the alpha.20 recipe, and the release
+    // prepared as alpha.22 became 0.1.0 (Christopher, 2026-11-01) before publication.
     assert!(!curated.join("releases/v0.1.0-alpha.21").exists());
+    assert!(!curated.join("releases/v0.1.0-alpha.22").exists());
     assert_eq!(ledger.supersedes.as_deref(), Some("0.1.0-alpha.20"));
 
     // The alpha.21 app cannot use this recipe: its engine rejects Challenge Mode's
     // `variants` and the `config_files` of Tweaks Anthology 3347, and without them its
-    // public-alpha validation reports the quest mods' defaults as omitted.
+    // public-alpha validation reports the quest mods' defaults as omitted. 0.1.0 orders
+    // after every 0.1.0 pre-release, so alpha apps see it as newer.
     let old_app = classify_updates(
         "0.1.0-alpha.20",
         "0.1.0-alpha.21",
@@ -478,17 +477,10 @@ fn alpha22_supersedes_alpha20_requires_the_alpha22_app_and_waits_for_the_next_pl
     )
     .unwrap();
     assert_eq!(old_app.disposition, UpdateDisposition::AppUpdateRequired);
-    assert_eq!(
-        old_app.minimum_app_version.as_deref(),
-        Some("0.1.0-alpha.22")
-    );
-    let new_app = classify_updates(
-        "0.1.0-alpha.20",
-        "0.1.0-alpha.22",
-        std::slice::from_ref(&ledger),
-    )
-    .unwrap();
-    assert_eq!(new_app.latest_version.as_deref(), Some("0.1.0-alpha.22"));
+    assert_eq!(old_app.minimum_app_version.as_deref(), Some("0.1.0"));
+    let new_app =
+        classify_updates("0.1.0-alpha.20", "0.1.0", std::slice::from_ref(&ledger)).unwrap();
+    assert_eq!(new_app.latest_version.as_deref(), Some("0.1.0"));
     assert_eq!(
         new_app.disposition,
         UpdateDisposition::DeferredForNextPlaythrough
@@ -504,11 +496,11 @@ fn alpha22_supersedes_alpha20_requires_the_alpha22_app_and_waits_for_the_next_pl
     let alpha20 = load_release(&curated.join("releases/v0.1.0-alpha.20/ledger.toml")).unwrap();
     let skipped = classify_updates(
         "0.1.0-alpha.19",
-        "0.1.0-alpha.22",
+        "0.1.0",
         &[ledger.clone(), alpha20.clone()],
     )
     .unwrap();
-    assert_eq!(skipped.latest_version.as_deref(), Some("0.1.0-alpha.22"));
+    assert_eq!(skipped.latest_version.as_deref(), Some("0.1.0"));
     assert_eq!(
         skipped.disposition,
         UpdateDisposition::DeferredForNextPlaythrough
@@ -518,17 +510,19 @@ fn alpha22_supersedes_alpha20_requires_the_alpha22_app_and_waits_for_the_next_pl
         [alpha20.changes, ledger.changes.clone()].concat()
     );
 
-    // The ledger covers the recorded alpha.20 -> alpha.22 differences and nothing else.
+    // The ledger covers the recorded alpha.20 -> 0.1.0 differences and nothing else.
     // They were taken from payloads that chriz-bg-author package-recipe built from the
     // recipe trees of both commits; e0b5116 is the recipe that app alpha.20 and alpha.21
-    // shipped.
+    // shipped. Renaming the release changed only release.json and the ledger, which the
+    // recipe diff does not compare. The November 2 pins of Artisan's Kitpack chriz.6 and
+    // BG Rebalance v0.8.9 (9bb496a) add their two artifacts.
     let snapshot = released_snapshots()
         .into_iter()
-        .find(|snapshot| snapshot["version"] == "0.1.0-alpha.22")
-        .expect("the alpha.22 differences are recorded");
+        .find(|snapshot| snapshot["version"] == "0.1.0")
+        .expect("the 0.1.0 differences are recorded");
     assert_eq!(snapshot["from_commit"], "e0b5116");
     let differences = snapshot_differences(&snapshot);
-    assert_eq!(differences.len(), 231);
+    assert_eq!(differences.len(), 233);
     ensure_change_coverage(&differences, &ledger).unwrap();
     assert_eq!(
         ledger
@@ -541,6 +535,77 @@ fn alpha22_supersedes_alpha20_requires_the_alpha22_app_and_waits_for_the_next_pl
             .map(|difference| difference.subject.as_str())
             .collect::<BTreeSet<_>>()
     );
+}
+
+#[test]
+fn release_0_1_1_supersedes_0_1_0_with_bg1npc_optional_and_marek_s_dagger() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+    let curated = root.join("recipes/curated-full-current");
+    let ledger = load_release(&curated.join("releases/v0.1.1/ledger.toml")).unwrap();
+    let source = load_release(&root.join("manifest/releases/v0.1.1/ledger.toml")).unwrap();
+    assert_eq!(ledger, source);
+    assert_eq!(ledger.version, "0.1.1");
+    assert_eq!(
+        bg_engine::cli::recipe_release_version(&curated)
+            .unwrap()
+            .as_deref(),
+        Some("0.1.1")
+    );
+    assert_eq!(ledger.supersedes.as_deref(), Some("0.1.0"));
+    // Nothing in this recipe needs a newer app than 0.1.0 yet.
+    assert_eq!(ledger.minimum_app_version, "0.1.0");
+
+    // A 0.1.0 installation gets the change for its next playthrough, without an app
+    // update; an alpha.20 installation gets 0.1.0 and 0.1.1 once each, in order.
+    let current = classify_updates("0.1.0", "0.1.0", std::slice::from_ref(&ledger)).unwrap();
+    assert_eq!(current.latest_version.as_deref(), Some("0.1.1"));
+    assert_eq!(
+        current.disposition,
+        UpdateDisposition::DeferredForNextPlaythrough
+    );
+    assert_eq!(current.changes, ledger.changes);
+    let v010 = load_release(&curated.join("releases/v0.1.0/ledger.toml")).unwrap();
+    let skipped =
+        classify_updates("0.1.0-alpha.20", "0.1.0", &[ledger.clone(), v010.clone()]).unwrap();
+    assert_eq!(skipped.latest_version.as_deref(), Some("0.1.1"));
+    assert_eq!(
+        skipped.changes,
+        [v010.changes, ledger.changes.clone()].concat()
+    );
+
+    // Since the recipe that 0.1.0 shipped, BG1 NPC Project left the defaults and Modpack
+    // alpha.15 adds Marek's Boomerang Dagger 670 as a default (Christopher, 2026-11-03):
+    // that mod feature's decision, the new Modpack artifact, the 670 feature and the main
+    // post-EET_end Modpack run. The differences were taken from payloads that
+    // chriz-bg-author package-recipe built from the curated trees of 9bb496a (and of the
+    // 0.1.0 build source 50a4239, with the same result) and fa0edd6.
+    let snapshot = released_snapshots()
+        .into_iter()
+        .find(|snapshot| snapshot["version"] == "0.1.1")
+        .expect("the 0.1.1 differences are recorded");
+    assert_eq!(snapshot["from_commit"], "9bb496a");
+    let differences = snapshot_differences(&snapshot);
+    assert_eq!(differences.len(), 4);
+    ensure_change_coverage(&differences, &ledger).unwrap();
+    assert_eq!(
+        ledger
+            .changes
+            .iter()
+            .flat_map(|change| change.covers.iter().map(String::as_str))
+            .collect::<BTreeSet<_>>(),
+        BTreeSet::from([
+            "artifact:chriz-bg-modpack-0.2.0-alpha.15",
+            "feature:feature:chriz-bg-modpack:component-670",
+            "feature:mod:bg1npc",
+            "run:chriz-bg-modpack-bg2",
+        ])
+    );
+    let dagger = ledger
+        .changes
+        .iter()
+        .find(|change| change.id == "modpack-marek-boomerang-dagger")
+        .expect("the 0.1.1 ledger names Marek's dagger");
+    assert_eq!(dagger.title, "Marek carries the Boomerang Dagger +2");
 }
 
 #[test]
@@ -584,8 +649,9 @@ fn ledger_covers_name_only_subject_kinds_the_recipe_diff_emits() {
                 }
             }
         }
-        // alpha.1, alpha.12 to alpha.20 and alpha.22; published ledgers are never removed.
-        assert!(ledgers >= 11, "{profile}: only {ledgers} ledgers found");
+        // alpha.1, alpha.12 to alpha.20, 0.1.0 and the next 0.1.1; published ledgers are
+        // never removed.
+        assert!(ledgers >= 12, "{profile}: only {ledgers} ledgers found");
         assert_eq!(
             dead, shipped,
             "{profile}: covers that no recipe difference can match (kinds: {DIFF_SUBJECT_KINDS:?})"

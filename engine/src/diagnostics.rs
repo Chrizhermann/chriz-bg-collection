@@ -117,6 +117,9 @@ struct SelectedEntry {
     source: PathBuf,
     archive_name: String,
     binary: bool,
+    /// For evidence that must stay inside the installation: the folder its open handle must
+    /// really lie in when it is read.
+    contained_in: Option<PathBuf>,
 }
 
 #[derive(Deserialize)]
@@ -266,6 +269,52 @@ fn select_entries(
         }
     }
 
+    // Answers to questions about downloads; the questions themselves are in the ledger.
+    // Each folder on the way must be a direct folder of the installation: a link, junction or
+    // other reparse point could lead the export to files outside it.
+    let evidence = state_root.join("evidence");
+    let decisions = evidence.join("decisions");
+    let mut present = true;
+    for folder in [&evidence, &decisions] {
+        match fs::symlink_metadata(folder) {
+            Ok(metadata) => {
+                if metadata.file_type().is_symlink() || is_reparse_point(&metadata) {
+                    return Err(unsafe_path(
+                        folder,
+                        "links and reparse points are forbidden in diagnostics evidence",
+                    ));
+                }
+                validate_direct_directory(folder)?;
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                present = false;
+                break;
+            }
+            Err(source) => {
+                return Err(DiagnosticsError::Io {
+                    path: folder.clone(),
+                    source,
+                })
+            }
+        }
+    }
+    if present {
+        for entry in read_directory(&decisions)? {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            let is_answer = name
+                .strip_suffix(".json")
+                .is_some_and(crate::decision::is_decision_id);
+            if !is_answer {
+                continue;
+            }
+            let archive_name = format!("evidence/decisions/{name}");
+            add_optional(&mut selected, entry.path(), &archive_name, false)?;
+            if let Some(selected) = selected.get_mut(&archive_name) {
+                selected.contained_in = Some(evidence.clone());
+            }
+        }
+    }
+
     Ok(selected.into_values().collect())
 }
 
@@ -380,6 +429,7 @@ fn add_required(
             source,
             archive_name: archive_name.to_owned(),
             binary,
+            contained_in: None,
         },
     );
     Ok(())
@@ -597,6 +647,18 @@ fn read_selected_entry(entry: &SelectedEntry) -> Result<Vec<u8>, DiagnosticsErro
     // Recheck the selected file before opening; bound new patch evidence even if it grew
     // after selection. Existing receipt/recipe/log behavior remains unchanged.
     validate_direct_file(&entry.source)?;
+    if let Some(root) = &entry.contained_in {
+        // Read through a handle whose real path lies inside the installation's evidence, so that
+        // a folder replaced after the checks above never leads the export elsewhere.
+        return crate::contained::read_inside(&entry.source, root)
+            .map_err(|source| DiagnosticsError::Io {
+                path: entry.source.clone(),
+                source,
+            })?
+            .ok_or_else(|| DiagnosticsError::MissingEvidence {
+                path: entry.source.clone(),
+            });
+    }
     if !entry.archive_name.starts_with("patches/cebg-v1/")
         && !entry.archive_name.starts_with("mod-upgrades/v1/")
     {
@@ -657,6 +719,91 @@ fn receipt_summary(receipt: &serde_json::Value) -> String {
     if let Some(timestamp) = receipt["completed_at_millis"].as_u64() {
         let _ = writeln!(summary, "Receipt time (Unix milliseconds): {timestamp}");
     }
+    let names = |value: &serde_json::Value| {
+        value
+            .as_array()
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(serde_json::Value::as_str)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            })
+            .unwrap_or_default()
+    };
+    if let Some(left_out) = receipt["left_out"]
+        .as_array()
+        .filter(|items| !items.is_empty())
+    {
+        summary.push_str("\nMods left out because their downloads could not be used\n");
+        for item in left_out {
+            let _ = writeln!(
+                summary,
+                "- {}: {}\n  Runs not installed: {}",
+                text(&item["artifact_id"]),
+                text(&item["reason"]),
+                names(&item["runs"])
+            );
+            let changed = names(&item["changed_runs"]);
+            if !changed.is_empty() {
+                let _ = writeln!(summary, "  Runs installed with fewer components: {changed}");
+            }
+        }
+    }
+    let describe = |identity: &serde_json::Value| {
+        format!(
+            "{} ({} bytes, SHA-256 {})",
+            identity["filename"].as_str().unwrap_or("unnamed file"),
+            identity["length"]
+                .as_u64()
+                .map_or_else(|| "unknown".to_owned(), |length| length.to_string()),
+            text(&identity["sha256"])
+        )
+    };
+    let changed_downloads = receipt["artifacts"]
+        .as_array()
+        .map(|artifacts| {
+            artifacts
+                .iter()
+                .filter(|artifact| artifact["served_difference"].is_object())
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    if !changed_downloads.is_empty() {
+        summary.push_str(
+            "\nDownloads that differ from their reviewed versions (installed as served)\n",
+        );
+        for artifact in changed_downloads {
+            let difference = &artifact["served_difference"];
+            let _ = writeln!(
+                summary,
+                "- {}: reviewed {}; served {}; final URL {}",
+                text(&artifact["id"]),
+                describe(&difference["reviewed"]),
+                describe(&difference["served"]),
+                text(&artifact["final_url"])
+            );
+            let hosts = names(&difference["unreviewed_hosts"]);
+            if !hosts.is_empty() {
+                let _ = writeln!(summary, "  Redirected through unreviewed hosts: {hosts}");
+            }
+        }
+    }
+    if let Some(tools) = receipt["weidu_tools"].as_array() {
+        for tool in tools.iter().filter(|tool| tool["reviewed"].is_object()) {
+            let _ = writeln!(
+                summary,
+                "- Tool {}: reviewed WeiDU {} ({} bytes, SHA-256 {}); used WeiDU {} ({} bytes, SHA-256 {})",
+                text(&tool["id"]),
+                text(&tool["reviewed"]["version"]),
+                tool["reviewed"]["length"].as_u64().unwrap_or_default(),
+                text(&tool["reviewed"]["sha256"]),
+                text(&tool["version"]),
+                tool["length"].as_u64().unwrap_or_default(),
+                text(&tool["sha256"])
+            );
+        }
+    }
     summary.push_str("\nPlanned mod runs in installation order\n");
     if let Some(runs) = receipt["runs"].as_array() {
         for run in runs {
@@ -692,7 +839,7 @@ fn receipt_summary(receipt: &serde_json::Value) -> String {
 This is a snapshot of the selected terminal receipt, not a live progress screen. Later resumes may have newer progress in ledger/.\n\
 An empty attempts list does not prove that the process never started: it can also mean a failure or interruption before a finalized run record was written. Check the stopped step and raw evidence.\n\
 A zero exit code or copied mod folder alone does not prove installation or in-game activation.\n\
-receipt/attempt-receipt.json contains the full outcome, versions, selected options, plan, downloads/cache identities and per-run records.\n\
+receipt/attempt-receipt.json contains the full outcome, versions, selected options, plan, downloads/cache identities and per-run records. Its left_out, installed_plan and served_difference fields, when present, record mods left out and downloads installed as served instead of the reviewed file.\n\
 ledger/ retains durable step transitions. logs/steps/ contains invocation.json, process-result.json, captured output and before/after WeiDU logs where available. Missing files may identify the point where evidence stopped; they do not establish the operating-system cause.\n\
 receipt/install-receipt.json is included when present. An older failure receipt may coexist with a later successful installation; inspect the attempt IDs and timestamps.\n\
 patches/cebg-v1/ contains optional existing-install patch records and captured logs. The base receipt is unchanged by a patch; check these records separately. Backup contents, mod payloads, executables and saves are not included.\n\
@@ -1045,6 +1192,18 @@ fn canonical_direct_directory(path: &Path) -> Result<PathBuf, DiagnosticsError> 
         path: path.to_path_buf(),
         source,
     })
+}
+
+#[cfg(windows)]
+fn is_reparse_point(metadata: &fs::Metadata) -> bool {
+    use std::os::windows::fs::MetadataExt;
+    // FILE_ATTRIBUTE_REPARSE_POINT
+    metadata.file_attributes() & 0x400 != 0
+}
+
+#[cfg(not(windows))]
+fn is_reparse_point(_metadata: &fs::Metadata) -> bool {
+    false
 }
 
 fn validate_direct_directory(path: &Path) -> Result<(), DiagnosticsError> {

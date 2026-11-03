@@ -88,6 +88,31 @@ pub enum EngineEvent {
         /// the real `PathBuf` and only reports it here.
         drop_dir: String,
     },
+    /// A mod's current download cannot be used, so the installation continues without it
+    /// and without everything that depends on it.
+    ArtifactLeftOut {
+        /// Frozen payload artifact id.
+        artifact_id: String,
+        /// Why its download cannot be used.
+        reason: String,
+        /// Planned runs left out with it, including runs of mods that need it.
+        runs: Vec<String>,
+        /// Planned runs still installed with fewer components or other prompt answers.
+        changed_runs: Vec<String>,
+        /// The run whose installer failed, when that and not the download is the reason.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        failed_run: Option<String>,
+    },
+    /// A step asked the player a question about a download and the installation waits for the
+    /// answer; `check-decision` shows it and `decide` answers it, then the campaign resumes.
+    DecisionRequired {
+        /// Stable managed-install identity that can be resumed once answered.
+        install_id: String,
+        /// The step that asks.
+        step_id: String,
+        /// The question's id.
+        decision_id: String,
+    },
     /// Something went wrong, either inside a step or at the run level.
     Error {
         /// Step the error belongs to, or `None` for run-level errors.
@@ -193,6 +218,37 @@ impl ConsoleSink {
             } => format!(
                 "?? manual download needed for {mod_id}: {page} \
                  (drop into {drop_dir}, sha256 {expected_sha256})"
+            ),
+            EngineEvent::ArtifactLeftOut {
+                artifact_id,
+                reason,
+                runs,
+                changed_runs,
+                failed_run,
+            } => {
+                let why = if failed_run.is_some() {
+                    "its installer stopped with an error"
+                } else {
+                    "its download cannot be used"
+                };
+                let mut line = format!(
+                    "!! Leaving out {artifact_id}: {why} ({reason}). Not installed: {}",
+                    runs.join(", ")
+                );
+                if !changed_runs.is_empty() {
+                    line.push_str(&format!(
+                        "; installed with fewer parts: {}",
+                        changed_runs.join(", ")
+                    ));
+                }
+                line
+            }
+            EngineEvent::DecisionRequired {
+                install_id,
+                step_id,
+                decision_id,
+            } => format!(
+                "?? [{step_id}] Campaign {install_id} waits for the answer to question {decision_id}"
             ),
             EngineEvent::Error { step_id, message } => {
                 let step_id = step_id.as_deref().unwrap_or("-");
@@ -301,6 +357,13 @@ mod tests {
                 page: "https://example.invalid/bg1re".to_string(),
                 expected_sha256: "abc123".to_string(),
                 drop_dir: "downloads/manual".to_string(),
+            },
+            EngineEvent::ArtifactLeftOut {
+                artifact_id: "snowytoes".to_string(),
+                reason: "the archive layout changed".to_string(),
+                runs: vec!["snowytoes".to_string(), "needs-snowytoes".to_string()],
+                changed_runs: vec!["tweaks".to_string()],
+                failed_run: None,
             },
             EngineEvent::Error {
                 step_id: Some("eet/0".to_string()),

@@ -90,14 +90,11 @@ fn validate_context(ctx: &Context<'_>) -> Result<(), String> {
     }
     files::direct(&r.managed_root)?;
     files::direct(&ctx.game())?;
+    // No folder-name heuristic (such as `steamapps` or Program Files): what keeps an update
+    // inside a CEBG copy is that the root is a registered installation whose receipt matches.
     if !r.managed_root.is_absolute()
         || fs::canonicalize(&r.managed_root).map_err(err)? != r.managed_root
         || crate::preflight::is_creator_protected_destination(&r.managed_root)
-        || r.managed_root
-            .to_string_lossy()
-            .to_ascii_lowercase()
-            .split(['\\', '/'])
-            .any(|p| matches!(p, "steamapps" | "program files" | "program files (x86)"))
     {
         return Err("Updates require a separate, registered game folder.".into());
     }
@@ -121,6 +118,11 @@ fn validate_context(ctx: &Context<'_>) -> Result<(), String> {
 /// newly selected features merely because unrelated parts of the recipe changed.
 fn selected_version(ctx: &Context<'_>) -> Result<Option<String>, String> {
     let b = crate::cli::verify_installed_baseline(ctx.record).map_err(err)?;
+    // The route below reasons about the frozen plan's BuffBot run; without the mods that were
+    // left out, the installed mod list is not that plan.
+    if !b.receipt.left_out.is_empty() {
+        return Err("Some mods were left out of this installation because their downloads could not be used. Whole-mod updates are unavailable for this copy.".into());
+    }
     let Some(run) = b
         .receipt
         .plan
