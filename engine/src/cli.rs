@@ -35,7 +35,7 @@ use crate::games::{
 use crate::lock::LockError;
 use crate::manifest::{
     AcquisitionPolicy, ArchiveKind as ManifestArchiveKind, ArchiveRootRule, Artifact, Collection,
-    GameRoot, InvocationMode, ModFile, PresetFile,
+    ComponentRef, GameRoot, InvocationMode, ModFile, PresetFile,
 };
 use crate::orchestrator::{
     run_campaign_controlled, AcquisitionOutcome, AnsweredAcquisition, ArtifactAcquirer,
@@ -2148,10 +2148,17 @@ fn receipt_notes(receipt: &InstallReceipt, frozen: &FrozenCliRecipe) -> Vec<Stri
         .iter()
         .filter(|left_out| !answered_leave_out(&left_out.artifact_id))
     {
-        let mut note = format!(
-            "Left out: {}. Its download could not be used.",
-            artifact_name(&left_out.artifact_id)
-        );
+        let name = artifact_name(&left_out.artifact_id);
+        let mut note = match &left_out.failed_run {
+            None => format!("Left out: {name}. Its download could not be used."),
+            // Parts installed before the failure stay; the run is then among the changed runs.
+            Some(run_id) if left_out.changed_runs.contains(run_id) => format!(
+                "Installed {name} without some of its parts: its installer stopped with an error, so the installation continued without them."
+            ),
+            Some(_) => format!(
+                "Left out: {name}. Its installer stopped with an error, so the installation continued without it."
+            ),
+        };
         let (dependents, changed) = affected(
             &left_out.artifact_id,
             &left_out.runs,
@@ -2409,27 +2416,33 @@ fn validate_receipt_left_out(
                 artifact_id,
                 detail,
                 plan_sha256,
+                failed_run,
                 ..
-            } => Some((artifact_id, detail, plan_sha256)),
+            } => Some((
+                artifact_id,
+                detail,
+                plan_sha256,
+                failed_run.as_ref().map(|failed| &failed.run_id),
+            )),
             _ => None,
         })
         .collect::<Vec<_>>();
     if receipt.left_out.len() > recorded.len()
         || (succeeded && receipt.left_out.len() != recorded.len())
-        || receipt
-            .left_out
-            .iter()
-            .zip(&recorded)
-            .any(|(left_out, (artifact_id, detail, _))| {
-                &left_out.artifact_id != *artifact_id || &left_out.reason != *detail
-            })
+        || receipt.left_out.iter().zip(&recorded).any(
+            |(left_out, (artifact_id, detail, _, failed_run))| {
+                &left_out.artifact_id != *artifact_id
+                    || &left_out.reason != *detail
+                    || left_out.failed_run.as_ref() != *failed_run
+            },
+        )
     {
         return Err("left-out mods differ from the campaign ledger".to_owned());
     }
     match (&receipt.installed_plan, receipt.left_out.len()) {
         (None, 0) => Ok(()),
         (Some(plan), count) if count > 0 => {
-            let (_, _, plan_sha256) = recorded[count - 1];
+            let (_, _, plan_sha256, _) = recorded[count - 1];
             if plan_digest(plan).map_err(|error| error.to_string())? != *plan_sha256 {
                 return Err(
                     "installed plan differs from the one recorded when mods were left out"
@@ -4395,6 +4408,46 @@ impl<S: EventSink> ArtifactAcquirer for GuardedCliDependencies<'_, S> {
             &self.frozen.normalized_selection,
             plan,
             &left_out.iter().cloned().collect(),
+        )
+        .map_err(step_error)
+    }
+
+    fn plan_without_parts(
+        &mut self,
+        plan: &InstallPlan,
+        left_out: &[String],
+        failed: &[(String, Vec<u32>)],
+    ) -> Result<InstallPlan, StepFailure> {
+        let manifest = Manifest {
+            root: self
+                .created
+                .managed_root
+                .join(STATE_DIRECTORY)
+                .join("recipe"),
+            collection: self.frozen.collection.clone(),
+            artifacts: self.frozen.artifacts.clone(),
+            mods: self.frozen.mods.clone(),
+            presets: self.frozen.presets.clone(),
+        };
+        let mut parts = BTreeSet::new();
+        for (planned_run_id, components) in failed {
+            let run_id =
+                crate::recipe_view::recipe_run_id(&manifest, planned_run_id).ok_or_else(|| {
+                    StepFailure::new(format!(
+                        "planned run {planned_run_id:?} is not in the frozen recipe"
+                    ))
+                })?;
+            parts.extend(components.iter().map(|component| ComponentRef {
+                run_id: run_id.clone(),
+                component: *component,
+            }));
+        }
+        crate::recipe_view::plan_without_parts(
+            &manifest,
+            &self.frozen.normalized_selection,
+            plan,
+            &left_out.iter().cloned().collect(),
+            &parts,
         )
         .map_err(step_error)
     }

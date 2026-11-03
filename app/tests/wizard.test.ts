@@ -113,6 +113,11 @@ describe("Chriz Easy BG application flow", () => {
     expect(root.querySelector("pre")?.textContent).toContain(
       "Leaving out snowytoes: its download cannot be used (its official link now serves a different archive). Not installed: snowytoes-bg2. Installed with fewer parts: tweaks-bg2.",
     );
+    // A part whose installer failed is named for that, not for its download.
+    emit({ runId: "left-out-run", sequenceAsString: "2.5", event: { type: "artifact_left_out", artifact_id: "tweaks", reason: "its installer stopped with an error and did not install component 2 of run tweaks-bg2", runs: [], changed_runs: ["tweaks-bg2"], failed_run: "tweaks-bg2" } });
+    expect(root.querySelector("pre")?.textContent).toContain(
+      "Leaving out tweaks: its installer stopped with an error, so the installation continues without the parts that failed (its installer stopped with an error and did not install component 2 of run tweaks-bg2). Installed with fewer parts: tweaks-bg2.",
+    );
 
     emit({ runId: "left-out-run", sequenceAsString: "3", event: { type: "campaign_finished", install_id: "completed" } });
     // The engine's closing hint becomes the app's own: it says where diagnostics come from.
