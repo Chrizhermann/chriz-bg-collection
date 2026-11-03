@@ -99,7 +99,7 @@ A fresh installation of Chriz Easy IWD 0.1.5 (the recommended setup plus the EEe
 so BuffBot 1.12.6 is followed by one more mod), from the Steam IWD:EE 2.7.3.0, in its own
 application data folder; driven through `chriz-bg-install hotpatch`. The game folder (42,820
 files, 4.6 GB) was compared by a separate script after every step. A file in
-`override/bfbot_presets/` stood in for a player's exported preset. The game was not started.
+`override/bfbot_presets/` stood in for a player's exported preset.
 
 - Freshly installed, the hotpatch check offered nothing and refused nothing ("Allowed difference
   … EEex Remote Console added"). The update check offered 1.12.6 → 1.16.0 (GitHub's Latest), with
@@ -117,5 +117,10 @@ files, 4.6 GB) was compared by a separate script after every step. A file in
 - After the update the hotpatch check still refused nothing, and offered Undo of "BuffBot 1.16.0".
 - Undo took 18 seconds and gave the installed folder back byte for byte; the update was offered
   again. Applying it again gave exactly the first result.
-- Not covered: starting the game with the updated BuffBot, a real hotpatch after an update (the
+- Started through the quiet lab runner for two minutes (main menu, no save): the EEex Remote
+  Console answered `BfBot.VERSION=1.16.0`, with BuffBot's UI, Persist, Exec and Innate modules
+  loaded. Afterwards only runtime files had changed (BuffBot's panel backgrounds and innate
+  helpers, the loader's caches); the hotpatch check still refused nothing, and Undo of the update
+  was still offered.
+- Not covered: playing a save with the updated BuffBot, a real hotpatch after an update (the
   synthetic tests cover the records), another BuffBot language, and Chriz Easy BG.
