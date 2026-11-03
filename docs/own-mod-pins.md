@@ -152,10 +152,40 @@ $env:GH_TOKEN = (gh auth token --user Chrizhermann); python -I tools/prepare_own
   match, or an order that no longer fits. It stops before its first edit, or undoes its
   edits, so the tree is as it was. Exit code 1 is an error, 2 a wrong argument.
 
-## Next: the daily pin job
+## The daily pin job
 
 Christopher chose on 2026-10-28: a GitHub Actions job looks for new releases of our mods
-once a day, and on demand. It runs `tools/prepare_own_mod_pin.py` for each installer and
-opens a draft PR for his test. It never merges by itself. An agent still writes the
-changelog and catalog text and updates the tests that freeze the pin. This job is not
-built yet.
+once a day, and on demand, and opens draft pull requests for his test. It never merges,
+closes or approves anything.
+
+- **Where it runs:** `.github/workflows/own-mod-pin-job.yml` on `main`, because GitHub
+  runs scheduled workflows only from the default branch. It checks out the branch that the
+  repository variable `CEBG_NEXT_RELEASE_BRANCH` names and runs `tools/own_mod_pin_job.py`
+  from there. When a new next-release branch starts, set that variable to it.
+- **What it does:** for each of our mods whose newest release an installer lacks, it runs
+  `tools/prepare_own_mod_pin.py` in a fresh worktree of each installer's branch. It pushes
+  `own-mod-pin/<installers>/<mod>-<release>`, opens a draft pull request against that
+  installer's branch, and starts its checks. While Chriz Easy IWD lives on
+  `claude/iwdee-app`, one release gets two pull requests, which link each other.
+- **Every installer at once, or none:** each installer that is behind gets the release in
+  the same run. If one of them needs an agent, the job opens the issue "Pin <mod> <release>
+  by hand" with the reason, and no pull request at all.
+- **What stops a release** (the job summary gives the reason):
+  - a hold for that release;
+  - a newest release numbered below the pin, which starts a new line of the mod and is
+    Christopher's choice;
+  - an installer that pins the release in only some of its recipes;
+  - a pull request the job already opened for that release, open or closed; a closed one
+    is not opened again;
+  - an open pull request that already changes the mod's pin, until it is merged or
+    closed. The job's own pull request for an older release does not stop it; the new
+    one says which one it supersedes.
+- **After it opens a pull request:** an agent completes "Left for the agent" on its branch
+  (catalog, changelog draft, the tests that freeze the pin, the hold). Then Christopher
+  tests and merges, the pull request into the installer's own branch first.
+- **By hand:** Actions → Own mod pin job → Run workflow. `mod` limits it to one mod;
+  `dry_run` prepares and reports, but pushes, opens and starts nothing. Locally,
+  `python -I tools/own_mod_pin_job.py plan --next-release-branch <branch>` only reads.
+
+The job needs the repository setting "Allow GitHub Actions to create and approve pull
+requests" (Settings → Actions → General). Only Christopher changes it.

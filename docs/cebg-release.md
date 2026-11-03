@@ -10,7 +10,9 @@ Repository creation and publication are separate release actions.
 Before a release, every one of our own mods must be on its newest release in every
 installer that ships it, or held with Christopher's recorded reason. Run
 `python -I tools/own_mod_pins.py check --release` and keep its output in the acceptance
-record; see [our own mods](own-mod-pins.md).
+record; see [our own mods](own-mod-pins.md). When a new next-release branch starts, set
+the repository variable `CEBG_NEXT_RELEASE_BRANCH` to it: the daily pin job prepares its
+pull requests there.
 
 After a successful signed NSIS build, prepare its update files from PowerShell:
 
