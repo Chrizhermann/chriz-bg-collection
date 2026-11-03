@@ -69,6 +69,34 @@ describe("launcher support", () => {
     expect(diagnostics).toEqual(["ready"]);
   });
 
+  it("opens the installation's saves & portraits folder and says where portraits go", async () => {
+    const profilePath = "C:\\Users\\Player\\OneDrive\\Documents\\Chriz Easy BG - 0123456789ab";
+    const installation: ManagedInstallation = {
+      id: "ready", name: "Ready game", path: "D:\\CEBG", status: "Ready to play", receiptPath: null,
+      launchPath: "D:\\CEBG\\game\\InfinityLoader.exe", profilePath, completedAtMillis: 1, available: true, resumable: false,
+    };
+    const openProfileFolder = vi.fn();
+    const actions = {
+      begin: vi.fn(), launch: vi.fn(), openFolder: vi.fn(), openProfileFolder, resume: vi.fn(), select: vi.fn(),
+      createShortcut: vi.fn(), diagnostics: vi.fn(),
+    };
+    const root = homeScreen([installation], installation, actions);
+    document.body.append(root);
+
+    await userEvent.setup().click(getByRole(root, "button", { name: "Open saves & portraits folder" }));
+    expect(openProfileFolder).toHaveBeenCalledWith("ready");
+    expect(actions.openFolder).not.toHaveBeenCalled();
+    expect(getByText(root, profilePath)).toBeTruthy();
+    expect(getByText(root, /put portrait images into its portraits folder/)).toBeTruthy();
+
+    // Incomplete installations and older backends report no profile: no button, no claim.
+    for (const copy of [{ ...installation, profilePath: null }, { ...installation, profilePath: undefined }]) {
+      const plain = homeScreen([copy], copy, actions);
+      expect(queryByRole(plain, "button", { name: "Open saves & portraits folder" })).toBeNull();
+      expect(plain.textContent).not.toContain("portraits");
+    }
+  });
+
   it("does not make a BuffBot activation claim without an installed log row", () => {
     const installation: ManagedInstallation = {
       id: "plain", name: "Plain game", path: "D:\\CEBG", status: "Ready", receiptPath: null,
