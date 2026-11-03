@@ -1,7 +1,8 @@
 # Chriz Easy BG 0.1.1
 
-**Release candidate:** app 0.1.1 / collection 0.1.1, planned for 2026-11-03. Exact package
-and test results: [0.1.1 package verification](package-acceptance-0.1.1-2026-11-03.md).
+**Published:** app 0.1.1 / collection 0.1.1, on 2026-11-03.
+[Download and release page](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.1).
+Exact package and test results: [0.1.1 package verification](package-acceptance-0.1.1-2026-11-03.md).
 
 0.1.1 makes the installer ask instead of stopping, opens CEBG to GOG, Beamdog and other
 Windows copies of the games, and adds a button for your saves and portraits. The
@@ -105,6 +106,11 @@ These installer changes work as soon as you update CEBG.
 
 ## Known issues
 
+- **Without Spell Revisions, a new installation stops at BG Rebalance.** Its Flail of the
+  Ages component does not recognize the Slow and Haste spells SCS writes when Spell
+  Revisions is missing. Keep Spell Revisions ticked in **Customize** until 0.1.2, which
+  fixes this, or untick **Flail of the Ages balance** there. The recommended setup and every
+  installation with Spell Revisions are not affected.
 - No GOG, Beamdog or Microsoft Store copy has been tested in a full installation yet; the
   checks follow the stores' documented layouts.
 - Marek's two fights and the dagger drop have not been played in a game yet; the

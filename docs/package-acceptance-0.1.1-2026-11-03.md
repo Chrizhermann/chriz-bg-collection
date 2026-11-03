@@ -3,9 +3,9 @@
 App **0.1.1**, bundled collection **0.1.1**. Build source:
 `f8554418dc3a73401b9719b27a24ac8488de8b32` (PR #98), merged into the next-release branch
 as `161bb72e9b12efc04a59153c6b0d5672d88a03d6` with an identical tree (`c8503494…`), so
-the package corresponds to the branch at that merge. This is a release candidate for
-Christopher's own test; nothing is tagged, published or uploaded. Later documentation does
-not alter the verified package.
+the package corresponds to the branch at that merge. Published on 2026-11-03 (UTC) after
+Christopher's OK; see [Publication](#publication). Later documentation does not alter the
+verified package.
 
 ## What this release changes
 
@@ -122,21 +122,83 @@ No game, lab, stream installation or saved game was touched.
 These are bounded clean-scan results, not a Microsoft guarantee or a Windows Authenticode
 publisher certificate.
 
-## Before publication
+## Lab install
 
-- Christopher's own test of this candidate, and his OK.
-- The lab install of this setup, with the Recommended selection.
-- None of the new paths has been tried live from a released setup yet:
-  - the download and modded-game questions;
-  - a failed optional mod left out;
-  - a GOG, Beamdog or Microsoft Store copy;
-  - Marek's fights and the dagger drop.
-- If publication slips past 2026-11-04 00:00 UTC, rebuild with the real publication date
-  in the ledger.
-- The Updates page does not show the ledger's changes in this app version: its update check
-  returns an empty change list for the collection, and the signed recipe channel that would
-  fill it is not configured. The release notes say so.
-- Not in this candidate: #53 (own-mod pin check), still open against the next-release
-  branch.
-- The README describes 0.1.0 as the published release and the `alpha` channel as serving
-  it; update both lines together with the website at publication.
+On 2026-11-03 this setup installed the Recommended selection into a disposable lab without
+errors: 69 runs, 468 components, the same set as the inventory above.
+
+- Checked in the lab:
+  - Marek drops the Boomerang Dagger +2 when killed from the console.
+  - True Time Stop holds a weapon poison for about 18 seconds.
+  - A slowed creature still takes its poison damage every second.
+  - BG1 NPC Project is not installed.
+- At load the game reports five missing files, the same five as 0.1.0.
+- Not checked in the lab: Marek's fights in the story (checked in the files only), the
+  Radar overlay and the saves & portraits button.
+
+## Publication
+
+Christopher OK'd the publication on 2026-11-04 (03:12 KST, 18:12 UTC on 2026-11-03), with
+the Spell Revisions known issue below in the release notes. It went out before 2026-11-04
+00:00 UTC, so the ledger's publication date stands.
+
+**Own-mods release check.** `tools/own_mod_pins.py check --release` ran on 2026-11-03 at
+18:29:45 UTC. Its tree was the next-release branch at `a0b16e6` with the BuffBot hold from
+this PR, and Chriz Easy IWD was read from `claude/iwdee-app` at `cabb8f2`. Exit 0:
+
+| Mod | Chriz Easy BG | Chriz Easy IWD | Newest | State |
+|---|---|---|---|---|
+| BuffBot | v1.12.6 | v1.12.6 | v1.15.0 | held |
+| Chriz BG Modpack | v0.2.0-alpha.15 | – | v0.2.0-alpha.15 | newest |
+| BG Rebalance | v0.8.9 | – | v0.8.9 | newest |
+| SoD Remix | v0.6.16 | – | v0.6.16 | newest |
+| EEex Remote Console | v0.2.1 (3d9899076) | v0.2.1 (3d9899076) | v0.2.1 | newest |
+| Voicepacks | v1.1.0 | – | v1.1.0 | newest |
+| Chriz IWD Encounters | – | v0.1.0 | v0.1.0 | newest |
+| Artisan's Kitpack (our fork) | v4.81a-dev.85928f9-chriz.6 | – | v4.81a-dev.85928f9-chriz.6 | newest |
+| Bardic Wonders (our fork) | v2.9c-balance.8 | – | v2.9c-balance.8 | newest |
+| Spell Revisions (our fork) | v4.21-chriz.7 | – | v4.21-chriz.7 | newest |
+| Item Randomiser (our fork) | v8.1.1 | – | v1.0.3 | held |
+
+- **BuffBot v1.15.0 is held** (Christopher, 2026-11-04). 0.1.1 ships v1.12.6, the version
+  he tested it with; v1.15.0 goes into both installers for 0.1.2.
+- The check, the pin tool and the daily pin job (#53, #55, #72) merged into the
+  next-release branch after this build. They change tooling and documentation only: between
+  `161bb72` and `a0b16e6`, `manifest/` and `recipes/` differ only in the new
+  `manifest/own-mods.toml`, which the app does not read.
+
+**Release.** [v0.1.1](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.1)
+was published on 2026-11-03 at 18:29:55 UTC: a normal release, marked Latest, with the
+seven files above. An anonymous download of all seven matched:
+
+- the setup, its signature and the feed, with the SHA-256 values above;
+- the inventory `74d51f1c…`;
+- `LICENSE` `b414bdb5…`;
+- `SHA256SUMS` `c45b7669…`;
+- `THIRD_PARTY_NOTICES.md` `46e789c7…`.
+
+**Update channel.** Since 18:30:44 UTC the `alpha` release's `latest.json` is the 0.1.1
+feed. An anonymous download returned `d1261567…`, the same file as the release asset. The
+0.1.0 feed stays as the rollback copy.
+
+**Known issue added at publication.** Without Spell Revisions, a new installation stops at
+BG Rebalance `302` (Flail of the Ages balance).
+- Cause: SCS writes its own Slow and Haste spells when Spell Revisions is missing, and
+  v0.8.9 does not recognize them. The script-engine session's lab without Spell Revisions
+  found it on 2026-11-03.
+- A second lab without Spell Revisions and with `302` off finished cleanly (450
+  components).
+- Workaround: keep Spell Revisions ticked, or untick Flail of the Ages balance.
+- Fix: BG Rebalance v0.8.10, for 0.1.2 (Christopher, 2026-11-04).
+
+**Website.** The update for 0.1.1 is handed to the website chat.
+
+**Not tried live from a released setup yet:**
+- the download and modded-game questions;
+- a failed optional mod left out;
+- a GOG, Beamdog or Microsoft Store copy;
+- Marek's fights in the story.
+
+The Updates page does not show the ledger's changes in this app version. Its update check
+returns an empty change list for the collection, and the signed recipe channel that would
+fill it is not configured. The release notes say so.

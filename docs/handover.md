@@ -2,7 +2,26 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
-## November 3 — 0.1.1 release candidate
+## November 3 — 0.1.1 published
+
+**Published** on 2026-11-03 at 18:29:55 UTC, with Christopher's OK of 2026-11-04 (03:12
+KST):
+- the [v0.1.1 release](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.1),
+  marked Latest;
+- the `alpha` update feed, serving 0.1.1 since 18:30:44 UTC;
+- the website, handed to its own chat.
+
+Details: [Publication](package-acceptance-0.1.1-2026-11-03.md#publication).
+
+- **BuffBot v1.15.0 is held for 0.1.2** (Christopher, 2026-11-04), recorded in
+  `manifest/own-mods.toml`. 0.1.1 ships the tested v1.12.6.
+- **Known issue:** without Spell Revisions, a new installation stops at BG Rebalance
+  `302`. BG Rebalance v0.8.10 fixes it, for 0.1.2.
+- **Next:**
+  - pin BG Rebalance v0.8.10 and BuffBot v1.15.0 for 0.1.2;
+  - the release line goes back into `main`, which Christopher decides.
+
+### The candidate
 
 Branch `claude/release-0.1.1`, from the next-release branch at `c6279f9` (#97), sets the
 app to **0.1.1** in the five files the 0.1.0 bump changed and refreshes the notices'
@@ -17,8 +36,7 @@ since 0.1.0:
 - the saves & portraits folder button (#82);
 - BG1 NPC Project optional (#88) and Marek's Boomerang Dagger (#97).
 
-Christopher OK'd building and testing the candidate (2026-11-03); publishing waits for his
-test and his OK. Nothing is tagged, published or uploaded.
+Christopher OK'd building and testing the candidate (2026-11-03).
 
 PR #98 merged as `161bb72`. The signed setup is built from its head `f855441`, whose tree
 the merge commit keeps unchanged: 6,413,423 bytes, SHA-256
@@ -32,8 +50,7 @@ passed:
 
 The setup, its signature, the feed and the other release files are in Christopher's test
 folder, with the prepared `alpha` channel feed and the 0.1.0 feed as its rollback copy.
-Exact results: [0.1.1 package verification](package-acceptance-0.1.1-2026-11-03.md). If
-publication slips past 2026-11-04 00:00 UTC, rebuild with the real date in the ledger.
+Exact results: [0.1.1 package verification](package-acceptance-0.1.1-2026-11-03.md).
 
 ## November 3 — questions about changed or unusable downloads (PR 80, for 0.1.1)
 
