@@ -9,6 +9,8 @@ export interface HomeActions {
   readonly launch: (installId: string, startRadar: boolean) => void | Promise<void>;
   readonly setStartRadar?: (installId: string, enabled: boolean) => void;
   readonly openFolder: (installId: string) => void | Promise<void>;
+  /** Opens the isolated game profile in Documents, where saves and custom portraits live. */
+  readonly openProfileFolder?: (installId: string) => void | Promise<void>;
   readonly resume: (installId: string) => void | Promise<void>;
   readonly select: (installId: string) => void | Promise<void>;
   readonly createShortcut: (installId: string) => void | Promise<void>;
@@ -79,6 +81,7 @@ function installationDetails(installation: ManagedInstallation): HTMLDetailsElem
   };
   appendRow("Install location", installation.path);
   appendRow("Game launcher", installation.launchPath);
+  appendRow("Saves & portraits", installation.profilePath ?? null);
   appendRow("Installation receipt", installation.receiptPath);
   appendRow("Collection version", installation.recipeVersion ?? null);
   appendRow("BG Radar Overlay", installation.radarVersion ?? null);
@@ -145,6 +148,9 @@ export function firstPlayGuide(installation: ManagedInstallation): HTMLDetailsEl
       && component.tp2.replaceAll("\\", "/").toLowerCase().includes("buffbot/"));
   if (buffBotInstalled) {
     steps.append(element("li", undefined, "In game, press F11 to open BuffBot and choose the buffs you want automated."));
+  }
+  if (installation.profilePath) {
+    steps.append(element("li", undefined, "Saves and custom portraits are kept in this installation's own folder in Documents. Open saves & portraits folder takes you there; put portrait images into its portraits folder."));
   }
   if (installation.radarVersion) {
     steps.append(element("li", undefined, `BG Radar Overlay ${installation.radarVersion} is installed. Select Start Radar with the game before pressing Play if you want to use it. Windows may ask for administrator approval. Its executable is in the BG Radar Overlay folder inside the game folder.`));
@@ -232,6 +238,12 @@ export function homeScreen(
     controls.append(
       play,
       actionButton("Open game folder", () => actions.openFolder(selected.id), "quiet"),
+    );
+    const openProfileFolder = actions.openProfileFolder;
+    if (selected.profilePath && openProfileFolder) {
+      controls.append(actionButton("Open saves & portraits folder", () => openProfileFolder(selected.id), "quiet"));
+    }
+    controls.append(
       actionButton(
         currentFeedback?.state === "created"
           ? "Recreate desktop shortcut"

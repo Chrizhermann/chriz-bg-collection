@@ -240,6 +240,8 @@ struct FakeBridgeEngine {
     install_released: Mutex<bool>,
     profile_repairs: Mutex<Vec<String>>,
     profile_repair_result: Mutex<Result<bool, String>>,
+    profile_folders: Mutex<Vec<String>>,
+    profile_folder_error: Mutex<Option<String>>,
     /// The question a campaign waits for, as the engine would report it.
     decision: Mutex<Option<bg_engine::cli::DecisionStatus>>,
     /// Every answer stored.
@@ -262,6 +264,8 @@ impl FakeBridgeEngine {
             install_released: Mutex::new(false),
             profile_repairs: Mutex::new(Vec::new()),
             profile_repair_result: Mutex::new(Ok(false)),
+            profile_folders: Mutex::new(Vec::new()),
+            profile_folder_error: Mutex::new(None),
             decision: Mutex::new(None),
             answers: Mutex::new(Vec::new()),
             resume_status: Mutex::new(None),
@@ -447,6 +451,17 @@ impl BridgeEngine for FakeBridgeEngine {
             .unwrap()
             .push(record.install_id.clone());
         self.profile_repair_result.lock().unwrap().clone()
+    }
+
+    fn prepare_profile_folder(&self, record: &ManagedInstallRecord) -> Result<PathBuf, String> {
+        self.profile_folders
+            .lock()
+            .unwrap()
+            .push(record.install_id.clone());
+        match self.profile_folder_error.lock().unwrap().as_ref() {
+            Some(error) => Err(error.clone()),
+            None => Ok(record.managed_save_root.clone()),
+        }
     }
 
     fn discover(&self, _recipe: &Path) -> Result<Vec<GameCandidate>, bg_engine::cli::CliError> {
@@ -1659,12 +1674,58 @@ fn destination_checks_use_registered_candidates_and_never_create_the_target() {
     fs::create_dir(&occupied).expect("create occupied destination");
     fs::write(occupied.join("existing.txt"), b"owned by somebody else")
         .expect("write occupied fixture");
-    let occupied_error = bridge.inspect_destination(
-        &occupied,
-        &discovery.selected_bg1_id,
-        &discovery.selected_bg2_id,
+    let occupied_inspected = bridge
+        .inspect_destination(
+            &occupied,
+            &discovery.selected_bg1_id,
+            &discovery.selected_bg2_id,
+        )
+        .expect("a folder with files gets a new folder inside it");
+    assert!(occupied_inspected.safe);
+    assert_eq!(occupied_inspected.title, "Ready to install");
+    assert_eq!(
+        occupied_inspected.path,
+        display_windows_path(&occupied.canonicalize().unwrap().join("Chriz Easy BG")).unwrap()
     );
-    assert_eq!(occupied_error.unwrap_err().code, "destination_unsafe");
+    assert_eq!(
+        occupied_inspected.note.as_deref(),
+        Some("This folder already has files, so CEBG installs into a new folder inside it.")
+    );
+    assert!(!occupied.join("Chriz Easy BG").exists());
+    assert_eq!(
+        fs::read(occupied.join("existing.txt")).unwrap(),
+        b"owned by somebody else"
+    );
+
+    // Taken names, folders or files alike, are skipped.
+    fs::create_dir(occupied.join("Chriz Easy BG")).unwrap();
+    fs::write(occupied.join("Chriz Easy BG (2)"), b"a file").unwrap();
+    let numbered = bridge
+        .inspect_destination(
+            &occupied,
+            &discovery.selected_bg1_id,
+            &discovery.selected_bg2_id,
+        )
+        .expect("the next free folder name");
+    assert_eq!(
+        numbered.path,
+        display_windows_path(&occupied.canonicalize().unwrap().join("Chriz Easy BG (3)")).unwrap()
+    );
+
+    // A file is still no install folder.
+    let file = cache.parent().unwrap().join("a-file");
+    fs::write(&file, b"not a folder").unwrap();
+    assert_eq!(
+        bridge
+            .inspect_destination(
+                &file,
+                &discovery.selected_bg1_id,
+                &discovery.selected_bg2_id
+            )
+            .unwrap_err()
+            .code,
+        "destination_unsafe"
+    );
 
     let inspected = bridge
         .inspect_destination(
@@ -1676,7 +1737,109 @@ fn destination_checks_use_registered_candidates_and_never_create_the_target() {
     assert!(inspected.safe);
     assert_eq!(inspected.title, "Ready to install");
     assert!(inspected.detail.contains("will create this folder"));
+    assert_eq!(inspected.note, None);
     assert!(!missing_parent.exists());
+}
+
+#[test]
+fn a_steam_or_program_files_destination_warns_but_stays_usable() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let cache = recipe.parent().unwrap().join("cache");
+    fs::create_dir(&cache).expect("create cache fixture");
+    let bg1 = recipe.parent().unwrap().join("clean-bg1");
+    let bg2 = recipe.parent().unwrap().join("clean-bg2");
+    fs::create_dir(&bg1).expect("create BG1 fixture");
+    fs::create_dir(&bg2).expect("create BG2 fixture");
+    let engine = Arc::new(FakeBridgeEngine::new(bg1, bg2));
+    let bridge = NativeBridge::with_engine(recipe.clone(), "recommended", &cache, engine);
+    let discovery = bridge.discover_games().expect("register discovered games");
+
+    for folder in [
+        "SteamLibrary/steamapps/common/Chriz Easy BG",
+        "Program Files/Chriz Easy BG",
+        "Program Files (x86)/Chriz Easy BG",
+    ] {
+        let destination = recipe.parent().unwrap().join(folder);
+        let inspected = bridge
+            .inspect_destination(
+                &destination,
+                &discovery.selected_bg1_id,
+                &discovery.selected_bg2_id,
+            )
+            .unwrap_or_else(|error| panic!("{folder}: {error:?}"));
+        assert!(inspected.safe, "{folder}");
+        assert_eq!(inspected.title, "Ready to install");
+        let note = inspected.note.expect("a warning about the folder");
+        assert!(note.contains("Steam or Windows may change files"), "{note}");
+        assert!(note.contains("a folder elsewhere is safer"), "{note}");
+        assert!(inspected.detail.contains(&note), "{}", inspected.detail);
+        assert!(!destination.exists());
+    }
+    let ordinary = bridge
+        .inspect_destination(
+            &recipe
+                .parent()
+                .unwrap()
+                .join("Games/steam-free/Chriz Easy BG"),
+            &discovery.selected_bg1_id,
+            &discovery.selected_bg2_id,
+        )
+        .unwrap();
+    assert_eq!(ordinary.note, None);
+}
+
+#[test]
+fn a_folder_with_files_is_frozen_and_started_as_its_new_inner_folder() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let cache = recipe.parent().unwrap().join("cache");
+    fs::create_dir(&cache).expect("create cache fixture");
+    let bg1 = recipe.parent().unwrap().join("clean-bg1");
+    let bg2 = recipe.parent().unwrap().join("clean-bg2");
+    fs::create_dir(&bg1).expect("create BG1 fixture");
+    fs::create_dir(&bg2).expect("create BG2 fixture");
+    let chosen = recipe.parent().unwrap().join("Games");
+    fs::create_dir(&chosen).unwrap();
+    fs::write(chosen.join("other game.txt"), b"the player's").unwrap();
+    let engine = Arc::new(FakeBridgeEngine::new(bg1, bg2));
+    let bridge = NativeBridge::with_engine(recipe, "recommended", &cache, engine.clone());
+    let discovery = bridge.discover_games().expect("register discovered games");
+    let inspected = bridge
+        .inspect_destination(
+            &chosen,
+            &discovery.selected_bg1_id,
+            &discovery.selected_bg2_id,
+        )
+        .unwrap();
+    let inner = chosen.canonicalize().unwrap().join("Chriz Easy BG");
+    assert_eq!(inspected.path, display_windows_path(&inner).unwrap());
+
+    // The app freezes the path the inspection answered; the start re-inspects it unchanged.
+    let review = bridge
+        .freeze_review(
+            "Chriz Easy BG",
+            &NormalizedSelection {
+                platform: "windows".to_owned(),
+                features: Default::default(),
+                inputs: Default::default(),
+            },
+            Path::new(&inspected.path),
+            &discovery.selected_bg1_id,
+            &discovery.selected_bg2_id,
+        )
+        .expect("freeze review");
+    assert!(
+        Path::new(&review.destination).ends_with("Games/Chriz Easy BG"),
+        "{}",
+        review.destination
+    );
+    bridge
+        .start_build(&review.review_token, |_| {})
+        .expect("start the frozen inner folder");
+    engine.release_install();
+    assert_eq!(
+        fs::read(chosen.join("other game.txt")).unwrap(),
+        b"the player's"
+    );
 }
 
 #[test]
@@ -2028,7 +2191,7 @@ fn managed_actions_reload_only_the_exact_available_registry_identity() {
         "recommended",
         cache,
         app_data,
-        engine,
+        engine.clone(),
         system.clone(),
     );
     let cards = bridge.list_managed_installations().unwrap();
@@ -2062,9 +2225,16 @@ fn managed_actions_reload_only_the_exact_available_registry_identity() {
         .unwrap()
         .starts_with(r"\\?\"));
     assert_eq!(cards[0].completed_at_millis, Some(1));
+    let save_root = managed.parent().unwrap().join("saves");
+    let expected_profile = display_windows_path(&save_root).unwrap();
+    assert_eq!(
+        cards[0].profile_path.as_deref(),
+        Some(expected_profile.as_str())
+    );
 
     bridge.launch_install("install-task23", false).unwrap();
     bridge.open_install_folder("install-task23").unwrap();
+    bridge.open_profile_folder("install-task23").unwrap();
     assert_eq!(
         system.launches.lock().unwrap().as_slice(),
         &[(
@@ -2074,7 +2244,11 @@ fn managed_actions_reload_only_the_exact_available_registry_identity() {
     );
     assert_eq!(
         system.folders.lock().unwrap().as_slice(),
-        &[canonical_managed]
+        &[canonical_managed, save_root]
+    );
+    assert_eq!(
+        engine.profile_folders.lock().unwrap().as_slice(),
+        ["install-task23"]
     );
     assert_eq!(
         bridge
@@ -2833,6 +3007,40 @@ fn stale_managed_install_is_listed_but_cannot_be_launched_or_opened() {
             .code,
         "managed_install_stale"
     );
+    assert_eq!(
+        bridge
+            .open_profile_folder("install-stale")
+            .unwrap_err()
+            .code,
+        "managed_install_stale"
+    );
+}
+
+#[test]
+fn profile_folder_opens_only_after_the_engine_proves_it_belongs_to_the_install() {
+    let fixture = RadarLaunchFixture::new();
+    assert_eq!(
+        fixture
+            .bridge
+            .open_profile_folder("not-a-registry-id")
+            .unwrap_err()
+            .code,
+        "managed_install_unknown"
+    );
+    assert!(fixture.engine.profile_folders.lock().unwrap().is_empty());
+
+    *fixture.engine.profile_folder_error.lock().unwrap() =
+        Some("ownership marker belongs to a different managed installation".to_owned());
+    let error = fixture
+        .bridge
+        .open_profile_folder("radar-fixture")
+        .unwrap_err();
+    assert_eq!(error.code, "profile_folder_unavailable");
+    assert_eq!(
+        fixture.engine.profile_folders.lock().unwrap().as_slice(),
+        ["radar-fixture"]
+    );
+    assert!(fixture.system.folders.lock().unwrap().is_empty());
 }
 
 #[test]

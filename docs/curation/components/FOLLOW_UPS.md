@@ -607,6 +607,15 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Christopher's own Elementalist Druid mod: the design continues right after alpha.22
   (Christopher, 2026-10-25). A design record from May/June 2026 exists; which sprites
   the forms use is still open.
+- Open saves & portraits folder
+  ([PR #82](https://github.com/Chrizhermann/chriz-bg-collection/pull/82), 2026-11-02): a
+  YouTube viewer could not find where custom portraits go. Each installation keeps its
+  saves and portraits in its own Documents folder, `<installation name> - <12-character
+  code>`, and the game never creates the `portraits` folder there. My installs gets a
+  button that creates it and opens the folder, the folder's path under Installation
+  details and a first-play tip. It goes into 0.1.1, the release after 0.1.0 (Christopher,
+  2026-11-02), through the next-release branch. Still open: Chriz Easy IWD
+  (`claude/iwdee-app`) needs the same change afterwards.
 - Fewer installer stops in both installers, as quick patches after the release (blocker
   audit of 2026-10-30; Christopher: as few blockers as possible, only PC and source-game
   safety stays strict):
@@ -621,6 +630,14 @@ Cross-repository status. Component detail stays in the sections below and in the
   Also: manual downloads (Evandra) accept a newer version, as #69 does for links. GOG,
   other game versions and non-English games install with a warning instead of stopping
   (Christopher, 2026-10-30).
+  Chriz Easy BG, for 0.1.1 (2026-11-03): all of it is in a stack of five PRs from the
+  `claude/fewer-blockers-*` branches into the next-release branch, awaiting Christopher's
+  review and merge OK (sources, retries, optional runs, manual downloads, environment).
+  On Christopher's request of 2026-11-03 the game check also finds GOG (registry records
+  and default folders) and Beamdog client copies and installs from them with a "less
+  tested" warning, and names a Microsoft Store folder as protected. Steam 2.7.3.0 in
+  English stays the tested setup. Not yet in the IWD app; Mac and Linux (Proton/Wine) are a
+  later research item.
 - Balance, close to vanilla (Christopher, 2026-10-30), collected as "Chris Revisions" (the
   name BG Rebalance `340` already carries). His line: characters, items, encounters and
   spells may be a little unbalanced, but neither too strong nor too weak: no must-haves or

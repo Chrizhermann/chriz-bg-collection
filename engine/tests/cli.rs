@@ -410,7 +410,7 @@ fn install_request(fixture: &ExecutableFixture) -> InstallCommandRequest {
 
 #[cfg(windows)]
 #[test]
-fn display_name_is_validated_and_frozen_into_the_review_identity() {
+fn display_name_is_sanitized_and_frozen_into_the_review_identity() {
     let fixture = executable_fixture();
     let first = install_request(&fixture);
     let mut renamed = first.clone();
@@ -426,24 +426,29 @@ fn display_name_is_validated_and_frozen_into_the_review_identity() {
     );
     assert_eq!(renamed_review.display_name, "My Baldur's Gate");
 
-    for invalid in [
-        "",
-        "   ",
-        "Line\nBreak",
-        "Bad<Name",
-        "Bad>Name",
-        "Bad:Name",
-        "Bad\"Name",
-        "Bad/Name",
-        "Bad\\Name",
-        "Bad|Name",
-        "Bad?Name",
-        "Bad*Name",
+    // Names Windows could not use for a folder are saved in a usable form, never refused.
+    let long = "a".repeat(100);
+    for (typed, frozen) in [
+        ("", "Chriz Easy BG"),
+        ("   ", "Chriz Easy BG"),
+        ("...", "Chriz Easy BG"),
+        ("Line\nBreak", "LineBreak"),
+        ("Bad<Name", "Bad-Name"),
+        ("Bad>Name", "Bad-Name"),
+        ("Bad:Name", "Bad-Name"),
+        ("Bad\"Name", "Bad-Name"),
+        ("Bad/Name", "Bad-Name"),
+        ("Bad\\Name", "Bad-Name"),
+        ("Bad|Name", "Bad-Name"),
+        ("Bad?Name", "Bad-Name"),
+        ("Bad*Name", "Bad-Name"),
+        (long.as_str(), &long[..80]),
     ] {
         let mut request = first.clone();
-        request.display_name = invalid.to_owned();
-        let error = review_install(&request).expect_err("invalid display name must fail closed");
-        assert_eq!(error.code(), "invalid_display_name", "accepted {invalid:?}");
+        request.display_name = typed.to_owned();
+        let review = review_install(&request)
+            .unwrap_or_else(|error| panic!("{typed:?} was refused: {error}"));
+        assert_eq!(review.display_name, frozen, "{typed:?}");
     }
 
     let mut unicode = first;
@@ -2143,6 +2148,75 @@ fn resume_rejects_a_requested_install_id_that_does_not_match_the_ledger() {
     assert_eq!(error.code(), "resume_identity_mismatch");
 }
 
+/// Only a disk that would certainly fill up stops the installation: the copied games and the
+/// exact downloads. With exactly that much free, the rest of the estimate (the archives'
+/// extraction maxima and the margin) is short, so the installation warns and continues.
+#[cfg(windows)]
+#[test]
+fn disk_space_stops_only_below_the_certain_need_and_otherwise_warns_and_continues() {
+    let fixture = executable_fixture();
+    let stopped = executable_command(&fixture)
+        .env("CHRIZ_BG_COLLECTION_TEST_AVAILABLE_SPACE", "1")
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ))
+        .output()
+        .expect("execute synthetic install without space");
+    assert_eq!(stopped.status.code(), Some(1), "{}", stdout(&stopped));
+    let response = json_stdout(&stopped);
+    assert_eq!(response["status"]["step_id"], "preflight", "{response}");
+    let text = response.to_string();
+    let certain: u64 = text
+        .split("insufficient disk space: need ")
+        .nth(1)
+        .and_then(|rest| rest.split(' ').next())
+        .and_then(|bytes| bytes.parse().ok())
+        .unwrap_or_else(|| panic!("no certain need in {text}"));
+    assert!(text.contains("have 1 bytes"), "{text}");
+    assert!(!fixture.managed.join(".chriz/install-receipt.json").exists());
+
+    let resumed = executable_command(&fixture)
+        .env(
+            "CHRIZ_BG_COLLECTION_TEST_AVAILABLE_SPACE",
+            certain.to_string(),
+        )
+        .args(["--json", "resume", fixture.managed.to_str().unwrap()])
+        .output()
+        .expect("resume with exactly the certain need free");
+    assert!(
+        resumed.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&resumed),
+        stderr(&resumed)
+    );
+    let response = json_stdout(&resumed);
+    assert_eq!(response["status"]["status"], "complete");
+    let warnings = response["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|event| event["type"] == "console_line" && event["step_id"] == "preflight")
+        .map(|event| event["line"].as_str().unwrap().to_owned())
+        .collect::<Vec<_>>();
+    assert_eq!(warnings.len(), 1, "{warnings:?}");
+    assert!(
+        warnings[0].starts_with("Disk space is tight"),
+        "{warnings:?}"
+    );
+    assert!(warnings[0].contains("upper bound"), "{warnings:?}");
+    assert!(
+        warnings[0].contains("the installation continues"),
+        "{warnings:?}"
+    );
+    assert!(fixture
+        .managed
+        .join(".chriz/install-receipt.json")
+        .is_file());
+}
 #[cfg(windows)]
 #[test]
 fn install_executes_the_frozen_recipe_and_publishes_complete_durable_evidence() {

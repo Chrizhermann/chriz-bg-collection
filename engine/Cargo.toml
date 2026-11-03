@@ -22,6 +22,10 @@ test-documents = []
 # Test builds only, through the dev-dependency below: the installer honors the environment
 # variables its tests use to declare running programs and simulate failures and interruptions.
 test-hooks = []
+# Debug and test builds always, release builds only with this feature: the installer refuses the
+# collection creator's own reference folders as destinations. Release player builds leave it off,
+# so they carry none of the owner's folder names.
+creator-guards = []
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -64,9 +68,9 @@ windows-sys = { version = "0.61", features = [
 ] }
 
 [dev-dependencies]
-# Every test build of this crate, its binaries included, runs with `test-documents` and
-# `test-hooks`.
-chriz-bg-engine = { path = ".", features = ["test-documents", "test-hooks"] }
+# Every test build of this crate, its binaries included, runs with `test-documents`,
+# `test-hooks` and `creator-guards`.
+chriz-bg-engine = { path = ".", features = ["test-documents", "test-hooks", "creator-guards"] }
 minisign = "0.9.1"
 tiny_http = "0.12"
 sevenz-rust2 = { version = "0.22.2", default-features = false, features = ["compress", "util"] }
