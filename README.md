@@ -8,25 +8,28 @@ The goal is a polished experience for players, not another expert-only mod manag
 finds supported clean games, starts with the recommended collection choices, builds a
 separate installation, verifies the result, and reopens later as a simple launcher.
 
-## Current development status (2026-11-02)
+## Current development status (2026-11-03)
 
-App and collection **0.1.0** are published (2026-11-02), the first release without the
-alpha label: a new recommended mod setup for fresh installations, with True Time Stop,
-druid and Alaghor weapons, Sirene in BG1 and SoD, player voicepacks and updated mods,
-and installer fixes for virus scanners, uninstalling and slow downloads. See the
-[changelog](docs/release-notes-0.1.0.md) and the
-[package verification](docs/package-acceptance-0.1.0-2026-11-02.md).
+App and collection **0.1.1** are published (2026-11-03): the installer asks instead of
+stopping when a download changed or cannot be used or the game looks modded, leaves out
+optional mods that fail, installs from GOG, Beamdog and other Windows copies with a
+warning, and opens the saves and portraits folder. Marek carries the Boomerang Dagger +2,
+and BG1 NPC Project is optional. See the [changelog](docs/release-notes-0.1.1.md) and the
+[package verification](docs/package-acceptance-0.1.1-2026-11-03.md). 0.1.0 (2026-11-02):
+[changelog](docs/release-notes-0.1.0.md).
 
 Get the installer and guide from [the collection page](https://bg.chrizfader.org/collection),
 or [public releases](https://github.com/Chrizhermann/chriz-easy-bg/releases).
 Each release records its package, tested scope and known limitations; source changes
 do not by themselves establish that a new binary has been published.
-Supported source games are clean English Steam BG:EE + SoD and BGII:EE 2.7.3 installations.
+The tested source games are clean English Steam BG:EE + SoD and BGII:EE 2.7.3
+installations; other versions, languages and GOG, Beamdog or other Windows copies install
+as "Less tested", with a warning.
 
 CEBG currently provides:
 
-- automatic game discovery plus clear clean-source checks for the currently verified Steam
-  2.7.3 builds;
+- automatic game discovery plus clear clean-source checks for the verified Steam 2.7.3
+  builds, and a warning that names the difference for every other copy;
 - an install-first UI with recommended choices already selected;
 - verified downloads and guided handling of the few manually supplied archives;
 - a separate, resumable game installation with an immutable receipt and diagnostics;
@@ -36,7 +39,7 @@ CEBG currently provides:
 - separate application, recipe, and installation update guidance without unsafe in-place
   WeiDU surgery.
 
-The public updater channel (named `alpha`) serves 0.1.0. Packages carry Tauri updater signatures;
+The public updater channel (named `alpha`) serves 0.1.1. Packages carry Tauri updater signatures;
 the current signing setup does **not provide Windows Authenticode**, so Windows may show
 an unknown publisher. Follow the
 [alpha.19 acceptance note](docs/package-acceptance-alpha19-2026-09-22.md) for the local

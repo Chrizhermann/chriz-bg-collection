@@ -129,6 +129,29 @@ Cross-repository status. Component detail stays in the sections below and in the
      2026-11-02 with Kitpack chriz.6 and Rebalance v0.8.9 (step 1); the first 0.1.0
      candidate and the alpha.22 candidate of 2026-11-01 were superseded and never
      published.
+- CEBG **0.1.1** is published since 2026-11-03 (18:29:55 UTC; Christopher's OK of
+  2026-11-04), built from `161bb72`. It brings the fewer-stops round, GOG and Beamdog
+  copies, the download questions, the saves & portraits button, BG1 NPC Project as an
+  option and Marek's Boomerang Dagger. Package, lab and publication:
+  `docs/package-acceptance-0.1.1-2026-11-03.md`.
+  Open for **0.1.2** on the next-release branch:
+  - **BG Rebalance v0.8.10** fixes 0.1.1's known issue: without Spell Revisions, `302`
+    (Flail of the Ages balance) stops the installation on SCS's own Slow and Haste spells
+    ([chriz-bg-rebalance#26](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/26)).
+    Christopher OK'd its release on 2026-11-04; it goes into 0.1.2. Only Chriz Easy BG
+    ships it. The
+    script-engine session's lab without Spell Revisions and with `302` off installed
+    cleanly (450 components, 2026-11-03), so nothing else stops there.
+  - **BuffBot v1.15.0** in both installers. It is held for 0.1.1 in
+    `manifest/own-mods.toml` (Christopher, 2026-11-04). The pin PR removes the hold, and
+    Chriz Easy IWD needs its own version bump for it.
+  - **Christopher's open questions** (asked 2026-11-03):
+    - When a single component fails, should CEBG leave only that one out, carry on and
+      name it at the end?
+    - Recommended still installs maximum HP on level-up (Tweaks Anthology `3000`) and
+      Maximum HP Creatures (`3010`). Should 0.1.2's Recommended use rolled HP and drop
+      Maximum HP Creatures, as the fight-AI labs do?
+  - Merging the release line back into `main`: Christopher decides.
 - Installers keep going when a mod's official link serves a newer file (Christopher,
   2026-10-30: as few blockers as possible; a newer version under the same link is
   installed and logged, and players report problems afterwards).
