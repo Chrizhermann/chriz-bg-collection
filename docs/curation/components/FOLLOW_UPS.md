@@ -527,15 +527,27 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Spell Revisions, Artisan's Kitpack and Bardic Wonders forks frozen (Christopher,
   2026-11-03): no more fixes or balancing; CEBG keeps the current pins until the own spell
   mod and own kit mod replace them (design chats running).
-- BG1 NPC Project out of the default (Christopher, 2026-11-03). Today it is on in
-  Recommended (bg1npc v32: components 0, 10, 90, 111, 120, 130, 240, 200). Turn it off by
-  default, and keep it optional. Check what depends on it, e.g. Modpack's "BG1NPC Kivan
-  sea-elf quest: SCS dialogue-phase guard", and the Recommended preset.
+- [x] BG1 NPC Project out of the default (Christopher, 2026-11-03). **Done** on
+  2026-11-03 in [PR #88](https://github.com/Chrizhermann/chriz-bg-collection/pull/88)
+  (merge commit `9eda4e6`): it is optional and unticked in Recommended and in the curated
+  recipe, and ticking it under Customize selects the same reviewed set as before
+  (components 0, 10, 90, 111, 120, 130, 240, 200). The only dependent is Modpack `130`
+  ("BG1NPC Kivan sea-elf quest: SCS dialogue-phase guard"); it follows the mod and is
+  unavailable while the mod is unticked. The 0.1.1 ledger records the change.
 - Boomerang Dagger without BG1 NPC Project (Christopher, 2026-11-03). Put it into the
   Item Randomiser's BG1 pool in the standard preset. Without the randomiser, place it with
-  a strong rogue, thief or assassin enemy in a BG1 fight; one of our own mods does that,
-  design with Christopher. First verify where the dagger comes from today (its resref and
-  whether BG1 NPC Project adds it).
+  a strong rogue, thief or assassin enemy in a BG1 fight; one of our own mods does that
+  (likely a new Modpack component), design with Christopher.
+  - Where the dagger comes from today, verified on 2026-11-03 (read-only, on a full CEBG
+    install and its BG1 side): `DAGG11.ITM`, "Boomerang Dagger +2". BG1 NPC Project
+    component 10 is its only placement in BG1 or Siege of Dragonspear: its script
+    `P#FW3100.BAF` puts `DAGG11` and `AMUL11` into `Container1` on the Shipwreck's Coast
+    (`AR3100`) once `X#KivanSea` reaches 7, the reward for Kivan's sea-elf quest. No
+    creature, container or store of BG1 or Siege of Dragonspear holds it. In BG2 it stays
+    where vanilla has it, with BG2:EE's own enemies. Every EET install already has the
+    item file, so the new component does not need to ship it.
+  - Candidates: see the candidate list in the coordinator notes. The Randomiser's BG1
+    pool entry needs the carrier's CRE resref, script name and area.
 
 **Ready to start**
 
