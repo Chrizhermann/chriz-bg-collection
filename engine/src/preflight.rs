@@ -380,11 +380,12 @@ pub fn recheck_target_before_mutation_with(
         }
     }
     tlks.push(validate_tlk(&language_tlk, &target)?);
-    host.probe_exclusive_writable_files(&tlks)
-        .map_err(|error| PreflightError::TlkUnavailable {
+    probe_tlks_outlasting_brief_holds(host, &tlks).map_err(|error| {
+        PreflightError::TlkUnavailable {
             path: error.path,
             source: error.source,
-        })?;
+        }
+    })?;
     Ok(())
 }
 
@@ -753,11 +754,24 @@ fn probe_existing_tlks(
             Err(source) => return Err(PreflightError::TlkUnavailable { path: tlk, source }),
         }
     }
-    host.probe_exclusive_writable_files(&existing)
-        .map_err(|error| PreflightError::TlkUnavailable {
+    probe_tlks_outlasting_brief_holds(host, &existing).map_err(|error| {
+        PreflightError::TlkUnavailable {
             path: error.path,
             source: error.source,
-        })
+        }
+    })
+}
+
+/// Probes that `paths` are exclusively writable, trying again while another program, such as a
+/// virus scanner, briefly holds one of them. A lasting hold still fails after the retries.
+fn probe_tlks_outlasting_brief_holds(
+    host: &dyn PreflightHost,
+    paths: &[PathBuf],
+) -> Result<(), ExclusiveFileError> {
+    crate::fs_retry::retry_while_held(
+        || host.probe_exclusive_writable_files(paths),
+        |error| Some(&error.source),
+    )
 }
 
 /// Refuses while a program started from inside `folder` runs, such as the game, its loader or an
