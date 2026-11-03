@@ -727,6 +727,7 @@ fn an_installation_that_left_out_a_mod_is_verified_but_offered_no_game_update() 
             plan_sha256: plan_digest(&remaining).unwrap(),
             removed_runs: vec!["buffbot-bg2".into()],
             changed_runs: Vec::new(),
+            failed_run: None,
         })
         .unwrap();
     // BuffBot was never installed, so the finished mod list is empty.
@@ -741,6 +742,7 @@ fn an_installation_that_left_out_a_mod_is_verified_but_offered_no_game_update() 
         reason: reason.into(),
         runs: vec!["buffbot-bg2".into()],
         changed_runs: Vec::new(),
+        failed_run: None,
     }];
     fixture.receipt.installed_plan = Some(remaining);
     fixture.rewrite_receipt();

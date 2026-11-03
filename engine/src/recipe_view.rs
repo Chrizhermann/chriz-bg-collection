@@ -1221,6 +1221,38 @@ pub fn plan_without_artifacts(
     plan: &InstallPlan,
     unusable: &BTreeSet<String>,
 ) -> std::result::Result<InstallPlan, LeaveOutError> {
+    plan_without_parts(manifest, selection, plan, unusable, &BTreeSet::new())
+}
+
+/// The recipe run a planned run comes from: the run of that id, or the run that a manual pause
+/// split into `<run>--manual-…` parts.
+pub fn recipe_run_id(manifest: &Manifest, planned_run_id: &str) -> Option<String> {
+    manifest
+        .collection
+        .runs
+        .iter()
+        .find(|candidate| candidate.run_id == planned_run_id)
+        .or_else(|| {
+            manifest.collection.runs.iter().find(|candidate| {
+                planned_run_id
+                    .strip_prefix(candidate.run_id.as_str())
+                    .is_some_and(|rest| rest.starts_with("--manual-"))
+            })
+        })
+        .map(|run| run.run_id.clone())
+}
+
+/// [`plan_without_artifacts`], leaving out also the `failed` components, which an installer
+/// could not install: every selected feature with such a component is switched off as when its
+/// mod is left out, together with everything that depends on it. A component is named by its
+/// recipe run, as features name it; a run split at a manual pause names its recipe run.
+pub fn plan_without_parts(
+    manifest: &Manifest,
+    selection: &NormalizedSelection,
+    plan: &InstallPlan,
+    unusable: &BTreeSet<String>,
+    failed: &BTreeSet<ComponentRef>,
+) -> std::result::Result<InstallPlan, LeaveOutError> {
     let features = manifest
         .collection
         .features
@@ -1244,10 +1276,9 @@ pub fn plan_without_artifacts(
         .map(|run| run.run_id.as_str())
         .collect::<BTreeSet<_>>();
     let uses_blocked = |feature: &Feature| {
-        feature
-            .components
-            .iter()
-            .any(|component| blocked_runs.contains(component.run_id.as_str()))
+        feature.components.iter().any(|component| {
+            blocked_runs.contains(component.run_id.as_str()) || failed.contains(component)
+        })
     };
     let is_on = |map: &BTreeMap<String, bool>, id: &str| map.get(id).copied().unwrap_or(false);
 

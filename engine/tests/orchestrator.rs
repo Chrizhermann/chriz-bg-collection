@@ -234,6 +234,10 @@ struct FakeDeps {
     keep_changed: bool,
     /// Payloads whose reviewed archive is back in the download folder.
     reviewed_back: Vec<String>,
+    /// Further runs that need a failed run's components, by failed run id.
+    failed_dependents: BTreeMap<String, Vec<String>>,
+    /// Every `plan_without_parts` request, to see replays not recompute it.
+    plan_without_parts_calls: Vec<Vec<(String, Vec<u32>)>>,
 }
 
 impl CampaignRecorder for FakeDeps {
@@ -395,6 +399,43 @@ impl ArtifactAcquirer for FakeDeps {
             runs.push(run);
         }
         Ok(InstallPlan { runs })
+    }
+
+    fn plan_without_parts(
+        &mut self,
+        plan: &InstallPlan,
+        left_out: &[String],
+        failed: &[(String, Vec<u32>)],
+    ) -> Result<InstallPlan, StepFailure> {
+        self.plan_without_parts_calls.push(failed.to_vec());
+        for (run_id, _) in failed {
+            if let Some(run) = plan.runs.iter().find(|run| &run.run_id == run_id) {
+                if self.essential.contains(&run.artifact_id) {
+                    return Err(StepFailure::new(format!(
+                        "{} is a fixed part of this collection",
+                        run.artifact_id
+                    )));
+                }
+            }
+        }
+        let mut reduced = self.plan_without(plan, left_out)?;
+        for (run_id, components) in failed {
+            let dependents = self
+                .failed_dependents
+                .get(run_id)
+                .cloned()
+                .unwrap_or_default();
+            reduced.runs.retain_mut(|run| {
+                if &run.run_id == run_id {
+                    run.components
+                        .retain(|component| !components.contains(component));
+                    !run.components.is_empty()
+                } else {
+                    !dependents.contains(&run.run_id)
+                }
+            });
+        }
+        Ok(reduced)
     }
 }
 
@@ -1026,6 +1067,8 @@ fn last_failed_proven_install_checks_postconditions_before_completion() {
     let sink = RecordingSink::default();
     let mut deps = FakeDeps {
         after_results: VecDeque::from([InstallReconciliation::retry(vec![0, 2])]),
+        // A fixed part: its failed run stops the installation instead of being left out.
+        essential: vec!["eefix".to_owned()],
         ..FakeDeps::default()
     };
     assert!(matches!(
@@ -1053,6 +1096,8 @@ fn failed_last_failed_proven_postcondition_requires_fresh_copy_without_rerun() {
     let sink = RecordingSink::default();
     let mut deps = FakeDeps {
         after_results: VecDeque::from([InstallReconciliation::retry(vec![0, 2])]),
+        // A fixed part: its failed run stops the installation instead of being left out.
+        essential: vec!["eefix".to_owned()],
         ..FakeDeps::default()
     };
     assert!(matches!(
@@ -1755,6 +1800,7 @@ fn an_unusable_download_leaves_out_its_mod_and_everything_that_needs_it() {
                 "needs-eefix".to_owned(),
             ],
             changed_runs: vec!["tweaks-bg2".to_owned()],
+            failed_run: None,
         }]
     );
     let events = sink.events();
@@ -1767,6 +1813,7 @@ fn an_unusable_download_leaves_out_its_mod_and_everything_that_needs_it() {
             "needs-eefix".to_owned(),
         ],
         changed_runs: vec!["tweaks-bg2".to_owned()],
+        failed_run: None,
     }));
     assert!(events.contains(&EngineEvent::StepFinished {
         id: "acquire:eefix".to_owned(),
@@ -1949,6 +1996,7 @@ fn a_changed_archive_that_cannot_be_placed_is_left_out_while_none_of_its_files_a
                 "needs-eefix".to_owned(),
             ],
             changed_runs: vec!["tweaks-bg2".to_owned()],
+            failed_run: None,
         }]
     );
 }
@@ -3003,6 +3051,7 @@ fn the_ledger_refuses_answers_that_contradict_their_outcome() {
         plan_sha256: "77".repeat(32),
         removed_runs: removed,
         changed_runs: Vec::new(),
+        failed_run: None,
     };
     let completed = |step: &str| SessionEvent::StepCompleted {
         step_id: step.to_owned(),
@@ -3085,5 +3134,201 @@ fn the_ledger_refuses_answers_that_contradict_their_outcome() {
             assert!(store.append(refused.clone()).is_err(), "{refused:?}");
         }
         store.append(fits).unwrap();
+    }
+}
+
+/// A failed optional run once stopped the whole installation. Now, when its installer made no
+/// durable change, the run is left out together with the runs that need it, and the campaign
+/// continues and completes.
+#[test]
+fn a_failed_optional_run_is_left_out_with_the_runs_that_need_it_and_the_campaign_completes() {
+    let fixture = Fixture::with_dependents();
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        after_results: VecDeque::from([
+            InstallReconciliation::ProvenDone,
+            InstallReconciliation::ProvenDone,
+            InstallReconciliation::ProvenDone,
+            InstallReconciliation::retry(vec![1, 2]),
+        ]),
+        failed_dependents: BTreeMap::from([(
+            "tweaks-bg2".to_owned(),
+            vec!["needs-eefix".to_owned()],
+        )]),
+        ..FakeDeps::default()
+    };
+
+    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+
+    assert_eq!(outcome, CampaignOutcome::Complete);
+    let root = &fixture.request.created.managed_root;
+    let remaining = InstallPlan {
+        runs: fixture.request.plan.runs[..3].to_vec(),
+    };
+    assert_eq!(deps.verified_plans, vec![remaining.clone()]);
+    assert!(!deps
+        .trace
+        .iter()
+        .any(|entry| entry.starts_with("build:needs-eefix")));
+    let recorded = ledger_events(root)
+        .into_iter()
+        .filter_map(|event| match event {
+            SessionEvent::ArtifactLeftOut {
+                step_id,
+                artifact_id,
+                plan_sha256,
+                removed_runs,
+                failed_run,
+                ..
+            } => Some((step_id, artifact_id, plan_sha256, removed_runs, failed_run)),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(recorded.len(), 1, "{recorded:?}");
+    let (step_id, artifact_id, plan_sha256, removed_runs, failed_run) = &recorded[0];
+    assert_eq!(step_id, "install:tweaks-bg2");
+    assert_eq!(artifact_id, "tweaks");
+    assert_eq!(*plan_sha256, plan_digest(&remaining).unwrap());
+    assert_eq!(
+        removed_runs,
+        &vec!["tweaks-bg2".to_owned(), "needs-eefix".to_owned()]
+    );
+    let failed_run = failed_run.as_ref().unwrap();
+    assert_eq!(failed_run.run_id, "tweaks-bg2");
+    assert_eq!(failed_run.components, vec![1, 2]);
+    let receipt = deps.receipts.last().unwrap();
+    assert!(matches!(receipt.outcome, ReceiptDraftOutcome::Succeeded));
+    assert_eq!(receipt.installed_plan.as_ref(), Some(&remaining));
+    assert_eq!(receipt.left_out.len(), 1);
+    assert_eq!(
+        receipt.left_out[0].failed_run.as_deref(),
+        Some("tweaks-bg2")
+    );
+    assert_eq!(
+        receipt.left_out[0].runs,
+        vec!["tweaks-bg2".to_owned(), "needs-eefix".to_owned()]
+    );
+    let events = sink.events();
+    assert!(events.contains(&EngineEvent::StepFinished {
+        id: "install:tweaks-bg2".to_owned(),
+        outcome: StepOutcome::Skipped,
+    }));
+    assert!(events.iter().any(|event| matches!(
+        event,
+        EngineEvent::ArtifactLeftOut { artifact_id, .. } if artifact_id == "tweaks"
+    )));
+}
+
+/// When a run installed some components before one failed, those stay and the plan keeps the
+/// run with exactly them. A resume after that rebuilds the recorded plan without asking the
+/// recipe again.
+#[test]
+fn a_run_that_failed_after_installing_some_parts_keeps_them_and_resumes_with_the_recorded_plan() {
+    let fixture = Fixture::with_dependents();
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        after_results: VecDeque::from([
+            InstallReconciliation::ProvenDone,
+            InstallReconciliation::ProvenDone,
+            InstallReconciliation::ProvenDone,
+            InstallReconciliation::PartialPrefix { remaining: vec![2] },
+            InstallReconciliation::retry(vec![2]),
+        ]),
+        // The next run then fails before it starts, which ends this attempt.
+        fail_once: Some("build:needs-eefix".to_owned()),
+        ..FakeDeps::default()
+    };
+
+    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+    assert!(
+        matches!(&outcome, CampaignOutcome::Failed { step_id, .. } if step_id == "install:needs-eefix"),
+        "{outcome:?}"
+    );
+    let mut tweaks = fixture.request.plan.runs[3].clone();
+    tweaks.components = vec![1];
+    let remaining = InstallPlan {
+        runs: vec![
+            fixture.request.plan.runs[0].clone(),
+            fixture.request.plan.runs[1].clone(),
+            fixture.request.plan.runs[2].clone(),
+            tweaks,
+            fixture.request.plan.runs[4].clone(),
+        ],
+    };
+
+    let mut resumed = FakeDeps::default();
+    assert_eq!(
+        run_campaign(&fixture.request, &mut resumed, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert!(resumed.plan_without_parts_calls.is_empty());
+    assert_eq!(resumed.verified_plans, vec![remaining.clone()]);
+    let receipt = resumed.receipts.last().unwrap();
+    assert_eq!(receipt.installed_plan.as_ref(), Some(&remaining));
+    assert_eq!(
+        receipt.left_out[0].changed_runs,
+        vec!["tweaks-bg2".to_owned()]
+    );
+    assert!(receipt.left_out[0].runs.is_empty());
+}
+
+/// A part the collection cannot do without still stops when its installer fails, with the
+/// reason in the installation log; so does leaving out a part that a run installed already
+/// needs. Both are kept stops: the game would otherwise lack what the plan says it has.
+#[test]
+fn a_failed_run_the_collection_cannot_do_without_still_stops() {
+    for (failing, deps_for) in [
+        (
+            "eet-core",
+            FakeDeps {
+                essential: vec!["eet".to_owned()],
+                ..FakeDeps::default()
+            },
+        ),
+        (
+            "tweaks-bg2",
+            FakeDeps {
+                failed_dependents: BTreeMap::from([(
+                    "tweaks-bg2".to_owned(),
+                    vec!["eefix-bg1".to_owned()],
+                )]),
+                ..FakeDeps::default()
+            },
+        ),
+    ] {
+        let fixture = Fixture::with_dependents();
+        let sink = RecordingSink::default();
+        let position = fixture
+            .request
+            .plan
+            .runs
+            .iter()
+            .position(|run| run.run_id == failing)
+            .unwrap();
+        let mut results = VecDeque::from(vec![InstallReconciliation::ProvenDone; position]);
+        let failed_components = fixture.request.plan.runs[position].components.clone();
+        results.push_back(InstallReconciliation::retry(failed_components));
+        let mut deps = FakeDeps {
+            after_results: results,
+            ..deps_for
+        };
+
+        let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+
+        assert_eq!(
+            outcome,
+            CampaignOutcome::Failed {
+                step_id: format!("install:{failing}"),
+                reason: "WeiDU made no durable change; the exact run remains retryable".to_owned(),
+            }
+        );
+        assert_eq!(
+            count_events(&fixture.request.created.managed_root, "left-out"),
+            0
+        );
+        assert!(sink.events().iter().any(|event| matches!(
+            event,
+            EngineEvent::ConsoleLine { line, .. } if line.contains("cannot continue without")
+        )));
     }
 }

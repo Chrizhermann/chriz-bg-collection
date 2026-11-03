@@ -99,6 +99,9 @@ pub enum EngineEvent {
         runs: Vec<String>,
         /// Planned runs still installed with fewer components or other prompt answers.
         changed_runs: Vec<String>,
+        /// The run whose installer failed, when that and not the download is the reason.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        failed_run: Option<String>,
     },
     /// A step asked the player a question about a download and the installation waits for the
     /// answer; `check-decision` shows it and `decide` answers it, then the campaign resumes.
@@ -221,10 +224,15 @@ impl ConsoleSink {
                 reason,
                 runs,
                 changed_runs,
+                failed_run,
             } => {
+                let why = if failed_run.is_some() {
+                    "its installer stopped with an error"
+                } else {
+                    "its download cannot be used"
+                };
                 let mut line = format!(
-                    "!! Leaving out {artifact_id}: its download cannot be used ({reason}). \
-                     Not installed: {}",
+                    "!! Leaving out {artifact_id}: {why} ({reason}). Not installed: {}",
                     runs.join(", ")
                 );
                 if !changed_runs.is_empty() {
@@ -355,6 +363,7 @@ mod tests {
                 reason: "the archive layout changed".to_string(),
                 runs: vec!["snowytoes".to_string(), "needs-snowytoes".to_string()],
                 changed_runs: vec!["tweaks".to_string()],
+                failed_run: None,
             },
             EngineEvent::Error {
                 step_id: Some("eet/0".to_string()),

@@ -1202,7 +1202,8 @@ class AppController implements AppHandle {
       case "artifact_left_out": {
         const notInstalled = event.runs.length > 0 ? ` Not installed: ${event.runs.join(", ")}.` : "";
         const fewerParts = event.changed_runs.length > 0 ? ` Installed with fewer parts: ${event.changed_runs.join(", ")}.` : "";
-        next = { ...current, logTail: log(`Leaving out ${event.artifact_id}: its download cannot be used (${event.reason}).${notInstalled}${fewerParts}`) };
+        const why = event.failed_run === undefined ? "its download cannot be used" : "its installer stopped with an error, so the installation continues without the parts that failed";
+        next = { ...current, logTail: log(`Leaving out ${event.artifact_id}: ${why} (${event.reason}).${notInstalled}${fewerParts}`) };
         break;
       }
       case "error":

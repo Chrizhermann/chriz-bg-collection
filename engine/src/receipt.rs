@@ -216,6 +216,11 @@ pub struct LeftOutReceipt {
     /// Planned runs installed with fewer components or other prompt answers because of it.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub changed_runs: Vec<String>,
+    /// The planned run whose installer failed, when the mod was left out because of that
+    /// rather than because of its download. Absent otherwise, so earlier receipts stay
+    /// byte-identical.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failed_run: Option<String>,
 }
 
 /// One answer to a question about a download ([`crate::decision`]).
@@ -721,6 +726,7 @@ impl ManagedReceiptWriter {
                     reason: left_out.reason.clone(),
                     runs: left_out.runs.clone(),
                     changed_runs: left_out.changed_runs.clone(),
+                    failed_run: left_out.failed_run.clone(),
                 })
                 .collect(),
             installed_plan: draft.installed_plan.clone(),
