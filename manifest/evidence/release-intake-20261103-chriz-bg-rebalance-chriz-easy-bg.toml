@@ -1,0 +1,23 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-11-03"
+generator = "tools/prepare_own_mod_pin.py"
+command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 <TP2 path>; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python -I tools/check_native_component_order.py --recipe-root <recipe> --mod-id <mod> --archive <fresh downloaded ZIP>"
+scope = "BG Rebalance v0.8.10 (published 2026-11-03 18:42 UTC, a normal GitHub release, tag commit cd0ffa2) replaces chriz-bg-rebalance-0.8.9 in manifest, recipes/curated-full-current. Each archive was downloaded anonymously into a fresh cache for the inspection and for each recipe's artifact TOML, and passed the production acquisition and extraction contracts. The superseded evidence records stay as history, and so do the superseded artifact TOMLs in manifest, recipes/curated-full-current. This is automated source/package verification, not a WeiDU install or gameplay acceptance."
+
+# 66 entries, 2,821,115 bytes uncompressed, largest entry 1,364,992 bytes, depth 4, compression ratio at most 16.3.
+[[artifacts]]
+mod_id = "chriz-bg-rebalance"
+artifact_id = "chriz-bg-rebalance-0.8.10"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v0.8.10"
+source_commit = "cd0ffa2dfa9b42e432e1ef9f59751eaa19cf75e1"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.10/chriz-bg-rebalance-v0.8.10-windows.zip"
+actual_length = 1848783
+actual_sha256 = "40be063d26d531f3355022f7ab822e0b2018f00d99ecfd0d493913ffc4f68826"
+tp2_sha256 = "30c39b3e23e35b5cfa67d2fcbbf8a6623bdbfb24c3859dab2865645d25f5c5b9"
+native_components = [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 402, 403, 404, 405, 406, 407, 409, 408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
