@@ -133,6 +133,7 @@ describe("Chriz Easy IWD build flavor", () => {
     expect(flavor.sources).toEqual([{ slot: "bg2", role: "iwdee", label: "Icewind Dale: Enhanced Edition", name: "Icewind Dale: Enhanced Edition", reviewLabel: "Game source" }]);
     expect(sourceSlots).toEqual(["bg2"]);
     expect(flavor.features).toEqual({ radar: true, installPatches: false, modUpgrades: false, hotpatches: true, manualPauses: true, appUpdates: false, buffBotTip: true, radarTip: true });
+    expect(flavor.modUpdates).toEqual([{ modId: "buffbot", title: "BuffBot" }]);
   });
 
   it("shows exactly one source card and installs with an empty bg1 candidate", async () => {
@@ -242,6 +243,110 @@ describe("Chriz Easy IWD build flavor", () => {
     await waitFor(() => expect(restore).toHaveBeenCalledWith("iwd-install", true, expect.any(Function)));
     await waitFor(() => expect(getByRole(root, "button", { name: "Apply hotpatch" })).toBeTruthy());
     expectNoBgWords(root, "hotpatch updates");
+  });
+
+  it("offers the BuffBot update below the hotpatch, updates and undoes it", async () => {
+    const { mountApp, FixtureBackend } = await iwd();
+    const backend = new FixtureBackend({ managedInstallations: [installation()] });
+    vi.spyOn(backend, "getUpdates").mockResolvedValue(updatesWithBgExtras());
+    const inspect = vi.spyOn(backend, "inspectModUpdate");
+    const apply = vi.spyOn(backend, "applyModUpdate");
+    const restore = vi.spyOn(backend, "restoreModUpdate");
+    const root = rootElement();
+    const app = await mountApp(root, backend);
+    await app.navigate("updates");
+    const card = () => root.querySelector<HTMLElement>(".mod-update-section")!;
+    expect(root.querySelector(".hotpatch-section")?.nextElementSibling).toBe(card());
+    expect(card().textContent).toContain("Not checked yet. Your game stays unchanged until you choose Update.");
+    expect(inspect).not.toHaveBeenCalled();
+    fireEvent.click(getByRole(root, "button", { name: "Check for a BuffBot update" }));
+    await waitFor(() => expect(getByRole(root, "button", { name: "Update BuffBot" })).toBeTruthy());
+    expect(inspect).toHaveBeenCalledWith("iwd-install", "buffbot");
+    expect(card().textContent).toContain("Installed: 1.12.6");
+    fireEvent.click(getByRole(root, "button", { name: "Update BuffBot" }));
+    await waitFor(() => expect(apply).toHaveBeenCalledWith("iwd-install", "buffbot", "fixture-mod-update-iwd-install-buffbot", true, false, expect.any(Function)));
+    await waitFor(() => expect(getByRole(root, "button", { name: "Undo BuffBot 1.16.0" })).toBeTruthy());
+    expect(card().textContent).toContain("Up to date");
+    expect(root.textContent).toContain("BuffBot updated");
+    fireEvent.click(getByRole(root, "button", { name: "Undo BuffBot 1.16.0" }));
+    await waitFor(() => expect(restore).toHaveBeenCalledWith("iwd-install", "buffbot", true, expect.any(Function)));
+    await waitFor(() => expect(getByRole(root, "button", { name: "Update BuffBot" })).toBeTruthy());
+    expect(root.textContent).toContain("BuffBot update undone");
+    expectNoBgWords(root, "BuffBot update");
+  });
+
+  it("never runs a hotpatch and a BuffBot update at once", async () => {
+    const { mountApp, FixtureBackend } = await iwd();
+    const backend = new FixtureBackend({ managedInstallations: [installation()] });
+    vi.spyOn(backend, "getUpdates").mockResolvedValue(updatesWithBgExtras());
+    let releaseHotpatch: () => void = () => undefined;
+    const applyHotpatch = backend.applyHotpatch.bind(backend);
+    vi.spyOn(backend, "applyHotpatch").mockImplementation(async (...args) => {
+      await new Promise<void>(resolve => { releaseHotpatch = resolve; });
+      return applyHotpatch(...args);
+    });
+    let releaseUpdate: () => void = () => undefined;
+    const applyModUpdate = backend.applyModUpdate.bind(backend);
+    vi.spyOn(backend, "applyModUpdate").mockImplementation(async (...args) => {
+      await new Promise<void>(resolve => { releaseUpdate = resolve; });
+      return applyModUpdate(...args);
+    });
+    const inspectModUpdate = vi.spyOn(backend, "inspectModUpdate");
+    const inspectHotpatch = vi.spyOn(backend, "inspectHotpatch");
+    const root = rootElement();
+    const app = await mountApp(root, backend);
+    await app.navigate("updates");
+    const button = (name: string) => getByRole(root, "button", { name }) as HTMLButtonElement;
+
+    fireEvent.click(button("Check for a hotpatch"));
+    await waitFor(() => expect(button("Apply hotpatch").disabled).toBe(false));
+    fireEvent.click(button("Apply hotpatch"));
+    await waitFor(() => expect(root.querySelector(".hotpatch-section")?.getAttribute("aria-busy")).toBe("true"));
+    expect(button("Check for a BuffBot update").disabled).toBe(true);
+    fireEvent.click(button("Check for a BuffBot update"));
+    expect(inspectModUpdate).not.toHaveBeenCalled();
+    releaseHotpatch();
+    await waitFor(() => expect(button("Check for a BuffBot update").disabled).toBe(false));
+
+    fireEvent.click(button("Check for a BuffBot update"));
+    await waitFor(() => expect(button("Update BuffBot").disabled).toBe(false));
+    inspectHotpatch.mockClear();
+    fireEvent.click(button("Update BuffBot"));
+    await waitFor(() => expect(root.querySelector(".mod-update-section")?.getAttribute("aria-busy")).toBe("true"));
+    expect(root.querySelector(".mod-update-section .patch-progress")?.textContent).toBe("Checking, backing up, updating or restoring… Keep the app open and the game closed.");
+    expect(button("Check for a hotpatch").disabled).toBe(true);
+    fireEvent.click(button("Check for a hotpatch"));
+    expect(inspectHotpatch).not.toHaveBeenCalled();
+    releaseUpdate();
+    await waitFor(() => expect(button("Check for a hotpatch").disabled).toBe(false));
+  });
+
+  it("asks for a new check of the other kind after a hotpatch or BuffBot change", async () => {
+    const { mountApp, FixtureBackend } = await iwd();
+    const backend = new FixtureBackend({ managedInstallations: [installation()] });
+    vi.spyOn(backend, "getUpdates").mockResolvedValue(updatesWithBgExtras());
+    const root = rootElement();
+    const app = await mountApp(root, backend);
+    await app.navigate("updates");
+    const hotpatch = () => root.querySelector(".hotpatch-section")!;
+    const card = () => root.querySelector(".mod-update-section")!;
+
+    fireEvent.click(getByRole(root, "button", { name: "Check for a hotpatch" }));
+    await waitFor(() => expect(getByRole(root, "button", { name: "Apply hotpatch" })).toBeTruthy());
+    fireEvent.click(getByRole(root, "button", { name: "Check for a BuffBot update" }));
+    await waitFor(() => expect(getByRole(root, "button", { name: "Update BuffBot" })).toBeTruthy());
+    fireEvent.click(getByRole(root, "button", { name: "Update BuffBot" }));
+    await waitFor(() => expect(getByRole(root, "button", { name: "Undo BuffBot 1.16.0" })).toBeTruthy());
+    // The hotpatch result was checked before the update; it is gone, never a stale Undo or Apply.
+    expect(hotpatch().textContent).toContain("Not checked yet");
+    expect(queryByRole(root, "button", { name: "Apply hotpatch" })).toBeNull();
+
+    fireEvent.click(getByRole(root, "button", { name: "Check for a hotpatch" }));
+    await waitFor(() => expect(getByRole(root, "button", { name: "Apply hotpatch" })).toBeTruthy());
+    fireEvent.click(getByRole(root, "button", { name: "Apply hotpatch" }));
+    await waitFor(() => expect(getByRole(root, "button", { name: "Undo Belhifet fight" })).toBeTruthy());
+    expect(card().textContent).toContain("Not checked yet");
+    expect(queryByRole(root, "button", { name: "Undo BuffBot 1.16.0" })).toBeNull();
   });
 
   it("adds BG Radar Overlay after an installation completes", async () => {
@@ -488,6 +593,7 @@ describe("Baldur's Gate flavor", () => {
         { slot: "bg2", role: "bg2ee", label: "Baldur's Gate II", name: "Baldur's Gate II", reviewLabel: "BG2 source" },
       ],
       features: { radar: true, installPatches: true, modUpgrades: true, hotpatches: false, manualPauses: true, appUpdates: true, buffBotTip: true, radarTip: true },
+      modUpdates: [],
       text: {
         lookingForGames: "Looking for your Baldur's Gate games…",
         preparingSetupDetail: "Checking your game folders and mod choices. Your original games stay unchanged.",

@@ -101,6 +101,9 @@ pub fn run() -> tauri::Result<()> {
             commands::inspect_hotpatch,
             commands::apply_hotpatch,
             commands::restore_hotpatch,
+            commands::inspect_mod_update,
+            commands::apply_mod_update,
+            commands::restore_mod_update,
             commands::install_app_update,
             commands::activate_recipe_update,
         ])

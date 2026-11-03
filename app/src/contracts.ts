@@ -556,6 +556,38 @@ export interface HotpatchPreview {
   readonly backupPath: string;
 }
 
+/**
+ * What Updates shows about bringing one installed mod, such as BuffBot, to its newest release.
+ * Updates share the hotpatch history: Undo always takes back the latest change. Checking never
+ * changes the game.
+ */
+export interface ModUpdatePreview {
+  readonly installId: string;
+  readonly modId: string;
+  readonly title: string;
+  readonly state: "available" | "up-to-date" | "not-installed" | "refused" | "unavailable" | "needs-recovery";
+  readonly detail: string;
+  readonly installedVersion: string | null;
+  readonly targetVersion: string | null;
+  readonly releaseTitle: string | null;
+  readonly releaseUrl: string | null;
+  /** Mods WeiDU takes off and puts back after the updated mod. */
+  readonly reinstalled: readonly string[];
+  /** Why the update is not offered. */
+  readonly refusals: readonly string[];
+  readonly notes: readonly string[];
+  readonly reviewToken: string | null;
+  /** The latest change is an update of this mod and can be undone. */
+  readonly canUndo: boolean;
+  readonly undoTitle: string | null;
+  readonly canRestore: boolean;
+  /** Decimal byte counts remain strings across the native boundary; saves may be "unavailable". */
+  readonly fullBackupBytes: string;
+  readonly saveBackupBytes: string;
+  readonly availableBytes: string;
+  readonly backupPath: string;
+}
+
 export interface UpdateSummary {
   readonly checkedAt: string | null;
   readonly networkState: "online" | "offline" | "unconfigured";

@@ -294,6 +294,76 @@ pub async fn restore_hotpatch(
     .await
 }
 
+#[tauri::command]
+pub async fn inspect_mod_update(
+    state: State<'_, BridgeState>,
+    install_id: String,
+    mod_id: String,
+) -> Result<bg_engine::hotpatch::update::ModUpdatePreview, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || bridge.inspect_mod_update(&install_id, &mod_id)).await
+}
+
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+pub async fn apply_mod_update(
+    state: State<'_, BridgeState>,
+    install_id: String,
+    mod_id: String,
+    review_token: String,
+    full_backup: bool,
+    save_backup: bool,
+    webview: tauri::Webview,
+    on_progress: Option<JavaScriptChannelId>,
+) -> Result<bg_engine::hotpatch::update::ModUpdatePreview, CommandError> {
+    let on_progress = on_progress.map(|id| id.channel_on(webview));
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || {
+        bridge.apply_mod_update_with_progress(
+            &install_id,
+            &mod_id,
+            &review_token,
+            full_backup,
+            save_backup,
+            &|progress| report_progress(&on_progress, progress),
+        )
+    })
+    .await
+}
+
+/// Undo the latest change when it is this mod's update (`undo`), or finish restoring a change
+/// that did not finish. Updates and hotpatches share one history.
+#[tauri::command]
+pub async fn restore_mod_update(
+    state: State<'_, BridgeState>,
+    install_id: String,
+    mod_id: String,
+    undo: bool,
+    webview: tauri::Webview,
+    on_progress: Option<JavaScriptChannelId>,
+) -> Result<bg_engine::hotpatch::update::ModUpdatePreview, CommandError> {
+    let on_progress = on_progress.map(|id| id.channel_on(webview));
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || {
+        bridge.restore_mod_update_with_progress(&install_id, &mod_id, undo, &|progress| {
+            report_progress(&on_progress, progress)
+        })
+    })
+    .await
+}
+
 fn local_path(selected: Option<FilePath>) -> Result<Option<PathBuf>, CommandError> {
     selected
         .map(|path| {
