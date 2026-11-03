@@ -809,8 +809,8 @@ pub fn install_campaign_reviewed<S: EventSink + Sync>(
 }
 
 fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, CliError> {
-    let display_name = crate::registry::names::normalize_display_name(&request.display_name)
-        .map_err(|error| CliError::new("invalid_display_name", error.to_string()))?;
+    // Sanitized, never refused; recording the campaign numbers a name another copy has.
+    let display_name = crate::registry::names::normalize_display_name(&request.display_name);
     let manifest = load_recipe(&request.recipe)?;
     validate::check(&manifest).map_err(|error| {
         CliError::new(
@@ -976,6 +976,9 @@ fn install_review_identity(created: &CampaignCreated, display_name: &str) -> Ins
     }
 }
 
+/// Checks the name frozen in a campaign's recipe on resume. A player's name is sanitized before
+/// it is frozen (and names frozen by earlier versions followed these rules), so this only
+/// catches a frozen record that no installer wrote.
 fn validate_display_name(display_name: &str) -> Result<(), CliError> {
     if display_name.trim().is_empty() {
         return Err(CliError::new(
@@ -4306,7 +4309,7 @@ impl<S: EventSink> CampaignPreflight for GuardedCliDependencies<'_, S> {
             .checked_add(downloads)
             .and_then(|sum| sum.checked_add(extraction))
             .ok_or_else(|| StepFailure::new("preflight byte count overflowed u64"))?;
-        initial_preflight(&InitialPreflight {
+        let report = initial_preflight(&InitialPreflight {
             bg1_source: &self.current_bg1,
             bg2_source: &self.current_bg2,
             destination: &request.created.managed_root,
@@ -4323,8 +4326,15 @@ impl<S: EventSink> CampaignPreflight for GuardedCliDependencies<'_, S> {
             required_artifacts: &required_artifacts,
             required_tools: &required_tools,
         })
-        .map(|_| ())
-        .map_err(|error| StepFailure::new(error.to_string()))
+        .map_err(|error| StepFailure::new(error.to_string()))?;
+        for line in report.warnings {
+            self.sink.emit(EngineEvent::ConsoleLine {
+                step_id: "preflight".to_owned(),
+                stream: crate::events::Stream::Stdout,
+                line,
+            });
+        }
+        Ok(())
     }
 
     fn recheck_before_mutation(&mut self, check: &MutationCheck) -> Result<(), StepFailure> {

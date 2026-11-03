@@ -74,6 +74,8 @@ export interface DestinationEvaluation {
   readonly safe: boolean;
   readonly title: string;
   readonly detail: string;
+  /** Part of `detail` shown even for a usable folder: CEBG installs into a new folder inside it, or Steam or Windows may change files there. */
+  readonly note?: string;
   readonly requiredSpace?: string;
   readonly availableSpace?: string;
 }

@@ -548,6 +548,10 @@ pub struct DestinationEvaluationResponse {
     pub safe: bool,
     pub title: String,
     pub detail: String,
+    /// The part of `detail` the install screen shows even for a usable folder: CEBG installs
+    /// into a new folder inside the chosen one, or the folder may be changed by Steam or Windows.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
 }
 
 /// Player-editable defaults for a new installation. Computing these never writes to disk.
@@ -1249,8 +1253,13 @@ impl NativeBridge {
         bg2_candidate_id: &str,
     ) -> Result<DestinationEvaluationResponse, CommandError> {
         let (bg1, bg2) = self.registered_sources(bg1_candidate_id, bg2_candidate_id)?;
-        let mut response =
-            inspect_destination_path(destination, &bg1.root, &bg2.root, &self.cache)?;
+        let mut response = inspect_destination_path(
+            destination,
+            &bg1.root,
+            &bg2.root,
+            &self.cache,
+            &self.registered_install_roots()?,
+        )?;
         response.path = display_windows_path(Path::new(&response.path))?;
         Ok(response)
     }
@@ -1820,7 +1829,13 @@ impl NativeBridge {
             self.registered_sources(bg1_candidate_id, bg2_candidate_id)?;
         let bg1 = self.reinspect_source(&registered_bg1, GameRole::BgeeSod)?;
         let bg2 = self.reinspect_source(&registered_bg2, GameRole::Bg2ee)?;
-        let destination = inspect_destination_path(destination, &bg1.root, &bg2.root, &self.cache)?;
+        let destination = inspect_destination_path(
+            destination,
+            &bg1.root,
+            &bg2.root,
+            &self.cache,
+            &self.registered_install_roots()?,
+        )?;
         let destination_path = PathBuf::from(&destination.path);
         bg_engine::acquire::ArtifactCache::open(&self.cache).map_err(|error| {
             CommandError::new(
@@ -2284,6 +2299,23 @@ impl NativeBridge {
         self.registry()?.list_campaigns().map_err(registry_error)
     }
 
+    /// Display paths of every registered completed and incomplete installation; none when the
+    /// app has no application data folder.
+    fn registered_install_roots(&self) -> Result<Vec<PathBuf>, CommandError> {
+        if self.app_data.is_none() {
+            return Ok(Vec::new());
+        }
+        let registry = self.registry()?;
+        let completed = registry.list().map_err(registry_error)?;
+        let campaigns = registry.list_campaigns().map_err(registry_error)?;
+        completed
+            .into_iter()
+            .map(|card| card.record.managed_root)
+            .chain(campaigns.into_iter().map(|card| card.record.managed_root))
+            .map(|root| display_windows_path(&root).map(PathBuf::from))
+            .collect()
+    }
+
     fn registry(&self) -> Result<ManagedInstallRegistry, CommandError> {
         let app_data = self.app_data.as_ref().ok_or_else(|| {
             CommandError::new(
@@ -2471,6 +2503,7 @@ impl NativeBridge {
             &bg1.root,
             &bg2.root,
             &review.request.cache,
+            &self.registered_install_roots()?,
         )?;
         let current_engine_identity = self
             .engine
@@ -2795,11 +2828,13 @@ fn canonical_candidate(mut candidate: GameCandidate) -> Result<GameCandidate, Co
     Ok(candidate)
 }
 
+/// `registered` holds the roots of CEBG's registered installations, as display paths.
 fn inspect_destination_path(
     destination: &Path,
     bg1: &Path,
     bg2: &Path,
     cache: &Path,
+    registered: &[PathBuf],
 ) -> Result<DestinationEvaluationResponse, CommandError> {
     if !destination.is_absolute()
         || destination
@@ -2835,18 +2870,22 @@ fn inspect_destination_path(
         )
     })?;
     let cache = normalize_prospective_path(cache)?;
-    for (label, protected) in [
-        ("BG1 source", &bg1),
-        ("BG2 source", &bg2),
-        ("cache", &cache),
-    ] {
-        if paths_overlap(&normalized, protected) {
-            return Err(unsafe_destination(
-                destination,
-                &format!("the destination overlaps the {label}"),
-            ));
+    let refuse_overlap = |candidate: &Path| -> Result<(), CommandError> {
+        for (label, protected) in [
+            ("BG1 source", &bg1),
+            ("BG2 source", &bg2),
+            ("cache", &cache),
+        ] {
+            if paths_overlap(candidate, protected) {
+                return Err(unsafe_destination(
+                    destination,
+                    &format!("the destination overlaps the {label}"),
+                ));
+            }
         }
-    }
+        Ok(())
+    };
+    refuse_overlap(&normalized)?;
     let destination_exists = normalized.try_exists().map_err(|error| {
         path_error(
             "destination_unavailable",
@@ -2855,6 +2894,9 @@ fn inspect_destination_path(
             error,
         )
     })?;
+    let mut target = normalized.clone();
+    let mut sentences = Vec::new();
+    let mut notes = Vec::new();
     if destination_exists {
         let metadata = fs::symlink_metadata(&normalized).map_err(|error| {
             path_error(
@@ -2891,23 +2933,86 @@ fn inspect_destination_path(
             })?
             .is_some()
         {
-            return Err(unsafe_destination(
-                destination,
-                "the destination already contains files and is not an empty new managed copy",
-            ));
+            // Never write into a folder that already has files: install into a new folder
+            // inside it. The new-root claim at installation start stays strict. Another CEBG
+            // installation's folder is never the parent of a new one.
+            let shown = PathBuf::from(display_windows_path(&normalized)?);
+            if registered.iter().any(|root| path_is_within(&shown, root)) {
+                return Err(unsafe_destination(
+                    destination,
+                    "the folder belongs to another CEBG installation",
+                ));
+            }
+            target = free_install_subfolder(&normalized, destination)?;
+            refuse_overlap(&target)?;
+            let note =
+                "This folder already has files, so CEBG installs into a new folder inside it.";
+            sentences.push(note);
+            notes.push(note);
+        } else {
+            sentences.push(
+                "CEBG will use this empty folder and repeat its safety checks when installation starts.",
+            );
         }
+    } else {
+        sentences.push(
+            "CEBG will create this folder when installation starts, then repeat its safety checks.",
+        );
+    }
+    if in_store_or_program_folder(&target) {
+        let note = "Steam or Windows may change files in this folder, so a folder elsewhere is safer. CEBG can still install here.";
+        sentences.push(note);
+        notes.push(note);
     }
     Ok(DestinationEvaluationResponse {
-        path: path_to_string(&normalized)?,
+        path: path_to_string(&target)?,
         safe: true,
         title: "Ready to install".to_owned(),
-        detail: if destination_exists {
-            "CEBG will use this empty folder and repeat its safety checks when installation starts."
-                .to_owned()
+        detail: sentences.join(" "),
+        note: (!notes.is_empty()).then(|| notes.join(" ")),
+    })
+}
+
+/// Name of the folder CEBG creates inside a chosen folder that already has files.
+const INSTALL_SUBFOLDER_NAME: &str = "Chriz Easy BG";
+
+/// The first of `Chriz Easy BG`, `Chriz Easy BG (2)`, `Chriz Easy BG (3)`, … that does not exist
+/// inside `folder`, as a file, folder or link.
+fn free_install_subfolder(folder: &Path, chosen: &Path) -> Result<PathBuf, CommandError> {
+    for number in 1..=999_u32 {
+        let name = if number == 1 {
+            INSTALL_SUBFOLDER_NAME.to_owned()
         } else {
-            "CEBG will create this folder when installation starts, then repeat its safety checks."
-                .to_owned()
-        },
+            format!("{INSTALL_SUBFOLDER_NAME} ({number})")
+        };
+        let candidate = folder.join(name);
+        match fs::symlink_metadata(&candidate) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(candidate),
+            Ok(_) => {}
+            Err(error) => {
+                return Err(path_error(
+                    "destination_unavailable",
+                    "The destination could not be inspected safely.",
+                    &candidate,
+                    error,
+                ))
+            }
+        }
+    }
+    Err(unsafe_destination(
+        chosen,
+        "the folder already holds every new CEBG folder name",
+    ))
+}
+
+/// Whether a path component is a Steam library or a Windows program folder, where Steam or
+/// Windows may change files. Only a warning: the folder stays usable.
+fn in_store_or_program_folder(path: &Path) -> bool {
+    path.components().any(|component| {
+        matches!(component, Component::Normal(name)
+            if ["steamapps", "program files", "program files (x86)"]
+                .iter()
+                .any(|known| name.to_string_lossy().eq_ignore_ascii_case(known)))
     })
 }
 
@@ -3205,7 +3310,7 @@ fn unsafe_destination(path: &Path, reason: &str) -> CommandError {
     CommandError::new(
         "destination_unsafe",
         "That folder cannot be used for a new isolated installation.",
-        "Choose a new empty local folder outside both source games and the installer cache.",
+        "Choose a local folder outside both source games and the installer cache.",
         format!("{}: {reason}", path.display()),
     )
 }

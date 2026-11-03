@@ -19,7 +19,6 @@ import {
   initialState,
   installationReadiness,
   reduce,
-  validateInstallationName,
   type AppAction,
   type AppState,
 } from "./state";
@@ -31,7 +30,7 @@ import { operationFeedback } from "./components/operation-feedback";
 import { clearAppUpdate, completedAppUpdate, rememberAppUpdate, type OperationFeedback } from "./operation-feedback";
 import type { OperationProgress } from "./contracts";
 import type { InputValue } from "./contracts";
-import { installationNameError } from "./components/installation-name";
+import { installationNameNote, savedInstallationName, type NamedInstallation } from "./components/installation-name";
 import type { DecisionAnswer, ManualBreakpoint, ManualCheckpointStatus, PendingDecision } from "./contracts";
 import { downloadDecisionDialog, focusDownloadDecision } from "./components/download-decision";
 import type { GameLogStatus, LaunchInstallResult } from "./contracts";
@@ -821,8 +820,10 @@ class AppController implements AppHandle {
     if (!this.#beginIdentityEdit()) return;
     this.#dispatch({ type: "set-installation-name", name });
     this.#dispatch({ type: "review-cleared" });
-    if (this.#state.destinationAutomatic && validateInstallationName(name) === null) {
-      await this.#inspectDestination(automaticInstallationPath(this.#defaultInstallationPath, name), true);
+    if (this.#state.destinationAutomatic) {
+      // The folder takes the name CEBG will save, which is always usable as a folder name.
+      const saved = savedInstallationName(name, this.#namedInstallations());
+      await this.#inspectDestination(automaticInstallationPath(this.#defaultInstallationPath, saved), true);
       return;
     }
     this.#render();
@@ -930,12 +931,10 @@ class AppController implements AppHandle {
 
   #canInstall(): boolean {
     if (this.#changingProfile) return false;
-    if (this.#newInstallationNameError() !== null) return false;
     const bg1 = this.#discovery?.bg1Candidates.find((candidate) => candidate.id === this.#state.selectedBg1Id);
     const bg2 = this.#discovery?.bg2Candidates.find((candidate) => candidate.id === this.#state.selectedBg2Id);
     return installationReadiness({
       starting: this.#starting,
-      name: this.#state.installationName,
       bg1,
       bg2,
       destination: this.#destination,
@@ -945,8 +944,8 @@ class AppController implements AppHandle {
     });
   }
 
-  #newInstallationNameError(): string | null {
-    return installationNameError(this.#state.installationName, this.#installations.map(copy => ({ installId: copy.id, name: copy.name })));
+  #namedInstallations(): readonly NamedInstallation[] {
+    return this.#installations.map(copy => ({ installId: copy.id, name: copy.name }));
   }
 
   async #renameInstallation(installId: string, name: string): Promise<void> {
@@ -2040,7 +2039,7 @@ class AppController implements AppHandle {
           selectedBg1Id: this.#state.selectedBg1Id,
           selectedBg2Id: this.#state.selectedBg2Id,
           installationName: this.#state.installationName,
-          installationNameError: this.#newInstallationNameError(),
+          installationNameNote: installationNameNote(this.#state.installationName, this.#namedInstallations()),
           destination: this.#destination,
           evaluation,
           evaluationPending: this.#state.evaluationPending || this.#changingProfile,
