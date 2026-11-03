@@ -456,7 +456,7 @@ args = []
 run_id = "chriz-bg-modpack-bg2"
 mod_id = "chriz-bg-modpack"
 phase = "post-eet-end"
-components = [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660]
+components = [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660, 670]
 args = []
 
 [[runs]]
@@ -914,7 +914,7 @@ description = "Adds the reviewed BG1 NPC banters, quests, dialogue, and convenie
 category = "bg1-npcs"
 source_label = "The BG1 NPC Project"
 group_label = "BG1 NPCs"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 
 [[features]]
@@ -6069,6 +6069,19 @@ decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
 components = [{ run_id = "chriz-bg-modpack-bg2", component = 660 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-670"
+title = "Marek carries the Boomerang Dagger +2"
+description = "Marek, the Iron Throne assassin of chapter 5, carries a Boomerang Dagger +2 in his backpack and drops it when he dies, so BG1 has the dagger without BG1 NPC Project's Kivan quest. When that quest is installed, it gives the dagger as before and Marek carries none."
+category = "items"
+source_label = "Collection fixes and NPC defaults"
+group_label = "chriz-bg-modpack: Gameplay tweaks"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:eet:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 670 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-640"

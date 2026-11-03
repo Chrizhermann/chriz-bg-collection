@@ -5,6 +5,13 @@ and matches the version installed in the isolated BG1 release candidate. Christo
 approved that exact installed set as the current alpha default; alternate choices stay
 optional and off.
 
+Christopher, 2026-11-03: the mod leaves the defaults. `mod:bg1npc` is optional and unchecked
+in both recipes; ticking it under Customize selects the defaults below, as before. Chriz BG
+Modpack's Kivan sea-elf quest guard `130` follows component `10`
+([CHRIZ-BG-MODPACK](CHRIZ-BG-MODPACK.md)). Component `10`'s Kivan sea-elf quest is BG1's only
+source of the Boomerang Dagger +2 (`DAGG11`): `P#FW3100.BAF` puts it and `AMUL11` into the
+Shipwreck's Coast container when the quest ends. A replacement is Christopher's to design.
+
 49 entries, 9 release-candidate-installed. ✓ = installed in the verified BG1 candidate.
 Subgroup = choose at most one; `none by default` is an explicit valid choice.
 

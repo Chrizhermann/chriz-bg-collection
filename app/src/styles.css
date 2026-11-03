@@ -260,7 +260,8 @@ h1[tabindex="-1"]:focus-visible {
   background: rgba(0, 0, 0, 0.7);
 }
 
-.removal-dialog {
+.removal-dialog,
+.decision-dialog {
   width: min(100%, 35rem);
   max-height: calc(100dvh - 2rem);
   overflow: auto;
@@ -270,19 +271,32 @@ h1[tabindex="-1"]:focus-visible {
   background: var(--charcoal);
 }
 
-.removal-dialog h2 {
+.removal-dialog h2,
+.decision-dialog h2 {
   margin: 0 0 1rem;
   font-family: Georgia, "Times New Roman", serif;
 }
 
-.removal-dialog p {
+.removal-dialog p,
+.decision-dialog p {
   line-height: 1.45;
   font-size: 0.9rem;
 }
 
-.removal-dialog .path {
+.removal-dialog .path,
+.decision-dialog .path {
   overflow-wrap: anywhere;
   user-select: text;
+}
+
+.decision-details {
+  margin: 0.8rem 0;
+  font-size: 0.85rem;
+}
+
+.decision-details ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
 }
 
 .removal-path {

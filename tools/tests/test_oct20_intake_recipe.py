@@ -20,8 +20,9 @@ ROOT = Path(__file__).resolve().parents[2]
 MOD_ID = "chriz-bg-modpack"
 ARTIFACT_ID = "chriz-bg-modpack-0.2.0-alpha.13"
 PREVIOUS_ARTIFACT_ID = "chriz-bg-modpack-0.2.0-alpha.12"
-# The October 26 alpha.22 pin batch replaces this pin.
-SUCCESSOR_ARTIFACT_ID = "chriz-bg-modpack-0.2.0-alpha.14"
+# The October 26 alpha.22 pin batch replaced this pin with alpha.14, and the November 3
+# intake (test_nov03_modpack_alpha15_marek_dagger_recipe) with alpha.15.
+SUCCESSOR_ARTIFACT_ID = "chriz-bg-modpack-0.2.0-alpha.15"
 LATE_RUN = "chriz-bg-modpack-late-companions-bg2"
 CAMPAIGN_RUN = "chriz-bg-modpack-campaign-xp-bg2"
 MODPACK = "feature:chriz-bg-modpack:component-{}"
@@ -188,7 +189,8 @@ class Oct20IntakeTests(unittest.TestCase):
         for profile in (ROOT / "manifest", ROOT / "recipes/curated-full-current", self.output):
             with self.subTest(profile=str(profile)):
                 mod = tomllib.loads((profile / f"mods/{MOD_ID}.toml").read_text(encoding="utf-8"))
-                # Superseded by alpha.14; this verified pin stays available as history.
+                # Superseded by alpha.14 and alpha.15; this verified pin stays available as
+                # history.
                 self.assertEqual(mod["artifact_id"], SUCCESSOR_ARTIFACT_ID)
                 artifact = tomllib.loads((profile / f"artifacts/{ARTIFACT_ID}.toml").read_text(encoding="utf-8"))
                 for key, measured in (("sha256", "actual_sha256"), ("expected_length", "actual_length"),
@@ -203,9 +205,11 @@ class Oct20IntakeTests(unittest.TestCase):
                 collection = tomllib.loads((profile / "collection.toml").read_text(encoding="utf-8"))
                 runs = [run for run in collection["runs"] if run["mod_id"] == MOD_ID]
                 self.assertEqual(len(runs), 9)
-                # Alpha.14 keeps alpha.13's declaration order.
+                # Alpha.14 keeps alpha.13's declaration order, and so does alpha.15 apart from
+                # its new 670 (test_nov03_modpack_alpha15_marek_dagger_recipe).
                 for run in runs:
-                    self.assertEqual(run["components"], [c for c in ALPHA13_NATIVE if c in run["components"]],
+                    components = [c for c in run["components"] if c != 670]
+                    self.assertEqual(components, [c for c in ALPHA13_NATIVE if c in components],
                                      run["run_id"])
         # The checked-in curated artifact is the generator's copy of the authored pin.
         self.assertEqual((ROOT / f"recipes/curated-full-current/artifacts/{ARTIFACT_ID}.toml").read_bytes(),

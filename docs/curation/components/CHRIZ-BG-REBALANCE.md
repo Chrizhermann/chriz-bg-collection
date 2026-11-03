@@ -14,8 +14,18 @@ The release retains component `120`
 weapon-protection repair, component `121` EEex/SCS ambient-readiness bridge, and the
 component `401` correction for Artisan CLAB cells packed into `ABILITY1`.
 
-The recipe pins **v0.8.8** (published 2026-10-29 10:00 UTC, tag commit `92479d1`), which
-adds Druid weapons `410` and Alaghor of Clangeddin weapons `411`, both defaults (see below).
+The recipe pins **v0.8.9** (published 2026-11-01 21:45 UTC, tag commit `bb3f11b`; pinned
+2026-11-02 for CEBG 0.1.0, Christopher's OK of that day). It changes no mechanic and no
+component: Pierce Magic `210` and Spellstrike `211` now write their spell descriptions in
+Spell Revisions' layout (header block, intro, the list of protections removed, the
+changed effect), and repoint what still showed the old mechanic: the scrolls, the Wand of
+Spell Striking's Pierce Magic line and sibling spells that cast the same payload, such as
+Artisan's Kitpack's monk Spellstrike `C0MK#009` and SCS's wand spell `DW#WNDSS`. Its
+texts-only tail components `212`/`213` for existing installations live in the separate
+`CBR_SR_ANTIMAGIC` package, which the recipe does not install; the recipe installs `210`
+and `211` fresh, so its selection does not change.
+v0.8.8 (2026-10-29 10:00 UTC, tag commit `92479d1`) added Druid weapons `410` and Alaghor
+of Clangeddin weapons `411`, both defaults (see below).
 v0.8.7 (2026-10-28, tag commit `2c0aae4`) renamed `360` to True Time Stop – fair Haste &
 Slow and left its behaviour unchanged. v0.8.6 (2026-10-27, tag commit `43b8811`) added `360`; v0.8.5 (2026-10-25) added
 Chris Revisions `340`; v0.8.3 added potion uniqueness `330`/`331` and the Heroism family

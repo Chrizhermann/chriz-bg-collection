@@ -3,11 +3,13 @@ use std::process::ExitCode;
 use std::sync::Mutex;
 
 use bg_engine::cli::{
-    diagnostics_for_managed_install, discover_games, human_plan_lines, inspect_game,
-    install_campaign_controlled, install_interrupt_handler, plan_recipe, report_managed_install,
-    resume_campaign_controlled, validate_recipe, CampaignStatus, CliError, InstallCommandRequest,
-    SelectionOverrides, ValidationProfile,
+    answer_decision, diagnostics_for_managed_install, discover_games, human_plan_lines,
+    inspect_decision, inspect_game, install_campaign_with_answers, install_interrupt_handler,
+    parse_preset_answers, plan_recipe, report_managed_install, resume_campaign_with_answers,
+    validate_recipe, CampaignStatus, CliError, InstallCommandRequest, SelectionOverrides,
+    ValidationProfile,
 };
+use bg_engine::decision::Answer;
 use bg_engine::events::{ConsoleSink, EngineEvent, EventSink};
 use bg_engine::games::GameRole;
 use bg_engine::weidu::runner::RunnerControlHandle;
@@ -40,7 +42,33 @@ enum Command {
     /// Start one new isolated managed installation.
     Install(InstallArgs),
     /// Resume one exact frozen managed installation.
-    Resume { managed_root: PathBuf },
+    Resume {
+        managed_root: PathBuf,
+        /// Answer a question for this run only, for tests and automation:
+        /// changed-download=yes|no|leave-out, unusable-download=yes|no,
+        /// unreviewed-tool=yes|no|leave-out or modded-source=yes|no. Repeat for several questions.
+        #[arg(long = "answer")]
+        answers: Vec<String>,
+    },
+    /// Show the question about a download that an installation waits for, with its token.
+    CheckDecision {
+        managed_root: PathBuf,
+        #[arg(long)]
+        install_id: String,
+    },
+    /// Answer the question shown by check-decision; resume then continues with the answer.
+    Decide {
+        managed_root: PathBuf,
+        #[arg(long)]
+        install_id: String,
+        #[arg(long)]
+        decision: String,
+        #[arg(long)]
+        token: String,
+        /// yes, no or leave-out.
+        #[arg(long, value_parser = parse_answer)]
+        answer: Answer,
+    },
     /// Inspect append-only additions at a declared manual installation pause.
     CheckManualCheckpoint {
         managed_root: PathBuf,
@@ -182,6 +210,15 @@ struct InstallArgs {
     /// Advanced pause after a selected component: run-id:component. Repeat for multiple pauses.
     #[arg(long = "manual-pause-after", value_parser = parse_manual_breakpoint)]
     manual_breakpoints: Vec<bg_engine::manual_checkpoint::ManualBreakpoint>,
+    /// Answer a question for this run only, for tests and automation:
+    /// changed-download=yes|no|leave-out, unusable-download=yes|no,
+    /// unreviewed-tool=yes|no|leave-out or modded-source=yes|no. Repeat for several questions.
+    #[arg(long = "answer")]
+    answers: Vec<String>,
+}
+
+fn parse_answer(value: &str) -> Result<Answer, String> {
+    Answer::parse(value)
 }
 
 fn parse_manual_breakpoint(
@@ -234,6 +271,39 @@ fn execute(cli: &Cli) -> Result<(), CliError> {
                 *accept_additions,
             )?;
             print_json(&json!({ "command": "accept-manual-checkpoint", "ok": true }));
+        }
+        Command::CheckDecision {
+            managed_root,
+            install_id,
+        } => {
+            let decision = inspect_decision(managed_root, install_id)?;
+            if cli.json {
+                print_json(
+                    &json!({ "command": "check-decision", "ok": true, "decision": decision }),
+                );
+            } else {
+                match decision {
+                    Some(decision) => print_decision(managed_root, &decision),
+                    None => println!("The installation waits for no answer."),
+                }
+            }
+        }
+        Command::Decide {
+            managed_root,
+            install_id,
+            decision,
+            token,
+            answer,
+        } => {
+            answer_decision(managed_root, install_id, decision, token, *answer)?;
+            if cli.json {
+                print_json(&json!({ "command": "decide", "ok": true }));
+            } else {
+                println!(
+                    "Answered. Resume the installation to continue: chriz-bg-install resume \"{}\"",
+                    managed_root.display()
+                );
+            }
         }
         Command::Validate(args) => {
             let report = validate_recipe(&args.recipe, args.profile.into())?;
@@ -355,32 +425,39 @@ fn execute(cli: &Cli) -> Result<(), CliError> {
                 managed_root: args.managed_root.clone(),
                 cache: args.cache.clone(),
             };
+            let answers = parse_preset_answers(&args.answers)?;
             if cli.json {
                 let sink = BufferedSink::default();
-                match install_campaign_controlled(&request, &sink, &controls) {
+                match install_campaign_with_answers(&request, &answers, &sink, &controls) {
                     Ok(report) => finish_json_campaign("install", report, sink.into_events())?,
                     Err(error) => return Err(error.with_events(sink.into_events())),
                 }
             } else {
-                finish_human_campaign(install_campaign_controlled(
+                finish_human_campaign(install_campaign_with_answers(
                     &request,
+                    &answers,
                     &ConsoleSink,
                     &controls,
                 )?)?;
             }
         }
-        Command::Resume { managed_root } => {
+        Command::Resume {
+            managed_root,
+            answers,
+        } => {
             let controls = RunnerControlHandle::new();
             install_interrupt_handler(&controls)?;
+            let answers = parse_preset_answers(answers)?;
             if cli.json {
                 let sink = BufferedSink::default();
-                match resume_campaign_controlled(managed_root, &sink, &controls) {
+                match resume_campaign_with_answers(managed_root, &answers, &sink, &controls) {
                     Ok(report) => finish_json_campaign("resume", report, sink.into_events())?,
                     Err(error) => return Err(error.with_events(sink.into_events())),
                 }
             } else {
-                finish_human_campaign(resume_campaign_controlled(
+                finish_human_campaign(resume_campaign_with_answers(
                     managed_root,
+                    &answers,
                     &ConsoleSink,
                     &controls,
                 )?)?;
@@ -395,6 +472,7 @@ fn execute(cli: &Cli) -> Result<(), CliError> {
                     "managed_root": report.managed_root,
                     "receipt": report.receipt,
                     "recovery": report.recovery,
+                    "notes": report.notes,
                 }));
             } else {
                 println!(
@@ -404,6 +482,9 @@ fn execute(cli: &Cli) -> Result<(), CliError> {
                     report.receipt.outcome
                 );
                 println!("Plan SHA-256: {}", report.receipt.plan_sha256);
+                for note in &report.notes {
+                    println!("{note}");
+                }
                 if let Some(recovery) = report.recovery {
                     println!(
                         "Current installation: {} — verified supervised recovery",
@@ -452,6 +533,8 @@ fn command_name(command: &Command) -> &'static str {
         Command::Resume { .. } => "resume",
         Command::CheckManualCheckpoint { .. } => "check-manual-checkpoint",
         Command::AcceptManualCheckpoint { .. } => "accept-manual-checkpoint",
+        Command::CheckDecision { .. } => "check-decision",
+        Command::Decide { .. } => "decide",
         Command::Report { .. } => "report",
         Command::Diagnostics { .. } => "diagnostics",
     }
@@ -487,7 +570,9 @@ fn finish_json_campaign(
 ) -> Result<(), CliError> {
     if matches!(
         report.status,
-        CampaignStatus::Complete | CampaignStatus::Paused { .. }
+        CampaignStatus::Complete
+            | CampaignStatus::Paused { .. }
+            | CampaignStatus::DecisionRequired { .. }
     ) {
         print_json(&json!({
             "command": command,
@@ -512,15 +597,69 @@ fn finish_human_campaign(report: bg_engine::cli::CampaignReport) -> Result<(), C
         );
         return Ok(());
     }
+    if let CampaignStatus::DecisionRequired { decision_id, .. } = &report.status {
+        // The worker has stopped and released the installation, so the question can be read
+        // with its texts and token as check-decision shows it.
+        match inspect_decision(&report.managed_root, &report.install_id) {
+            Ok(Some(decision)) => print_decision(&report.managed_root, &decision),
+            Ok(None) => {
+                println!("The installation waits for the answer to question {decision_id}.")
+            }
+            Err(error) => eprintln!("The question could not be read: {error}"),
+        }
+        return Ok(());
+    }
     if report.status == CampaignStatus::Complete {
         println!(
             "Managed installation ready at {}",
             report.managed_root.display()
         );
+        // The end summary names mods left out and downloads that changed; the installation
+        // is complete either way, so a summary that cannot be read is only reported.
+        match bg_engine::cli::report_managed_install(&report.managed_root) {
+            Ok(managed) => {
+                for note in managed.notes {
+                    println!("{note}");
+                }
+            }
+            Err(error) => eprintln!("The end summary could not be read: {error}"),
+        }
         Ok(())
     } else {
         Err(CliError::from_campaign(report))
     }
+}
+
+/// Prints a question about a download and the exact command lines that answer it.
+fn print_decision(managed_root: &std::path::Path, decision: &bg_engine::cli::DecisionStatus) {
+    println!("The installation waits for your answer:");
+    println!("{}", decision.texts.message);
+    for detail in &decision.texts.details {
+        println!("  {detail}");
+    }
+    if let Some(answer) = decision.answer {
+        println!(
+            "Answered with {}. Resume the installation to continue: chriz-bg-install resume \"{}\"",
+            answer.flag_value(),
+            managed_root.display()
+        );
+        return;
+    }
+    for answer in &decision.texts.answers {
+        println!(
+            "{}: chriz-bg-install decide \"{}\" --install-id {} --decision {} --token {} --answer {}",
+            answer.label,
+            managed_root.display(),
+            decision.install_id,
+            decision.decision_id,
+            decision.token,
+            answer.answer.flag_value()
+        );
+    }
+    println!(
+        "Then resume the installation: chriz-bg-install resume \"{}\"",
+        managed_root.display()
+    );
 }
 
 #[derive(Default)]

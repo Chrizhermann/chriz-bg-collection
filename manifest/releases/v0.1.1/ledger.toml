@@ -1,0 +1,30 @@
+schema = 1
+recipe_id = "chriz-bg-collection"
+version = "0.1.1"
+# The planned publication date (UTC), fixed before packaging because the setup bundles this ledger.
+published_at = "2026-11-03T00:00:00Z"
+# Nothing in this recipe needs a newer app than 0.1.0.
+minimum_app_version = "0.1.0"
+supersedes = "0.1.0"
+
+[[changes]]
+id = "bg1npc-optional"
+title = "BG1 NPC Project is optional"
+summary = "BG1 NPC Project is no longer installed by default; you can still tick it under Customize, where it brings the same banters, quests, interjections and conveniences as before, and the Kivan sea-elf quest guard comes with it. Games you already installed keep it."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "feature:mod:bg1npc",
+]
+
+[[changes]]
+id = "modpack-marek-boomerang-dagger"
+title = "Marek carries the Boomerang Dagger +2"
+summary = "Recommended new installations give Marek, the Iron Throne assassin of chapter 5, a Boomerang Dagger +2 in his backpack, and he drops it when he dies: at his first meeting with you in the north-east of Baldur's Gate or later at the Blushing Mermaid. BG1 NPC Project's Kivan quest was the dagger's only source in BG1 and Siege of Dragonspear, so without that mod there is one again; with it ticked, the quest gives the dagger as before and Marek carries none. (Chriz BG Modpack alpha.15)"
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-modpack-0.2.0-alpha.15",
+  "feature:feature:chriz-bg-modpack:component-670",
+  "run:chriz-bg-modpack-bg2",
+]

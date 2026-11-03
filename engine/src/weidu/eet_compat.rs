@@ -18,7 +18,11 @@ const CORRECTED_SHA256: &str = "1bd191c84ff6c890a5df5d8b556349ec54a996812d0d5f50
 pub(crate) struct EetCompatibilityInput<'a> {
     pub mod_id: &'a str,
     pub artifact_id: &'a str,
+    /// SHA-256 of the archive the staged EET files came from.
     pub artifact_sha256: &'a str,
+    /// The official link served a different archive than the reviewed pin, so the staged
+    /// files may be a newer EET release.
+    pub archive_drifted: bool,
     pub target: GameRoot,
     pub tp2: &'a str,
     pub components: &'a [u32],
@@ -30,17 +34,26 @@ pub(crate) struct EetCompatibilityInput<'a> {
 pub(crate) struct EetCompatibilityEvidence {
     fix_id: &'static str,
     artifact_id: &'static str,
-    archive_sha256: &'static str,
+    archive_sha256: String,
     relative_path: &'static str,
     upstream_lf_sha256: &'static str,
     corrected_lf_sha256: &'static str,
     observed_before_sha256: String,
     observed_after_sha256: String,
     changed: bool,
+    /// Present only for a changed download: the fix then matched the faulty text alone,
+    /// because the rest of the file may differ from the reviewed release.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    matched: Option<&'static str>,
 }
 
 /// Apply only to the known Windows EET core, after source verification/materialization.
 /// Neither the original download nor extracted cache is rewritten.
+///
+/// For the reviewed archive the whole file must be the reviewed original or its correction.
+/// When the official link served a different archive, the file may come from a newer EET
+/// release, so only the exact faulty batch text is replaced, once, and a file without it is
+/// left as it is: upstream may have fixed or changed it.
 pub(crate) fn prepare(
     input: EetCompatibilityInput<'_>,
 ) -> Result<Option<EetCompatibilityEvidence>, String> {
@@ -53,22 +66,85 @@ pub(crate) fn prepare(
             .replace('\\', "/")
             .eq_ignore_ascii_case("eet/eet.tp2")
         || input.artifact_id != ARTIFACT_ID
-        || !input.artifact_sha256.eq_ignore_ascii_case(ARCHIVE_SHA256)
     {
         return Ok(None);
     }
-    let (before, after) = patch_file(input.target_root, ORIGINAL_SHA256, CORRECTED_SHA256)?;
+    let matched = if input.archive_drifted {
+        Some("faulty-text")
+    } else if input.artifact_sha256.eq_ignore_ascii_case(ARCHIVE_SHA256) {
+        None
+    } else {
+        return Ok(None);
+    };
+    let Some((before, after)) = (if matched.is_some() {
+        patch_drifted_file(input.target_root)?
+    } else {
+        Some(patch_file(
+            input.target_root,
+            ORIGINAL_SHA256,
+            CORRECTED_SHA256,
+        )?)
+    }) else {
+        return Ok(None);
+    };
     Ok(Some(EetCompatibilityEvidence {
         fix_id: "eet-windows-documents-path-v1",
         artifact_id: ARTIFACT_ID,
-        archive_sha256: ARCHIVE_SHA256,
+        archive_sha256: input.artifact_sha256.to_ascii_lowercase(),
         relative_path: "EET/lib/macros.tph",
         upstream_lf_sha256: ORIGINAL_SHA256,
         corrected_lf_sha256: CORRECTED_SHA256,
         changed: before != after,
         observed_before_sha256: before,
         observed_after_sha256: after,
+        matched,
     }))
+}
+
+/// Replace the faulty batch text of a newer EET release, when it is there exactly once.
+/// Returns the before/after hashes, or `None` when the file is missing, already has the
+/// corrected text, or lacks the faulty text: then nothing is written.
+fn patch_drifted_file(target_root: &Path) -> Result<Option<(String, String)>, String> {
+    if !target_root.is_absolute() {
+        return Err("EET compatibility target must be absolute".into());
+    }
+    let folder = match HeldFolder::open(target_root, ["EET", "lib"]) {
+        Ok(folder) => folder,
+        Err(error) if matches!(error.kind, EntryErrorKind::Missing) => return Ok(None),
+        Err(error) => return Err(path_error(error)),
+    };
+    let path = folder.path().join(MACROS);
+    let before = match folder.open_file(MACROS) {
+        Ok((file, _)) => {
+            let mut bytes = Vec::new();
+            (&file).read_to_end(&mut bytes).map_err(|error| {
+                format!("Read EET compatibility path {}: {error}", path.display())
+            })?;
+            bytes
+        }
+        Err(error) if matches!(error.kind, EntryErrorKind::Missing) => return Ok(None),
+        Err(error) => return Err(path_error(error)),
+    };
+    let Ok(text) = std::str::from_utf8(&before) else {
+        return Ok(None);
+    };
+    let normalized = text.replace("\r\n", "\n");
+    let crlf = text.contains("\r\n");
+    if (crlf && normalized.replace('\n', "\r\n") != text)
+        || normalized.matches(ORIGINAL_BATCH).count() != 1
+    {
+        return Ok(None);
+    }
+    let corrected = normalized.replacen(ORIGINAL_BATCH, CORRECTED_BATCH, 1);
+    let after = if crlf {
+        corrected.replace('\n', "\r\n").into_bytes()
+    } else {
+        corrected.into_bytes()
+    };
+    folder
+        .replace_file(MACROS, &after)
+        .map_err(|error| format!("Replace EET compatibility path {}: {error}", path.display()))?;
+    Ok(Some((sha256_bytes(&before), sha256_bytes(&after))))
 }
 
 // Upstream match text: EET/lib/macros.tph at 74e91d72bca5d073fa11c1d088b90d7ff0c7105d.
@@ -359,6 +435,7 @@ mod tests {
                 mod_id,
                 artifact_id,
                 artifact_sha256: hash,
+                archive_drifted: false,
                 target,
                 tp2,
                 components,
@@ -368,6 +445,68 @@ mod tests {
             .is_none());
         }
         assert_eq!(std::fs::read_dir(temp.path()).unwrap().count(), 0);
+    }
+
+    fn drifted_input(target_root: &Path) -> EetCompatibilityInput<'_> {
+        EetCompatibilityInput {
+            mod_id: "eet",
+            artifact_id: ARTIFACT_ID,
+            artifact_sha256: "ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12",
+            archive_drifted: true,
+            target: GameRoot::Bg2,
+            tp2: "EET/EET.tp2",
+            components: &[0],
+            target_root,
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn eet_compat_corrects_only_the_faulty_text_of_a_newer_release() {
+        let temp = tempfile::tempdir().unwrap();
+        let target = std::fs::canonicalize(temp.path()).unwrap();
+        std::fs::create_dir_all(target.join("EET/lib")).unwrap();
+        let path = target.join("EET/lib/macros.tph");
+        // A newer release: the rest of the file changed, the faulty batch did not.
+        let newer = format!(
+            "newer prefix\r\n{}\r\nnewer suffix\r\n",
+            ORIGINAL_BATCH.replace('\n', "\r\n")
+        );
+        std::fs::write(&path, &newer).unwrap();
+        let evidence = prepare(drifted_input(&target)).unwrap().unwrap();
+        assert!(evidence.changed);
+        assert_eq!(evidence.matched, Some("faulty-text"));
+        assert_eq!(
+            evidence.archive_sha256,
+            "ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12"
+        );
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            newer.replace(
+                &ORIGINAL_BATCH.replace('\n', "\r\n"),
+                &CORRECTED_BATCH.replace('\n', "\r\n")
+            )
+        );
+        // Run again, as a retry does: nothing left to correct, nothing written.
+        assert!(prepare(drifted_input(&target)).unwrap().is_none());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn eet_compat_leaves_a_newer_release_without_the_faulty_text_alone() {
+        let temp = tempfile::tempdir().unwrap();
+        let target = std::fs::canonicalize(temp.path()).unwrap();
+        // No EET folder at all: nothing is created.
+        assert!(prepare(drifted_input(&target)).unwrap().is_none());
+        assert_eq!(std::fs::read_dir(&target).unwrap().count(), 0);
+        std::fs::create_dir_all(target.join("EET/lib")).unwrap();
+        let path = target.join("EET/lib/macros.tph");
+        std::fs::write(&path, "upstream fixed this differently").unwrap();
+        assert!(prepare(drifted_input(&target)).unwrap().is_none());
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            "upstream fixed this differently"
+        );
     }
 
     #[test]
@@ -520,6 +659,7 @@ mod tests {
                 mod_id: "eet",
                 artifact_id: ARTIFACT_ID,
                 artifact_sha256: ARCHIVE_SHA256,
+                archive_drifted: false,
                 target: GameRoot::Bg2,
                 tp2: "EET/EET.tp2",
                 components: &[0, 100],

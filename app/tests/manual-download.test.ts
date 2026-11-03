@@ -147,6 +147,20 @@ describe("upfront manual downloads", () => {
     expect(backend.openedArtifacts).toEqual(["evandra-2.2-windows"]);
   });
 
+  it("accepts a newer file than the reviewed one and says so before installing", async () => {
+    const backend = new ManualDownloadBackend();
+    const { root, user } = await render(backend);
+    await revealRequirement(root, user);
+    expect(getByText(root, /A newer version than the one named below works too/)).toBeTruthy();
+
+    // The native side accepts the chosen file and reports how it differs.
+    backend.detail = "The file you chose differs from the reviewed version, for example because it is newer. CEBG installs it as chosen and records it; if something does not work, please report it. (5500000 bytes, SHA-256 22)";
+    await user.click(getByRole(root, "button", { name: "Choose downloaded file" }));
+
+    await waitFor(() => expect(getByText(root, "Verified and ready")).toBeTruthy());
+    expect(getByText(root, /CEBG installs it as chosen and records it/)).toBeTruthy();
+    expect((getByRole(root, "button", { name: "Install Chriz Easy BG" }) as HTMLButtonElement).disabled).toBe(false);
+  });
   it("shows checking, marks a valid file ready, and waits for another explicit Install", async () => {
     let releaseSupply!: () => void;
     const backend = new ManualDownloadBackend();

@@ -1,10 +1,17 @@
-//! Steam and GOG installed-game discovery behind injectable providers.
+//! Steam, GOG and Beamdog installed-game discovery behind injectable providers.
+//!
+//! Every candidate folder is checked on its own: an unreadable store record or a malformed
+//! manifest skips only that record, and a game folder that cannot be checked is listed with
+//! its reason. One bad entry never hides the other games.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::io;
 use std::path::{Component, Path, PathBuf};
 
-use super::probe::{inspect_profile_paths, FileKind, FileSystemProvider, SystemFileSystem};
+use super::probe::{
+    inspect_profile_paths, role_profiles, unreadable_candidate, FileKind, FileSystemProvider,
+    SystemFileSystem,
+};
 use super::{GameCandidate, GameError, GameProfile, GameProfiles, GameRole, Result, Storefront};
 
 const STEAM_REGISTRY_LOCATIONS: &[(RegistryHive, &str, &str)] = &[
@@ -25,6 +32,8 @@ const STEAM_REGISTRY_LOCATIONS: &[(RegistryHive, &str, &str)] = &[
     ),
 ];
 
+/// Where the GOG installer and GOG Galaxy record installed games, one subkey per game with
+/// the string values `gameID`, `path` and `language` (among others).
 const GOG_REGISTRY_LOCATIONS: &[(RegistryHive, &str)] = &[
     (RegistryHive::LocalMachine, r"SOFTWARE\GOG.com\Games"),
     (
@@ -36,6 +45,31 @@ const GOG_REGISTRY_LOCATIONS: &[(RegistryHive, &str)] = &[
         RegistryHive::CurrentUser,
         r"SOFTWARE\WOW6432Node\GOG.com\Games",
     ),
+];
+
+/// GOG product ids of the games (GOG database, gogdb.org): Baldur's Gate: Enhanced Edition,
+/// whose Siege of Dragonspear is the DLC 1459335293 inside it, and Baldur's Gate II: Enhanced
+/// Edition. Recipe profiles may name more ids in `gog_game_ids`.
+pub const GOG_GAME_IDS: &[(GameRole, &str)] = &[
+    (GameRole::BgeeSod, "1207666353"),
+    (GameRole::Bg2ee, "1207666373"),
+];
+
+/// Folder names that GOG installs use (GOG database). A folder of that name counts only when
+/// it holds the game's `goggame-<id>.info` file.
+const GOG_FOLDER_NAMES: &[(GameRole, &str)] = &[
+    (GameRole::BgeeSod, "Baldur's Gate Enhanced Edition"),
+    (GameRole::Bg2ee, "Baldur's Gate II - Enhanced Edition"),
+];
+
+/// Folder names the Beamdog client gave the games inside its `Games` folder: `00766` for
+/// Baldur's Gate: Enhanced Edition, `00806` for it with Siege of Dragonspear, `00783` for
+/// Baldur's Gate II: Enhanced Edition (Beamdog forums). The client closed in December 2025;
+/// installed games stay where it put them.
+pub const BEAMDOG_FOLDERS: &[(GameRole, &str)] = &[
+    (GameRole::BgeeSod, "00806"),
+    (GameRole::BgeeSod, "00766"),
+    (GameRole::Bg2ee, "00783"),
 ];
 
 /// Supported Windows registry hive.
@@ -114,20 +148,92 @@ impl RegistryProvider for SystemRegistry {
     }
 }
 
-/// Discovers and inspects installed games using the host read-only providers.
-pub fn discover_installed_games(profiles: &GameProfiles) -> Result<Vec<GameCandidate>> {
-    discover_games(profiles, &SystemRegistry, &SystemFileSystem)
+/// Folders where stores put games by default, for stores without usable records: the
+/// Beamdog client's `Games` folders and GOG's game libraries.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct StoreFolders {
+    /// Folders holding Beamdog game folders such as `00806`.
+    pub beamdog_games: Vec<PathBuf>,
+    /// Folders holding GOG game folders such as `Baldur's Gate Enhanced Edition`.
+    pub gog_libraries: Vec<PathBuf>,
 }
 
-/// Discovers Steam first and GOG second, then probes every deduplicated candidate.
+impl StoreFolders {
+    /// The default folders on this PC: `Beamdog\Games` under both Program Files folders,
+    /// `GOG Games` on the system drive (the GOG installer's default) and `GOG Galaxy\Games`
+    /// under both Program Files folders (GOG Galaxy's default).
+    pub fn system() -> Self {
+        let program_files = ["ProgramFiles(x86)", "ProgramFiles"]
+            .into_iter()
+            .filter_map(std::env::var_os)
+            .map(PathBuf::from)
+            .filter(|path| path.is_absolute())
+            .collect::<Vec<_>>();
+        let system_drive = std::env::var_os("SystemDrive")
+            .map(|drive| PathBuf::from(format!("{}\\", drive.to_string_lossy())))
+            .filter(|path| path.is_absolute());
+        Self {
+            beamdog_games: program_files
+                .iter()
+                .map(|root| root.join("Beamdog").join("Games"))
+                .collect(),
+            gog_libraries: system_drive
+                .into_iter()
+                .map(|drive| drive.join("GOG Games"))
+                .chain(
+                    program_files
+                        .iter()
+                        .map(|root| root.join("GOG Galaxy").join("Games")),
+                )
+                .collect(),
+        }
+    }
+}
+
+/// Discovers and inspects installed games using the host read-only providers.
+pub fn discover_installed_games(profiles: &GameProfiles) -> Result<Vec<GameCandidate>> {
+    discover_games_with(
+        profiles,
+        &SystemRegistry,
+        &SystemFileSystem,
+        &StoreFolders::system(),
+    )
+}
+
+/// Discovers Steam and GOG games from their records, then probes every deduplicated
+/// candidate. Default store folders are not searched; see [`discover_games_with`].
 pub fn discover_games<R: RegistryProvider, F: FileSystemProvider>(
     profiles: &GameProfiles,
     registry: &R,
     fs_provider: &F,
 ) -> Result<Vec<GameCandidate>> {
+    discover_games_with(profiles, registry, fs_provider, &StoreFolders::default())
+}
+
+/// Discovers Steam and GOG games from their records and Beamdog and GOG games in `folders`,
+/// then probes every deduplicated candidate. Each candidate is checked on its own; the
+/// result lists every game found, usable or not, and never fails because of one of them.
+pub fn discover_games_with<R: RegistryProvider, F: FileSystemProvider>(
+    profiles: &GameProfiles,
+    registry: &R,
+    fs_provider: &F,
+    folders: &StoreFolders,
+) -> Result<Vec<GameCandidate>> {
     let mut discovered = Vec::new();
-    discover_steam(profiles, registry, fs_provider, &mut discovered)?;
-    discover_gog(profiles, registry, fs_provider, &mut discovered)?;
+    discover_steam(profiles, registry, fs_provider, &mut discovered);
+    discover_gog(profiles, registry, fs_provider, &mut discovered);
+    discover_gog_folders(
+        profiles,
+        fs_provider,
+        &folders.gog_libraries,
+        &mut discovered,
+    );
+    discover_beamdog(
+        profiles,
+        fs_provider,
+        &folders.beamdog_games,
+        &mut discovered,
+    );
 
     discovered.sort_by(|left, right| {
         (left.storefront, left.role, folded_path(&left.root)).cmp(&(
@@ -144,33 +250,52 @@ pub fn discover_games<R: RegistryProvider, F: FileSystemProvider>(
     Ok(discovered)
 }
 
+/// Inspects one discovered folder; a folder that cannot be checked is listed with the reason.
+fn inspect_discovered<F: FileSystemProvider>(
+    fs_provider: &F,
+    profiles: &[&GameProfile],
+    root: &Path,
+    storefront: Storefront,
+    language: Option<&str>,
+    output: &mut Vec<GameCandidate>,
+) {
+    let Some(role) = profiles.first().map(|profile| profile.role) else {
+        return;
+    };
+    match is_candidate_directory(fs_provider, root) {
+        Ok(true) => {}
+        Ok(false) => return,
+        Err(error) => {
+            output.push(unreadable_candidate(role, storefront, root, &error));
+            return;
+        }
+    }
+    output.push(
+        match inspect_profile_paths(fs_provider, profiles, root, storefront, language) {
+            Ok(candidate) => candidate,
+            Err(error) => unreadable_candidate(role, storefront, root, &error),
+        },
+    );
+}
+
 fn discover_steam<R: RegistryProvider, F: FileSystemProvider>(
     profiles: &GameProfiles,
     registry: &R,
     fs_provider: &F,
     output: &mut Vec<GameCandidate>,
-) -> Result<()> {
-    let mut steam_roots = BTreeSet::new();
+) {
+    let mut steam_roots = BTreeMap::<String, PathBuf>::new();
     for &(hive, key, value_name) in STEAM_REGISTRY_LOCATIONS {
-        let value = registry
-            .read_string(hive, key, value_name)
-            .map_err(|source| GameError::Registry {
-                location: format!("{hive:?}\\{key}::{value_name}"),
-                source,
-            })?;
-        if let Some(value) = value {
-            let root = PathBuf::from(value.trim());
-            if root.as_os_str().is_empty() || !root.is_absolute() {
-                return Err(GameError::Registry {
-                    location: format!("{hive:?}\\{key}::{value_name}"),
-                    source: io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        "Steam root is empty or not absolute",
-                    ),
-                });
-            }
-            steam_roots.insert(root);
+        // A record that cannot be read or names no usable folder is skipped; the other
+        // records may still find Steam.
+        let Ok(Some(value)) = registry.read_string(hive, key, value_name) else {
+            continue;
+        };
+        let root = PathBuf::from(value.trim());
+        if root.as_os_str().is_empty() || !root.is_absolute() {
+            continue;
         }
+        steam_roots.insert(folded_path(&root), root);
     }
 
     let mut steam_profiles = BTreeMap::<(u32, GameRole), Vec<&GameProfile>>::new();
@@ -188,107 +313,118 @@ fn discover_steam<R: RegistryProvider, F: FileSystemProvider>(
     for group in steam_profiles.values_mut() {
         group.sort_by_key(|profile| (&profile.product_version, &profile.id));
     }
-    for steam_root in steam_roots {
-        let libraries = steam_libraries(fs_provider, &steam_root)?;
-        for library in libraries {
+    for steam_root in steam_roots.into_values() {
+        for library in steam_libraries(fs_provider, &steam_root) {
             for (&(app_id, _), profile_group) in &steam_profiles {
                 let manifest_path = library
                     .join("steamapps")
                     .join(format!("appmanifest_{app_id}.acf"));
-                let bytes = match fs_provider.read(&manifest_path) {
-                    Ok(bytes) => bytes,
-                    Err(error) if error.kind() == io::ErrorKind::NotFound => continue,
-                    Err(source) => {
-                        return Err(GameError::Io {
-                            path: manifest_path,
-                            source,
-                        })
-                    }
-                };
-                let document = parse_vdf(&manifest_path, &bytes)?;
-                let app_state =
-                    object(&document, "AppState").ok_or_else(|| GameError::SteamMetadata {
-                        path: manifest_path.clone(),
-                        message: "missing AppState object".to_owned(),
-                    })?;
-                let declared_app_id =
-                    text_value(app_state, "appid").ok_or_else(|| GameError::SteamMetadata {
-                        path: manifest_path.clone(),
-                        message: "missing appid".to_owned(),
-                    })?;
-                if declared_app_id != app_id.to_string() {
-                    return Err(GameError::SteamMetadata {
-                        path: manifest_path,
-                        message: format!(
-                            "appid {declared_app_id:?} does not match expected {app_id}"
-                        ),
-                    });
-                }
-                let install_dir = text_value(app_state, "installdir").ok_or_else(|| {
-                    GameError::SteamMetadata {
-                        path: manifest_path.clone(),
-                        message: "missing installdir".to_owned(),
-                    }
-                })?;
-                if !safe_install_dir(install_dir) {
-                    return Err(GameError::SteamMetadata {
-                        path: manifest_path,
-                        message: format!("unsafe installdir {install_dir:?}"),
-                    });
-                }
-                let root = library.join("steamapps/common").join(install_dir);
-                if !is_candidate_directory(fs_provider, &root)? {
+                let Some(app) = steam_app(fs_provider, &manifest_path, app_id) else {
                     continue;
-                }
-                output.push(inspect_profile_paths(fs_provider, profile_group, &root)?);
+                };
+                let root = library.join("steamapps/common").join(&app.install_dir);
+                inspect_discovered(
+                    fs_provider,
+                    profile_group,
+                    &root,
+                    Storefront::Steam,
+                    app.language.as_deref(),
+                    output,
+                );
             }
         }
     }
-    Ok(())
 }
 
-fn steam_libraries<F: FileSystemProvider>(
+/// What one Steam app manifest says about an installed game.
+struct SteamApp {
+    install_dir: String,
+    language: Option<String>,
+}
+
+/// Reads one app manifest. An absent, unreadable, malformed or unsafe manifest gives `None`:
+/// its game cannot be located, and the other manifests are read on.
+fn steam_app<F: FileSystemProvider>(
     fs_provider: &F,
-    steam_root: &Path,
-) -> Result<Vec<PathBuf>> {
+    manifest_path: &Path,
+    app_id: u32,
+) -> Option<SteamApp> {
+    let bytes = fs_provider.read(manifest_path).ok()?;
+    let document = parse_vdf(manifest_path, &bytes).ok()?;
+    let app_state = object(&document, "AppState")?;
+    if text_value(app_state, "appid")? != app_id.to_string() {
+        return None;
+    }
+    let install_dir = text_value(app_state, "installdir")?;
+    if !safe_install_dir(install_dir) {
+        return None;
+    }
+    // Steam keeps the game language the player picked in `UserConfig`.
+    let language = ["UserConfig", "MountedConfig"].iter().find_map(|section| {
+        object(app_state, section)
+            .and_then(|config| text_value(config, "language"))
+            .filter(|language| !language.trim().is_empty())
+            .map(str::to_owned)
+    });
+    Some(SteamApp {
+        install_dir: install_dir.to_owned(),
+        language,
+    })
+}
+
+/// The Steam root and every library `libraryfolders.vdf` names. A missing or malformed file,
+/// or a library entry without a usable absolute path, leaves just the libraries it can name.
+fn steam_libraries<F: FileSystemProvider>(fs_provider: &F, steam_root: &Path) -> Vec<PathBuf> {
     let mut libraries = BTreeMap::<String, PathBuf>::new();
     libraries.insert(folded_path(steam_root), steam_root.to_path_buf());
     let path = steam_root.join("steamapps/libraryfolders.vdf");
-    let bytes = match fs_provider.read(&path) {
-        Ok(bytes) => bytes,
-        Err(error) if error.kind() == io::ErrorKind::NotFound => {
-            return Ok(libraries.into_values().collect())
-        }
-        Err(source) => return Err(GameError::Io { path, source }),
+    let Some(document) = fs_provider
+        .read(&path)
+        .ok()
+        .and_then(|bytes| parse_vdf(&path, &bytes).ok())
+    else {
+        return libraries.into_values().collect();
     };
-    let document = parse_vdf(&path, &bytes)?;
-    let folders = object(&document, "libraryfolders").ok_or_else(|| GameError::SteamMetadata {
-        path: path.clone(),
-        message: "missing libraryfolders object".to_owned(),
-    })?;
-    for (_, value) in folders {
-        let VdfValue::Object(entry) = value else {
-            continue;
-        };
-        let Some(library_path) = text_value(entry, "path") else {
-            continue;
-        };
-        if library_path.trim().is_empty() {
-            return Err(GameError::SteamMetadata {
-                path,
-                message: "library path is empty".to_owned(),
-            });
+    if let Some(folders) = object(&document, "libraryfolders") {
+        for (_, value) in folders {
+            let VdfValue::Object(entry) = value else {
+                continue;
+            };
+            let Some(library_path) = text_value(entry, "path") else {
+                continue;
+            };
+            let library = PathBuf::from(library_path.trim());
+            if library.as_os_str().is_empty() || !library.is_absolute() {
+                continue;
+            }
+            libraries.insert(folded_path(&library), library);
         }
-        let library = PathBuf::from(library_path.trim());
-        if !library.is_absolute() {
-            return Err(GameError::SteamMetadata {
-                path,
-                message: format!("library path {library_path:?} is not absolute"),
-            });
-        }
-        libraries.insert(folded_path(&library), library);
     }
-    Ok(libraries.into_values().collect())
+    libraries.into_values().collect()
+}
+
+/// The roles a GOG product id stands for: the known ids, and the ids recipe profiles name.
+fn gog_roles(profiles: &GameProfiles, game_id: &str) -> Vec<GameRole> {
+    let mut roles = GOG_GAME_IDS
+        .iter()
+        .filter(|(_, id)| id.eq_ignore_ascii_case(game_id.trim()))
+        .map(|(role, _)| *role)
+        .collect::<Vec<_>>();
+    for profile in profiles
+        .iter()
+        .filter(|profile| profile.storefront == Storefront::Gog)
+    {
+        if profile
+            .gog_game_ids
+            .iter()
+            .any(|id| id.eq_ignore_ascii_case(game_id.trim()))
+            && !roles.contains(&profile.role)
+        {
+            roles.push(profile.role);
+        }
+    }
+    roles.sort();
+    roles
 }
 
 fn discover_gog<R: RegistryProvider, F: FileSystemProvider>(
@@ -296,75 +432,110 @@ fn discover_gog<R: RegistryProvider, F: FileSystemProvider>(
     registry: &R,
     fs_provider: &F,
     output: &mut Vec<GameCandidate>,
-) -> Result<()> {
+) {
     for &(hive, root_key) in GOG_REGISTRY_LOCATIONS {
-        let mut records =
-            registry
-                .subkeys(hive, root_key)
-                .map_err(|source| GameError::Registry {
-                    location: format!("{hive:?}\\{root_key}"),
-                    source,
-                })?;
+        let Ok(mut records) = registry.subkeys(hive, root_key) else {
+            continue;
+        };
         records.sort_by_key(|value| value.to_ascii_lowercase());
         for record in records {
             let key = format!(r"{root_key}\{record}");
-            let game_id = registry
-                .read_string(hive, &key, "gameID")
-                .map_err(|source| GameError::Registry {
-                    location: format!("{hive:?}\\{key}::gameID"),
-                    source,
-                })?
-                .unwrap_or_else(|| record.clone());
-            let matched_profiles = profiles
-                .iter()
-                .filter(|profile| profile.storefront == Storefront::Gog)
-                .filter(|profile| {
-                    profile
-                        .gog_game_ids
-                        .iter()
-                        .any(|id| id.eq_ignore_ascii_case(&game_id))
-                })
-                .collect::<Vec<_>>();
-            if matched_profiles.is_empty() {
+            let game_id = match registry.read_string(hive, &key, "gameID") {
+                Ok(Some(game_id)) => game_id,
+                Ok(None) => record.clone(),
+                Err(_) => continue,
+            };
+            let roles = gog_roles(profiles, &game_id);
+            if roles.is_empty() {
                 continue;
             }
-            let value = registry
-                .read_string(hive, &key, "path")
-                .map_err(|source| GameError::Registry {
-                    location: format!("{hive:?}\\{key}::path"),
-                    source,
-                })?
-                .ok_or_else(|| GameError::Registry {
-                    location: format!("{hive:?}\\{key}::path"),
-                    source: io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        "recognized GOG record has no path",
-                    ),
-                })?;
-            let root = PathBuf::from(value);
+            let Ok(Some(value)) = registry.read_string(hive, &key, "path") else {
+                continue;
+            };
+            let root = PathBuf::from(value.trim());
             if root.as_os_str().is_empty() || !root.is_absolute() {
-                return Err(GameError::Registry {
-                    location: format!("{hive:?}\\{key}::path"),
-                    source: io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        "recognized GOG path is empty or not absolute",
-                    ),
-                });
-            }
-            if !is_candidate_directory(fs_provider, &root)? {
                 continue;
             }
-            let mut role_groups = BTreeMap::<GameRole, Vec<&GameProfile>>::new();
-            for profile in matched_profiles {
-                role_groups.entry(profile.role).or_default().push(profile);
-            }
-            for profile_group in role_groups.values_mut() {
-                profile_group.sort_by_key(|profile| (&profile.product_version, &profile.id));
-                output.push(inspect_profile_paths(fs_provider, profile_group, &root)?);
+            let language = registry.read_string(hive, &key, "language").ok().flatten();
+            for role in roles {
+                let group = role_profiles(profiles, role, Storefront::Gog);
+                inspect_discovered(
+                    fs_provider,
+                    &group,
+                    &root,
+                    Storefront::Gog,
+                    language.as_deref(),
+                    output,
+                );
             }
         }
     }
-    Ok(())
+}
+
+/// GOG games in the default GOG folders, for installs whose registry record is missing. A
+/// folder counts only when it holds the game's `goggame-<id>.info` file.
+fn discover_gog_folders<F: FileSystemProvider>(
+    profiles: &GameProfiles,
+    fs_provider: &F,
+    libraries: &[PathBuf],
+    output: &mut Vec<GameCandidate>,
+) {
+    for library in libraries {
+        for &(role, name) in GOG_FOLDER_NAMES {
+            let root = library.join(name);
+            let Some(info) = GOG_GAME_IDS
+                .iter()
+                .filter(|(id_role, _)| *id_role == role)
+                .map(|(_, id)| root.join(format!("goggame-{id}.info")))
+                .find(|info| matches!(fs_provider.file_kind(info), Ok(FileKind::File)))
+            else {
+                continue;
+            };
+            let language = gog_info_language(fs_provider, &info);
+            let group = role_profiles(profiles, role, Storefront::Gog);
+            inspect_discovered(
+                fs_provider,
+                &group,
+                &root,
+                Storefront::Gog,
+                language.as_deref(),
+                output,
+            );
+        }
+    }
+}
+
+/// The `language` a GOG game's `goggame-<id>.info` file names, when it can be read.
+fn gog_info_language<F: FileSystemProvider>(fs_provider: &F, info: &Path) -> Option<String> {
+    let bytes = fs_provider.read(info).ok()?;
+    let document = serde_json::from_slice::<serde_json::Value>(&bytes).ok()?;
+    document
+        .get("language")
+        .and_then(serde_json::Value::as_str)
+        .filter(|language| !language.trim().is_empty())
+        .map(str::to_owned)
+}
+
+/// Beamdog client games in its default `Games` folders.
+fn discover_beamdog<F: FileSystemProvider>(
+    profiles: &GameProfiles,
+    fs_provider: &F,
+    games_folders: &[PathBuf],
+    output: &mut Vec<GameCandidate>,
+) {
+    for games in games_folders {
+        for &(role, folder) in BEAMDOG_FOLDERS {
+            let group = role_profiles(profiles, role, Storefront::Beamdog);
+            inspect_discovered(
+                fs_provider,
+                &group,
+                &games.join(folder),
+                Storefront::Beamdog,
+                None,
+                output,
+            );
+        }
+    }
 }
 
 fn is_candidate_directory<F: FileSystemProvider>(fs_provider: &F, root: &Path) -> Result<bool> {

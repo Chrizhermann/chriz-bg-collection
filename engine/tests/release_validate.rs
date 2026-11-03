@@ -240,8 +240,22 @@ fn blocked_default_requires_an_explicit_omission_record() {
             .retain(|record| record["feature_id"].as_str() != Some("feature:bg1npc:component-160"));
     });
 
-    let findings = validate_public_alpha_at(&recipe(), temp.path()).unwrap();
+    // BG1 NPC Project is optional and off since 2026-11-03 (Christopher): unticked, nothing
+    // of it is requested, so its blocked portraits default 160 needs no record.
+    let mut manifest = recipe();
+    let findings = validate_public_alpha_at(&manifest, temp.path()).unwrap();
+    assert!(
+        !omitted(&findings, "feature:bg1npc:component-160"),
+        "{findings:#?}"
+    );
+    // Ticked, 160 is requested again and its omission needs the record.
+    set_preset(&mut manifest, "mod:bg1npc", "on");
+    let findings = validate_public_alpha_at(&manifest, temp.path()).unwrap();
     assert!(has_rule(&findings, RULE_RELEASE_OMISSION));
+    assert!(
+        omitted(&findings, "feature:bg1npc:component-160"),
+        "{findings:#?}"
+    );
 }
 
 #[test]
@@ -323,7 +337,7 @@ fn a_default_that_drops_out_under_a_ticked_optional_parent_needs_an_omission_rec
 fn outcomes_beneath_a_switched_off_default_parent_still_need_omission_records() {
     let mut manifest = recipe();
     // Default children of a default mod, and a mandatory child of another default mod.
-    set_preset(&mut manifest, "mod:bg1npc", "off");
+    set_preset(&mut manifest, "mod:xan", "off");
     set_preset(&mut manifest, "mod:paina", "off");
     let paina_child = manifest
         .collection
@@ -339,10 +353,16 @@ fn outcomes_beneath_a_switched_off_default_parent_still_need_omission_records() 
 
     let findings = validate_public_alpha_at(&manifest, &release_root()).unwrap();
     assert!(
-        omitted(&findings, "feature:bg1npc:component-0"),
+        omitted(&findings, "feature:xan:component-1"),
         "{findings:#?}"
     );
     assert!(omitted(&findings, &paina_child), "{findings:#?}");
+    // BG1 NPC Project is optional since 2026-11-03: unticked, its defaults are not
+    // requested, so they need no record.
+    assert!(
+        !omitted(&findings, "feature:bg1npc:component-0"),
+        "{findings:#?}"
+    );
 }
 
 #[test]

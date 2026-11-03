@@ -80,6 +80,18 @@ describe("managed patch recovery projection", () => {
   });
 });
 
+describe("installation end summary", () => {
+  it("reads the summary of one installation by its registry id", async () => {
+    const notes = [
+      "Left out: Snowytoes. Its download could not be used.",
+      "If something does not work as expected, please report it so the collection can be fixed.",
+    ];
+    const invoke = vi.fn(async () => notes);
+    await expect(new NativeBackend(invoke).installationSummary("managed-one")).resolves.toEqual(notes);
+    expect(invoke).toHaveBeenLastCalledWith("installation_summary", { installId: "managed-one" });
+  });
+});
+
 describe("explicit installation removal", () => {
   it("uses only the registry id and confirmed token on the native command boundary", async () => {
     const preview = { installId: "managed-one", displayName: "Test", managedRoot: "D:\\Test", action: "delete", approximateSizeBytes: "12884901888", preservedSavePath: null, confirmationToken: "bound-token" };
@@ -398,6 +410,7 @@ describe("native command adapter", () => {
               status: "Ready to play",
               receipt_path: "D:\\Campaigns\\Ready\\install-receipt.json",
               launch_path: "D:\\Campaigns\\Ready\\InfinityLoader.exe",
+              profile_path: "C:\\Users\\Player\\Documents\\Ready campaign - 0123456789ab",
               completed_at_millis: 1_788_451_200_000,
               available: true,
               resumable: false,
@@ -409,6 +422,7 @@ describe("native command adapter", () => {
               status: "Build interrupted — ready to resume",
               receipt_path: null,
               launch_path: null,
+              profile_path: null,
               completed_at_millis: null,
               available: false,
               resumable: true,
@@ -425,6 +439,9 @@ describe("native command adapter", () => {
           return { installId: "install-ready", radar: { state: "not-requested", detail: null, technicalDetail: null },
             gameSettings: { state: "unchanged", technicalDetail: null }, gameLog: { state: "kept", technicalDetail: null } };
         case "open_install_folder":
+          expect(args).toEqual({ installId: "install-ready" });
+          return null;
+        case "open_profile_folder":
           expect(args).toEqual({ installId: "install-ready" });
           return null;
         case "create_desktop_shortcut":
@@ -444,6 +461,7 @@ describe("native command adapter", () => {
         status: "Ready to play",
         receiptPath: "D:\\Campaigns\\Ready\\install-receipt.json",
         launchPath: "D:\\Campaigns\\Ready\\InfinityLoader.exe",
+        profilePath: "C:\\Users\\Player\\Documents\\Ready campaign - 0123456789ab",
         completedAtMillis: 1_788_451_200_000,
         available: true,
         resumable: false,
@@ -455,6 +473,7 @@ describe("native command adapter", () => {
         status: "Build interrupted — ready to resume",
         receiptPath: null,
         launchPath: null,
+        profilePath: null,
         completedAtMillis: null,
         available: false,
         resumable: true,
@@ -469,6 +488,7 @@ describe("native command adapter", () => {
       gameSettings: { state: "unchanged", technicalDetail: null }, gameLog: { state: "kept", technicalDetail: null },
     });
     await expect(backend.openInstallFolder("install-ready")).resolves.toBeUndefined();
+    await expect(backend.openProfileFolder("install-ready")).resolves.toBeUndefined();
     await expect(backend.createDesktopShortcut("install-ready")).resolves.toEqual({
       path: "C:\\Users\\Player\\Desktop\\Chriz Easy BG.lnk",
     });

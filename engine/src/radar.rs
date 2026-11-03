@@ -593,6 +593,11 @@ fn validate_roots(managed_root: &Path, game_root: &Path) -> Result<ValidatedRoot
     })
 }
 
+/// The collection creator's own `C:\Games` reference tree, which no development or test run may
+/// write into. Like the creator folders in preflight, this exists only in debug and test builds
+/// and with the `creator-guards` feature: release player builds do not carry the owner's folder
+/// rule, so a player's installation under `C:\Games` gets Radar like any other.
+#[cfg(any(debug_assertions, feature = "creator-guards"))]
 fn is_protected_games_path(path: &Path) -> bool {
     let normalized = path
         .to_string_lossy()
@@ -600,6 +605,11 @@ fn is_protected_games_path(path: &Path) -> bool {
         .trim_start_matches("\\\\?\\")
         .to_ascii_lowercase();
     normalized == "c:\\games" || normalized.starts_with("c:\\games\\")
+}
+
+#[cfg(not(any(debug_assertions, feature = "creator-guards")))]
+fn is_protected_games_path(_path: &Path) -> bool {
+    false
 }
 
 fn reject_link(path: &Path, label: &str) -> Result<(), RadarError> {
@@ -1162,5 +1172,30 @@ fn io_error(action: &'static str, path: &Path, source: std::io::Error) -> RadarE
         action,
         path: path.to_path_buf(),
         source,
+    }
+}
+
+#[cfg(all(test, any(debug_assertions, feature = "creator-guards")))]
+mod creator_guard_tests {
+    use super::*;
+
+    /// Test builds keep the creator's `C:\Games` guard; only lexical checks, no file is touched.
+    #[test]
+    fn test_builds_keep_the_creator_games_tree_guard() {
+        for protected in [
+            r"C:\Games",
+            r"c:\games\Some Install",
+            r"\\?\C:\Games\Some Install\game",
+            "C:/Games/Some Install",
+        ] {
+            assert!(is_protected_games_path(Path::new(protected)), "{protected}");
+        }
+        for ordinary in [
+            r"C:\GamesLibrary\Install",
+            r"D:\Games\Install",
+            r"C:\Users\Player\Games",
+        ] {
+            assert!(!is_protected_games_path(Path::new(ordinary)), "{ordinary}");
+        }
     }
 }
