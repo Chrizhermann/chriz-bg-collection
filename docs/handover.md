@@ -20,6 +20,21 @@ since 0.1.0:
 Christopher OK'd building and testing the candidate (2026-11-03); publishing waits for his
 test and his OK. Nothing is tagged, published or uploaded.
 
+PR #98 merged as `161bb72`. The signed setup is built from its head `f855441`, whose tree
+the merge commit keeps unchanged: 6,413,423 bytes, SHA-256
+`0d20eac8175ffecbf8a29f3c24e7c59cce156e949724e2ca5273f5723d631652`. The checks all
+passed:
+
+- the signature, resource and updater checks (0.1.0 → 0.1.1);
+- the native order proof of the Modpack alpha.15 pin;
+- a Defender scan of the setup;
+- the full suite in a new clean worktree: 1,336 native, 478 frontend and 281 Python tests.
+
+The setup, its signature, the feed and the other release files are in Christopher's test
+folder, with the prepared `alpha` channel feed and the 0.1.0 feed as its rollback copy.
+Exact results: [0.1.1 package verification](package-acceptance-0.1.1-2026-11-03.md). If
+publication slips past 2026-11-04 00:00 UTC, rebuild with the real date in the ledger.
+
 ## November 3 — questions about changed or unusable downloads (PR 80, for 0.1.1)
 
 PR 80 (`claude/drift-dialogs`), on top of PR 69, for 0.1.1. The installer no longer

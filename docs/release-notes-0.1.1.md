@@ -1,7 +1,7 @@
 # Chriz Easy BG 0.1.1
 
-**Release candidate:** app 0.1.1 / collection 0.1.1, planned for 2026-11-03. The exact
-package and its test results follow in the candidate's package verification record.
+**Release candidate:** app 0.1.1 / collection 0.1.1, planned for 2026-11-03. Exact package
+and test results: [0.1.1 package verification](package-acceptance-0.1.1-2026-11-03.md).
 
 0.1.1 makes the installer ask instead of stopping, opens CEBG to GOG, Beamdog and other
 Windows copies of the games, and adds a button for your saves and portraits. The
