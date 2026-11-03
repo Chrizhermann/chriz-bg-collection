@@ -2,6 +2,24 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 3 — 0.1.1 release candidate
+
+Branch `claude/release-0.1.1`, from the next-release branch at `c6279f9` (#97), sets the
+app to **0.1.1** in the five files the 0.1.0 bump changed and refreshes the notices'
+lockfile digests. The bundled collection already reads 0.1.1. Its update ledger keeps
+2026-11-03 as the publication date, fixed before packaging because the setup bundles the
+ledger, and needs app 0.1.0. The [release notes](release-notes-0.1.1.md) cover everything
+since 0.1.0:
+
+- the fewer-stops round (#89–#93, #96): GOG, Beamdog and other copies, the modded-game
+  question and failed optional mods left out;
+- the download questions (#69, #80);
+- the saves & portraits folder button (#82);
+- BG1 NPC Project optional (#88) and Marek's Boomerang Dagger (#97).
+
+Christopher OK'd building and testing the candidate (2026-11-03); publishing waits for his
+test and his OK. Nothing is tagged, published or uploaded.
+
 ## November 3 — questions about changed or unusable downloads (PR 80, for 0.1.1)
 
 PR 80 (`claude/drift-dialogs`), on top of PR 69, for 0.1.1. The installer no longer
