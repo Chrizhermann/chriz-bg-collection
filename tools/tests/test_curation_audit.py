@@ -139,7 +139,8 @@ class CatalogParserTests(unittest.TestCase):
         # October 29: the SIRENE_BG1 catalog (Sirene NPC for BG:EE) adds 10 rows.
         # October 29: Rebalance v0.8.8 adds Druid weapons 410 and Alaghor of Clangeddin
         # weapons 411, and Artisan's Kitpack chriz.5 adds tweak 7205.
-        self.assertEqual(len(rows), 1_351)
+        # November 3: Modpack alpha.15 adds Marek's Boomerang Dagger 670.
+        self.assertEqual(len(rows), 1_352)
         self.assertEqual(
             decision_totals(rows),
             {
@@ -189,7 +190,9 @@ class CatalogParserTests(unittest.TestCase):
                 # and so are Sirene BG1 0, 3 and 6 (Christopher, 2026-10-29).
                 # October 29: Rebalance 410 and 411 are defaults (Christopher, 2026-10-29),
                 # and so is Artisan tweak 7205 (Christopher, 2026-10-29).
-                Decision.DEFAULT: 335,
+                # November 3: Modpack 670 (Marek's Boomerang Dagger) is a default
+                # (Christopher, 2026-11-03).
+                Decision.DEFAULT: 336,
                 # October 13 intake: SoD 177/198/285 join the mandatory bundle (430 left it).
                 Decision.MANDATORY: 154,
             },
@@ -425,9 +428,10 @@ default = "none"
         # and the six offered SIRENE_BG1 rows map to one feature each.
         # October 29: Rebalance 410 and 411 map to one feature each (v0.8.8 pin), and so
         # does Artisan tweak 7205 (chriz.5 pin).
-        self.assertEqual(result.mapped_rows, 1_351)
+        # November 3: Modpack 670 maps to one feature (alpha.15 pin).
+        self.assertEqual(result.mapped_rows, 1_352)
         self.assertEqual(result.excluded_rows, 527)
-        self.assertEqual(result.feature_rows + result.omission_rows, 824)
+        self.assertEqual(result.feature_rows + result.omission_rows, 825)
         # October 14: Rebalance potion uniqueness and SCS fine weapons choices.
         # October 23: the SoD Remix Imoen in Shadows of Amn choice.
         # October 23: ten quest-mod choices (Ascalon's three with their first variant as
@@ -439,7 +443,7 @@ default = "none"
         self.assertEqual(result.choice_groups, 88)
         self.assertEqual(result.optional_none_groups, 31)
         self.assertEqual(result.fixed_groups, 12)
-        self.assertIn("rows=1351", coverage_report(rows, result))
+        self.assertIn("rows=1352", coverage_report(rows, result))
 
     def test_september16_intake_rows_match_the_approved_recipe_features(self) -> None:
         root = Path(__file__).resolve().parents[2]

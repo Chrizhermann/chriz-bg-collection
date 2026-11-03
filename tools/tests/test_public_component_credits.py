@@ -84,7 +84,10 @@ class PublicComponentCreditsTests(unittest.TestCase):
         # and the Kivan quest guard Modpack 130 leave the defaults.
         self.assertNotIn("bg1npc-bg1", actual)
         self.assertNotIn(130, actual["chriz-bg-modpack-bg2"])
-        self.assertEqual(self.result["componentCount"], 467)
+        # November 3: the Modpack alpha.15 pin adds default Marek's Boomerang Dagger 670 after
+        # Degrodel 660.
+        self.assertEqual(actual["chriz-bg-modpack-bg2"][-2:], [660, 670])
+        self.assertEqual(self.result["componentCount"], 468)
         self.assertEqual(len(actual), 69)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:

@@ -538,7 +538,7 @@ fn release_0_1_0_supersedes_alpha20_requires_the_0_1_0_app_and_waits_for_the_nex
 }
 
 #[test]
-fn release_0_1_1_supersedes_0_1_0_and_makes_bg1npc_optional_for_the_next_playthrough() {
+fn release_0_1_1_supersedes_0_1_0_with_bg1npc_optional_and_marek_s_dagger() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
     let curated = root.join("recipes/curated-full-current");
     let ledger = load_release(&curated.join("releases/v0.1.1/ledger.toml")).unwrap();
@@ -573,17 +573,19 @@ fn release_0_1_1_supersedes_0_1_0_and_makes_bg1npc_optional_for_the_next_playthr
         [v010.changes, ledger.changes.clone()].concat()
     );
 
-    // BG1 NPC Project left the defaults (Christopher, 2026-11-03): the only recorded
-    // difference since the recipe that 0.1.0 shipped is that feature's decision. It was
-    // taken from payloads that chriz-bg-author package-recipe built from the curated trees
-    // of 9bb496a (and of the 0.1.0 build source 50a4239, with the same result) and d8fcade.
+    // Since the recipe that 0.1.0 shipped, BG1 NPC Project left the defaults and Modpack
+    // alpha.15 adds Marek's Boomerang Dagger 670 as a default (Christopher, 2026-11-03):
+    // that mod feature's decision, the new Modpack artifact, the 670 feature and the main
+    // post-EET_end Modpack run. The differences were taken from payloads that
+    // chriz-bg-author package-recipe built from the curated trees of 9bb496a (and of the
+    // 0.1.0 build source 50a4239, with the same result) and fa0edd6.
     let snapshot = released_snapshots()
         .into_iter()
         .find(|snapshot| snapshot["version"] == "0.1.1")
         .expect("the 0.1.1 differences are recorded");
     assert_eq!(snapshot["from_commit"], "9bb496a");
     let differences = snapshot_differences(&snapshot);
-    assert_eq!(differences.len(), 1);
+    assert_eq!(differences.len(), 4);
     ensure_change_coverage(&differences, &ledger).unwrap();
     assert_eq!(
         ledger
@@ -591,8 +593,19 @@ fn release_0_1_1_supersedes_0_1_0_and_makes_bg1npc_optional_for_the_next_playthr
             .iter()
             .flat_map(|change| change.covers.iter().map(String::as_str))
             .collect::<BTreeSet<_>>(),
-        BTreeSet::from(["feature:mod:bg1npc"])
+        BTreeSet::from([
+            "artifact:chriz-bg-modpack-0.2.0-alpha.15",
+            "feature:feature:chriz-bg-modpack:component-670",
+            "feature:mod:bg1npc",
+            "run:chriz-bg-modpack-bg2",
+        ])
     );
+    let dagger = ledger
+        .changes
+        .iter()
+        .find(|change| change.id == "modpack-marek-boomerang-dagger")
+        .expect("the 0.1.1 ledger names Marek's dagger");
+    assert_eq!(dagger.title, "Marek carries the Boomerang Dagger +2");
 }
 
 #[test]

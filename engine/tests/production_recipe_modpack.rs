@@ -10,7 +10,7 @@ use bg_engine::Manifest;
 const MODPACK_COMPONENTS: &[u32] = &[
     110, 130, 135, 140, 170, 188, 189, 190, 192, 193, 194, 195, 196, 197, 198, 199, 220, 221, 222,
     223, 224, 225, 230, 231, 232, 233, 234, 400, 410, 430, 440, 450, 460, 610, 611, 620, 630, 640,
-    235, 236, 237, 238, 239, 660, 650, 651, 652,
+    235, 236, 237, 238, 239, 660, 670, 650, 651, 652,
 ];
 
 /// The September 16 intake split the single post-EET modpack run into the
@@ -28,16 +28,19 @@ const CONTINUITY_COMPONENTS: &[u32] = &[199];
 /// The October 13 intake (Modpack alpha.11 candidate) moves scroll policy 430 into
 /// its own final run and adds Degrodel 660 after 630 in TP2 order. The October 26
 /// alpha.14 pin adds alpha.13's Dorn ambush fix 135 after 130 and its party AI
-/// Defensive Stance fix 460 after 450, in TP2 order.
-const POST_EET_END_COMPONENTS: &[u32] = &[130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660];
+/// Defensive Stance fix 460 after 450, in TP2 order. The November 3 alpha.15 pin adds
+/// Marek's Boomerang Dagger 670 after 660, in TP2 order.
+const POST_EET_END_COMPONENTS: &[u32] =
+    &[130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660, 670];
 
 const RECOMMENDED_PRE_CONTINUITY_COMPONENTS: &[u32] = &[
     110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 230, 231, 232, 233, 234,
 ];
 
 // November 3: BG1 NPC Project left the defaults (Christopher, 2026-11-03), so the Kivan
-// quest guard 130 installs only when it is ticked.
-const RECOMMENDED_COMPONENTS: &[u32] = &[135, 410, 440, 450, 460, 611, 660];
+// quest guard 130 installs only when it is ticked. Marek's Boomerang Dagger 670
+// (alpha.15) is a default for 0.1.1.
+const RECOMMENDED_COMPONENTS: &[u32] = &[135, 410, 440, 450, 460, 611, 660, 670];
 
 fn recipe_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../manifest")
@@ -51,27 +54,31 @@ fn recipe() -> Manifest {
 fn freezes_the_public_modpack_alpha_without_publishing_its_bundled_weidu() {
     let manifest = recipe();
     let artifact_id = &manifest.mods["chriz-bg-modpack"].artifact_id;
-    assert_eq!(artifact_id, "chriz-bg-modpack-0.2.0-alpha.14");
+    // November 3: alpha.15 adds Marek's Boomerang Dagger 670; alpha.14 stays as history.
+    assert_eq!(artifact_id, "chriz-bg-modpack-0.2.0-alpha.15");
     let artifact = &manifest.artifacts[artifact_id];
+    assert!(manifest
+        .artifacts
+        .contains_key("chriz-bg-modpack-0.2.0-alpha.14"));
     assert!(!manifest
         .artifacts
         .contains_key("chriz-bg-modpack-0.2.0-alpha.5"));
-    assert_eq!(artifact.version, "0.2.0-alpha.14");
+    assert_eq!(artifact.version, "0.2.0-alpha.15");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
-    assert_eq!(artifact.source.reference, "v0.2.0-alpha.14");
+    assert_eq!(artifact.source.reference, "v0.2.0-alpha.15");
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.14/chriz-bg-modpack-v0.2.0-alpha.14.zip"
+        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.15/chriz-bg-modpack-v0.2.0-alpha.15.zip"
     );
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-bg-modpack-v0.2.0-alpha.14.zip")
+        Some("chriz-bg-modpack-v0.2.0-alpha.15.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(10_550_312));
+    assert_eq!(artifact.source.expected_length, Some(10_555_318));
     assert_eq!(
         artifact.source.sha256,
-        "45c767b21342d1c7c23ded6cd52aef29b4054daf9cc949613d8f6620207a356c"
+        "a6031332c10c0bd5ee72b63ff1e1a870b1ef1b5e056f59e3542949e0c4ba7d8d"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -148,7 +155,7 @@ fn authors_all_approved_components_between_remote_console_and_buffbot() {
     assert_eq!(runs[baeloth].components, [235]);
 
     let installer = &manifest.mods["chriz-bg-modpack"];
-    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.14");
+    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.15");
     assert_eq!(installer.tp2, "setup-chriz-bg-modpack.tp2");
     assert_eq!(installer.language, 0);
     assert_eq!(installer.weidu_artifact_id, "weidu-249-amd64");
@@ -208,9 +215,10 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // October 14: companion stats 230-234 (Modpack alpha.12) are defaults too.
     // October 20: so is EET join XP 239 (Modpack alpha.13).
     // October 26: and alpha.13's Dorn ambush fix 135 and party AI fix 460 (alpha.14 pin).
+    // November 3: and Marek's Boomerang Dagger 670 (alpha.15 pin).
     for component in [
         110, 135, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 230, 231, 232, 233, 234, 236,
-        237, 239, 430, 460, 611, 660,
+        237, 239, 430, 460, 611, 660, 670,
     ] {
         let id = format!("feature:chriz-bg-modpack:component-{component}");
         let control = evaluation
@@ -335,7 +343,8 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // weapons 411 to both plans, and its Kitpack chriz.5 pin the default katana fix 7205.
     // November 3: BG1 NPC Project is optional and unselected (Christopher, 2026-11-03),
     // which removes its 8 defaults and the Kivan quest guard 130 from both plans.
-    // This 370-component base plan is distinct from the 467-component curated plan.
+    // Its Modpack alpha.15 pin adds default Marek's Boomerang Dagger 670 to both plans.
+    // This 371-component base plan is distinct from the 468-component curated plan.
     assert_eq!(
         evaluation
             .plan
@@ -343,7 +352,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        370
+        371
     );
 }
 

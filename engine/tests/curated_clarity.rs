@@ -73,8 +73,9 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         // The October 29 Rebalance v0.8.8 pin adds default Druid weapons 410 and Alaghor of
         // Clangeddin weapons 411, and the Kitpack chriz.5 pin the default katana fix 7205.
         // November 3 removes BG1 NPC Project's 8 defaults and the Kivan quest guard
-        // Modpack 130 that follows them.
-        467
+        // Modpack 130 that follows them; the Modpack alpha.15 pin adds default Marek's
+        // Boomerang Dagger 670.
+        468
     );
     // Scroll policy 430 hashes the final scrolls and spells, so it follows BuffBot.
     let (tail, rest) = result.plan.runs.split_last().unwrap();

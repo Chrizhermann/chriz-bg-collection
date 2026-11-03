@@ -67,8 +67,9 @@ NATIVE_RUN_ORDERS = {
     # Modpack alpha.11 (October 13): scroll policy 430 moved to its own final run;
     # Degrodel 660 is declared after 640 and before the campaign XP pair 650/651.
     # Alpha.13 declares Dorn's ambush fix 135 after 130 and the party AI fix 460 after
-    # 450; the collection offers both from the alpha.14 pin (October 26).
-    "chriz-bg-modpack-bg2": [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660],
+    # 450; the collection offers both from the alpha.14 pin (October 26). Alpha.15
+    # (November 3) declares Marek's Boomerang Dagger 670 after 660 and before 650.
+    "chriz-bg-modpack-bg2": [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660, 670],
     # Modpack alpha.13 (October 20) declares EET join XP 239 right after 238; it runs
     # after the NPC mods and EET_end and before the campaign XP run, as 650 requires.
     "chriz-bg-modpack-late-companions-bg2": [189, 237, 238, 239, 620],

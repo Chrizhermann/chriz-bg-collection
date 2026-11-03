@@ -384,15 +384,15 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "9a32652029dc2d35dfe940e67753830a562af375e47ebab9c24f347a71b83106",
-            "baefd1bdbae87ec62f46487fe563cac19f48b2a1da557c8d4a14bbfcd2b59c62",
-            "749cb2da25c6a7ab1e286bc498bd14ebf32f972cb69123b52808d1393d73c7c8",
+            "c90f8f1b57deda983af1eafb2ffdd987eba60c253907f14972d10c3fd144b855",
+            "253015344c72b69bd35011cb03f9dbf8ad395999deb9fa5a3278ed7baa943c1e",
+            "9a20fbbf693c053ef811157c749645945c62903c684a8136244d3f34f2fbd551",
         ),
         (
             "../recipes/curated-full-current",
-            "460a03664109cb38c04f464bacfddbcacc6301d167329aad118de421664debe0",
-            "5d1dbddea6422ec87fc559f83106f9847c0169a601af2f2d4c23fd0fba227d3a",
-            "e13c0693addac73b38fefe1e2b3ef8b32532920f40414b0204fa91fc605487c6",
+            "28812dc15b2863260be1c9cd54ab195a393a08404a9ca16a7a837f82c853568a",
+            "7a1ba97da70cba541ce9e05c68c3b0d999d41e5ec8b724745f2efd43ce3ecbf2",
+            "ee3d8e3b51a929dc3236032fc2b4e51139da5f0fe1bf9a50e2d1debd0e2d9989",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

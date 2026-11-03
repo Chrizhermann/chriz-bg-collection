@@ -434,9 +434,12 @@
   {
     "version": "0.1.1",
     "from_commit": "9bb496a",
-    "to_commit": "d8fcade",
+    "to_commit": "fa0edd6",
     "subjects": [
-      "feature:mod:bg1npc"
+      "artifact:chriz-bg-modpack-0.2.0-alpha.15",
+      "feature:feature:chriz-bg-modpack:component-670",
+      "feature:mod:bg1npc",
+      "run:chriz-bg-modpack-bg2"
     ]
   }
 ]
