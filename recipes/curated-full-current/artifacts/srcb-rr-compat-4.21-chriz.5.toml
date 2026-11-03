@@ -1,0 +1,32 @@
+id = "srcb-rr-compat-4.21-chriz.5"
+name = "Spell Revisions / Rogue Rebalancing compatibility"
+version = "4.21-chriz.5"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/chriz-spell-revisions-patch/releases/download/v4.21-chriz.5/SRCB_RR_COMPAT-v4-21-chriz-5.zip"
+reference = "v4.21-chriz.5"
+expected_filename = "SRCB_RR_COMPAT-v4-21-chriz-5.zip"
+expected_length = 1450569
+sha256 = "c7958b467f9197cbe364791796e15678b95f11020d27b14e45ed471b0ff6968d"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["SRCB_RR_COMPAT"]
+tp2_paths = ["SRCB_RR_COMPAT/setup-SRCB_RR_COMPAT.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 64
+max_entry_uncompressed_bytes = 2097152
+max_total_uncompressed_bytes = 4194304
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-spell-revisions-patch"
+license = "Fetch-only maintained fork release; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/chriz-spell-revisions-patch/releases/tag/v4.21-chriz.5"
+reviewed_on = "2026-09-16"

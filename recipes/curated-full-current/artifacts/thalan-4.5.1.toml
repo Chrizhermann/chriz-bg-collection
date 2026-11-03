@@ -1,0 +1,32 @@
+id = "thalan-4.5.1"
+name = "Thalantyr Item Upgrade"
+version = "4.5.1"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/CrevsDaak/thalan/releases/download/v4.5.1/thalantyr-item-upgrade-v4.5.1.iemod"
+reference = "v4.5.1"
+expected_filename = "thalantyr-item-upgrade-v4.5.1.iemod"
+expected_length = 833151
+sha256 = "ac5a2dff1feb41ee0e5d7a2e029c8a4985957aaef9c689558dbc6ed09cf019d3"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "iemod"
+root_rule = "direct"
+publish_roots = ["thalan"]
+tp2_paths = ["thalan/thalan.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 2097152
+max_total_uncompressed_bytes = 4194304
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/CrevsDaak/thalan"
+license = "Fetch-only from the author's official release; no redistribution by CEBG"
+url = "https://github.com/CrevsDaak/thalan/releases/tag/v4.5.1"
+reviewed_on = "2026-10-22"

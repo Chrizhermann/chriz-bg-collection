@@ -1,0 +1,42 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-10-23"
+command = "chriz-bg-author artifact inspect <release or commit archive URL> --cache-root <fresh cache> --expected-tp2 buffbot/setup-buffbot.tp2 (BuffBot) or --expected-tp2 setup-eeexremote.tp2 (Remote Console); chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python tools/check_native_component_order.py --recipe-root manifest --recipe-root recipes/curated-full-current --mod-id <mod> --archive <fresh downloaded ZIP>"
+scope = "BuffBot v1.10.1 was published as a normal GitHub release on October 20 and replaces v1.10.0 in both recipe profiles. EEex Remote Console v0.2.1 was merged and tagged on October 23; like v0.2.0 it is an annotated tag without GitHub release assets, so it is pinned as GitHub's immutable commit archive of the tag commit and replaces v0.2.0 in both recipe profiles. Each archive was downloaded anonymously into a fresh cache for the inspection and for each profile's artifact TOML, and passed the production acquisition and extraction contracts; the measured hashes and the native TP2 declaration order match both recipes. Archive layouts and limits are unchanged from the previous pins. This is automated source/package verification, not a full combined WeiDU install or gameplay acceptance."
+
+# Against v1.10.0 the TP2 changes only its VERSION line: components 1 and 0 are unchanged.
+# v1.10.1 fixes the combat-stop notice (bg-eeex-buffbot#76).
+[[artifacts]]
+mod_id = "buffbot"
+artifact_id = "buffbot-1.10.1"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.10.1"
+source_commit = "c1f2eb6cea3b555024853d8e99fc55dc5bd372d7"
+immutable_source_url = "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.10.1/buffbot-v1.10.1.zip"
+actual_length = 4270988
+actual_sha256 = "4aadd0ea5dba2dd082b3af5b63da06db61139e997ea87e8adff1a2853fa31a7e"
+tp2_sha256 = "1965db37521953c8a9792e857f5a89f4ab8d6c9eb4b7287aceacb8b10773aed9"
+native_components = [1, 0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+# Tag v0.2.1 is on the merge commit of eeex-remote-console#5. There is no published GitHub
+# release (the repository publishes tags only). Component 0 stays the only component; the
+# TP2 changes its VERSION and the EEex v1.2/v1.3 guidance in its two failure messages.
+[[artifacts]]
+mod_id = "eeexremote"
+artifact_id = "eeexremote-0.2.1"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "3d98990766abe9ed1024c79ff43d609101f37836"
+source_commit = "3d98990766abe9ed1024c79ff43d609101f37836"
+immutable_source_url = "https://codeload.github.com/Chrizhermann/eeex-remote-console/zip/3d98990766abe9ed1024c79ff43d609101f37836"
+actual_length = 34419
+actual_sha256 = "f417cb993fff8fac5f72a7e2c597baa78dd68f7bc51b5951777b5ffd60e70359"
+tp2_sha256 = "0f7e9af5664f93aa1c44e76006c0bb484ada10a16ce6915c38592b234b43f610"
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = false
+native_component_order_verified = true

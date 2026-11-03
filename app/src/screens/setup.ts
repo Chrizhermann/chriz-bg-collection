@@ -1,21 +1,42 @@
 import type { SelectionEvaluation } from "../contracts";
 import { actionButton, element, screenActions, screenIntro } from "../components/app-shell";
-import { bulkCategoryChanges, bundleChanges, bundleSelected, commonBundles, exclusiveChoiceChanges, exclusiveChoiceGroups, type ExclusiveChoiceGroup } from "../customization";
+import { persistDisclosure } from "../components/disclosure";
+import { gameInterfaceSelector } from "../components/game-interface";
+import { manualBreakpointEditor, invalidBreakpoints, type ManualBreakpointEditorModel } from "../components/manual-checkpoints";
+import { featureInputs, type InputChange } from "../components/feature-inputs";
+import { featureGroupCard } from "../components/feature-group-card";
+import { bulkCategoryChanges, bundleChanges, bundleSelected, commonBundles, exclusiveChoiceChanges, exclusiveChoiceGroups, featureGroupsByMember, featureGroupVariantsByChoiceGroup, type ExclusiveChoiceGroup } from "../customization";
 
 export interface SetupViewState {
   search: string;
   category: string;
   advancedOpen?: boolean;
+  commonOpen?: boolean;
+  categoryOpen?: Record<string, boolean>;
   bundleMemory?: Record<string, Readonly<Record<string, boolean>>>;
   adjustedChoices?: readonly string[];
+  manualModsOpen?: boolean;
 }
 
 export interface SetupBatchActions {
   change(changes: Record<string, boolean>, focusId: string): void | Promise<void>;
   reset(): void | Promise<void>;
+  input?: InputChange;
+  manualBreakpoints?: Omit<ManualBreakpointEditorModel, "open" | "onOpen" | "phaseTitles">;
 }
 
 const decisionLabels = { mandatory: "Always included", default: "Recommended", optional: "Optional", excluded: "Not included" } as const;
+
+const categoryLabels: Readonly<Record<string, string>> = {
+  core: "Essential setup", "bg1-content": "Baldur’s Gate: content", "bg1-fixes": "Baldur’s Gate: fixes",
+  "bg1-npcs": "Baldur’s Gate: companions", npcs: "Companions", kits: "Classes and kits",
+  engine: "Engine and utilities", banters: "Companion conversations", convenience: "Quality of life",
+  difficulty: "Difficulty and challenges", endgame: "Endgame", collection: "Collection",
+};
+
+function displayCategory(category: string): string {
+  return categoryLabels[category] ?? category.replaceAll("-", " ").replace(/^./, (letter) => letter.toLocaleUpperCase());
+}
 
 function choiceGroupControlId(group: ExclusiveChoiceGroup): string {
   return `choice-group-${group.id.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
@@ -37,13 +58,37 @@ export function setupScreen(
   const page = element("div", "screen-stack setup-screen");
   const header = element("div", "setup-toolbar");
   const top = element("div", "setup-heading");
-  top.append(screenIntro("", "Customize your installation", "Chriz’s setup is ready to install. Change just the things you want."), screenActions(back, actionButton("Done", next)));
+  const done = actionButton("Done", next);
+  const invalidInputs = new Set<string>();
+  const invalidPauses = batch?.manualBreakpoints ? invalidBreakpoints(batch.manualBreakpoints.selected, batch.manualBreakpoints.options).length > 0 : false;
+  done.disabled = invalidPauses;
+  const inputValidity = (id: string, valid: boolean): void => {
+    if (valid) invalidInputs.delete(id); else invalidInputs.add(id);
+    done.disabled = invalidInputs.size > 0 || invalidPauses;
+  };
+  top.append(screenIntro("", "Customize your installation", "Chriz’s setup is ready to install. Change just the things you want."), screenActions(back, done));
   header.append(top);
+  if (invalidPauses) {
+    const notice = element("p", "unavailable-reason", "A manual-mod pause needs correction. Open Advanced: Add your own mods below, then remove the pause or restore its component.");
+    notice.id = "manual-pause-correction";
+    notice.setAttribute("role", "alert");
+    done.setAttribute("aria-describedby", notice.id);
+    header.append(notice);
+  }
   page.append(header);
+  // Feature groups (Challenge Mode) are the first choice on the page, above common changes.
+  if (batch) for (const group of evaluation.featureGroups ?? []) page.append(featureGroupCard(evaluation, group, batch.change));
+  const groupByMember = featureGroupsByMember(evaluation);
+  const variantByChoiceGroup = featureGroupVariantsByChoiceGroup(evaluation);
+  const variantByOption = new Map([...variantByChoiceGroup.values()].map(entry => [entry.variant.option, entry] as const));
+  const exclusiveGroups = batch ? exclusiveChoiceGroups(evaluation) : [];
+  const interfaceGroup = exclusiveGroups.find(group => group.id === "game-interface");
   const bundles = batch ? commonBundles(evaluation) : [];
-  if (batch && bundles.length > 0) {
-    const common = element("section", "common-choices");
-    const title = element("h2", undefined, "Common changes");
+  if (batch && (bundles.length > 0 || interfaceGroup)) {
+    const common = element("details", "common-choices choice-group");
+    common.open = viewState.commonOpen ?? true;
+    const title = element("summary", "category-heading", "Common changes");
+    persistDisclosure(common, title, (open) => { viewState.commonOpen = open; });
     common.setAttribute("aria-label", "Common changes");
     const choices = element("div", "common-choice-grid");
     for (const bundle of bundles) {
@@ -70,7 +115,11 @@ export function setupScreen(
     }
     const reset = actionButton("Reset to Chriz’s setup", () => { viewState.bundleMemory = {}; void batch.reset(); }, "quiet");
     reset.classList.add("button-quiet");
-    common.append(title, choices, reset);
+    const body = element("div", "category-body");
+    body.append(choices);
+    if (interfaceGroup) body.append(gameInterfaceSelector(evaluation, interfaceGroup, batch.change));
+    body.append(reset);
+    common.append(title, body);
     page.append(common);
   }
   if (viewState.adjustedChoices?.length) {
@@ -83,8 +132,9 @@ export function setupScreen(
   }
   const advanced = element("details", "setup-advanced");
   advanced.open = viewState.advancedOpen ?? bundles.length === 0;
-  advanced.addEventListener("toggle", () => { viewState.advancedOpen = advanced.open; });
-  advanced.append(element("summary", undefined, "Advanced options by category"));
+  const advancedHeading = element("summary", undefined, "Advanced options by category");
+  persistDisclosure(advanced, advancedHeading, (open) => { viewState.advancedOpen = open; });
+  advanced.append(advancedHeading);
   const filters = element("div", "setup-filters");
   const searchLabel = element("label", undefined, "Find a mod or option");
   const search = element("input");
@@ -102,7 +152,7 @@ export function setupScreen(
   allCategories.value = "";
   categorySelect.append(allCategories);
   evaluation.view.categories.forEach((category) => {
-    const option = element("option", undefined, category);
+    const option = element("option", undefined, displayCategory(category));
     option.value = category;
     categorySelect.append(option);
   });
@@ -113,15 +163,31 @@ export function setupScreen(
   filters.append(searchLabel, categoryLabel, summary);
   advanced.append(filters);
   const groups = element("div", "setup-groups");
-  const filterable: { group: HTMLElement; category: string; rows: { element: HTMLElement; text: string }[] }[] = [];
-  const exclusiveGroups = batch ? exclusiveChoiceGroups(evaluation) : [];
+  const filterable: { group: HTMLDetailsElement; category: string; rows: { element: HTMLElement; text: string }[] }[] = [];
   const exclusiveByControl = new Map(exclusiveGroups.flatMap(group => group.controls.map(control => [control.id, group] as const)));
   evaluation.view.categories.forEach((category) => {
-    const fieldset = element("fieldset", "choice-group card");
-    fieldset.append(element("legend", undefined, category));
+    const section = element("details", "choice-group");
+    section.dataset.category = category;
+    section.open = viewState.categoryOpen?.[category] ?? true;
+    const heading = element("summary", "category-heading");
+    heading.append(element("span", "category-title", displayCategory(category)));
+    const count = element("span", "category-count");
+    const categoryControls = evaluation.view.controls.filter((control) => control.category === category && !interfaceGroup?.controls.includes(control));
+    if (categoryControls.length === 0) return;
+    count.textContent = `${categoryControls.filter((control) => control.selected).length} / ${categoryControls.length} included`;
+    heading.append(count);
+    persistDisclosure(section, heading, (open) => {
+      // Search temporarily opens matches; it must not erase the player's layout.
+      if (viewState.search.trim()) return;
+      viewState.categoryOpen ??= {};
+      viewState.categoryOpen[category] = open;
+    });
+    section.append(heading);
+    const fieldset = element("div", "category-body");
+    section.append(fieldset);
     if (batch) {
       const buttons = element("div", "category-actions");
-      for (const [selected, label] of [[true, "Include all compatible"], [false, "Exclude all optional"]] as const) {
+      for (const [selected, label] of [[true, "Include available choices"], [false, "Exclude optional choices"]] as const) {
         const id = `category-${category}-${selected ? "include" : "exclude"}`;
         const changes = bulkCategoryChanges(evaluation, category, selected);
         const button = actionButton(label, () => { void batch.change(changes, id); }, "quiet");
@@ -129,11 +195,12 @@ export function setupScreen(
         button.disabled = Object.keys(changes).length === 0;
         buttons.append(button);
       }
-      fieldset.append(buttons, element("p", "category-hint", "Required fixes stay included. Unavailable choices and conflicting alternatives are left out."));
+      fieldset.append(buttons, element("p", "category-hint", "Both buttons affect the whole category, including choices hidden by your search. Include keeps your existing alternatives but can add challenge or experimental choices; it is not a recommendation. Required fixes stay included."));
     }
     const rows: { element: HTMLElement; text: string }[] = [];
     const renderedExclusiveGroups = new Set<string>();
     evaluation.view.controls.filter((control) => control.category === category).forEach((control) => {
+      if (interfaceGroup?.controls.includes(control)) return;
       const exclusive = exclusiveByControl.get(control.id);
       if (exclusive) {
         if (renderedExclusiveGroups.has(exclusive.id)) return;
@@ -142,11 +209,13 @@ export function setupScreen(
         const selectId = choiceGroupControlId(exclusive);
         const label = element("label", "exclusive-choice-label", exclusive.label);
         label.htmlFor = selectId;
+        // A feature group variant marks the choice it switches and the option it picks.
+        const groupVariant = variantByChoiceGroup.get(exclusive.id);
         const select = element("select", "exclusive-choice-select");
         select.id = selectId;
         const selectedControl = exclusive.controls.find(option => option.selected);
         if (exclusive.allowNone) {
-          const none = element("option", undefined, "None / unchanged");
+          const none = element("option", undefined, "Leave these options out");
           none.value = "";
           select.append(none);
         } else if (!selectedControl) {
@@ -157,14 +226,15 @@ export function setupScreen(
         }
         for (const optionControl of exclusive.controls) {
           const available = optionControl.selected || optionControl.choiceAvailable === true;
-          const optionLabel = `${choiceOptionLabel(exclusive, optionControl.title)}${optionControl.decision === "default" ? " (Recommended)" : ""}`;
+          const optionLabel = `${choiceOptionLabel(exclusive, optionControl.title)}${optionControl.decision === "default" ? " (Recommended)" : ""}${groupVariant?.variant.option === optionControl.id ? ` (${groupVariant.group.title})` : ""}`;
           const option = element("option", undefined, `${optionLabel}${available ? "" : " (Unavailable)"}`);
           option.value = optionControl.id;
           option.disabled = !available;
           select.append(option);
         }
         select.value = selectedControl?.id ?? "";
-        const detail = element("p", "exclusive-choice-description", selectedControl?.description ?? "No option selected.");
+        const noneDetail = "No option from this group. Other selected mods may still affect this part of the game.";
+        const detail = element("p", "exclusive-choice-description", selectedControl?.description ?? noneDetail);
         const sources = [...new Set(exclusive.controls.map(option => option.sourceLabel).filter((source): source is string => Boolean(source)))];
         const source = element("p", "exclusive-choice-source", `${sources.length === 1 ? "Source" : "Sources"}: ${sources.join(", ")}`);
         source.hidden = sources.length === 0;
@@ -177,15 +247,20 @@ export function setupScreen(
         reasons.id = `${selectId}-reasons`;
         select.addEventListener("change", () => {
           const selected = exclusive.controls.find(option => option.id === select.value);
-          detail.textContent = selected?.description ?? "No option selected.";
+          detail.textContent = selected?.description ?? noneDetail;
           if (select.value === "" && !exclusive.allowNone) return;
           void batch!.change(exclusiveChoiceChanges(exclusive, select.value), select.id);
         });
-        row.append(label, select, detail, source, reasons);
+        // The label and a feature group's mark share one line, as on other controls.
+        const heading = element("div", "exclusive-choice-heading");
+        heading.append(label);
+        if (groupVariant) heading.append(element("span", "badge feature-group-badge", groupVariant.group.title));
+        row.append(heading, select, detail, source, reasons);
+        if (selectedControl?.inputs.length) row.append(featureInputs(selectedControl, batch?.input, inputValidity));
         fieldset.append(row);
         rows.push({
           element: row,
-          text: [exclusive.label, ...exclusive.controls.flatMap(option => [option.title, option.description, option.sourceLabel ?? ""])].join(" ").toLocaleLowerCase(),
+          text: [exclusive.label, ...exclusive.controls.flatMap(option => [option.title, option.description, option.sourceLabel ?? ""]), groupVariant?.group.title ?? ""].join(" ").toLocaleLowerCase(),
         });
         return;
       }
@@ -210,12 +285,16 @@ export function setupScreen(
       const copy = element("div");
       const label = element("label", undefined, control.title);
       label.htmlFor = input.id;
-      const badge = element("span", `badge ${control.decision}`, decisionLabels[control.decision]);
+      const conditional = control.parent || control.requires?.length || control.requiresAny?.length;
+      const badge = element("span", `badge ${control.decision}`, control.decision === "mandatory" && conditional ? "Required when applicable" : decisionLabels[control.decision]);
       const description = element("p", undefined, control.description);
       description.id = descriptionId;
       copy.append(label, badge);
+      const featureGroup = groupByMember.get(control.id) ?? variantByOption.get(control.id)?.group;
+      if (featureGroup) copy.append(element("span", "badge feature-group-badge", featureGroup.title));
       if (control.readiness !== "ready") copy.append(element("span", `badge ${control.readiness}`, control.readiness === "blocked" ? "Unavailable" : "Experimental"));
       if (hasDistinctDescription) copy.append(description);
+      if (control.inputs.length) copy.append(featureInputs(control, batch?.input, inputValidity));
       if (control.unavailableReason) {
         const reason = element("p", "unavailable-reason", control.unavailableReason);
         reason.id = `${control.id}-reason`;
@@ -227,10 +306,10 @@ export function setupScreen(
       if (control.sourceLabel || control.groupLabel) {
         copy.append(element("p", "control-source", [control.groupLabel ? `Group: ${control.groupLabel}` : "", control.sourceLabel ? `Source: ${control.sourceLabel}` : ""].filter(Boolean).join(". ")));
       }
-      rows.push({ element: row, text: `${control.title} ${control.description} ${control.sourceLabel ?? ""} ${control.groupLabel ?? ""}`.toLocaleLowerCase() });
+      rows.push({ element: row, text: `${control.title} ${control.description} ${control.sourceLabel ?? ""} ${control.groupLabel ?? ""} ${featureGroup?.title ?? ""}`.toLocaleLowerCase() });
     });
-    groups.append(fieldset);
-    filterable.push({ group: fieldset, category, rows });
+    groups.append(section);
+    filterable.push({ group: section, category, rows });
   });
   const empty = element("p", "setup-empty", "No matching choices. Try another search or category.");
   const filter = (): void => {
@@ -245,16 +324,21 @@ export function setupScreen(
         if (!row.element.hidden) groupVisible += 1;
       }
       group.group.hidden = groupVisible === 0;
+      group.group.open = query ? groupVisible > 0 : (viewState.categoryOpen?.[group.category] ?? true);
       visible += groupVisible;
     }
     empty.hidden = visible > 0;
-    summary.textContent = `${evaluation.selectedChoiceCount} choices included${query || viewState.category ? ` · ${visible} shown` : ""}`;
+    summary.textContent = `${evaluation.selectedChoiceCount} choices included${query || viewState.category ? ` · ${visible} matching rows` : ""}`;
   };
   search.addEventListener("input", filter);
   categorySelect.addEventListener("change", filter);
   filter();
   advanced.append(groups, empty);
   page.append(advanced);
+  if (batch?.manualBreakpoints) page.append(manualBreakpointEditor({ ...batch.manualBreakpoints,
+    open: viewState.manualModsOpen, onOpen: open => { viewState.manualModsOpen = open; },
+    phaseTitles: Object.fromEntries(evaluation.plan.phases.map(phase => [phase.id, phase.title])),
+  }));
   if (evaluation.findings.length > 0) {
     const notices = element("details", "recipe-notices setup-notices");
     const heading = element("summary", undefined, `${evaluation.findings.length} setup ${evaluation.findings.length === 1 ? "note" : "notes"}`);

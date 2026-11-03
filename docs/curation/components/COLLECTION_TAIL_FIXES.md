@@ -10,21 +10,25 @@ or balance layer. A `mandatory` plan below means **automatic only when its activ
 conditions are true**, with no standalone user toggle. `default` remains an optional
 preference enabled by default.
 
-## Current migration inventory
+## Historical migration inventory (2026-09-01; later corrections noted)
+
+Some migration-status cells below predate the public modpack releases. Use the
+implementation status in `CHRIZ-BG-MODPACK.md` and the pinned source as the current
+authority; do not infer that a maintained release still contains a legacy stub.
 
 | Legacy installer | Intended home | Fresh-stack status | Planned behavior |
 |---|---|---|---|
 | `NPC_KIT_CHANGES` | Retire monolithic `chriz-bg-modpack` `500` | Blocked: the current component is a FAIL stub; the legacy installer hardcodes kit numbers, bundles ten unrelated NPC changes, duplicates selected native components, and touches special/nonjoinable CREs. | Replace it with semantic per-NPC choices only where no maintained native component exists. Never install `500`. |
 | `BARD_SPELL_FIX` | `chriz-bg-modpack` `100` | Blocked: current component is a FAIL stub; the legacy installer couples Aura and Safana and hardcodes physical `SPWI` slots. | Aura should use its native Bard option. Rebuild the Safana half semantically, then make it mandatory under the Safana-Bard preset. |
-| `EVANDRA_SORCERER` | Unassigned | Unmigrated. Its effective spell choices match the selected SR reference, but the patch still needs a maintained home and fixture coverage. | `default` when Evandra is selected. |
+| `EVANDRA_SORCERER` | `chriz-bg-modpack` `224` | Implemented in development source September 29 with semantic SR/non-SR starting books and real-WeiDU fixture checks; owner release and CEBG pin are pending. Independent custom portrait is `225`. | Both are intended `default` when Evandra core is selected; skip both when Evandra is skipped. |
 | `SKIE_SKILL_FIX` | `chriz-bg-modpack` `160` | FAIL stub. | `mandatory` only when Skie is converted to Swashbuckler. |
 | `SAFANA_SNARE_FIX` | `chriz-bg-modpack` `150` | FAIL stub. | `mandatory` only under the Safana-Bard/Abettor preset. |
 | `MAZZY_PROF_FIX` | `chriz-bg-modpack` `140` | FAIL stub. Current curation now makes Mazzy a Divine Champion through Artisan NPC `3102`, so the earlier no-Mazzy policy is obsolete. | Reimplement semantically and apply automatically with Artisan NPC `3102`. |
 | `VICONIA_MULTICLASS` | New Viconia-only `chriz-bg-modpack` component | Explicitly curated as a default, but the maintained modpack has no implementation and its Phase-0 snapshot omitted this installer source. | Reconstruct and fixture-test the class/level/skill conversion semantically; expose it as the default Viconia class choice and do not reuse `500`. |
 | `AK_MULTICLASS_PROFS_FIX` | `chriz-bg-modpack` `200` | Likely obsolete: the target Artisan source now enumerates the six formerly missing multiclasses dynamically. Current component is a FAIL stub. | Retire after a fresh-install verification; do not duplicate the upstream fix. |
 | `XAN_EK_FIX` | Artisan NPC `20002`; legacy destination `chriz-bg-modpack` `170` | Partly superseded: target Artisan code now covers `XAN_` but still misses `XAN4`, `XAN6`, and `TTXAN`. | Absorb the remaining EET variants into Artisan `20002`; then make the repair mandatory when Xan Fighter/Mage + Eldritch Knight are selected. |
-| `EDWIN_AMULET_FIX` | `chriz-bg-modpack` `310` | FAIL stub; a personal balance choice tied to Red Wizard Edwin, which is itself unavailable under the current SR policy. | Exclude for now. |
-| `KIVAN_QUEST_FIX` | `chriz-bg-modpack` `130` | FAIL stub. | `mandatory` when the BG1NPC Kivan sea-elf quest and SCS smarter general AI `6000` are both present. |
+| `EDWIN_AMULET_FIX` | `chriz-bg-modpack` `310` | Unmigrated personal balance choice tied to Red Wizard Edwin. The kit itself is default-checked with SR again as of 2026-09-10; this does not validate the separate amulet repair. | Exclude the amulet repair pending its own review; do not block the Red Wizard kit on this basis. |
+| `KIVAN_QUEST_FIX` | `chriz-bg-modpack` `130` | Implemented in pinned `v0.2.0-alpha.5`; verified in Combined-20260908 on 2026-09-09. Both installed guards match the verified standalone fix byte-for-byte. | `mandatory` when BG1NPC quests `10` and SCS smarter general AI `6000` are selected; after EET import and SCS. Never also install the legacy standalone fix. |
 | `SR_SUBSPELL_FIX` | Spell Revisions `v4.21-chriz.3` component `60`; legacy modpack `180` retired | Migrated into the maintained successor release. | Installed automatically with the default late NPC-spellbook pass; no standalone tail component. |
 | `AURA_BALANCE_PATCH` | `Aura_BG1_BG2_EET-Chriz-Balance-Patch` | Its crossbow rebalance is integrated in the maintained Aura balance patch; complete legacy parity still needs verification. | Retire after verifying all six legacy item changes on a fresh target build. |
 | `BEARSKIN_MAIL_FIX` | `chriz-bg-modpack` `300` | Likely obsolete: target Artisan source no longer carries the bad usability byte. Current component is a FAIL stub. | Retire after fresh-install verification. |
@@ -39,12 +43,13 @@ preference enabled by default.
 
 ## Maintained modpack status
 
-The current `chriz-bg-modpack` source implements components `430`, `440`, `450`, and
-`600`. Components `100`–`420`, `500`, and `510`–`514` are explicit FAIL stubs and must
-remain unavailable even where this inventory records a future decision. Component `500`
-must be retired rather than implemented with its current monolithic meaning. The catalog in
-`CHRIZ-BG-MODPACK.md` is the actual component selection surface; this file records how
-the historical tail installers map into it.
+The original Phase-0 snapshot implemented only `430`, `440`, `450`, and `600`, with
+explicit FAIL stubs for many other numbers. That is **not** the current public
+release state: consult `CHRIZ-BG-MODPACK.md` and the pinned artifact. In particular,
+`130` is implemented, conditionally automatic and already present in the combined
+test installation. Never enable an actual stub or duplicate a migrated component.
+Component `500` remains retired rather than a monolithic NPC assignment route.
+This file records the historical tail mappings, not a substitute source catalog.
 
 ## NPC assignment reconciliation
 

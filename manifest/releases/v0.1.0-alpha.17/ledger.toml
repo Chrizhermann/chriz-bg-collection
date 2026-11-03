@@ -1,0 +1,35 @@
+schema = 1
+recipe_id = "chriz-bg-collection"
+version = "0.1.0-alpha.17"
+published_at = "2026-09-20T00:00:00Z"
+minimum_app_version = "0.1.0-alpha.19"
+supersedes = "0.1.0-alpha.16"
+
+[[changes]]
+id = "recipe-records-corrected"
+title = "Clearer component information and corrected update records"
+summary = "Completes information for already approved components, corrects earlier update descriptions and removes unused download records. These record corrections alone do not require replacing a working game."
+save_applicability = "next-playthrough"
+urgency = "informational"
+covers = [
+  "artifact:chriz-bg-modpack-0.2.0-alpha.5",
+  "artifact:bardicwonders-v2.9c-balance.4",
+  "feature:feature:spell-rev:component-80",
+  "feature:feature:spell-rev:component-81",
+  "feature:feature:srcb-rr-compat:component-0",
+  "feature:feature:chriz-bg-modpack:component-188",
+  "feature:feature:chriz-bg-modpack:component-189",
+  "feature:feature:chriz-bg-modpack:component-199",
+  "feature:feature:chriz-bg-modpack:component-620",
+  "feature:feature:chriz-sod-remix:component-257",
+  "feature:feature:chriz-bg-rebalance:component-110",
+  "feature:feature:chriz-bg-rebalance:component-111",
+]
+
+[[changes]]
+id = "interval-save-controls-default"
+title = "Interval-save controls included by default"
+summary = "New recommended installations include the in-game interval-save controls alongside the existing 15-minute rotating saves. The controls follow your chosen interval and stay inactive when interval saves are excluded. CEBG also verifies the required settings in each new installation's own profile. Existing installations are not automatically modified."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = ["feature:feature:hiddengameplayoptions:component-38"]

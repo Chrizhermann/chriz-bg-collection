@@ -1,5 +1,5 @@
 id = "eeexremote"
-artifact_id = "eeexremote-0.2.0"
+artifact_id = "eeexremote-0.2.1"
 name = "EEex Remote Console"
 tp2 = "setup-eeexremote.tp2"
 language = 0

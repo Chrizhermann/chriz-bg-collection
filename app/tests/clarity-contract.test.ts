@@ -2,6 +2,25 @@ import { describe, expect, it, vi } from "vitest";
 import { NativeBackend, type InvokeCommand } from "../src/backend";
 
 describe("clarity metadata transport", () => {
+  it("retains alternative prerequisites and the engine's actionable reason", async () => {
+    const invoke = vi.fn<InvokeCommand>(async () => ({
+      view: { categories: ["fixes"], controls: [{
+        id: "compat", title: "SR/RR compatibility", description: "Repair supported RR encounters.", category: "fixes",
+        decision: "default", readiness: "ready", parent: null,
+        requires: ["sr"], requires_any: ["rr11", "rr12"], conflicts: [],
+        selected: false, interactive: false, unavailable_reason: "Requires at least one of: Chosen of Cyric, Shadow Thief Improvements.", inputs: [],
+      }] },
+      normalized_selection: { platform: "windows", features: { compat: true }, inputs: {} },
+      findings: [], plan: { phases: [] }, selected_choice_count: 0,
+    }));
+    const result = await new NativeBackend(invoke).evaluateBuild({ platform: "windows", features: {}, inputs: {} });
+    expect(result.view.controls[0]).toMatchObject({
+      requires: ["sr"], requiresAny: ["rr11", "rr12"], selected: false, interactive: false,
+      unavailableReason: "Requires at least one of: Chosen of Cyric, Shadow Thief Improvements.",
+    });
+    expect(result.view.controls[0]).not.toHaveProperty("requires_any");
+  });
+
   it("retains authored context and engine switch availability", async () => {
     const invoke = vi.fn<InvokeCommand>(async () => ({
       view: { categories: ["convenience"], controls: [{

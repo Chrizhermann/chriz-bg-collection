@@ -1,6 +1,22 @@
 schema = 2
 game_build = "2.7.3.0"
 
+[[feature_groups]]
+id = "challenge-mode"
+title = "Challenge Mode"
+description = "Stricter rules for players who want a harder game. Turns on every Challenge Mode change at once; you can still switch each one on or off under its own mod."
+members = [
+  "feature:chriz-bg-rebalance:component-301",
+  "feature:chriz-bg-modpack:component-235",
+  "feature:chriz-bg-rebalance:component-110",
+  "feature:chriz-sod-remix:component-257",
+]
+# Christopher, 2026-10-14: Challenge Mode picks strict potion uniqueness (Rebalance 330);
+# switching the group off restores the recommended 331.
+variants = [
+  { choice_group = "potion-uniqueness", option = "feature:chriz-bg-rebalance:component-330", label = "Potions: strict (Potions of Genius don't stack either)" },
+]
+
 [[runs]]
 run_id = "dlcmerger-bg1"
 mod_id = "dlcmerger"
@@ -54,7 +70,56 @@ args = [
 run_id = "eeex-bg2"
 mod_id = "eeex"
 phase = "main"
-components = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+components = [0, 1, 9, 2, 3, 4, 5, 6, 7, 8]
+args = []
+
+[[runs]]
+run_id = "game-interface-infinity-bg2"
+mod_id = "infinity-ui"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "game-interface-eet-sod-bg2"
+mod_id = "eet-gui"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "game-interface-leui-bg2-bg2"
+mod_id = "leui"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "game-interface-leui-bg1-bg2"
+mod_id = "leui-bg1ee"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "game-interface-leui-sod-bg2"
+mod_id = "leui-sod"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "game-interface-dragonspear-bg2"
+mod_id = "dragonspear-ui"
+phase = "main"
+components = [1]
+args = []
+
+[[runs]]
+run_id = "chriz-bg-modpack-ui-compat-bg2"
+mod_id = "chriz-bg-modpack"
+phase = "main"
+components = [640]
 args = []
 
 [[runs]]
@@ -69,6 +134,27 @@ run_id = "bggo-bg2"
 mod_id = "bggo"
 phase = "main"
 components = [0]
+args = []
+
+[[runs]]
+run_id = "ntotsc-bg2"
+mod_id = "ntotsc"
+phase = "main"
+components = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+args = []
+
+[[runs]]
+run_id = "ac-quest-bg2"
+mod_id = "ac-quest"
+phase = "main"
+components = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+args = []
+
+[[runs]]
+run_id = "blackhearts-bg2"
+mod_id = "blackhearts"
+phase = "main"
+components = [1]
 args = []
 
 [[runs]]
@@ -121,13 +207,6 @@ components = [0, 1]
 args = []
 
 [[runs]]
-run_id = "sirene-bg2"
-mod_id = "sirene-bg2"
-phase = "main"
-components = [0, 2, 5, 6, 7, 8]
-args = []
-
-[[runs]]
 run_id = "ascension-bg2"
 mod_id = "ascension"
 phase = "main"
@@ -145,7 +224,21 @@ args = []
 run_id = "artisanskitpack-main-bg2"
 mod_id = "artisanskitpack"
 phase = "main"
-components = [1, 2, 20000, 20001, 8001, 8101, 8002, 8004, 10002, 10001, 10003, 10004, 1003, 1006, 1004, 1005, 1007, 1000, 1001, 1008, 1009, 1100, 2000, 2010, 2011, 2012, 2002, 3000, 3010, 3003, 3011, 3004, 3001, 3002, 3005, 5100, 5110, 5001, 5002, 7004, 7006, 7001, 7002, 7003, 7005, 9001]
+components = [1, 2, 20000, 20001, 8001, 8101, 8002, 8004, 10001, 10002, 10003, 10004, 1100, 1003, 1006, 1004, 1005, 1007, 1000, 1001, 1008, 1009, 2000, 2010, 2011, 2012, 2002, 3000, 3010, 3003, 3011, 3004, 3001, 3002, 3005, 5100, 5110, 5001, 5002, 7004, 7006, 7001, 7002, 7003, 7005, 9001]
+args = []
+
+[[runs]]
+run_id = "sirene-bg1-bg2"
+mod_id = "sirene-bg1"
+phase = "main"
+components = [0, 3, 6, 7, 8, 9]
+args = []
+
+[[runs]]
+run_id = "sirene-bg2"
+mod_id = "sirene-bg2"
+phase = "main"
+components = [0, 2, 5, 6, 7, 8]
 args = []
 
 [[runs]]
@@ -153,6 +246,13 @@ run_id = "artisanskitpack-npc-bg2"
 mod_id = "artisanskitpack-npc"
 phase = "main"
 components = [1101, 2001, 3101, 3102, 5101, 5102, 7101, 7102, 7104, 21001, 9101, 10004, 20002, 99001]
+args = []
+
+[[runs]]
+run_id = "chriz-bg-modpack-edwin-bg2"
+mod_id = "chriz-bg-modpack"
+phase = "main"
+components = [236]
 args = []
 
 [[runs]]
@@ -184,24 +284,45 @@ components = [0]
 args = []
 
 [[runs]]
+run_id = "zg-iwd-voices-bg2"
+mod_id = "zg-iwd-voices"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "thalan-bg2"
+mod_id = "thalan"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
 run_id = "randomiser-bg2"
 mod_id = "randomiser"
 phase = "main"
-components = [500, 510, 530, 540, 560, 570, 9000, 10200, 10210, 10300, 1100]
+components = [500, 510, 530, 540, 560, 570, 1100, 9000, 10200, 10210, 10300]
+args = []
+
+[[runs]]
+run_id = "srcb-rr-compat-bg2"
+mod_id = "srcb-rr-compat"
+phase = "main"
+components = [0]
 args = []
 
 [[runs]]
 run_id = "stratagems-bg2"
 mod_id = "stratagems"
 phase = "main"
-components = [2000, 2500, 2510, 3040, 3041, 3505, 3540, 3541, 4000, 4115, 4210, 4215, 4218, 4240, 4250, 5000, 5900, 6000, 6010, 6030, 6040, 6100, 6200, 6300, 6310, 6320, 6500, 6510, 6520, 6540, 6550, 6560, 6570, 6580, 6590, 6800, 6810, 6820, 6830, 6840, 6850, 7000, 7010, 7020, 7030, 7040, 7050, 7060, 7070, 7080, 7090, 7100, 7110, 7130, 7140, 7150, 7200, 7210, 7220, 7230, 7250, 7900, 8000, 8010, 8020, 8040, 8050, 8060, 8070, 8080, 8085, 8090, 8100, 8110, 8120, 8130, 8140, 8150, 8160, 8170, 8180, 8190]
+components = [2000, 2500, 2510, 3010, 3015, 3021, 3040, 3041, 3505, 3540, 3541, 4000, 4020, 4050, 4051, 4052, 4093, 4115, 4130, 4135, 4140, 4145, 4150, 4160, 4161, 4162, 4163, 4164, 4170, 4171, 4172, 4173, 4174, 4210, 4215, 4216, 4217, 4218, 4230, 4240, 4250, 5000, 5900, 6000, 6010, 6030, 6040, 6100, 6200, 6300, 6310, 6320, 6500, 6510, 6520, 6540, 6550, 6560, 6570, 6580, 6590, 6800, 6810, 6820, 6830, 6840, 6850, 7000, 7010, 7020, 7030, 7040, 7050, 7060, 7070, 7080, 7090, 7100, 7110, 7130, 7140, 7150, 7200, 7210, 7220, 7230, 7250, 7900, 8000, 8010, 8020, 8040, 8050, 8060, 8070, 8080, 8085, 8090, 8100, 8110, 8120, 8130, 8140, 8150, 8160, 8170, 8180, 8190]
 args = []
 
 [[runs]]
 run_id = "artisanskitpack-tweak-late-bg2"
 mod_id = "artisanskitpack-tweak"
 phase = "main"
-components = [12012, 3202, 3302, 8204]
+components = [51010, 12012, 3202, 3302, 7205, 8204, 1010000]
 args = []
 
 [[runs]]
@@ -209,6 +330,27 @@ run_id = "artisanskitpack-npc-late-bg2"
 mod_id = "artisanskitpack-npc"
 phase = "main"
 components = [200010]
+args = []
+
+[[runs]]
+run_id = "chriz-bg-modpack-pre-continuity-bg2"
+mod_id = "chriz-bg-modpack"
+phase = "main"
+components = [110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 224, 225, 230, 231, 232, 233, 234]
+args = []
+
+[[runs]]
+run_id = "ppe-bg2"
+mod_id = "ppe"
+phase = "main"
+components = [0, 100, 150, 10, 20, 25, 300, 301, 302, 311, 312, 322, 330, 332, 340, 342, 350, 30, 40]
+args = []
+
+[[runs]]
+run_id = "chriz-bg-modpack-continuity-bg2"
+mod_id = "chriz-bg-modpack"
+phase = "main"
+components = [199]
 args = []
 
 [[runs]]
@@ -222,7 +364,7 @@ args = []
 run_id = "chriz-sod-remix-bg2"
 mod_id = "chriz-sod-remix"
 phase = "post-eet-end"
-components = [100, 110, 120, 130, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 260, 270, 280, 290, 900, 910]
+components = [100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 177, 185, 190, 195, 210, 197, 198, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 285, 290, 900, 910, 292, 293, 294]
 args = []
 
 [[runs]]
@@ -236,7 +378,7 @@ args = []
 run_id = "chriz-bg-rebalance-bg2"
 mod_id = "chriz-bg-rebalance"
 phase = "post-eet-end"
-components = [100, 101, 120, 121, 400, 401, 404, 405, 407, 408]
+components = [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360]
 args = []
 
 [[runs]]
@@ -250,7 +392,28 @@ args = []
 run_id = "chriz-bg-modpack-bg2"
 mod_id = "chriz-bg-modpack"
 phase = "post-eet-end"
-components = [110, 130, 140, 170, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 400, 410, 430, 440, 450, 610]
+components = [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660]
+args = []
+
+[[runs]]
+run_id = "safana-bg2"
+mod_id = "safana"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "chriz-bg-modpack-late-companions-bg2"
+mod_id = "chriz-bg-modpack"
+phase = "post-eet-end"
+components = [189, 237, 238, 239, 620]
+args = []
+
+[[runs]]
+run_id = "chriz-bg-modpack-campaign-xp-bg2"
+mod_id = "chriz-bg-modpack"
+phase = "post-eet-end"
+components = [650, 651, 652]
 args = []
 
 [[runs]]
@@ -261,10 +424,158 @@ components = [60]
 args = []
 
 [[runs]]
+run_id = "spell-rev-lightning-bg2"
+mod_id = "spell-rev"
+phase = "post-eet-end"
+components = [80, 81]
+args = []
+
+[[runs]]
+run_id = "chriz-bg-modpack-baeloth-bg2"
+mod_id = "chriz-bg-modpack"
+phase = "post-eet-end"
+components = [235]
+args = []
+
+[[runs]]
+run_id = "voicepack-neera-bg2"
+mod_id = "voicepack-neera"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-safana-bg1-bg2"
+mod_id = "voicepack-safana-bg1"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-safana-sod-bg2"
+mod_id = "voicepack-safana-sod"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-jaheira-bg1-bg2"
+mod_id = "voicepack-jaheira-bg1"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-jaheira-bg2-bg2"
+mod_id = "voicepack-jaheira-bg2"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-yeslick-bg2"
+mod_id = "voicepack-yeslick"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-edwin-bg1-bg2"
+mod_id = "voicepack-edwin-bg1"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-edwin-bg2-bg2"
+mod_id = "voicepack-edwin-bg2"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-aerie-bg2"
+mod_id = "voicepack-aerie"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-imoen-bg1-bg2"
+mod_id = "voicepack-imoen-bg1"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-imoen-bg2-bg2"
+mod_id = "voicepack-imoen-bg2"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-sarevok-bg2"
+mod_id = "voicepack-sarevok"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-amelyssan-bg2"
+mod_id = "voicepack-amelyssan"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-gromnir-il-khan-bg2"
+mod_id = "voicepack-gromnir-il-khan"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-ajantis-bg2"
+mod_id = "voicepack-ajantis"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-viconia-bg1-bg2"
+mod_id = "voicepack-viconia-bg1"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-viconia-bg2-bg2"
+mod_id = "voicepack-viconia-bg2"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-garithos-bg2"
+mod_id = "voicepack-garithos"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+
+[[runs]]
 run_id = "buffbot-bg2"
 mod_id = "buffbot"
 phase = "post-eet-end"
 components = [1, 0]
+args = []
+
+[[runs]]
+run_id = "chriz-bg-modpack-scrolls-bg2"
+mod_id = "chriz-bg-modpack"
+phase = "post-eet-end"
+components = [430]
 args = []
 
 [[features]]
@@ -313,7 +624,7 @@ id = "mod:bg1ub"
 title = "BG1 Unfinished Business"
 description = "Restores the reviewed BG1 quests, encounters, and fixes before EET imports BG1."
 category = "bg1-content"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 
 [[features]]
@@ -321,7 +632,7 @@ id = "feature:bg1ub:component-0"
 title = "Ice Island Level Two Restoration"
 description = "Restore the second level of Ice Island."
 category = "bg1-content"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 0 }]
@@ -331,7 +642,7 @@ id = "feature:bg1ub:component-11"
 title = "Scar and the Sashenstar's Daughter"
 description = "Restore this reviewed BG1 encounter."
 category = "bg1-content"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 11 }]
@@ -341,7 +652,7 @@ id = "feature:bg1ub:component-12"
 title = "Quoningar, the Cleric"
 description = "Restore this reviewed BG1 encounter."
 category = "bg1-content"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 12 }]
@@ -351,7 +662,7 @@ id = "feature:bg1ub:component-13"
 title = "Shilo Chen and the Ogre-Magi"
 description = "Restore this reviewed BG1 encounter."
 category = "bg1-content"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 13 }]
@@ -361,7 +672,7 @@ id = "feature:bg1ub:component-14"
 title = "Edie, the Merchant League Applicant"
 description = "Restore this reviewed BG1 encounter."
 category = "bg1-content"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 14 }]
@@ -371,7 +682,7 @@ id = "feature:bg1ub:component-16"
 title = "Creature Corrections"
 description = "Apply the reviewed BG1 creature corrections."
 category = "bg1-fixes"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 16 }]
@@ -381,7 +692,7 @@ id = "feature:bg1ub:component-17"
 title = "Creature Restorations"
 description = "Apply the reviewed BG1 creature restorations."
 category = "bg1-fixes"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 17 }]
@@ -391,7 +702,7 @@ id = "feature:bg1ub:component-18"
 title = "Creature Name Restorations"
 description = "Restore reviewed BG1 creature names."
 category = "bg1-fixes"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 18 }]
@@ -401,7 +712,7 @@ id = "feature:bg1ub:component-19"
 title = "Minor Dialogue Restorations"
 description = "Restore reviewed minor BG1 dialogue."
 category = "bg1-fixes"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 19 }]
@@ -411,7 +722,7 @@ id = "feature:bg1ub:component-21"
 title = "Store, Tavern and Inn Fixes and Restorations"
 description = "Apply the reviewed store, tavern, and inn fixes."
 category = "bg1-fixes"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 21 }]
@@ -421,7 +732,7 @@ id = "feature:bg1ub:component-22"
 title = "Item Corrections and Restorations"
 description = "Apply the reviewed BG1 item fixes and restorations."
 category = "bg1-fixes"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 22 }]
@@ -431,7 +742,7 @@ id = "feature:bg1ub:component-29"
 title = "Duke Eltan in the Harbor Master's Building"
 description = "Restore this reviewed BG1 encounter."
 category = "bg1-content"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 29 }]
@@ -441,7 +752,7 @@ id = "feature:bg1ub:component-30"
 title = "Nim Furlwing Encounter"
 description = "Restore this reviewed BG1 encounter."
 category = "bg1-content"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 30 }]
@@ -451,7 +762,7 @@ id = "feature:bg1ub:component-32"
 title = "Svlast, the Fallen Paladin Encounter"
 description = "Restore this reviewed BG1 encounter."
 category = "bg1-content"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 32 }]
@@ -461,7 +772,7 @@ id = "feature:bg1ub:component-33"
 title = "Mal-Kalen, the Ulcaster Ghost"
 description = "Restore this reviewed BG1 encounter."
 category = "bg1-content"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 33 }]
@@ -471,7 +782,7 @@ id = "feature:bg1ub:component-34"
 title = "Chapter 6 Dialogue Restorations"
 description = "Restore the reviewed Chapter 6 dialogue."
 category = "bg1-fixes"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 34 }]
@@ -606,7 +917,7 @@ id = "feature:eet:component-100"
 title = "Create desktop shortcut"
 description = "Create EET's desktop shortcut."
 category = "core"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:eet"
 components = [{ run_id = "eet-initialize-bg2", component = 100 }]
@@ -632,7 +943,7 @@ components = [{ run_id = "eet-end-bg2", component = 0 }]
 [[features]]
 id = "mod:eeex"
 title = "EEex"
-description = "Install the reviewed EEex 1.2 runtime and its required modules. Launch the game through InfinityLoader."
+description = "Install the reviewed EEex 1.3.1 runtime and its required modules. Launch the game through InfinityLoader."
 category = "engine"
 decision = "default"
 readiness = "ready"
@@ -656,6 +967,17 @@ components = [
   { run_id = "eeex-bg2", component = 7 },
   { run_id = "eeex-bg2", component = 8 },
 ]
+
+[[features]]
+id = "feature:eeex:component-9"
+title = "EEex attack info"
+description = "Show your chance to hit when you hover the attack cursor over a target. You can also switch it on or off later in EEex's in-game options; the change takes effect after a restart."
+category = "engine"
+decision = "optional"
+readiness = "ready"
+parent = "mod:eeex"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "eeex-bg2", component = 9 }]
 
 [[features]]
 id = "feature:eeexremote:component-0"
@@ -854,6 +1176,7 @@ decision = "default"
 readiness = "ready"
 parent = "mod:hidden-gameplay-options"
 components = [{ run_id = "hiddengameplayoptions-bg2", component = 28 }]
+conflicts = [{ feature_id = "feature:game-interface:leui-bg2", reason = "Hidden Gameplay Options rejects its idle-sound control with Lefreut's interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Hidden Gameplay Options rejects its idle-sound control with Lefreut's interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-sod", reason = "Hidden Gameplay Options rejects its idle-sound control with Lefreut's interface. Your preference is remembered when you switch back." }]
 
 [[features]]
 id = "feature:hiddengameplayoptions:component-29"
@@ -864,6 +1187,7 @@ decision = "default"
 readiness = "ready"
 parent = "mod:hidden-gameplay-options"
 components = [{ run_id = "hiddengameplayoptions-bg2", component = 29 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-sod", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }]
 
 [[features]]
 id = "feature:hiddengameplayoptions:component-30"
@@ -874,6 +1198,7 @@ decision = "default"
 readiness = "ready"
 parent = "mod:hidden-gameplay-options"
 components = [{ run_id = "hiddengameplayoptions-bg2", component = 30 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-sod", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }]
 
 [[features]]
 id = "feature:hiddengameplayoptions:component-32"
@@ -986,6 +1311,7 @@ decision = "default"
 readiness = "ready"
 parent = "mod:hidden-gameplay-options"
 components = [{ run_id = "hiddengameplayoptions-bg2", component = 300 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-sod", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:dragonspear", reason = "Hidden Gameplay Options rejects this component with Dragonspear UI++. Your preference is remembered when you switch back." }]
 
 [[features]]
 id = "feature:hiddengameplayoptions:component-301"
@@ -996,6 +1322,7 @@ decision = "default"
 readiness = "ready"
 parent = "mod:hidden-gameplay-options"
 components = [{ run_id = "hiddengameplayoptions-bg2", component = 301 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-sod", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:dragonspear", reason = "Hidden Gameplay Options rejects this component with Dragonspear UI++. Your preference is remembered when you switch back." }]
 
 [[features]]
 id = "feature:hiddengameplayoptions:component-302"
@@ -1006,6 +1333,7 @@ decision = "optional"
 readiness = "ready"
 parent = "mod:hidden-gameplay-options"
 components = [{ run_id = "hiddengameplayoptions-bg2", component = 302 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-sod", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:dragonspear", reason = "Hidden Gameplay Options rejects this component with Dragonspear UI++. Your preference is remembered when you switch back." }]
 
 [[features]]
 id = "feature:hiddengameplayoptions:component-304"
@@ -1016,6 +1344,7 @@ decision = "optional"
 readiness = "ready"
 parent = "mod:hidden-gameplay-options"
 components = [{ run_id = "hiddengameplayoptions-bg2", component = 304 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-sod", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:dragonspear", reason = "Hidden Gameplay Options rejects this component with Dragonspear UI++. Your preference is remembered when you switch back." }]
 
 [[features]]
 id = "feature:hiddengameplayoptions:component-101"
@@ -1188,6 +1517,630 @@ readiness = "ready"
 components = [{ run_id = "rr-bg2", component = 999 }]
 
 [[features]]
+id = "mod:ntotsc"
+title = "Northern Tales of the Sword Coast"
+description = "Third-party BG1 quest mod with new quests, areas and dungeons north of Baldur's Gate and along the Sword Coast. Experimental: not yet tested in a combined CEBG install."
+category = "quest-mods"
+decision = "optional"
+readiness = "experimental"
+
+[[features]]
+id = "feature:ntotsc:component-0"
+title = "NTotSC core"
+description = "The main quests and areas: the Northern Citadel, the Field of the Dead, Haeball's tower in Larswood, Nadarin's fishing village, the Island of the Sirines and two extra dungeons, started by Duke Eltan, in the Blade and Stars and in Ulgoth's Beard. Every other NTotSC component except the spell scrolls requires it."
+category = "quest-mods"
+decision = "default"
+readiness = "experimental"
+parent = "mod:ntotsc"
+components = [{ run_id = "ntotsc-bg2", component = 0 }]
+
+[[features]]
+id = "feature:ntotsc:component-1"
+title = "Fewer monsters on lower difficulties"
+description = "Reduces the number and variety of monsters in NTotSC's dungeons depending on the game difficulty."
+category = "quest-mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+components = [{ run_id = "ntotsc-bg2", component = 1 }]
+
+[[features]]
+id = "feature:ntotsc:component-2"
+title = "Keelor the Dwarf"
+description = "Adds Keelor, a dwarf injured by gnolls, to NTotSC's Wood of the Dead. If he is healed well enough, his sister Nasha in the temple of Umberlee in Baldur's Gate heals the party for free afterwards."
+category = "quest-mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+components = [{ run_id = "ntotsc-bg2", component = 2 }]
+
+[[features]]
+id = "feature:ntotsc:component-3"
+title = "Llindellyn's Lucky Arrow"
+description = "Adds Llindellyn to NTotSC's Northern Wood; help him find his lucky arrow."
+category = "quest-mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+components = [{ run_id = "ntotsc-bg2", component = 3 }]
+
+[[features]]
+id = "feature:ntotsc:component-4"
+title = "Nim Furlwing's Hunting Hounds"
+description = "Adds Nim Furlwing and her hounds to NTotSC's Temple of the Black Hand; help save the hounds from a monster attack."
+category = "quest-mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+conflicts = [{ feature_id = "feature:bg1ub:component-30", reason = "BG1 Unfinished Business already restores this encounter with its Nim Furlwing Encounter (component 30), and NTotSC refuses to add it a second time. To use NTotSC's version, untick Nim Furlwing Encounter under BG1 Unfinished Business." }]
+components = [{ run_id = "ntotsc-bg2", component = 4 }]
+
+[[features]]
+id = "feature:ntotsc:component-5"
+title = "Pilar and Gheldehar"
+description = "Adds two people in Baldur's Gate who each have an item the other wants back. The quest can only be solved by pickpocketing."
+category = "quest-mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+components = [{ run_id = "ntotsc-bg2", component = 5 }]
+
+[[features]]
+id = "feature:ntotsc:component-6"
+title = "Svlast's Torment"
+description = "Adds the fallen paladin Svlast to Firewine Bridge; one of the brethren he wronged is coming for him."
+category = "quest-mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+conflicts = [{ feature_id = "feature:bg1ub:component-32", reason = "BG1 Unfinished Business already restores this encounter with its Svlast, the Fallen Paladin Encounter (component 32), and NTotSC refuses to add it a second time. To use NTotSC's version, untick Svlast, the Fallen Paladin Encounter under BG1 Unfinished Business." }]
+components = [{ run_id = "ntotsc-bg2", component = 6 }]
+
+[[features]]
+id = "feature:ntotsc:component-7"
+title = "Will O'Hara (joinable NPC)"
+description = "Adds Will O'Hara, a joinable companion met in Beregost. Apart from a few interjections in Beregost and some custom items he has no dialogue or banters."
+category = "quest-mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+components = [{ run_id = "ntotsc-bg2", component = 7 }]
+
+[[features]]
+id = "feature:ntotsc:component-8"
+title = "Will O'Hara's English soundset"
+description = "Installs the English audio of Will O'Hara's soundset."
+category = "quest-mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-7"]
+components = [{ run_id = "ntotsc-bg2", component = 8 }]
+
+[[features]]
+id = "feature:ntotsc:component-9"
+title = "Fighting encounters"
+description = "Adds unrelated fights: two extra fighters for Lamalha in the Valley of the Tombs, a family in a Beregost house, six sisters in the Jovial Juggler, Officer Tytus in the Cloakwood Mines and Black Talon elite fighters in Cloakwood and its mines."
+category = "quest-mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+components = [{ run_id = "ntotsc-bg2", component = 9 }]
+
+[[features]]
+id = "feature:ntotsc:component-10"
+title = "Improved Lesser Fiends"
+description = "Turns the \"lesser fiends\" in the Fireleaf Forest dungeon into a succubus and two maurezi, and brings back some invisible stalkers on higher difficulties."
+category = "quest-mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+components = [{ run_id = "ntotsc-bg2", component = 10 }]
+
+[[features]]
+id = "feature:ntotsc:component-11"
+title = "Improved Haeball"
+description = "Turns Haeball into a vampire mage who reveals himself halfway through the fight, summons wolves, uses other vampiric powers and casts a better selection of spells."
+category = "quest-mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+components = [{ run_id = "ntotsc-bg2", component = 11 }]
+
+[[features]]
+id = "feature:ntotsc:component-12"
+title = "Improved Ghotal"
+description = "Turns General Ghotal into a ghost with unusual powers and ghostly minions, replaces the two death knights at the tomb entrance with stone golems and some of the weakest undead in the crypt with tougher ones."
+category = "quest-mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+components = [{ run_id = "ntotsc-bg2", component = 12 }]
+
+[[features]]
+id = "feature:ntotsc:component-13"
+title = "Remove Shaman Cloaks from generic Orc Priests"
+description = "Only one Shaman Cloak is left to find: the generic Orc Priests carry none and drop studded leather armor instead, which should make their fights easier."
+category = "quest-mods"
+group_label = "Reduce Number of Shaman Cloaks"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+choice_group = "choice:ntotsc:reduce-number-of-shaman-cloaks"
+conflicts = [{ feature_id = "feature:ntotsc:component-14", reason = "Choose one way to reduce the Shaman Cloaks." }]
+components = [{ run_id = "ntotsc-bg2", component = 13 }]
+
+[[features]]
+id = "feature:ntotsc:component-14"
+title = "Make Shaman Cloaks undroppable"
+description = "Only one Shaman Cloak is left to find: the Orc Priests still wear theirs, but the cloaks can't be looted, and the priests drop studded leather armor instead."
+category = "quest-mods"
+group_label = "Reduce Number of Shaman Cloaks"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+choice_group = "choice:ntotsc:reduce-number-of-shaman-cloaks"
+conflicts = [{ feature_id = "feature:ntotsc:component-13", reason = "Choose one way to reduce the Shaman Cloaks." }]
+components = [{ run_id = "ntotsc-bg2", component = 14 }]
+
+[[features]]
+id = "feature:ntotsc:component-15"
+title = "Revised level 6 spell scrolls"
+description = "Adds two new wizard spells as level 6 spells, Skeleton Guard (summons a skeletal guard for one turn) and Fiery Cloud (4d4 fire damage per round in the cloud), and sells their scrolls at Sorcerous Sundries."
+category = "quest-mods"
+group_label = "Spell Scrolls"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+choice_group = "choice:ntotsc:spell-scrolls"
+conflicts = [{ feature_id = "feature:ntotsc:component-16", reason = "Choose one version of the spell scrolls." }]
+components = [{ run_id = "ntotsc-bg2", component = 15 }]
+
+[[features]]
+id = "feature:ntotsc:component-16"
+title = "Original level 7 and 8 spell scrolls"
+description = "Adds the two spells in their original strength, Skeleton Guard as a level 7 spell that summons two skeleton warriors for four hours and Fiery Cloud as a level 8 spell (1d4 fire damage per caster level each round, save for half), and sells their scrolls at Sorcerous Sundries."
+category = "quest-mods"
+group_label = "Spell Scrolls"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+choice_group = "choice:ntotsc:spell-scrolls"
+conflicts = [{ feature_id = "feature:ntotsc:component-15", reason = "Choose one version of the spell scrolls." }]
+components = [{ run_id = "ntotsc-bg2", component = 16 }]
+
+[[features]]
+id = "mod:ac-quest"
+title = "Ascalon's Questpack"
+description = "Third-party quest pack: nine small BG1 quests and one for Shadows of Amn, some humorous, some tragic, with puzzles, fights and a few race- or class-specific turns. Experimental: not yet tested in a combined CEBG install."
+category = "quest-mods"
+decision = "optional"
+readiness = "experimental"
+
+[[features]]
+id = "feature:ac-quest:component-0"
+title = "A Job Well-Paid"
+description = "A Beregost quest about adventurers who spend their first big reward a little too eagerly."
+category = "quest-mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ac-quest"
+components = [{ run_id = "ac-quest-bg2", component = 0 }]
+
+[[features]]
+id = "feature:ac-quest:component-1"
+title = "A Feast for the Gnolls"
+description = "A romantic picnic went wrong: help Mrs Wellstone in Nashkel find her son."
+category = "quest-mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ac-quest"
+components = [{ run_id = "ac-quest-bg2", component = 1 }]
+
+[[features]]
+id = "feature:ac-quest:component-2"
+title = "Jumper: Ugh and Jumper inside the cave (original)"
+description = "A comic tale of honour, friendship and a rabbit. Ugh and Jumper wait inside a cave west of the South Beregost Road."
+category = "quest-mods"
+group_label = "Jumper"
+decision = "default"
+readiness = "experimental"
+parent = "mod:ac-quest"
+choice_group = "choice:ac-quest:jumper"
+conflicts = [{ feature_id = "feature:ac-quest:component-3", reason = "Choose one version of Jumper." }]
+components = [{ run_id = "ac-quest-bg2", component = 2 }]
+
+[[features]]
+id = "feature:ac-quest:component-3"
+title = "Jumper: Ugh and Jumper outside the cave"
+description = "The same quest with Ugh and Jumper outside the cave entrance. The author offers this placement for TheArtisan's Shadow Magic mod, which CEBG does not install."
+category = "quest-mods"
+group_label = "Jumper"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ac-quest"
+choice_group = "choice:ac-quest:jumper"
+conflicts = [{ feature_id = "feature:ac-quest:component-2", reason = "Choose one version of Jumper." }]
+components = [{ run_id = "ac-quest-bg2", component = 3 }]
+
+[[features]]
+id = "feature:ac-quest:component-4"
+title = "The Lost Son"
+description = "Meet Aphriel, a half-elf archer who gave up her bow for a quiet life, near the Cloakwood Lodge, and find out what changed."
+category = "quest-mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ac-quest"
+components = [{ run_id = "ac-quest-bg2", component = 4 }]
+
+[[features]]
+id = "feature:ac-quest:component-5"
+title = "Of Wolves and Men: Aiwell's hut in High Hedge (original)"
+description = "The mage Aiwell has barred her doors from the outside; find out why. The couple lives in the hut near Thalantyr's in High Hedge."
+category = "quest-mods"
+group_label = "Of Wolves and Men"
+decision = "default"
+readiness = "experimental"
+parent = "mod:ac-quest"
+choice_group = "choice:ac-quest:of-wolves-and-men"
+conflicts = [{ feature_id = "feature:ac-quest:component-6", reason = "Choose one version of Of Wolves and Men." }]
+components = [{ run_id = "ac-quest-bg2", component = 5 }]
+
+[[features]]
+id = "feature:ac-quest:component-6"
+title = "Of Wolves and Men: Aiwell's home in a Beregost house"
+description = "The same quest with the couple's home in a house in Beregost. The author offers this placement for Glam's NPC Pack, which CEBG does not install."
+category = "quest-mods"
+group_label = "Of Wolves and Men"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ac-quest"
+choice_group = "choice:ac-quest:of-wolves-and-men"
+conflicts = [{ feature_id = "feature:ac-quest:component-5", reason = "Choose one version of Of Wolves and Men." }]
+components = [{ run_id = "ac-quest-bg2", component = 6 }]
+
+[[features]]
+id = "feature:ac-quest:component-7"
+title = "The Great Carlini"
+description = "A curious gnome in the Friendly Arm Inn wants to try the spell that once cost the archmage Carlini his life."
+category = "quest-mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ac-quest"
+components = [{ run_id = "ac-quest-bg2", component = 7 }]
+
+[[features]]
+id = "feature:ac-quest:component-8"
+title = "A Home for the Gibberlings"
+description = "An artist out of ideas makes trouble: see what Geraldo the Splendiferous in central Baldur's Gate has been up to."
+category = "quest-mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ac-quest"
+components = [{ run_id = "ac-quest-bg2", component = 8 }]
+
+[[features]]
+id = "feature:ac-quest:component-9"
+title = "Fangirls"
+description = "Three devoted fans in north-western Baldur's Gate stay true to their idols."
+category = "quest-mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ac-quest"
+components = [{ run_id = "ac-quest-bg2", component = 9 }]
+
+[[features]]
+id = "feature:ac-quest:component-10"
+title = "The Serpents of Abbathor: Original version (cliffhanger ending)"
+description = "A dwarven cult recruits along the Sword Coast; start by looting Mulahey's cave or by visiting south-western Baldur's Gate with a dwarf in the party. The original ends on a cliffhanger, because its planned sequels were never made."
+category = "quest-mods"
+group_label = "The Serpents of Abbathor"
+decision = "default"
+readiness = "experimental"
+parent = "mod:ac-quest"
+choice_group = "choice:ac-quest:the-serpents-of-abbathor"
+conflicts = [{ feature_id = "feature:ac-quest:component-11", reason = "Choose one version of The Serpents of Abbathor." }]
+components = [{ run_id = "ac-quest-bg2", component = 10 }]
+
+[[features]]
+id = "feature:ac-quest:component-11"
+title = "The Serpents of Abbathor: Tweaked version (ends in BG1)"
+description = "The same quest, tweaked by the Kerzenburgforum so that it ends in BG1, with more places to hand in the artifact on good and evil paths. On EET the good path has a small follow-up in Athkatla's slums, and the reward weapon can be upgraded by Cromwell and Cespenar."
+category = "quest-mods"
+group_label = "The Serpents of Abbathor"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ac-quest"
+choice_group = "choice:ac-quest:the-serpents-of-abbathor"
+conflicts = [{ feature_id = "feature:ac-quest:component-10", reason = "Choose one version of The Serpents of Abbathor." }]
+components = [{ run_id = "ac-quest-bg2", component = 11 }]
+
+[[features]]
+id = "feature:ac-quest:component-12"
+title = "A Halfling among the Eyeless"
+description = "A Shadows of Amn quest: help Mrs Lawner find her missing son."
+category = "quest-mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ac-quest"
+components = [{ run_id = "ac-quest-bg2", component = 12 }]
+
+[[features]]
+id = "feature:blackhearts:component-1"
+title = "Black Hearts"
+description = "Third-party quest mod for BG1 and Siege of Dragonspear: Illasera hires the party in BG1 chapter 3 (The Huntress), and the story continues in SoD chapters 9 and 10 (Pilgrimage), with a short ToB dialogue on EET. Experimental: not yet tested in a combined CEBG install."
+category = "quest-mods"
+decision = "optional"
+readiness = "experimental"
+conflicts = [{ feature_id = "feature:chriz-sod-remix:mandatory-components", reason = "Unavailable with CHRIZ-SOD-REMIX: Black Hearts' Siege of Dragonspear part runs through areas and scripts that the remix restructures." }]
+components = [{ run_id = "blackhearts-bg2", component = 1 }]
+
+[[features]]
+id = "feature:thalan:component-0"
+title = "Thalantyr Item Upgrade"
+description = "Thalantyr in High Hedge combines BG1 magic items, potions or scrolls and gold into improved items, and his store adds BG2's bags and cases and Remove Curse scrolls. On EE games its upgraded rings, cloak and amulet that contain a protection item are not marked exclusive, so they can be worn with other protection items. Experimental: not yet tested in a combined CEBG install."
+category = "items"
+decision = "optional"
+readiness = "experimental"
+components = [{ run_id = "thalan-bg2", component = 0 }]
+
+[[features]]
+id = "feature:zg-iwd-voices:component-0"
+title = "Icewind Dale Voice Pack"
+description = "Adds Icewind Dale's player voice sets as selectable voices for your characters, in English. On EET possibly only three of each set's seven \"order acknowledged\" lines play; this is not yet checked in game. Experimental: not yet tested in a combined CEBG install."
+category = "audio"
+decision = "optional"
+readiness = "experimental"
+components = [{ run_id = "zg-iwd-voices-bg2", component = 0 }]
+
+[[features]]
+id = "mod:ppe"
+title = "Portraits Portraits Everywhere"
+description = "Third-party mod that adds dialogue portraits to speaking NPCs in BG1, SoD and BG2. It installs late, after nearly all NPC and content mods, so that their NPCs can get portraits too, and it replaces some portraits that other mods set. About 0.4 GB. Experimental: not yet tested in a combined CEBG install."
+category = "visuals"
+decision = "optional"
+readiness = "experimental"
+
+[[features]]
+id = "feature:ppe:component-0"
+title = "PPE core"
+description = "Gives the game's named speaking NPCs dialogue portraits from PPE's table. It writes the portrait even where another mod already set one, for example Pai'Na's party portrait in Shadows of Amn and several Rogue Rebalancing and Unfinished Business NPCs."
+category = "visuals"
+decision = "default"
+readiness = "experimental"
+parent = "mod:ppe"
+components = [{ run_id = "ppe-bg2", component = 0 }]
+
+[[features]]
+id = "feature:ppe:component-100"
+title = "Category portraits in a fixed order"
+description = "Gives generic NPCs that still have no portrait (for example \"Thief\" or \"Commoner\") one from a matching pool, in a fixed order, so a reinstall gives the same result. Creatures that already have a portrait keep it."
+category = "visuals"
+group_label = "Category portraits"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+requires = ["feature:ppe:component-0"]
+choice_group = "choice:ppe:category-portraits"
+conflicts = [{ feature_id = "feature:ppe:component-150", reason = "Choose one way to assign category portraits." }]
+components = [{ run_id = "ppe-bg2", component = 100 }]
+
+[[features]]
+id = "feature:ppe:component-150"
+title = "Category portraits at random"
+description = "The same, but each portrait is picked at random from its pool."
+category = "visuals"
+group_label = "Category portraits"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+requires = ["feature:ppe:component-0"]
+choice_group = "choice:ppe:category-portraits"
+conflicts = [{ feature_id = "feature:ppe:component-100", reason = "Choose one way to assign category portraits." }]
+components = [{ run_id = "ppe-bg2", component = 150 }]
+
+[[features]]
+id = "feature:ppe:component-10"
+title = "Isandir's CHARNAME portraits"
+description = "Copies Isandir's set of portraits for your own character into the game."
+category = "visuals"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+components = [{ run_id = "ppe-bg2", component = 10 }]
+
+[[features]]
+id = "feature:ppe:component-20"
+title = "Replace low-quality ToB and SoA portraits"
+description = "Replaces low-quality small portraits of major Shadows of Amn and Throne of Bhaal characters, such as the Five, Illasera, Melissan, Irenicus, Bodhi, Ellesime and the Solar. Ascension, installed earlier, sets some of the same files, so Bodhi, Balthazar, Gromnir and Abazigal end up with Ascension's large and PPE's small portraits."
+category = "visuals"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+components = [{ run_id = "ppe-bg2", component = 20 }]
+
+[[features]]
+id = "feature:ppe:component-25"
+title = "Edwin/Edwina"
+description = "Adds portrait changes to Edwin's transformation into Edwina and back. The Tweaks Anthology's Female Edwina component does the same; with both installed, which portrait shows is not verified."
+category = "visuals"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+components = [{ run_id = "ppe-bg2", component = 25 }]
+
+[[features]]
+id = "feature:ppe:component-300"
+title = "Imoen's BG1 portrait in BG1 and BG2"
+description = "Imoen uses her BG1 portrait in BG1 and BG2."
+category = "visuals"
+group_label = "Change Imoen portraits"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+choice_group = "choice:ppe:change-imoen-portraits"
+conflicts = [{ feature_id = "feature:ppe:component-301", reason = "Choose one portrait for Imoen." }, { feature_id = "feature:ppe:component-302", reason = "Choose one portrait for Imoen." }]
+components = [{ run_id = "ppe-bg2", component = 300 }]
+
+[[features]]
+id = "feature:ppe:component-301"
+title = "Imoen's SoD portrait in BG1, SoD and BG2"
+description = "Imoen uses her SoD portrait in BG1, SoD and BG2."
+category = "visuals"
+group_label = "Change Imoen portraits"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+choice_group = "choice:ppe:change-imoen-portraits"
+conflicts = [{ feature_id = "feature:ppe:component-300", reason = "Choose one portrait for Imoen." }, { feature_id = "feature:ppe:component-302", reason = "Choose one portrait for Imoen." }]
+components = [{ run_id = "ppe-bg2", component = 301 }]
+
+[[features]]
+id = "feature:ppe:component-302"
+title = "Imoen's BG2 portrait in BG1 and BG2"
+description = "Imoen uses her BG2 portrait in BG1 and BG2."
+category = "visuals"
+group_label = "Change Imoen portraits"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+choice_group = "choice:ppe:change-imoen-portraits"
+conflicts = [{ feature_id = "feature:ppe:component-300", reason = "Choose one portrait for Imoen." }, { feature_id = "feature:ppe:component-301", reason = "Choose one portrait for Imoen." }]
+components = [{ run_id = "ppe-bg2", component = 302 }]
+
+[[features]]
+id = "feature:ppe:component-311"
+title = "Viconia's SoD portrait in BG1"
+description = "Viconia uses her SoD portrait in BG1. PPE writes her SoD and BG2 copies under file names the game does not read, so those portraits stay unchanged."
+category = "visuals"
+group_label = "Change Viconia portraits"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+choice_group = "choice:ppe:change-viconia-portraits"
+conflicts = [{ feature_id = "feature:ppe:component-312", reason = "Choose one portrait for Viconia." }]
+components = [{ run_id = "ppe-bg2", component = 311 }]
+
+[[features]]
+id = "feature:ppe:component-312"
+title = "Viconia's BG2 portrait in BG1"
+description = "Viconia uses her BG2 portrait in BG1. PPE writes the BG2 copy under a file name the game does not read, so her BG2 portrait stays unchanged."
+category = "visuals"
+group_label = "Change Viconia portraits"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+choice_group = "choice:ppe:change-viconia-portraits"
+conflicts = [{ feature_id = "feature:ppe:component-311", reason = "Choose one portrait for Viconia." }]
+components = [{ run_id = "ppe-bg2", component = 312 }]
+
+[[features]]
+id = "feature:ppe:component-322"
+title = "Jaheira's BG2 portrait in BG1"
+description = "Jaheira uses her BG2 portrait in BG1. PPE writes the BG2 copy under a file name the game does not read, so her BG2 portrait stays unchanged."
+category = "visuals"
+group_label = "Change Jaheira portraits"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+components = [{ run_id = "ppe-bg2", component = 322 }]
+
+[[features]]
+id = "feature:ppe:component-330"
+title = "Minsc's BG1 portrait in BG1 and BG2"
+description = "Minsc uses his BG1 portrait in BG1 and BG2."
+category = "visuals"
+group_label = "Change Minsc portraits"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+choice_group = "choice:ppe:change-minsc-portraits"
+conflicts = [{ feature_id = "feature:ppe:component-332", reason = "Choose one portrait for Minsc." }]
+components = [{ run_id = "ppe-bg2", component = 330 }]
+
+[[features]]
+id = "feature:ppe:component-332"
+title = "Minsc's BG2 portrait in BG1 and BG2"
+description = "Minsc uses his BG2 portrait in BG1 and BG2."
+category = "visuals"
+group_label = "Change Minsc portraits"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+choice_group = "choice:ppe:change-minsc-portraits"
+conflicts = [{ feature_id = "feature:ppe:component-330", reason = "Choose one portrait for Minsc." }]
+components = [{ run_id = "ppe-bg2", component = 332 }]
+
+[[features]]
+id = "feature:ppe:component-340"
+title = "Edwin's BG1 portrait in BG1 and BG2"
+description = "Edwin uses his BG1 portrait in BG1 and BG2."
+category = "visuals"
+group_label = "Change Edwin portraits"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+choice_group = "choice:ppe:change-edwin-portraits"
+conflicts = [{ feature_id = "feature:ppe:component-342", reason = "Choose one portrait for Edwin." }]
+components = [{ run_id = "ppe-bg2", component = 340 }]
+
+[[features]]
+id = "feature:ppe:component-342"
+title = "Edwin's BG2 portrait in BG1 and BG2"
+description = "Edwin uses his BG2 portrait in BG1 and BG2."
+category = "visuals"
+group_label = "Change Edwin portraits"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+choice_group = "choice:ppe:change-edwin-portraits"
+conflicts = [{ feature_id = "feature:ppe:component-340", reason = "Choose one portrait for Edwin." }]
+components = [{ run_id = "ppe-bg2", component = 342 }]
+
+[[features]]
+id = "feature:ppe:component-350"
+title = "Longhair Aerie"
+description = "Gives Aerie a long-haired portrait in Shadows of Amn and Throne of Bhaal, with matching drow and vampire variants."
+category = "visuals"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+components = [{ run_id = "ppe-bg2", component = 350 }]
+
+[[features]]
+id = "feature:ppe:component-30"
+title = "Ust Natha drow NPCs"
+description = "While the party is disguised as drow in Ust Natha, the game's own companions show drow portraits. Companions from other mods keep their normal portraits."
+category = "visuals"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+components = [{ run_id = "ppe-bg2", component = 30 }]
+
+[[features]]
+id = "feature:ppe:component-40"
+title = "Vampire NPCs"
+description = "Gives the vampire forms of Aerie, Anomen, Jaheira and Viconia vampire versions of their portraits."
+category = "visuals"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+components = [{ run_id = "ppe-bg2", component = 40 }]
+
+[[features]]
 id = "mod:evandra"
 title = "Evandra NPC"
 description = "Evandra remains part of the curated collection, but the public alpha does not yet have a verified user-supplied archive contract."
@@ -1265,7 +2218,7 @@ id = "feature:ub:component-0"
 title = "The Kidnapping of Boo"
 description = "Restore the reviewed Unfinished Business quest."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 0 }]
 
@@ -1274,7 +2227,7 @@ id = "feature:ub:component-1"
 title = "The Suna Seni and Valygar Relationship"
 description = "Restore the reviewed Unfinished Business content."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 1 }]
 
@@ -1283,7 +2236,7 @@ id = "feature:ub:component-2"
 title = "Kalah and What He Was Promised"
 description = "Restore the reviewed Unfinished Business content."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 2 }]
 
@@ -1292,7 +2245,7 @@ id = "feature:ub:component-4"
 title = "Gorje Hilldark and the Extended Illithium Quest"
 description = "Restore the reviewed Unfinished Business quest."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 4 }]
 
@@ -1301,7 +2254,7 @@ id = "feature:ub:component-5"
 title = "The Pai'Na and Spider's Bane Quest"
 description = "Restore the reviewed Unfinished Business quest."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 5 }]
 
@@ -1310,7 +2263,7 @@ id = "feature:ub:component-6"
 title = "Restored Crooked Crane Inn"
 description = "Restore the reviewed Crooked Crane Inn content."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 6 }]
 
@@ -1319,7 +2272,7 @@ id = "feature:ub:component-7"
 title = "Restored Encounters"
 description = "Restore the reviewed Unfinished Business encounters."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 7 }]
 
@@ -1328,7 +2281,7 @@ id = "feature:ub:component-8"
 title = "Artemis Entreri in Bodhi's Lair"
 description = "Restore the reviewed Unfinished Business encounter."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 8 }]
 
@@ -1337,7 +2290,7 @@ id = "feature:ub:component-9"
 title = "Corrected Xzar's Creations"
 description = "Apply the reviewed Unfinished Business correction."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 9 }]
 
@@ -1346,7 +2299,7 @@ id = "feature:ub:component-10"
 title = "Restored Hell Minions"
 description = "Restore the reviewed Unfinished Business content."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 10 }]
 
@@ -1355,7 +2308,7 @@ id = "feature:ub:component-12"
 title = "Item Restorations"
 description = "Install the reviewed Unfinished Business item restorations."
 category = "items"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 12 }]
 
@@ -1364,7 +2317,7 @@ id = "feature:ub:component-13"
 title = "Yoshimo's Original Portrait"
 description = "Use Yoshimo's reviewed original portrait."
 category = "visuals"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 13 }]
 
@@ -1373,7 +2326,7 @@ id = "feature:ub:component-14"
 title = "Anomen's Original Portrait"
 description = "Use Anomen's reviewed original portrait."
 category = "visuals"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 14 }]
 
@@ -1382,7 +2335,7 @@ id = "feature:ub:component-15"
 title = "NPC Portrait Restorations"
 description = "Install the reviewed NPC portrait restorations."
 category = "visuals"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 15 }]
 
@@ -1391,7 +2344,7 @@ id = "feature:ub:component-17"
 title = "Corrected Character Names and Biographies"
 description = "Apply the reviewed name and biography corrections."
 category = "fixes"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 17 }]
 
@@ -1400,7 +2353,7 @@ id = "feature:ub:component-18"
 title = "Restored Minor Dialogs"
 description = "Restore the reviewed minor dialogs."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 18 }]
 
@@ -1409,7 +2362,7 @@ id = "feature:ub:component-20"
 title = "Extended ToB Item Descriptions"
 description = "Install the reviewed Throne of Bhaal item descriptions."
 category = "items"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 20 }]
 
@@ -1418,7 +2371,7 @@ id = "feature:ub:component-21"
 title = "Throne of Bhaal Minor Restorations"
 description = "Install the reviewed Throne of Bhaal minor restorations."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 21 }]
 
@@ -1452,9 +2405,9 @@ components = [{ run_id = "ub-bg2", component = 24 }]
 [[features]]
 id = "feature:ub:component-25"
 title = "The Murder of Acton Balthis"
-description = "Install the reviewed Kulyok quest."
+description = "Optional quest by Kulyok; not included in the recommended setup."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 25 }]
 
@@ -1555,6 +2508,85 @@ decision = "default"
 readiness = "ready"
 conflicts = [{ feature_id = "feature:yeslicknpc:component-0", reason = "Choose exactly one Yeslick class route when installing Yeslick." }]
 components = [{ run_id = "yeslicknpc-bg2", component = 1 }]
+
+[[features]]
+id = "feature:sirene-bg1:component-0"
+title = "Sirene NPC for BG1 and Siege of Dragonspear"
+description = "Add Sirene to BG1 and Siege of Dragonspear. With Sirene NPC for BG2, she can travel on with you into BG2."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "sirene-bg1-bg2", component = 0 }]
+
+[[features]]
+id = "feature:sirene-bg1:component-3"
+title = "Sirene portrait in BG1 and SoD: Sirick, Light Armor"
+description = "Use Christopher's curated Sirene portrait, the same one as in BG2."
+category = "visuals"
+decision = "default"
+readiness = "ready"
+parent = "feature:sirene-bg1:component-0"
+components = [{ run_id = "sirene-bg1-bg2", component = 3 }]
+
+[[features]]
+id = "feature:sirene-bg1:component-6"
+title = "Sirene as a True Paladin in BG1 and SoD"
+description = "Use the curated default class for Sirene in BG1 and Siege of Dragonspear, the same as in BG2."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "feature:sirene-bg1:component-0"
+conflicts = [
+  { feature_id = "feature:sirene-bg1:component-7", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-8", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-9", reason = "Choose at most one alternate class for Sirene." },
+]
+components = [{ run_id = "sirene-bg1-bg2", component = 6 }]
+
+[[features]]
+id = "feature:sirene-bg1:component-7"
+title = "Sirene as a Cavalier in BG1 and SoD"
+description = "Optional. Make Sirene a Cavalier in BG1 and Siege of Dragonspear; pick the same class for Sirene in BG2."
+category = "npcs"
+decision = "optional"
+readiness = "ready"
+parent = "feature:sirene-bg1:component-0"
+conflicts = [
+  { feature_id = "feature:sirene-bg1:component-6", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-8", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-9", reason = "Choose at most one alternate class for Sirene." },
+]
+components = [{ run_id = "sirene-bg1-bg2", component = 7 }]
+
+[[features]]
+id = "feature:sirene-bg1:component-8"
+title = "Sirene as an Inquisitor in BG1 and SoD"
+description = "Optional. Make Sirene an Inquisitor in BG1 and Siege of Dragonspear; pick the same class for Sirene in BG2."
+category = "npcs"
+decision = "optional"
+readiness = "ready"
+parent = "feature:sirene-bg1:component-0"
+conflicts = [
+  { feature_id = "feature:sirene-bg1:component-6", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-7", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-9", reason = "Choose at most one alternate class for Sirene." },
+]
+components = [{ run_id = "sirene-bg1-bg2", component = 8 }]
+
+[[features]]
+id = "feature:sirene-bg1:component-9"
+title = "Sirene as an Undead Hunter in BG1 and SoD"
+description = "Optional. Make Sirene an Undead Hunter in BG1 and Siege of Dragonspear; pick the same class for Sirene in BG2."
+category = "npcs"
+decision = "optional"
+readiness = "ready"
+parent = "feature:sirene-bg1:component-0"
+conflicts = [
+  { feature_id = "feature:sirene-bg1:component-6", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-7", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-8", reason = "Choose at most one alternate class for Sirene." },
+]
+components = [{ run_id = "sirene-bg1-bg2", component = 9 }]
 
 [[features]]
 id = "feature:sirene-bg2:component-0"
@@ -2493,7 +3525,6 @@ category = "npcs"
 decision = "default"
 readiness = "ready"
 parent = "mod:artisanskitpack-npc"
-conflicts = [{ feature_id = "feature:spell-rev:mandatory-components", reason = "Unavailable with Spell Revisions." }]
 components = [{ run_id = "artisanskitpack-npc-bg2", component = 5102 }]
 
 [[features]]
@@ -2613,8 +3644,8 @@ requires = ["mod:artisanskitpack"]
 
 [[features]]
 id = "feature:artisanskitpack-tweak:component-20101"
-title = "Manyshot for mod-added weapons"
-description = "Apply Archer Manyshot support to mod-added bows and crossbows."
+title = "Remove old Manyshot effects"
+description = "Remove legacy Manyshot effects from mod-added bows and crossbows. Archer's Aimed Shot supports these weapons automatically."
 category = "kits"
 decision = "default"
 readiness = "ready"
@@ -2677,6 +3708,16 @@ requires = ["feature:artisanskitpack:component-3002", "feature:eeex:mandatory-co
 components = [{ run_id = "artisanskitpack-tweak-late-bg2", component = 3302 }]
 
 [[features]]
+id = "feature:artisanskitpack-tweak:component-7205"
+title = "Katana fix for items and kits from later mods"
+description = "The Invisible Blade and Bardic Wonders' Dancer, who may not wear armor, can also use the katanas and other items that mods installed after the Kitpack add, such as SCS's Drow Katana and Tweaks Anthology's two-handed katanas. Every other kit stays blocked where it was."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack-tweak"
+components = [{ run_id = "artisanskitpack-tweak-late-bg2", component = 7205 }]
+
+[[features]]
 id = "feature:artisanskitpack-tweak:component-8204"
 title = "Arcane Trickster Sorcerer thief equipment"
 description = "Enable thief equipment for the Arcane Trickster sorcerer."
@@ -2686,6 +3727,29 @@ readiness = "ready"
 parent = "mod:artisanskitpack-tweak"
 requires = ["feature:artisanskitpack:component-8004", "feature:eeex:mandatory-components"]
 components = [{ run_id = "artisanskitpack-tweak-late-bg2", component = 8204 }]
+
+[[features]]
+id = "feature:artisanskitpack-tweak:component-1010000"
+title = "Kit weapon rules for weapons from later mods"
+description = "Extend the Artisan kits' weapon rules to weapons that mods installed after the Kitpack add, such as the SCS Drow Katana for the Arcane Trickster sorcerer."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack-tweak"
+requires = ["feature:eeex:mandatory-components"]
+requires_any = ["feature:artisanskitpack:component-20000", "feature:artisanskitpack-tweak:component-8204"]
+components = [{ run_id = "artisanskitpack-tweak-late-bg2", component = 1010000 }]
+
+[[features]]
+id = "feature:artisanskitpack-tweak:component-51010"
+title = "Talk while shapeshifted"
+description = "Allow dialogue in Artisan's Shapeshifter and Hivemaster forms. Requires either kit and does not require EEex."
+category = "convenience"
+decision = "optional"
+readiness = "ready"
+parent = "mod:artisanskitpack-tweak"
+requires_any = ["feature:artisanskitpack:component-5100", "feature:artisanskitpack:component-5002"]
+components = [{ run_id = "artisanskitpack-tweak-late-bg2", component = 51010 }]
 
 [[features]]
 id = "mod:spell-rev"
@@ -2768,11 +3832,11 @@ components = [{ run_id = "spell-rev-core-bg2", component = 65 }]
 [[features]]
 id = "mod:stratagems"
 title = "Sword Coast Stratagems"
-description = "Install the curated SCS spell, AI, and encounter package with WeiDU 249."
+description = "Install the curated SCS spell, AI, and encounter package with WeiDU 249. This package includes Ascension encounters and requires its rewritten final chapter."
 category = "difficulty"
 decision = "default"
 readiness = "ready"
-requires = ["mod:ascension"]
+requires = ["feature:ascension:component-0"]
 
 [[features]]
 id = "feature:stratagems:mandatory-components"
@@ -2855,6 +3919,36 @@ components = [
 ]
 
 [[features]]
+id = "feature:stratagems:component-3010"
+title = "Fine ammunition instead of +1 ammunition"
+description = "+1 arrows, bolts, darts and sling bullets become nonmagical \"fine\" ammunition. They keep +1 to hit and damage, but cannot harm creatures immune to normal weapons, and Protection from Normal Missiles stops them."
+category = "items"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 3010 }]
+
+[[features]]
+id = "feature:stratagems:component-3015"
+title = "More extra-healing potions in BG1 shops"
+description = "Adds a small stock of Potions of Extra Healing to four BG1 temple shops."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 3015 }]
+
+[[features]]
+id = "feature:stratagems:component-3021"
+title = "Fine weapons instead of +1 weapons; they never break"
+description = "Most standard +1 weapons become nonmagical \"fine\" weapons: still +1 to hit and damage, but no initiative bonus, no harm to creatures immune to normal weapons, and about a third of the price. Fine weapons never break in BG1's iron crisis."
+category = "items"
+decision = "default"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 3021 }]
+
+[[features]]
 id = "feature:stratagems:component-3040"
 title = "Remove Arrows of Dispelling from stores"
 description = "Optional stricter alternative to the curated five-arrow limit."
@@ -2899,6 +3993,60 @@ conflicts = [{ feature_id = "feature:stratagems:component-3540", reason = "Choos
 components = [{ run_id = "stratagems-bg2", component = 3541 }]
 
 [[features]]
+id = "feature:stratagems:component-4020"
+title = "More natural wolves and wild dogs"
+description = "Wild animals are not always hostile and may avoid or flee your party. Dangerous encounter wolves stay dangerous."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4020 }]
+
+[[features]]
+id = "feature:stratagems:component-4050"
+title = "Reputation gains at about two-thirds the normal rate"
+description = "Good deeds raise reputation less often. Store discounts and companions' tolerance of your reputation are separate settings. Leave this group off to keep the current gain rate."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4051", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4052", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4093", reason = "Choose one reputation gain rate." }]
+components = [{ run_id = "stratagems-bg2", component = 4050 }]
+
+[[features]]
+id = "feature:stratagems:component-4051"
+title = "Reputation gains at about one-half the normal rate"
+description = "Good deeds raise reputation less often. Store discounts and companions' tolerance of your reputation are separate settings. Leave this group off to keep the current gain rate."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4050", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4052", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4093", reason = "Choose one reputation gain rate." }]
+components = [{ run_id = "stratagems-bg2", component = 4051 }]
+
+[[features]]
+id = "feature:stratagems:component-4052"
+title = "Reputation gains at about one-third the normal rate"
+description = "Good deeds raise reputation less often. Store discounts and companions' tolerance of your reputation are separate settings. Leave this group off to keep the current gain rate."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4050", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4051", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4093", reason = "Choose one reputation gain rate." }]
+components = [{ run_id = "stratagems-bg2", component = 4052 }]
+
+[[features]]
+id = "feature:stratagems:component-4093"
+title = "Reputation gains at about one-quarter the normal rate"
+description = "Good deeds raise reputation less often. Store discounts and companions' tolerance of your reputation are separate settings. Leave this group off to keep the current gain rate."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4050", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4051", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4052", reason = "Choose one reputation gain rate." }]
+components = [{ run_id = "stratagems-bg2", component = 4093 }]
+
+[[features]]
 id = "feature:stratagems:component-4115"
 title = "Thief skills in multiples of five"
 description = "Assign thief skill points in multiples of five."
@@ -2907,6 +4055,168 @@ decision = "default"
 readiness = "ready"
 parent = "mod:stratagems"
 components = [{ run_id = "stratagems-bg2", component = 4115 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Infinity UI++ cannot use SCS's five-point thief-skill screen. This choice uses normal point allocation; your preference is restored with the default interface." }]
+
+[[features]]
+id = "feature:stratagems:component-4130"
+title = "Not recommended: revised death, petrification and imprisonment"
+description = "Experimental opt-in: players have reported problems; not independently reproduced in CEBG. Changes companion permanent death and the handling of petrification and imprisonment; changes Resurrection costs and restrictions. Unavailable with Spell Revisions."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:spell-rev:mandatory-components", reason = "SCS 35.21 explicitly forbids this component with Spell Revisions. Turn off Spell Revisions to select it." }]
+components = [{ run_id = "stratagems-bg2", component = 4130 }]
+
+[[features]]
+id = "feature:stratagems:component-4135"
+title = "Not recommended: rests use provisions"
+description = "Experimental opt-in: players have reported problems; not independently reproduced in CEBG. Wilderness and dungeon rests use supplies; inns refill them and druids or rangers can forage outdoors. Supplies are not required during SoD or selected campaign finales."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4135 }]
+
+[[features]]
+id = "feature:stratagems:component-4140"
+title = "Not recommended: more expensive inns with bonuses"
+description = "Experimental opt-in: players have reported problems; not independently reproduced in CEBG. Inn rooms cost more; better rooms grant stronger, longer-lasting rest bonuses. Works with or without the provisions option."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4140 }]
+
+[[features]]
+id = "feature:stratagems:component-4145"
+title = "Remove Candlekeep tutorial NPCs"
+description = "Removes tutorial guides and introductory training reminders, while keeping Candlekeep itself."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4145 }]
+
+[[features]]
+id = "feature:stratagems:component-4150"
+title = "Cowled Wizards also police indoor spellcasting"
+description = "Using unlicensed magic in many above-ground Athkatla interiors can attract the Cowled Wizards."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4150 }]
+
+[[features]]
+id = "feature:stratagems:component-4160"
+title = "Athkatla magic license: 10,000 gp"
+description = "Raises the price of permission to cast magic in Athkatla to 10,000 gold. Does not require indoor spellcasting enforcement."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4161", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4162", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4163", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4164", reason = "Choose one price for the Athkatla magic license." }]
+components = [{ run_id = "stratagems-bg2", component = 4160 }]
+
+[[features]]
+id = "feature:stratagems:component-4161"
+title = "Athkatla magic license: 15,000 gp"
+description = "Raises the price of permission to cast magic in Athkatla to 15,000 gold. Does not require indoor spellcasting enforcement."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4160", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4162", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4163", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4164", reason = "Choose one price for the Athkatla magic license." }]
+components = [{ run_id = "stratagems-bg2", component = 4161 }]
+
+[[features]]
+id = "feature:stratagems:component-4162"
+title = "Athkatla magic license: 20,000 gp"
+description = "Raises the price of permission to cast magic in Athkatla to 20,000 gold. Does not require indoor spellcasting enforcement."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4160", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4161", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4163", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4164", reason = "Choose one price for the Athkatla magic license." }]
+components = [{ run_id = "stratagems-bg2", component = 4162 }]
+
+[[features]]
+id = "feature:stratagems:component-4163"
+title = "Athkatla magic license: 30,000 gp"
+description = "Raises the price of permission to cast magic in Athkatla to 30,000 gold. Does not require indoor spellcasting enforcement."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4160", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4161", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4162", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4164", reason = "Choose one price for the Athkatla magic license." }]
+components = [{ run_id = "stratagems-bg2", component = 4163 }]
+
+[[features]]
+id = "feature:stratagems:component-4164"
+title = "Athkatla magic license: 50,000 gp"
+description = "Raises the price of permission to cast magic in Athkatla to 50,000 gold. Does not require indoor spellcasting enforcement."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4160", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4161", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4162", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4163", reason = "Choose one price for the Athkatla magic license." }]
+components = [{ run_id = "stratagems-bg2", component = 4164 }]
+
+[[features]]
+id = "feature:stratagems:component-4170"
+title = "Gaelan's initial asking price: 40,000 gp"
+description = "Raises the initial price for help reaching Imoen to 40,000 gold; the eventual discounted payment is 30,000 gold."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4171", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4172", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4173", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4174", reason = "Choose one Spellhold rescue price." }]
+components = [{ run_id = "stratagems-bg2", component = 4170 }]
+
+[[features]]
+id = "feature:stratagems:component-4171"
+title = "Gaelan's initial asking price: 60,000 gp"
+description = "Raises the initial price for help reaching Imoen to 60,000 gold; the eventual discounted payment is 45,000 gold."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4170", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4172", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4173", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4174", reason = "Choose one Spellhold rescue price." }]
+components = [{ run_id = "stratagems-bg2", component = 4171 }]
+
+[[features]]
+id = "feature:stratagems:component-4172"
+title = "Gaelan's initial asking price: 80,000 gp"
+description = "Raises the initial price for help reaching Imoen to 80,000 gold; the eventual discounted payment is 60,000 gold."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4170", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4171", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4173", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4174", reason = "Choose one Spellhold rescue price." }]
+components = [{ run_id = "stratagems-bg2", component = 4172 }]
+
+[[features]]
+id = "feature:stratagems:component-4173"
+title = "Gaelan's initial asking price: 100,000 gp"
+description = "Raises the initial price for help reaching Imoen to 100,000 gold; the eventual discounted payment is 75,000 gold."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4170", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4171", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4172", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4174", reason = "Choose one Spellhold rescue price." }]
+components = [{ run_id = "stratagems-bg2", component = 4173 }]
+
+[[features]]
+id = "feature:stratagems:component-4174"
+title = "Gaelan's initial asking price: 120,000 gp"
+description = "Raises the initial price for help reaching Imoen to 120,000 gold; the eventual discounted payment is 90,000 gold."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4170", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4171", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4172", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4173", reason = "Choose one Spellhold rescue price." }]
+components = [{ run_id = "stratagems-bg2", component = 4174 }]
 
 [[features]]
 id = "feature:stratagems:component-4210"
@@ -2929,14 +4239,47 @@ parent = "mod:stratagems"
 components = [{ run_id = "stratagems-bg2", component = 4215 }]
 
 [[features]]
+id = "feature:stratagems:component-4216"
+title = "Remove only nonmagical ammunition from containers"
+description = "Removes ordinary ammunition from random area containers. Shop stock and enemies' equipment are not affected."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4217", reason = "Choose one ammunition removal option." }, { feature_id = "feature:stratagems:component-4218", reason = "Choose one ammunition removal option." }]
+components = [{ run_id = "stratagems-bg2", component = 4216 }]
+
+[[features]]
+id = "feature:stratagems:component-4217"
+title = "Remove ammunition up to +2 from containers"
+description = "Removes ordinary ammunition and SCS's listed ammunition up to +2 from random area containers. Shop stock and enemies' equipment are not affected."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4216", reason = "Choose one ammunition removal option." }, { feature_id = "feature:stratagems:component-4218", reason = "Choose one ammunition removal option." }]
+components = [{ run_id = "stratagems-bg2", component = 4217 }]
+
+[[features]]
 id = "feature:stratagems:component-4218"
 title = "Remove ammunition from random containers"
-description = "Remove all ammunition from random containers."
+description = "Removes all ammunition covered by SCS's removal list from random area containers. Shop stock and enemies' equipment are not affected."
 category = "gameplay"
 decision = "default"
 readiness = "ready"
 parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4216", reason = "Choose one ammunition removal option." }, { feature_id = "feature:stratagems:component-4217", reason = "Choose one ammunition removal option." }]
 components = [{ run_id = "stratagems-bg2", component = 4218 }]
+
+[[features]]
+id = "feature:stratagems:component-4230"
+title = "Delay the bonus-item merchants"
+description = "Joluv and Deidre arrive later as you complete major BG2 quests and advance the story."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4230 }]
 
 [[features]]
 id = "feature:stratagems:component-4240"
@@ -3056,6 +4399,7 @@ category = "randomisation"
 decision = "default"
 readiness = "ready"
 parent = "mod:randomiser"
+conflicts = [{ feature_id = "feature:chriz-bg-modpack:component-630", reason = "Choose either Randomiser's cursed-item appearance or the unidentified-appearance helper, not both. Ordinary loot randomization remains available." }]
 components = [{ run_id = "randomiser-bg2", component = 570 }]
 
 [[features]]
@@ -3121,7 +4465,7 @@ requires = ["mod:eet-end"]
 [[features]]
 id = "feature:chriz-sod-remix:mandatory-components"
 title = "Complete CHRIZ-SOD-REMIX setup"
-description = "Install all 32 reviewed v0.6.7 fresh-install components as one indivisible bundle, including the accepted EET SoD skip, victory ending, and camp-chest treasure route."
+description = "Install the complete curated fresh-install remix, including the SoD skip, victory ending, companion continuity, revised bridge finale, filler and XP corrections, and finite Shadow Aspect Mislead. Extra Challenge remains a separate optional choice."
 category = "collection"
 decision = "mandatory"
 readiness = "ready"
@@ -3129,8 +4473,10 @@ parent = "mod:chriz-sod-remix"
 components = [
   { run_id = "chriz-sod-remix-bg2", component = 100 },
   { run_id = "chriz-sod-remix-bg2", component = 110 },
+  { run_id = "chriz-sod-remix-bg2", component = 115 },
   { run_id = "chriz-sod-remix-bg2", component = 120 },
   { run_id = "chriz-sod-remix-bg2", component = 130 },
+  { run_id = "chriz-sod-remix-bg2", component = 135 },
   { run_id = "chriz-sod-remix-bg2", component = 140 },
   { run_id = "chriz-sod-remix-bg2", component = 150 },
   { run_id = "chriz-sod-remix-bg2", component = 145 },
@@ -3138,11 +4484,13 @@ components = [
   { run_id = "chriz-sod-remix-bg2", component = 170 },
   { run_id = "chriz-sod-remix-bg2", component = 180 },
   { run_id = "chriz-sod-remix-bg2", component = 175 },
+  { run_id = "chriz-sod-remix-bg2", component = 177 },
   { run_id = "chriz-sod-remix-bg2", component = 185 },
   { run_id = "chriz-sod-remix-bg2", component = 190 },
   { run_id = "chriz-sod-remix-bg2", component = 195 },
   { run_id = "chriz-sod-remix-bg2", component = 210 },
   { run_id = "chriz-sod-remix-bg2", component = 197 },
+  { run_id = "chriz-sod-remix-bg2", component = 198 },
   { run_id = "chriz-sod-remix-bg2", component = 187 },
   { run_id = "chriz-sod-remix-bg2", component = 200 },
   { run_id = "chriz-sod-remix-bg2", component = 215 },
@@ -3153,9 +4501,13 @@ components = [
   { run_id = "chriz-sod-remix-bg2", component = 240 },
   { run_id = "chriz-sod-remix-bg2", component = 250 },
   { run_id = "chriz-sod-remix-bg2", component = 255 },
+  { run_id = "chriz-sod-remix-bg2", component = 256 },
   { run_id = "chriz-sod-remix-bg2", component = 260 },
+  { run_id = "chriz-sod-remix-bg2", component = 265 },
+  { run_id = "chriz-sod-remix-bg2", component = 266 },
   { run_id = "chriz-sod-remix-bg2", component = 270 },
   { run_id = "chriz-sod-remix-bg2", component = 280 },
+  { run_id = "chriz-sod-remix-bg2", component = 285 },
   { run_id = "chriz-sod-remix-bg2", component = 290 },
   { run_id = "chriz-sod-remix-bg2", component = 900 },
   { run_id = "chriz-sod-remix-bg2", component = 910 },
@@ -3207,6 +4559,243 @@ requires = ["feature:stratagems:mandatory-components", "feature:eeex:mandatory-c
 components = [{ run_id = "chriz-bg-rebalance-bg2", component = 121 }]
 
 [[features]]
+id = "feature:chriz-bg-rebalance:component-301"
+title = "Emotion, Courage and Hope don't stack"
+description = "Casting either Emotion removes the other from each target; the latest wins and recasting refreshes."
+category = "spells"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 301 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-302"
+title = "Flail of the Ages balance"
+description = "The +5 flail allows Haste and Improved Haste. Slow uses Breath saves at -2 for +3, -4 for both +4 variants and -6 for +5; proc chance and duration stay unchanged."
+category = "items"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 302 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-130"
+title = "Elemental arrows: BG2 damage"
+description = "Use BG2 damage for elemental arrows throughout EET, including BG1 and SoD."
+category = "items"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:eet:mandatory-components", "feature:stratagems:mandatory-components"]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 130 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-200"
+title = "Hardiness: 40% physical resistance"
+description = "Restore 40% physical resistance. Extra elemental and magic-damage protection is a separate option."
+category = "spells"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:spell-rev:component-65"]
+choice_group = "sr-hardiness-physical-resistance"
+conflicts = [{ feature_id = "feature:chriz-bg-rebalance:component-201", reason = "Choose either 40% or 30% physical resistance." }]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 200 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-201"
+title = "Hardiness: 30% physical resistance"
+description = "Use 30% physical resistance instead of 40%."
+category = "spells"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:spell-rev:component-65"]
+choice_group = "sr-hardiness-physical-resistance"
+conflicts = [{ feature_id = "feature:chriz-bg-rebalance:component-200", reason = "Choose either 40% or 30% physical resistance." }]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 201 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-202"
+title = "Hardiness: also protect against elemental and magic damage"
+description = "Add 20% resistance to acid, cold, electricity, fire and magic damage. Does not grant magic resistance or poison resistance."
+category = "spells"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:spell-rev:component-65"]
+requires_any = ["feature:chriz-bg-rebalance:component-200", "feature:chriz-bg-rebalance:component-201"]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 202 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-210"
+title = "Pierce Magic: limited resistance reduction"
+description = "Halve current magic resistance, removing at least 10 and at most 40 percentage points for 5 rounds. Recasting refreshes rather than stacks."
+category = "spells"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:spell-rev:mandatory-components", "feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 210 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-211"
+title = "Spellstrike: brief spellcasting disruption"
+description = "Add 15% arcane and divine spell failure for 2 rounds. Recasting refreshes rather than stacks."
+category = "spells"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:spell-rev:mandatory-components"]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 211 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-220"
+title = "Bracers of Blinding Strike: SR Improved Haste"
+description = "The bracers grant Spell Revisions Improved Haste (+1 attack per round) for 20 seconds instead of doubling attacks."
+category = "items"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:spell-rev:mandatory-components"]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 220 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-310"
+title = "Party physical resistance: diminishing returns above 80%"
+description = "Resistance above 80% is half as effective, up to a maximum of 90%. Applies to party members, not enemies."
+category = "difficulty"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 310 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-320"
+title = "Genie cloud forms can take damage"
+description = "Cloud-granted damage immunity becomes 75% resistance. Other resistance values and scripted escapes stay unchanged."
+category = "difficulty"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 320 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-330"
+title = "Potions: one dose of each type at a time"
+description = "Drinking a temporary potion type that is already active restarts its duration instead of stacking its bonus. Heroism, Power and other potions that raise maximum hit points keep the first dose until it ends. Different potion types still combine. Potions of Genius follow the same rule."
+category = "items"
+group_label = "Potion uniqueness"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+choice_group = "potion-uniqueness"
+conflicts = [{ feature_id = "feature:chriz-bg-rebalance:component-331", reason = "Choose whether Potions of Genius stack." }]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 330 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-331"
+title = "Potions: one dose of each type at a time; Genius still stacks"
+description = "Drinking a temporary potion type that is already active restarts its duration instead of stacking its bonus. Heroism, Power and other potions that raise maximum hit points keep the first dose until it ends. Different potion types still combine. Potions of Genius still stack as before."
+category = "items"
+group_label = "Potion uniqueness"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+choice_group = "potion-uniqueness"
+conflicts = [{ feature_id = "feature:chriz-bg-rebalance:component-330", reason = "Choose whether Potions of Genius stack." }]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 331 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-332"
+title = "Heroism effects don't combine"
+description = "Heroism, Greater Heroism (Bardic Wonders), their copies and the Potion of Heroism: the first one active on a creature wins, and the others have no effect on it until it ends. Song of Heroism, Aid and the Potion of Power stay separate."
+category = "items"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 332 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-340"
+title = "Chris Revisions: Aid, Luck, Bless, Chaotic Commands, Prayer and Recitation"
+description = "Aid grants only hit points: 1d8 +1 per caster level (at most +10), and recasting replaces it. Luck lasts 15 rounds. Bless lasts 30 seconds plus 1 round per caster level (up to 150 seconds). Druids and rangers can cast Bless again, and druids Chaotic Commands. Prayer and Recitation no longer stack: Recitation's bonus or penalty replaces Prayer's of the same kind while it lasts."
+category = "spells"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 340 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-360"
+title = "True Time Stop – fair Haste & Slow"
+description = "In a Time Stop everything but the caster stops: the frozen creatures' spell and item durations, poison, disease, regeneration and other repeated effects wait and continue afterwards with the time they had left. Haste and Slow no longer speed up or slow down poison, regeneration and other repeated effects; actions, attacks and movement stay hasted or slowed. Install it before a playthrough: adding or removing it during one is not supported. Saving, dispelling, curing or dying during a Time Stop are not covered yet."
+category = "spells"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 360 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-410"
+title = "Druid weapons"
+description = "Druids and every druid kit may use axes and short bows and put one proficiency point into them; fighter/druids may also use long bows and put up to two points into all three. Higher limits that another mod set stay. The English druid and fighter/druid descriptions name the new weapons. Existing party members get them at their next level-up at the latest."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 410 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-411"
+title = "Alaghor of Clangeddin weapons"
+description = "Yeslick's Alaghor of Clangeddin kit trains and uses the cleric weapons plus axes, Clangeddin's weapon, with up to two proficiency points like a fighter/cleric. The thief weapons its weapon list allowed drop out; points already spent stay. Needs EEex, Yeslick as a Fighter-Alaghor and the Artisan's Kitpack weapon rules. The English kit description names the axes."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:eeex:mandatory-components", "feature:yeslicknpc:component-1"]
+requires_any = ["feature:artisanskitpack:component-20000", "feature:artisanskitpack-tweak:component-8204"]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 411 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:bard-spell-ceilings"
+title = "Bard spell-level ceilings"
+description = "Bards and Jesters follow the Icewind Dale bard progression up to 7th-level spells, unlocked at bard level 21. Blades and Skalds keep the original progression, capped at 6th level. Requires EEex. Existing characters gain the new spell capacity at their next level-up."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:eeex:mandatory-components"]
+components = [
+  { run_id = "chriz-bg-rebalance-bg2", component = 420 },
+  { run_id = "chriz-bg-rebalance-bg2", component = 421 },
+]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-235"
+title = "Baeloth: normal Sorcerer spells known"
+description = "Limit Baeloth to a legal Sorcerer spell selection for his level, with or without Spell Revisions. An optional challenge choice."
+category = "npcs"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-baeloth-bg2", component = 235 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-236"
+title = "Edwin: Red Wizard amulet and spell slots"
+description = "Let Red Wizard Edwin remove his amulet. Extra spell slots come from his kit, not the amulet."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:artisanskitpack-npc:component-5102"]
+components = [{ run_id = "chriz-bg-modpack-edwin-bg2", component = 236 }]
+
+[[features]]
 id = "feature:chriz-bg-rebalance:tempus-bundle"
 title = "Cleric of Tempus rework"
 description = "Install the curated six-component Tempus rework as one atomic option."
@@ -3243,7 +4832,7 @@ readiness = "ready"
 parent = "mod:chriz-bg-modpack"
 requires = ["mod:fade"]
 conflicts = [{ feature_id = "feature:fade:component-2", reason = "Choose either Fade's Fighter/Thief conversion or her Shadowdancer kit." }]
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 110 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 110 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-130"
@@ -3253,8 +4842,19 @@ category = "fixes"
 decision = "mandatory"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
-requires = ["mod:bg1npc", "feature:stratagems:mandatory-components"]
+requires = ["feature:bg1npc:component-10", "feature:stratagems:mandatory-components"]
 components = [{ run_id = "chriz-bg-modpack-bg2", component = 130 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-135"
+title = "Stop the crash after Dorn's BG1 ambush"
+description = "When Dorn catches up with Senjak and Dorotea, the cutscene no longer locks the camera on Senjak. If their conversation stalls, leaving the area no longer crashes the game; a completed conversation still ends with Senjak and Dorotea attacking."
+category = "fixes"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:eet:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 135 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-140"
@@ -3265,7 +4865,7 @@ decision = "mandatory"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
 requires = ["feature:artisanskitpack-npc:component-3102"]
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 140 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 140 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-170"
@@ -3276,7 +4876,7 @@ decision = "mandatory"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
 requires = ["feature:artisanskitpack:component-20000", "feature:artisanskitpack-npc:component-20002"]
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 170 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 170 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-190"
@@ -3287,7 +4887,7 @@ decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
 requires = ["mod:sarahtob"]
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 190 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 190 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-192"
@@ -3297,7 +4897,7 @@ category = "npcs"
 decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 192 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 192 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-193"
@@ -3307,7 +4907,7 @@ category = "npcs"
 decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 193 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 193 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-194"
@@ -3317,7 +4917,7 @@ category = "npcs"
 decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 194 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 194 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-195"
@@ -3327,7 +4927,7 @@ category = "npcs"
 decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 195 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 195 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-196"
@@ -3337,7 +4937,7 @@ category = "npcs"
 decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 196 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 196 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-197"
@@ -3347,7 +4947,7 @@ category = "npcs"
 decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 197 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 197 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-198"
@@ -3357,7 +4957,7 @@ category = "npcs"
 decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 198 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 198 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-220"
@@ -3367,7 +4967,7 @@ category = "npcs"
 decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 220 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 220 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-221"
@@ -3382,7 +4982,7 @@ conflicts = [
   { feature_id = "feature:chriz-bg-modpack:component-223", reason = "Conflicts with Hexxat: Assassin (modpack component 223)." },
   { feature_id = "feature:artisanskitpack-npc:component-7104", reason = "Conflicts with Hexxat: Invisible Blade (Artisan component 7104)." },
 ]
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 221 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 221 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-222"
@@ -3397,7 +4997,7 @@ conflicts = [
   { feature_id = "feature:chriz-bg-modpack:component-223", reason = "Conflicts with Hexxat: Assassin (modpack component 223)." },
   { feature_id = "feature:artisanskitpack-npc:component-7104", reason = "Conflicts with Hexxat: Invisible Blade (Artisan component 7104)." },
 ]
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 222 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 222 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-223"
@@ -3412,7 +5012,7 @@ conflicts = [
   { feature_id = "feature:chriz-bg-modpack:component-222", reason = "Conflicts with Hexxat: Fighter/Thief (modpack component 222)." },
   { feature_id = "feature:artisanskitpack-npc:component-7104", reason = "Conflicts with Hexxat: Invisible Blade (Artisan component 7104)." },
 ]
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 223 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 223 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-400"
@@ -3439,14 +5039,14 @@ components = [{ run_id = "chriz-bg-modpack-bg2", component = 410 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-430"
-title = "Give Use Any Item scrolls a fair caster level"
-description = "Correct non-caster scroll scaling after Tweaks Anthology's character-level scroll component."
-category = "fixes"
-decision = "mandatory"
-readiness = "blocked"
-unavailable_reason = "Requires Tweaks Anthology component 2170, which is not yet available in the alpha recipe."
+title = "Scrolls cast at the reader's own caster level"
+description = "Arcane and divine scrolls use the reader's caster level of that type; other readers, such as Use Any Item users, use half their highest class level, minimum 1. Requires EEex."
+category = "rules"
+decision = "default"
+readiness = "ready"
 parent = "mod:chriz-bg-modpack"
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 430 }]
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-scrolls-bg2", component = 430 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-440"
@@ -3471,15 +5071,146 @@ requires = ["feature:stratagems:mandatory-components"]
 components = [{ run_id = "chriz-bg-modpack-bg2", component = 450 }]
 
 [[features]]
+id = "feature:chriz-bg-modpack:component-460"
+title = "Party AI: Defensive Stance only with \"Use special abilities\" on"
+description = "The party AI scripts use Defensive Stance only while \"Use special abilities\" is on. EET's BG1 stance block in the default party AI ignored that option, so the protagonist and others kept entering the stance with it off."
+category = "fixes"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 460 }]
+
+[[features]]
 id = "feature:chriz-bg-modpack:component-610"
 title = "Scale utility XP with party progress"
 description = "Progressively scale lock, trap, and spell-learning XP from early BG1 through BG2 using the released default curve."
 category = "convenience"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+choice_group = "utility-xp-mode"
+requires = ["feature:eeex:mandatory-components", "mod:eet-end"]
+conflicts = [{ feature_id = "feature:chriz-bg-modpack:component-611", reason = "Choose either party-progress or story-stage utility XP." }]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 610 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-611"
+title = "Scale utility XP with the story"
+description = "Use EET campaign and chapter progress to scale lock, trap and spell-learning XP. Replaces the party-progress curve for new recommended installations."
+category = "convenience"
 decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
+choice_group = "utility-xp-mode"
+requires = ["feature:eeex:mandatory-components", "feature:eet:mandatory-components", "mod:eet-end"]
+conflicts = [{ feature_id = "feature:chriz-bg-modpack:component-610", reason = "Choose either story-stage or party-progress utility XP." }]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 611 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-630"
+title = "Hide unidentified item appearance"
+description = "Use generic item art until identification on Windows with EEex. Optional; incompatible only with Randomiser's cursed-item appearance, not ordinary loot randomization."
+category = "items"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:chriz-bg-modpack"
 requires = ["feature:eeex:mandatory-components", "mod:eet-end"]
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 610 }]
+conflicts = [{ feature_id = "feature:randomiser:component-570", reason = "Turn off Randomiser's cursed-item appearance before enabling this helper. Ordinary loot randomization can stay enabled." }]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 630 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-660"
+title = "Degrodel: refuse to hand over the Helm of Balduran and fight him"
+description = "Adds a choice when Degrodel asks for the helm. Handing it over keeps the normal reward and ending. Refusing makes Degrodel and his servants attack; you keep the helm and the quest ends with a journal note. No extra difficulty is added."
+category = "quests"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 660 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-640"
+title = "Classic interface text compatibility"
+description = "Automatically supplies the legacy text helper for Lefreut and Dragonspear interfaces on game 2.7. Independent of HGO and optional Modpack gameplay changes."
+category = "interface"
+decision = "mandatory"
+readiness = "ready"
+requires_any = ["feature:game-interface:leui-bg2", "feature:game-interface:leui-bg1", "feature:game-interface:leui-sod", "feature:game-interface:dragonspear"]
+components = [{ run_id = "chriz-bg-modpack-ui-compat-bg2", component = 640 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-224"
+title = "Make Evandra a Sorcerer"
+description = "Use Evandra's curated Sorcerer build and starting spellbook."
+category = "npcs"
+decision = "default"
+readiness = "blocked"
+unavailable_reason = "Evandra's verified core is supplied by the generated full recipe, not this narrower fallback profile."
+parent = "mod:chriz-bg-modpack"
+requires = ["mod:evandra"]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 224 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-225"
+title = "Use Evandra's custom portrait"
+description = "Use Christopher's custom Evandra portrait."
+category = "npcs"
+decision = "default"
+readiness = "blocked"
+unavailable_reason = "Evandra's verified core is supplied by the generated full recipe, not this narrower fallback profile."
+parent = "mod:chriz-bg-modpack"
+requires = ["mod:evandra"]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 225 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-230"
+title = "Rasaad: Dexterity 17 and Constitution 16"
+description = "Set Rasaad's base Dexterity to 17 and Constitution to 16 in every campaign. Other scores, class, kit, equipment and current hit points stay as they are."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 230 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-231"
+title = "Dorn: Constitution 16"
+description = "Set Dorn's base Constitution to 16 in every campaign. Other scores, class, kit, equipment and current hit points stay as they are."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 231 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-232"
+title = "Eldoth: Strength 17, Constitution 16, Wisdom 9 and Intelligence 14"
+description = "Set Eldoth's base Strength to 17, Constitution to 16, Wisdom to 9 and Intelligence to 14. Other scores, class, kit, equipment and current hit points stay as they are."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 232 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-233"
+title = "Garrick: Dexterity 17 and Intelligence 15"
+description = "Set Garrick's base Dexterity to 17 and Intelligence to 15 in every campaign. Other scores, class, kit, equipment and current hit points stay as they are."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 233 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-234"
+title = "Quayle: Constitution 15"
+description = "Set Quayle's base Constitution to 15 in every campaign. Other scores, class, kit, equipment and current hit points stay as they are."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 234 }]
 
 [[features]]
 id = "mod:buffbot"
@@ -3502,3 +5233,538 @@ components = [
   { run_id = "buffbot-bg2", component = 1 },
   { run_id = "buffbot-bg2", component = 0 },
 ]
+
+[[features]]
+id = "feature:spell-rev:component-80"
+title = "Classic bouncing Lightning Bolt"
+description = "Lightning Bolt bounces off walls and can hit allies, restoring its classic positioning risk. Select at most one Lightning Bolt variant."
+category = "spells"
+choice_group = "spell-rev-lightning-bolt"
+decision = "default"
+readiness = "ready"
+parent = "mod:spell-rev"
+requires = ["feature:spell-rev:mandatory-components"]
+conflicts = [{ feature_id = "feature:spell-rev:component-81", reason = "Choose either classic bouncing or non-bouncing Lightning Bolt." }]
+components = [{ run_id = "spell-rev-lightning-bg2", component = 80 }]
+
+[[features]]
+id = "feature:spell-rev:component-81"
+title = "Non-bouncing Lightning Bolt"
+description = "Lightning Bolt spells and wands do not bounce; lightning traps retain their bouncing behaviour. An alternative to the recommended classic bouncing version."
+category = "spells"
+choice_group = "spell-rev-lightning-bolt"
+decision = "optional"
+readiness = "ready"
+parent = "mod:spell-rev"
+requires = ["feature:spell-rev:mandatory-components"]
+conflicts = [{ feature_id = "feature:spell-rev:component-80", reason = "Choose either classic bouncing or non-bouncing Lightning Bolt." }]
+components = [{ run_id = "spell-rev-lightning-bg2", component = 81 }]
+
+[[features]]
+id = "mod:srcb-rr-compat"
+title = "Spell Revisions / Rogue Rebalancing compatibility"
+description = "Keep Rogue Rebalancing encounter spellbooks and scripts consistent with Spell Revisions' relocated spells. Automatically applies when either supported encounter is selected."
+category = "fixes"
+decision = "default"
+readiness = "ready"
+requires = ["feature:spell-rev:mandatory-components"]
+requires_any = ["feature:rr:component-11", "feature:rr:component-12"]
+
+[[features]]
+id = "feature:srcb-rr-compat:component-0"
+title = "Correct Rogue Rebalancing's spell choices"
+description = "Repair Chaos spellbooks and scripts, plus the affected spell-protection checks, in Chosen of Cyric and Shadow Thief Improvements. Skipped when neither encounter or Spell Revisions is selected."
+category = "fixes"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:srcb-rr-compat"
+components = [{ run_id = "srcb-rr-compat-bg2", component = 0 }]
+
+[[features]]
+id = "mod:safana"
+title = "Safana in Amn"
+description = "Bring Safana into Shadows of Amn with her existing character progression and a one-time arrival inventory cleanup. Her planned Bard/Abettor conversion is not included."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+requires = ["mod:eet-end", "mod:chriz-bg-modpack"]
+
+[[features]]
+id = "feature:safana:mandatory-components"
+title = "Safana in Amn"
+description = "Add Safana's official EET companion continuation. Her arrival cleanup is included automatically."
+category = "npcs"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:safana"
+components = [{ run_id = "safana-bg2", component = 0 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-188"
+title = "Apply Yeslick's Alaghor kit in BG1"
+description = "Extend the selected Fighter/Alaghor route to BG1 Yeslick's recruitment variants, using the installed kit and normal priest-level grants. Automatically omitted when keeping Yeslick's vanilla class."
+category = "fixes"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:yeslicknpc:component-1"]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 188 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-189"
+title = "Clear Safana's carried-over arrival inventory once"
+description = "Clear Safana's inherited SoD inventory at her first SoA arrival, while preserving equipment acquired later. Does not change her class or kit."
+category = "fixes"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:safana:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-late-companions-bg2", component = 189 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-199"
+title = "Keep Xan and Yeslick's progression across EET"
+description = "Carry the supported companions' developed character builds into BG2 while retaining their BG2 presentation. Works with vanilla classes too; it does not force a kit during transitions. New installations only."
+category = "fixes"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["mod:eet"]
+components = [{ run_id = "chriz-bg-modpack-continuity-bg2", component = 199 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-620"
+title = "Bring Imoen up to party XP at Spellhold"
+description = "At first recruitment in Spellhold, raise Imoen's mage XP to the party average, capped at 3 million. Supports her normal and player-dual routes without repeating the award on rejoin."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-late-companions-bg2", component = 620 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-237"
+title = "Raise Fade's XP when she first joins in Shadows of Amn"
+description = "On her first SoA recruitment, raise Fade to the highest protagonist XP threshold reached, from 125,000 up to 1,250,000. Never lowers XP and pays only once."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:fade:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-late-companions-bg2", component = 237 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-238"
+title = "Raise Evandra's XP when she first joins in Shadows of Amn"
+description = "On her first SoA recruitment, raise Evandra to the highest protagonist XP threshold reached, from 125,000 up to 1,250,000. Never lowers XP and pays only once."
+category = "npcs"
+decision = "optional"
+readiness = "blocked"
+unavailable_reason = "Evandra's verified core is supplied by the generated full recipe, not this narrower fallback profile."
+parent = "mod:chriz-bg-modpack"
+requires = ["mod:evandra"]
+components = [{ run_id = "chriz-bg-modpack-late-companions-bg2", component = 238 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-239"
+title = "Give every joinable NPC EET's join-XP catch-up"
+description = "NPCs whose scripts lack EET's join-XP catch-up, mostly from mods, get it: on joining in SoA they rise to the highest protagonist XP threshold reached, from 125,000 up to 1,250,000, and in ToB to 2,500,000. Never lowers XP and doesn't repeat when they rejoin."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:eet:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-late-companions-bg2", component = 239 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-650"
+title = "Campaign XP caps with banked XP (experimental)"
+description = "BG1 stops usable XP at 161,000 and SoD at 500,000; XP earned above the cap is banked and becomes usable when a later campaign allows it. Banked XP shows on the character record. Not yet tested in a full playthrough; don't remove it from a run that has banked XP."
+category = "rules"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-campaign-xp-bg2", component = 650 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-651"
+title = "Also cap Shadows of Amn at 2,950,000 XP (experimental)"
+description = "With campaign XP caps on, also limit usable XP in Shadows of Amn; the rest stays banked until Throne of Bhaal."
+category = "rules"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:chriz-bg-modpack:component-650"]
+conflicts = [{ feature_id = "feature:chriz-bg-modpack:component-652", reason = "Choose either the Shadows of Amn cap or chapter-by-chapter XP caps." }]
+components = [{ run_id = "chriz-bg-modpack-campaign-xp-bg2", component = 651 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-652"
+title = "Chapter-by-chapter XP caps (experimental)"
+description = "With campaign XP caps on, usable XP is capped chapter by chapter instead: in BG1 from 16,000 (Chapters 1-2) up to 161,000 (Chapter 7), in SoD up to 500,000, in SoA from 500,000 up to 3,500,000 and in ToB from 5,000,000 up to 8,900,000. XP above the current cap stays banked until a later chapter raises it. Baeloth's Larswood scene waits for Chapter 5, so his starting XP fits under the cap. Use it instead of the Shadows of Amn cap. Not yet tested in a full playthrough."
+category = "rules"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:chriz-bg-modpack:component-650"]
+conflicts = [{ feature_id = "feature:chriz-bg-modpack:component-651", reason = "Choose either chapter-by-chapter XP caps or the Shadows of Amn cap." }]
+components = [{ run_id = "chriz-bg-modpack-campaign-xp-bg2", component = 652 }]
+
+[[features]]
+id = "feature:chriz-sod-remix:component-257"
+title = "Extra Challenge: Insane bridge sequencers"
+description = "Add the implemented harder sequencer behaviour to the revised SoD bridge encounter on Insane. Optional and unchecked; the normal revised bridge is already included."
+category = "difficulty"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-sod-remix"
+requires = ["feature:chriz-sod-remix:mandatory-components"]
+components = [{ run_id = "chriz-sod-remix-bg2", component = 257 }]
+
+[[features]]
+id = "feature:chriz-sod-remix:component-292"
+title = "Imoen in Shadows of Amn: the BG2 thief/mage dual-class"
+description = "At the end of SoD, Imoen's gear is handed over like the party's and she keeps only her BG2 belt. In Shadows of Amn she is EET's own BG2 Imoen (thief 7 / mage 8) plus the tome boosts she read in BG1 and SoD, each score capped at 25."
+category = "npcs"
+group_label = "SoD remix: Imoen in Shadows of Amn (EET; her SoD gear is handed over like the party's)"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-sod-remix"
+requires = ["feature:chriz-sod-remix:mandatory-components"]
+choice_group = "sod-remix-imoen-soa"
+conflicts = [{ feature_id = "feature:chriz-sod-remix:component-293", reason = "Choose one way for Imoen to continue in Shadows of Amn." }, { feature_id = "feature:chriz-sod-remix:component-294", reason = "Choose one way for Imoen to continue in Shadows of Amn." }]
+components = [{ run_id = "chriz-sod-remix-bg2", component = 292 }]
+
+[[features]]
+id = "feature:chriz-sod-remix:component-293"
+title = "Imoen in Shadows of Amn: as taken along"
+description = "At the end of SoD, Imoen's gear is handed over like the party's and she keeps only her BG2 belt. She keeps her own BG1/SoD build and gets Shadows of Amn's dialog, scripts and XP catch-up."
+category = "npcs"
+group_label = "SoD remix: Imoen in Shadows of Amn (EET; her SoD gear is handed over like the party's)"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-sod-remix"
+requires = ["feature:chriz-sod-remix:mandatory-components"]
+choice_group = "sod-remix-imoen-soa"
+conflicts = [{ feature_id = "feature:chriz-sod-remix:component-292", reason = "Choose one way for Imoen to continue in Shadows of Amn." }, { feature_id = "feature:chriz-sod-remix:component-294", reason = "Choose one way for Imoen to continue in Shadows of Amn." }]
+components = [{ run_id = "chriz-sod-remix-bg2", component = 293 }]
+
+[[features]]
+id = "feature:chriz-sod-remix:component-294"
+title = "Imoen in Shadows of Amn: dual-class at her SoD thief level"
+description = "At the end of SoD, Imoen's gear is handed over like the party's and she keeps only her BG2 belt. A single-class thief Imoen dual-classes to mage at her end-of-SoD thief level; Shadows of Amn's catch-up XP goes into mage, and she learns the BG2 Imoen's wizard spells. Kit, HP, skills and proficiencies stay. Requires EEex."
+category = "npcs"
+group_label = "SoD remix: Imoen in Shadows of Amn (EET; her SoD gear is handed over like the party's)"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-sod-remix"
+requires = ["feature:chriz-sod-remix:mandatory-components", "feature:eeex:mandatory-components"]
+choice_group = "sod-remix-imoen-soa"
+conflicts = [{ feature_id = "feature:chriz-sod-remix:component-292", reason = "Choose one way for Imoen to continue in Shadows of Amn." }, { feature_id = "feature:chriz-sod-remix:component-293", reason = "Choose one way for Imoen to continue in Shadows of Amn." }]
+components = [{ run_id = "chriz-sod-remix-bg2", component = 294 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-110"
+title = "Extra Challenge: lethal dragon melee"
+description = "Strengthen SCS dragon melee at the supported high difficulty settings, including the intended death-protection interactions. Requires Smarter Dragons and EEex. Optional; not part of the normal default setup."
+category = "difficulty"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:stratagems:mandatory-components", "feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 110 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-111"
+title = "Dragon wing buffet: longer spacing"
+description = "Space SCS dragon wing buffets 18 seconds apart instead of 6 seconds. Included by default; requires Smarter Dragons and can be switched off."
+category = "difficulty"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:stratagems:mandatory-components"]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 111 }]
+
+[[features]]
+id = "feature:game-interface:infinity"
+title = "Infinity UI++"
+description = "A redesigned interface with several skins chosen in-game. Omits SCS five-point thief skills and incompatible HGO controls. Experimental; community playtesting is still needed."
+category = "interface"
+source_label = "Infinity UI++"
+group_label = "Game interface"
+choice_group = "game-interface"
+decision = "optional"
+readiness = "experimental"
+requires = ["feature:eet:mandatory-components"]
+components = [{ run_id = "game-interface-infinity-bg2", component = 0 }]
+conflicts = [{ feature_id = "feature:game-interface:eet-sod", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-sod", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:dragonspear", reason = "Choose one game interface." }]
+
+[[features]]
+id = "feature:game-interface:eet-sod"
+title = "EET: SoD style"
+description = "Use EET's Siege of Dragonspear-style interface across the trilogy. Experimental; community playtesting is still needed."
+category = "interface"
+source_label = "EET: SoD style"
+group_label = "Game interface"
+choice_group = "game-interface"
+decision = "optional"
+readiness = "experimental"
+requires = ["feature:eet:mandatory-components"]
+components = [{ run_id = "game-interface-eet-sod-bg2", component = 0 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-sod", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:dragonspear", reason = "Choose one game interface." }]
+
+[[features]]
+id = "feature:game-interface:leui-bg2"
+title = "Lefreut's Enhanced UI: BG2 style"
+description = "A classic BG2 look with reorganized screens."
+category = "interface"
+source_label = "Lefreut's Enhanced UI: BG2 style"
+group_label = "Game interface"
+choice_group = "game-interface"
+decision = "optional"
+readiness = "experimental"
+requires = ["feature:eet:mandatory-components"]
+components = [{ run_id = "game-interface-leui-bg2-bg2", component = 0 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:eet-sod", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-sod", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:dragonspear", reason = "Choose one game interface." }]
+
+[[features]]
+id = "feature:game-interface:leui-bg1"
+title = "Lefreut's Enhanced UI: BG1 style"
+description = "Lefreut's reorganized screens with a classic BG1 look."
+category = "interface"
+source_label = "Lefreut's Enhanced UI: BG1 style"
+group_label = "Game interface"
+choice_group = "game-interface"
+decision = "optional"
+readiness = "experimental"
+requires = ["feature:eet:mandatory-components"]
+components = [{ run_id = "game-interface-leui-bg1-bg2", component = 0 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:eet-sod", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-sod", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:dragonspear", reason = "Choose one game interface." }]
+
+[[features]]
+id = "feature:game-interface:leui-sod"
+title = "Lefreut's Enhanced UI: SoD style"
+description = "Lefreut's reorganized screens with a Siege of Dragonspear look."
+category = "interface"
+source_label = "Lefreut's Enhanced UI: SoD style"
+group_label = "Game interface"
+choice_group = "game-interface"
+decision = "optional"
+readiness = "experimental"
+requires = ["feature:eet:mandatory-components"]
+components = [{ run_id = "game-interface-leui-sod-bg2", component = 0 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:eet-sod", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:dragonspear", reason = "Choose one game interface." }]
+
+[[features]]
+id = "feature:game-interface:dragonspear"
+title = "Dragonspear UI++"
+description = "A Dragonspear-style interface, separate from Infinity UI++. Includes the released game 2.7 text compatibility helper. Experimental; community playtesting is still needed."
+category = "interface"
+source_label = "Dragonspear UI++"
+group_label = "Game interface"
+choice_group = "game-interface"
+decision = "optional"
+readiness = "experimental"
+requires = ["feature:eet:mandatory-components"]
+components = [{ run_id = "game-interface-dragonspear-bg2", component = 1 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:eet-sod", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-sod", reason = "Choose one game interface." }]
+
+[[features]]
+id = "feature:voicepack-neera:component-0"
+title = "Neera"
+description = "A broad Neera player soundset assembled from her BG:EE, BG2:EE, and Siege of Dragonspear recordings."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-neera-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-safana-bg1:component-0"
+title = "Safana (BG1)"
+description = "A BG1-first Safana set using the original BG1 lines, classic BG2 bonus-voice vocalizations, and limited SoD filler."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-safana-bg1-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-safana-sod:component-0"
+title = "Safana (SoD)"
+description = "The consistent Siege of Dragonspear Safana voice, with the fuller EE-era combat, stealth, and utility coverage."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-safana-sod-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-jaheira-bg1:component-0"
+title = "Jaheira (BG1)"
+description = "Jaheira's original BG1 voice, supplemented with same-actress BG2 lines where BG1 recorded no suitable slot."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-jaheira-bg1-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-jaheira-bg2:component-0"
+title = "Jaheira (BG2)"
+description = "A BG2/Throne of Bhaal Jaheira set, with BG1 supplying the otherwise missing death reaction."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-jaheira-bg2-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-yeslick:component-0"
+title = "Yeslick"
+description = "All 38 surviving lines from Yeslick's original BG1 companion voice."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-yeslick-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-edwin-bg1:component-0"
+title = "Edwin (BG1)"
+description = "Edwin's BG1 voice—including his memorable Dynaheir lines—with same-actor BG2 filler for missing events."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-edwin-bg1-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-edwin-bg2:component-0"
+title = "Edwin (BG2)"
+description = "Edwin's BG2/Throne of Bhaal voice, with his lost death-reaction slots recovered from BG1."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-edwin-bg2-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-aerie:component-0"
+title = "Aerie"
+description = "Aerie's BG2/Throne of Bhaal companion voice; events for which she has no genuine recording remain silent."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-aerie-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-imoen-bg1:component-0"
+title = "Imoen (BG1)"
+description = "Imoen's young, original BG1 voice kept era-pure; missing modern utility slots are intentionally silent."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-imoen-bg1-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-imoen-bg2:component-0"
+title = "Imoen (BG2)"
+description = "Imoen's mature BG2/Throne of Bhaal voice, including her recorded critical-hit and critical-miss lines."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-imoen-bg2-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-sarevok:component-0"
+title = "Sarevok"
+description = "The redeemed, Chaotic-Good Throne of Bhaal companion variant, using his five alignment-specific lines and excluding banter/cutscene padding."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-sarevok-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-amelyssan:component-0"
+title = "Amelyssan"
+description = "A deliberately sparse playable Amelyssan set, combining authoritative combat sounds with carefully cut Amelyssan and innocent Melissan dialogue. Original game audio only; no TTS."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-amelyssan-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-gromnir-il-khan:component-0"
+title = "Gromnir Il-Khan"
+description = "An intentionally sparse, comic Gromnir set built from his authoritative combat voice and four hand-cut dialogue clips—including ‘Gromnir knows’ and ‘We is no idiot!’ Original game audio only; no TTS."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-gromnir-il-khan-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-ajantis:component-0"
+title = "Ajantis"
+description = "Ajantis's original BG1 companion voice, decoded straight from the game's own recordings; events he never recorded stay silent."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-ajantis-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-viconia-bg1:component-0"
+title = "Viconia (BG1)"
+description = "Viconia's original BG1 companion voice, kept era-pure; events she never recorded, such as a city line, stay silent."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-viconia-bg1-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-viconia-bg2:component-0"
+title = "Viconia (BG2)"
+description = "Viconia's BG2/Throne of Bhaal companion voice, including her critical-hit, critical-miss, and spell-disrupted lines."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-viconia-bg2-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-garithos:component-0"
+title = "Garithos"
+description = "Lord Garithos from Warcraft III: The Frozen Throne: IAIWE's soundset converted into an EE installer."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-garithos-bg2", component = 0 }]

@@ -1,5 +1,5 @@
 id = "chriz-bg-modpack"
-artifact_id = "chriz-bg-modpack-0.2.0-alpha.5"
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.14"
 name = "chriz-bg-modpack"
 tp2 = "setup-chriz-bg-modpack.tp2"
 language = 0
@@ -15,12 +15,24 @@ id = 130
 name = "BG1NPC Kivan sea-elf quest: SCS dialogue-phase guard"
 
 [[components]]
+id = 135
+name = "Dorn's BG1 ambush: no camera lock on Senjak (prevents a crash after leaving the area)"
+
+[[components]]
 id = 140
 name = "Mazzy: move the fifth Short Bow pip to Short Sword"
 
 [[components]]
 id = 170
 name = "Xan Eldritch Knight: reconcile the EET XAN4/XAN6/TTXAN variants"
+
+[[components]]
+id = 188
+name = "Yeslick: extend the Alaghor kit to BG1 recruitment variants"
+
+[[components]]
+id = 189
+name = "Safana: one-time SoA arrival inventory cleanup"
 
 [[components]]
 id = 190
@@ -55,6 +67,10 @@ id = 198
 name = "Kivan: Archer kit"
 
 [[components]]
+id = 199
+name = "EET: preserve Xan and Yeslick's companion progression"
+
+[[components]]
 id = 220
 name = "Yoshimo: Swashbuckler"
 
@@ -71,6 +87,34 @@ id = 223
 name = "Hexxat: Assassin"
 
 [[components]]
+id = 224
+name = "Evandra: Sorcerer build and starting spellbook"
+
+[[components]]
+id = 225
+name = "Evandra: custom portrait"
+
+[[components]]
+id = 230
+name = "Rasaad: Dexterity 17 and Constitution 16"
+
+[[components]]
+id = 231
+name = "Dorn: Constitution 16"
+
+[[components]]
+id = 232
+name = "Eldoth: Strength 17, Constitution 16, Wisdom 9 and Intelligence 14"
+
+[[components]]
+id = 233
+name = "Garrick: Dexterity 17 and Intelligence 15"
+
+[[components]]
+id = 234
+name = "Quayle: Constitution 15"
+
+[[components]]
 id = 400
 name = "Branwen Spiritual Hammer: repair magical-weapon charges"
 
@@ -80,7 +124,7 @@ name = "Yeslick and Keldorn Dispel Magic: hostile-only, correctly scaled dispels
 
 [[components]]
 id = 430
-name = "Use Any Item: fair fixed caster level for non-caster scroll use"
+name = "Scrolls: use the reader's active caster level, or half their active class level"
 
 [[components]]
 id = 440
@@ -91,5 +135,61 @@ id = 450
 name = "SCS shapechange spells: repair the EE Fixpack interaction"
 
 [[components]]
+id = 460
+name = "Party AI Defensive Stance: obey the \"Use special abilities\" option"
+
+[[components]]
 id = 610
 name = "Progressive utility XP for locks, traps, and learning spells"
+
+[[components]]
+id = 611
+name = "Story-stage utility XP for locks, traps, and learning spells"
+
+[[components]]
+id = 620
+name = "Imoen: Spellhold party-average XP catch-up"
+
+[[components]]
+id = 630
+name = "Hide unidentified item appearance until identification"
+
+[[components]]
+id = 640
+name = "Legacy UI translation helper compatibility"
+
+[[components]]
+id = 235
+name = "Baeloth: legal Sorcerer spells known"
+
+[[components]]
+id = 236
+name = "Edwin Red Wizard: removable amulet and corrected spell slots"
+
+[[components]]
+id = 237
+name = "Fade: first-recruitment SoA XP catch-up (new recruitment actors)"
+
+[[components]]
+id = 238
+name = "Evandra: first-recruitment SoA XP catch-up (new recruitment actors)"
+
+[[components]]
+id = 239
+name = "EET: SoA and ToB join-XP catch-up for joinable NPCs whose scripts lack it"
+
+[[components]]
+id = 660
+name = "Degrodel: hand over the Helm of Balduran or keep it and fight him"
+
+[[components]]
+id = 650
+name = "Campaign XP caps - keep excess XP for later (BG1/SoD; experimental)"
+
+[[components]]
+id = 651
+name = "Campaign XP caps - also cap SoA until ToB (requires 650; experimental)"
+
+[[components]]
+id = 652
+name = "Campaign XP caps - chapter-by-chapter XP caps across BG1, SoD, SoA, and ToB (requires 650; experimental)"

@@ -1,0 +1,11 @@
+id = "voicepack-jaheira-bg1"
+artifact_id = "voicepack-jaheira-bg1-1.0.1"
+name = "Jaheira (BG1) player voicepack"
+tp2 = "cd_jahebg1/cd_jahebg1.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Jaheira BG1 Soundset"

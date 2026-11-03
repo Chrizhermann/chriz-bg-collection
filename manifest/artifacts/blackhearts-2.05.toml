@@ -1,0 +1,32 @@
+id = "blackhearts-2.05"
+name = "Black Hearts"
+version = "2.05"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/A-Wizard-Did-It/Black-Hearts/releases/download/v2.05/BlackHearts-v2.05.iemod"
+reference = "v2.05"
+expected_filename = "BlackHearts-v2.05.iemod"
+expected_length = 38645056
+sha256 = "a1a6257a2c21e19c87778bd34dba5c50224fdc3767b9fdbb2e41561f50340301"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "iemod"
+root_rule = "direct"
+publish_roots = ["Blackhearts"]
+tp2_paths = ["Blackhearts/Blackhearts.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 2048
+max_entry_uncompressed_bytes = 16777216
+max_total_uncompressed_bytes = 134217728
+max_compression_ratio = 2000
+
+[provenance]
+homepage = "https://github.com/A-Wizard-Did-It/Black-Hearts"
+license = "Fetch-only from the author's official release; no redistribution by CEBG"
+url = "https://github.com/A-Wizard-Did-It/Black-Hearts/releases/tag/v2.05"
+reviewed_on = "2026-10-22"

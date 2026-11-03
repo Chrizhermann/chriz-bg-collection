@@ -1,5 +1,5 @@
 id = "chriz-sod-remix"
-artifact_id = "chriz-sod-remix-0.6.8"
+artifact_id = "chriz-sod-remix-0.6.16"
 name = "CHRIZ-SOD-REMIX"
 tp2 = "chriz-sod-remix/setup-chriz-sod-remix.tp2"
 language = 0
@@ -15,12 +15,20 @@ id = 110
 name = "SoD remix: keep all companions at SoD start"
 
 [[components]]
+id = 115
+name = "SoD remix: Khalid continuity at Bridgefort"
+
+[[components]]
 id = 120
 name = "SoD remix: remove the hooded man from the mid-campaign"
 
 [[components]]
 id = 130
 name = "SoD remix: skip the four chapter rest-dreams"
+
+[[components]]
+id = 135
+name = "SoD remix: assassin ambush without dead magic"
 
 [[components]]
 id = 140
@@ -51,6 +59,10 @@ id = 175
 name = "SoD remix: prologue - the XP ledger: Liia's reward after the jailbreak"
 
 [[components]]
+id = 177
+name = "SoD remix: prologue - report Korlasz to Liia after the first night"
+
+[[components]]
 id = 185
 name = "SoD remix: prologue - Entar Silvershield removed (stays dead)"
 
@@ -69,6 +81,10 @@ name = "SoD remix: Coast Way Forest removed - Rasaad recruits at the camp"
 [[components]]
 id = 197
 name = "SoD remix: prologue - Skie: talk-to-join recruit at the palace, SoD plot removed"
+
+[[components]]
+id = 198
+name = "SoD remix: early BG1 companion recruitment and camp follow-up"
 
 [[components]]
 id = 187
@@ -111,8 +127,24 @@ id = 255
 name = "SoD remix: Boareskyr battle - durable explosive barrels"
 
 [[components]]
+id = 256
+name = "SoD remix: bridge elemental finale"
+
+[[components]]
+id = 257
+name = "SoD remix: optional Insane bridge sequencers"
+
+[[components]]
 id = 260
 name = "SoD remix: coalition camp arc - fewer, cleaner enemies on the scouting maps"
+
+[[components]]
+id = 265
+name = "SoD remix: Mizhena amulet, filler cuts, and XP corrections"
+
+[[components]]
+id = 266
+name = "SoD remix: finite Shadow Aspect Mislead"
 
 [[components]]
 id = 270
@@ -121,6 +153,10 @@ name = "SoD remix: Kanaglym - fewer undead"
 [[components]]
 id = 280
 name = "SoD remix: no party dispel at the basement reveal"
+
+[[components]]
+id = 285
+name = "SoD remix: Avernus portal and a fairer final battle"
 
 [[components]]
 id = 290
@@ -133,3 +169,15 @@ name = "Collected in the camp chest at the Coast Way crossing"
 [[components]]
 id = 910
 name = "Offer to skip SoD at palace arrival (EET, experimental)"
+
+[[components]]
+id = 292
+name = "SoD remix: Imoen in Shadows of Amn - the BG2 dual-class build plus her tome boosts"
+
+[[components]]
+id = 293
+name = "SoD remix: Imoen in Shadows of Amn - as taken along"
+
+[[components]]
+id = 294
+name = "SoD remix: Imoen in Shadows of Amn - dual-class to mage at her SoD thief level (EEex)"

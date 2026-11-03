@@ -1,17 +1,20 @@
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use fs4::fs_std::FileExt;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::events::{EngineEvent, EventSink};
+use crate::events::{EngineEvent, EventSink, Stream};
 use crate::fs_retry;
 
+use super::damaged::{damaged_entry_reason, entry_is_present, set_aside, CacheRepair};
+use super::entry_lock::lock_entry;
 use super::http::{validate_download_url, HttpClient, HttpResponse};
-use super::{AcquireError, AcquiredArtifact, ArtifactMetadata, CacheDisposition, DownloadRequest};
+use super::{
+    AcquireError, AcquiredArtifact, ArtifactMetadata, CacheDisposition, DownloadRequest, StopSignal,
+};
 
 const BUFFER_SIZE: usize = 64 * 1024;
 const MAX_PROGRESS_INTEGER: u64 = (1_u64 << 53) - 1;
@@ -54,18 +57,13 @@ struct CachePaths {
     lock: PathBuf,
 }
 
-struct DigestLock(File);
-
-impl Drop for DigestLock {
-    fn drop(&mut self) {
-        let _ = FileExt::unlock(&self.0);
-    }
-}
-
 impl ArtifactCache {
     /// Open or create a cache rooted at `root`.
     pub fn open(root: impl Into<PathBuf>) -> Result<Self, AcquireError> {
-        let root = root.into();
+        Self::open_with_client(root.into(), HttpClient::new())
+    }
+
+    fn open_with_client(root: PathBuf, client: HttpClient) -> Result<Self, AcquireError> {
         for directory in [
             root.join("sha256"),
             root.join("partial"),
@@ -77,10 +75,7 @@ impl ArtifactCache {
                 source,
             })?;
         }
-        Ok(Self {
-            root,
-            client: HttpClient::new(),
-        })
+        Ok(Self { root, client })
     }
 
     /// Acquire one pinned artifact, returning only a rehashed cache hit or verified download.
@@ -89,13 +84,26 @@ impl ArtifactCache {
         request: &DownloadRequest,
         sink: &dyn EventSink,
     ) -> Result<AcquiredArtifact, AcquireError> {
+        self.acquire_with_stop(request, sink, &StopSignal::never())
+    }
+
+    /// [`Self::acquire`], giving up with [`AcquireError::Stopped`] instead of downloading or
+    /// publishing once `stop` reports that the user stopped, also while another download of the
+    /// same artifact holds its cache entry.
+    pub fn acquire_with_stop(
+        &self,
+        request: &DownloadRequest,
+        sink: &dyn EventSink,
+        stop: &StopSignal,
+    ) -> Result<AcquiredArtifact, AcquireError> {
         let digest = validate_request(request)?;
         validate_download_url(&request.url)?;
         let paths = self.paths(request, &digest);
 
+        let mut repaired = None;
         {
-            let _guard = acquire_digest_lock(&paths.lock)?;
-            if let Some(hit) = verified_cache_entry(&paths, &digest, request.expected_length)? {
+            let _guard = lock_entry(&paths.lock, stop)?;
+            if let Some(hit) = self.usable_cache_entry(&paths, &digest, request, &mut repaired)? {
                 sink.emit(EngineEvent::StepProgress {
                     id: request.request_id.clone(),
                     done: request.expected_length,
@@ -138,11 +146,11 @@ impl ArtifactCache {
                 .as_secs(),
         };
 
-        let _guard = acquire_digest_lock(&paths.lock)?;
-        if let Some(hit) = verified_cache_entry(&paths, &digest, request.expected_length)? {
+        let _guard = lock_entry(&paths.lock, stop)?;
+        if let Some(hit) = self.usable_cache_entry(&paths, &digest, request, &mut repaired)? {
             remove_if_exists(&paths.partial)?;
             remove_if_exists(&paths.partial_state)?;
-            return Ok(hit);
+            return Ok(AcquiredArtifact { repaired, ..hit });
         }
         publish(&paths, request, &metadata)?;
         Ok(AcquiredArtifact {
@@ -150,7 +158,36 @@ impl ArtifactCache {
             metadata_path: paths.metadata,
             metadata,
             disposition: CacheDisposition::Downloaded,
+            repaired,
         })
+    }
+
+    /// A verified cache hit, or `None` when the object must be downloaded. Called with the
+    /// digest lock held. A damaged entry is set aside so the download can replace it; the
+    /// first repair of this call is reported.
+    fn usable_cache_entry(
+        &self,
+        paths: &CachePaths,
+        digest: &str,
+        request: &DownloadRequest,
+        repaired: &mut Option<CacheRepair>,
+    ) -> Result<Option<AcquiredArtifact>, AcquireError> {
+        match verified_cache_entry(paths, digest, request.expected_length) {
+            Ok(hit) => Ok(hit),
+            Err(error) => {
+                let owned = [paths.archive.as_path(), paths.metadata.as_path()];
+                let Some(reason) = damaged_entry_reason(&error, &owned) else {
+                    return Err(error);
+                };
+                for entry in owned {
+                    if entry_is_present(entry)? {
+                        set_aside(&self.root, entry, digest)?;
+                    }
+                }
+                repaired.get_or_insert(CacheRepair { reason });
+                Ok(None)
+            }
+        }
     }
 
     fn paths(&self, request: &DownloadRequest, digest: &str) -> CachePaths {
@@ -174,18 +211,12 @@ impl ArtifactCache {
         paths: &CachePaths,
         sink: &dyn EventSink,
     ) -> Result<TransferResult, AcquireError> {
-        let mut last_error = String::new();
-        for _attempt in 1..=request.max_attempts {
-            match self.transfer_once(request, paths, sink) {
-                Ok(result) => return Ok(result),
-                Err(AttemptFailure::Fatal(error)) => return Err(error),
-                Err(AttemptFailure::Retryable(error)) => last_error = error.to_string(),
-            }
-        }
-        Err(AcquireError::RetryExhausted {
-            attempts: request.max_attempts,
-            last_error,
-        })
+        retry_transfer(
+            request,
+            sink,
+            || self.transfer_once(request, paths, sink),
+            std::thread::sleep,
+        )
     }
 
     fn transfer_once(
@@ -229,6 +260,56 @@ impl ArtifactCache {
         }
         handle_fresh_response(response, request, paths, sink)
     }
+}
+
+// Inject the wait operation so schedule/termination tests do not sleep or download.
+// Success and fatal failures leave immediately; only transient failures use the budget.
+fn retry_transfer<T>(
+    request: &DownloadRequest,
+    sink: &dyn EventSink,
+    mut transfer: impl FnMut() -> Result<T, AttemptFailure>,
+    mut wait: impl FnMut(Duration),
+) -> Result<T, AcquireError> {
+    let mut last_error = String::new();
+    for attempt in 1..=request.max_attempts {
+        match transfer() {
+            Ok(result) => return Ok(result),
+            Err(AttemptFailure::Fatal(error)) => return Err(error),
+            Err(AttemptFailure::Retryable(error)) => last_error = error.to_string(),
+        }
+        if attempt == request.max_attempts {
+            break;
+        }
+
+        let seconds = match attempt {
+            1 => 0,
+            2 => 2,
+            3 => 10,
+            _ => 30,
+        };
+        let when = if seconds == 0 {
+            "immediately".to_owned()
+        } else {
+            format!("in {seconds} seconds")
+        };
+        sink.emit(EngineEvent::ConsoleLine {
+            step_id: format!("acquire:{}", request.request_id),
+            stream: Stream::Stdout,
+            line: format!(
+                "Download interrupted for {}. Retrying {when} (attempt {}/{}).",
+                request.request_id,
+                attempt + 1,
+                request.max_attempts,
+            ),
+        });
+        if seconds != 0 {
+            wait(Duration::from_secs(seconds));
+        }
+    }
+    Err(AcquireError::RetryExhausted {
+        attempts: request.max_attempts,
+        last_error,
+    })
 }
 
 fn validate_request(request: &DownloadRequest) -> Result<String, AcquireError> {
@@ -575,33 +656,13 @@ fn sync_file(path: &Path) -> Result<(), AcquireError> {
         })
 }
 
-fn acquire_digest_lock(path: &Path) -> Result<DigestLock, AcquireError> {
-    let file = OpenOptions::new()
-        .create(true)
-        .truncate(false)
-        .read(true)
-        .write(true)
-        .open(path)
-        .map_err(|source| AcquireError::Io {
-            action: "open digest lock",
-            path: path.to_path_buf(),
-            source,
-        })?;
-    file.lock_exclusive().map_err(|source| AcquireError::Io {
-        action: "acquire digest lock",
-        path: path.to_path_buf(),
-        source,
-    })?;
-    Ok(DigestLock(file))
-}
-
 fn verified_cache_entry(
     paths: &CachePaths,
     digest: &str,
     expected_length: u64,
 ) -> Result<Option<AcquiredArtifact>, AcquireError> {
-    let archive_exists = paths.archive.exists();
-    let metadata_exists = paths.metadata.exists();
+    let archive_exists = entry_is_present(&paths.archive)?;
+    let metadata_exists = entry_is_present(&paths.metadata)?;
     if !archive_exists && !metadata_exists {
         return Ok(None);
     }
@@ -611,22 +672,20 @@ fn verified_cache_entry(
             message: "archive and metadata must both exist".to_owned(),
         });
     }
-    let file = File::open(&paths.metadata).map_err(|source| AcquireError::Io {
-        action: "open cache metadata",
+    // Read before parsing so that a read failure keeps its I/O kind: only a record that was
+    // read completely and does not parse proves damage.
+    let bytes = fs::read(&paths.metadata).map_err(|source| AcquireError::Io {
+        action: "read cache metadata",
         path: paths.metadata.clone(),
         source,
     })?;
     let metadata: ArtifactMetadata =
-        serde_json::from_reader(file).map_err(|source| AcquireError::Metadata {
+        serde_json::from_slice(&bytes).map_err(|source| AcquireError::Metadata {
             path: paths.metadata.clone(),
             message: source.to_string(),
         })?;
     let (actual_length, actual_digest) = hash_file(&paths.archive)?;
-    if metadata.sha256 != digest
-        || metadata.length != expected_length
-        || actual_digest != digest
-        || actual_length != expected_length
-    {
+    if metadata.sha256 != digest || actual_digest != digest || metadata.length != actual_length {
         return Err(AcquireError::CorruptCache {
             digest: digest.to_owned(),
             message: format!(
@@ -635,11 +694,20 @@ fn verified_cache_entry(
             ),
         });
     }
+    // The entry is consistent and holds the requested digest, so a different length is an
+    // error in the request. The shared entry stays for requests that pin it correctly.
+    if actual_length != expected_length {
+        return Err(AcquireError::LengthMismatch {
+            expected: expected_length,
+            actual: actual_length,
+        });
+    }
     Ok(Some(AcquiredArtifact {
         archive_path: paths.archive.clone(),
         metadata_path: paths.metadata.clone(),
         metadata,
         disposition: CacheDisposition::Hit,
+        repaired: None,
     }))
 }
 
@@ -714,8 +782,162 @@ fn remove_if_exists(path: &Path) -> Result<(), AcquireError> {
 
 #[cfg(test)]
 mod tests {
-    use super::validate_request;
-    use crate::acquire::DownloadRequest;
+    use std::collections::BTreeMap;
+    use std::fs;
+    use std::io::{BufRead, BufReader, Read, Write};
+    use std::net::{TcpListener, TcpStream};
+    use std::thread::{self, JoinHandle};
+    use std::time::{Duration, Instant};
+
+    use sha2::{Digest, Sha256};
+    use tempfile::TempDir;
+
+    use super::{retry_transfer, validate_request, ArtifactCache, AttemptFailure};
+    use crate::acquire::http::{HttpClient, HttpTimeouts};
+    use crate::acquire::{AcquireError, CacheDisposition, DownloadRequest};
+    use crate::events::{ChannelSink, EngineEvent, Stream};
+
+    fn retry_request(max_attempts: u32) -> DownloadRequest {
+        DownloadRequest {
+            request_id: "xan-19".to_owned(),
+            url: "https://example.invalid/archive.zip".to_owned(),
+            expected_length: 1,
+            expected_sha256: "0".repeat(64),
+            redirect_hosts: Vec::new(),
+            max_attempts,
+        }
+    }
+
+    fn temporary_failure() -> AttemptFailure {
+        AttemptFailure::Retryable(AcquireError::HttpStatus {
+            url: "https://example.invalid/archive.zip".to_owned(),
+            status: 500,
+        })
+    }
+
+    #[test]
+    fn progressive_retries_wait_only_before_remaining_attempts_and_report_them() {
+        let request = retry_request(5);
+        let (sink, events) = ChannelSink::unbounded();
+        let mut calls = 0;
+        let mut waits = Vec::new();
+        let result: Result<(), _> = retry_transfer(
+            &request,
+            &sink,
+            || {
+                calls += 1;
+                Err(temporary_failure())
+            },
+            |delay| waits.push(delay.as_secs()),
+        );
+
+        assert_eq!(calls, 5);
+        assert_eq!(waits, [2, 10, 30]);
+        assert!(
+            matches!(result, Err(AcquireError::RetryExhausted { attempts: 5, last_error }) if last_error.contains("status 500"))
+        );
+        let lines = events
+            .try_iter()
+            .map(|event| match event {
+                EngineEvent::ConsoleLine {
+                    step_id,
+                    stream,
+                    line,
+                } => {
+                    assert_eq!(step_id, "acquire:xan-19");
+                    assert_eq!(stream, Stream::Stdout);
+                    line
+                }
+                other => panic!("Retry must not signal failure/attention: {other:?}"),
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(lines.len(), 4);
+        assert!(lines[0].contains("immediately") && lines[0].contains("2/5"));
+        for (line, delay) in lines[1..].iter().zip([2, 10, 30]) {
+            assert!(line.contains(&format!("in {delay} seconds")), "{line}");
+        }
+        assert!(lines[3].contains("5/5"));
+    }
+
+    #[test]
+    fn progressive_retries_stop_immediately_on_success_at_any_attempt() {
+        for succeed_on in 1..=5 {
+            let (sink, _) = ChannelSink::unbounded();
+            let mut calls = 0;
+            let mut waits = Vec::new();
+            let result = retry_transfer(
+                &retry_request(5),
+                &sink,
+                || {
+                    calls += 1;
+                    if calls == succeed_on {
+                        Ok(42)
+                    } else {
+                        Err(temporary_failure())
+                    }
+                },
+                |delay| waits.push(delay.as_secs()),
+            )
+            .unwrap();
+            assert_eq!(result, 42);
+            assert_eq!(calls, succeed_on);
+            let expected: Vec<_> = [2, 10, 30]
+                .into_iter()
+                .take((succeed_on as usize).saturating_sub(2))
+                .collect();
+            assert_eq!(waits, expected);
+        }
+    }
+
+    #[test]
+    fn progressive_retries_do_not_retry_a_permanent_failure() {
+        let (sink, events) = ChannelSink::unbounded();
+        let result: Result<(), _> = retry_transfer(
+            &retry_request(5),
+            &sink,
+            || {
+                Err(AttemptFailure::Fatal(AcquireError::HttpStatus {
+                    url: "https://example.invalid/archive.zip".to_owned(),
+                    status: 404,
+                }))
+            },
+            |_| panic!("Permanent errors must not wait"),
+        );
+        assert!(matches!(
+            result,
+            Err(AcquireError::HttpStatus { status: 404, .. })
+        ));
+        assert!(events.try_iter().next().is_none());
+    }
+
+    #[test]
+    fn progressive_retries_respect_smaller_limits_and_cap_longer_waits() {
+        for (limit, expected) in [
+            (1, vec![]),
+            (2, vec![]),
+            (3, vec![2]),
+            (6, vec![2, 10, 30, 30]),
+        ] {
+            let (sink, events) = ChannelSink::unbounded();
+            let mut calls = 0;
+            let mut waits = Vec::new();
+            let result: Result<(), _> = retry_transfer(
+                &retry_request(limit),
+                &sink,
+                || {
+                    calls += 1;
+                    Err(temporary_failure())
+                },
+                |delay: Duration| waits.push(delay.as_secs()),
+            );
+            assert!(
+                matches!(result, Err(AcquireError::RetryExhausted { attempts, .. }) if attempts == limit)
+            );
+            assert_eq!(calls, limit);
+            assert_eq!(waits, expected);
+            assert_eq!(events.try_iter().count(), (limit - 1) as usize);
+        }
+    }
 
     #[test]
     fn accepts_versioned_artifact_ids_with_dots() {
@@ -730,5 +952,271 @@ mod tests {
         };
 
         assert!(validate_request(&request).is_ok());
+    }
+
+    // Loopback transfers with millisecond limits. Each connection has its own server thread,
+    // so a connection held open by a stalled reply does not delay the next attempt.
+
+    const TEST_TIMEOUTS: HttpTimeouts = HttpTimeouts {
+        resolve: Duration::from_millis(300),
+        connect: Duration::from_millis(300),
+        send_request: Duration::from_millis(300),
+        body_stall: Duration::from_millis(300),
+    };
+    // Generous for a loaded test machine; still far below a production limit.
+    const DETECTION_SLACK: Duration = Duration::from_millis(1500);
+
+    struct Connection {
+        stream: TcpStream,
+        headers: BTreeMap<String, String>,
+    }
+
+    impl Connection {
+        fn reply_headers(&mut self, status: &str, headers: &[(&str, String)], length: usize) {
+            let mut head = format!("HTTP/1.1 {status}\r\n");
+            for (name, value) in headers {
+                head.push_str(&format!("{name}: {value}\r\n"));
+            }
+            head.push_str(&format!(
+                "Content-Length: {length}\r\nConnection: close\r\n\r\n"
+            ));
+            self.send(head.as_bytes());
+        }
+
+        fn send(&mut self, bytes: &[u8]) {
+            self.stream.write_all(bytes).expect("write test response");
+            self.stream.flush().expect("flush test response");
+        }
+
+        /// Keep the connection open without sending anything until the client gives up.
+        fn hold_until_client_closes(&mut self) {
+            self.stream
+                .set_read_timeout(Some(Duration::from_millis(10)))
+                .expect("set hold read timeout");
+            let deadline = Instant::now() + Duration::from_secs(10);
+            let mut byte = [0_u8; 1];
+            while Instant::now() < deadline {
+                match self.stream.read(&mut byte) {
+                    Ok(0) => return,
+                    Ok(_) => {}
+                    Err(error)
+                        if matches!(
+                            error.kind(),
+                            std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+                        ) => {}
+                    Err(_) => return,
+                }
+            }
+            panic!("client kept a stalled test connection open for 10 seconds");
+        }
+    }
+
+    type Handler = Box<dyn FnOnce(&mut Connection) + Send>;
+
+    /// Serve one connection per handler, in order. Joining returns each request's headers.
+    fn serve(handlers: Vec<Handler>) -> (String, JoinHandle<Vec<BTreeMap<String, String>>>) {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind loopback test server");
+        let base_url = format!("http://{}", listener.local_addr().unwrap());
+        listener.set_nonblocking(true).unwrap();
+        let server = thread::spawn(move || {
+            let mut connections = Vec::new();
+            for handler in handlers {
+                let deadline = Instant::now() + Duration::from_secs(10);
+                let stream = loop {
+                    match listener.accept() {
+                        Ok((stream, _)) => break stream,
+                        Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                            assert!(Instant::now() < deadline, "test request did not arrive");
+                            thread::sleep(Duration::from_millis(5));
+                        }
+                        Err(error) => panic!("accept test request: {error}"),
+                    }
+                };
+                connections.push(thread::spawn(move || {
+                    stream.set_nonblocking(false).unwrap();
+                    stream
+                        .set_read_timeout(Some(Duration::from_secs(5)))
+                        .unwrap();
+                    let mut headers = BTreeMap::new();
+                    let mut reader = BufReader::new(stream.try_clone().unwrap());
+                    let mut line = String::new();
+                    reader.read_line(&mut line).expect("read request line");
+                    loop {
+                        line.clear();
+                        reader.read_line(&mut line).expect("read request header");
+                        let Some((name, value)) = line.trim_end().split_once(':') else {
+                            break;
+                        };
+                        headers.insert(name.to_ascii_lowercase(), value.trim().to_owned());
+                    }
+                    let mut connection = Connection { stream, headers };
+                    handler(&mut connection);
+                    connection.headers
+                }));
+            }
+            connections
+                .into_iter()
+                .map(|connection| connection.join().expect("test connection thread"))
+                .collect()
+        });
+        (base_url, server)
+    }
+
+    fn archive_bytes(length: usize) -> Vec<u8> {
+        (0..length).map(|index| (index % 251) as u8).collect()
+    }
+
+    fn download(id: &str, url: String, bytes: &[u8]) -> DownloadRequest {
+        DownloadRequest {
+            request_id: id.to_owned(),
+            url,
+            expected_length: bytes.len() as u64,
+            expected_sha256: hex::encode(Sha256::digest(bytes)),
+            redirect_hosts: Vec::new(),
+            max_attempts: 1,
+        }
+    }
+
+    fn test_cache(temp: &TempDir) -> ArtifactCache {
+        ArtifactCache::open_with_client(
+            temp.path().join("cache"),
+            HttpClient::with_timeouts(TEST_TIMEOUTS),
+        )
+        .unwrap()
+    }
+
+    fn longest_test_timeout() -> Duration {
+        [
+            TEST_TIMEOUTS.resolve,
+            TEST_TIMEOUTS.connect,
+            TEST_TIMEOUTS.send_request,
+            TEST_TIMEOUTS.body_stall,
+        ]
+        .into_iter()
+        .max()
+        .unwrap()
+    }
+
+    #[test]
+    fn a_steady_download_longer_than_every_timeout_completes() {
+        let bytes = archive_bytes(64_000);
+        let body = bytes.clone();
+        let (url, server) = serve(vec![Box::new(move |connection: &mut Connection| {
+            connection.reply_headers("200 OK", &[("ETag", "\"steady\"".to_owned())], body.len());
+            // ureq gives a read that starts after a passed deadline one more second, so a
+            // total limit only fails a wait it interrupts. Chunks 120 ms apart put the
+            // 300 ms limits in the middle of a wait, while staying well inside the stall limit.
+            for chunk in body.chunks(6_400) {
+                thread::sleep(Duration::from_millis(120));
+                connection.send(chunk);
+            }
+        })]);
+        let temp = TempDir::new().unwrap();
+        let (sink, _) = ChannelSink::unbounded();
+
+        let started = Instant::now();
+        let acquired = test_cache(&temp)
+            .acquire(&download("steady", url, &bytes), &sink)
+            .unwrap();
+
+        assert!(
+            started.elapsed() > 3 * longest_test_timeout(),
+            "the transfer must outlast every limit, took {:?}",
+            started.elapsed()
+        );
+        assert_eq!(acquired.disposition, CacheDisposition::Downloaded);
+        assert_eq!(fs::read(&acquired.archive_path).unwrap(), bytes);
+        server.join().unwrap();
+    }
+
+    #[test]
+    fn a_stalled_body_fails_after_the_stall_window_and_the_next_attempt_resumes() {
+        let bytes = archive_bytes(32 * 1024);
+        let prefix_len = 12_000;
+        let total = bytes.len();
+        let (first, rest) = (bytes[..prefix_len].to_vec(), bytes[prefix_len..].to_vec());
+        let (url, server) = serve(vec![
+            Box::new(move |connection: &mut Connection| {
+                connection.reply_headers("200 OK", &[("ETag", "\"stall-v1\"".to_owned())], total);
+                connection.send(&first);
+                connection.hold_until_client_closes();
+            }),
+            Box::new(move |connection: &mut Connection| {
+                connection.reply_headers(
+                    "206 Partial Content",
+                    &[
+                        ("ETag", "\"stall-v1\"".to_owned()),
+                        (
+                            "Content-Range",
+                            format!("bytes {prefix_len}-{}/{total}", total - 1),
+                        ),
+                    ],
+                    rest.len(),
+                );
+                connection.send(&rest);
+            }),
+        ]);
+        let temp = TempDir::new().unwrap();
+        let cache = test_cache(&temp);
+        let (sink, _) = ChannelSink::unbounded();
+        let request = download("stall", url, &bytes);
+
+        let started = Instant::now();
+        let error = cache.acquire(&request, &sink).unwrap_err();
+        let elapsed = started.elapsed();
+
+        // Exhausting the budget, instead of returning the error itself, proves that the stall
+        // was classified as retryable.
+        assert!(
+            matches!(&error, AcquireError::RetryExhausted { attempts: 1, last_error } if last_error.contains("timeout: receive body")),
+            "{error}"
+        );
+        assert!(
+            elapsed >= TEST_TIMEOUTS.body_stall
+                && elapsed < TEST_TIMEOUTS.body_stall + DETECTION_SLACK,
+            "stall detected after {elapsed:?}"
+        );
+        assert_eq!(
+            fs::metadata(temp.path().join("cache/partial/stall.part"))
+                .unwrap()
+                .len(),
+            prefix_len as u64
+        );
+
+        let acquired = cache.acquire(&request, &sink).unwrap();
+
+        assert_eq!(acquired.disposition, CacheDisposition::Downloaded);
+        assert_eq!(fs::read(&acquired.archive_path).unwrap(), bytes);
+        let seen = server.join().unwrap();
+        assert!(!seen[0].contains_key("range"));
+        assert_eq!(seen[1]["range"], format!("bytes={prefix_len}-"));
+        assert_eq!(seen[1]["if-range"], "\"stall-v1\"");
+    }
+
+    #[test]
+    fn a_server_that_never_sends_headers_fails_within_the_header_bound() {
+        let bytes = archive_bytes(1024);
+        let (url, server) = serve(vec![Box::new(|connection: &mut Connection| {
+            connection.hold_until_client_closes();
+        })]);
+        let temp = TempDir::new().unwrap();
+        let (sink, _) = ChannelSink::unbounded();
+
+        let started = Instant::now();
+        let error = test_cache(&temp)
+            .acquire(&download("silent", url, &bytes), &sink)
+            .unwrap_err();
+        let elapsed = started.elapsed();
+
+        assert!(
+            matches!(&error, AcquireError::RetryExhausted { attempts: 1, last_error } if last_error.contains("timeout: send request")),
+            "{error}"
+        );
+        assert!(
+            elapsed >= TEST_TIMEOUTS.send_request
+                && elapsed < TEST_TIMEOUTS.send_request + DETECTION_SLACK,
+            "missing headers detected after {elapsed:?}"
+        );
+        server.join().unwrap();
     }
 }

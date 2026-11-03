@@ -8,12 +8,14 @@ The goal is a polished experience for players, not another expert-only mod manag
 finds supported clean games, starts with the recommended collection choices, builds a
 separate installation, verifies the result, and reopens later as a simple launcher.
 
-## Current status (2026-09-07)
+## Current development status (2026-11-02)
 
-The current release is Windows app **0.1.0-alpha.15**, with recipe **0.1.0-alpha.13**
-and 434 recommended components. BG Rebalance v0.3.2 fixes Tempus installation without
-Spell Revisions. Other mod pins and default choices are unchanged. It retains the
-guarded recovery, shortcut handling and restored setup preferences from alpha.14.
+App and collection **0.1.0** are published (2026-11-02), the first release without the
+alpha label: a new recommended mod setup for fresh installations, with True Time Stop,
+druid and Alaghor weapons, Sirene in BG1 and SoD, player voicepacks and updated mods,
+and installer fixes for virus scanners, uninstalling and slow downloads. See the
+[changelog](docs/release-notes-0.1.0.md) and the
+[package verification](docs/package-acceptance-0.1.0-2026-11-02.md).
 
 Get the installer and guide from [the collection page](https://bg.chrizfader.org/collection),
 or [public releases](https://github.com/Chrizhermann/chriz-easy-bg/releases).
@@ -34,12 +36,12 @@ CEBG currently provides:
 - separate application, recipe, and installation update guidance without unsafe in-place
   WeiDU surgery.
 
-The public alpha updater channel is active. Packages carry Tauri updater signatures;
+The public updater channel (named `alpha`) serves 0.1.0. Packages carry Tauri updater signatures;
 the current signing setup does **not provide Windows Authenticode**, so Windows may show
 an unknown publisher. Follow the
-[alpha.15 acceptance note](docs/patch-acceptance-alpha15-2026-09-07.md) for source, package
-and installation evidence. The existing no-SR test was recovered in place and its
-429 components verified; gameplay and native updater apply/restart remain separate checks.
+[alpha.19 acceptance note](docs/package-acceptance-alpha19-2026-09-22.md) for the local
+BuffBot Apply, user gameplay and Undo evidence. General mod upgrades remain deferred;
+a newer collection is not automatically applied to an existing game.
 See [docs/handover.md](docs/handover.md) for the maintained development status.
 
 ## Source and downloads
@@ -52,7 +54,7 @@ retain their terms, collected in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md
 The source and binary distribution repositories have separate roles; existing release
 downloads and updater URLs remain the supported player entry points.
 
-The alpha.15 package was built from commit
+For historical provenance, the alpha.15 package was built from commit
 `255be75aa232f3af5ad1e1969ccba313fffcccce`, including its versioned notices.
 The preceding alpha.14 source is `5610783590ad49b24101d5d3a6a85b018abadb7e`.
 The earlier alpha.13 implementation is `9f89830be760338c74a2f0839a25e2cd1980faad`.
@@ -75,6 +77,7 @@ docs/curation/components/
                         Human curation decisions and follow-ups per mod
 docs/handover.md         Live agent/developer entry point
 docs/BUILDING.md         Windows build and release-provenance guide
+docs/mod-link-check.md   Nightly check that pinned mod downloads still serve the reviewed file
 ```
 
 ## Development guardrails

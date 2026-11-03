@@ -1,0 +1,28 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-10-20"
+command = "chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python tools/check_native_component_order.py --recipe-root manifest --recipe-root recipes/curated-full-current --mod-id <mod> --archive <fresh downloaded ZIP>"
+scope = "Modpack v0.2.0-alpha.13 was published as a normal GitHub release on October 20 and replaces alpha.12 in both recipe profiles. The release ZIP was downloaded anonymously into a fresh cache for each profile's artifact TOML and passed the production acquisition and extraction contracts; the measured hash and the native TP2 declaration order match both recipes. The archive layout and limits are unchanged from alpha.12. This is automated source/package verification, not a full combined WeiDU install or gameplay acceptance."
+
+# Alpha.13 declares 135 after 130, 239 after 238, 460 after 450 and 652 after 651.
+# The collection offers only 239 (default, late-companion run); 135, 460 and 652 wait
+# for Christopher's decision and appear in no run.
+[[artifacts]]
+mod_id = "chriz-bg-modpack"
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.13"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v0.2.0-alpha.13"
+source_commit = "72fc4e6d31887d9598e0a8dc4faf5b76aeb988a3"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.13/chriz-bg-modpack-v0.2.0-alpha.13.zip"
+actual_length = 10479090
+actual_sha256 = "afbf05eec35bf65280cdab5276417f83e767ca5594de93602934d0398a68a381"
+tp2_sha256 = "5a47901632254204fc4e2261f4c4627a9d0d6f193d56828ad678019dee7bf76b"
+native_components = [
+  110, 130, 135, 140, 160, 170, 188, 189, 190, 192, 193, 194, 195, 196, 197, 198, 199, 220, 221,
+  222, 223, 224, 225, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 400, 410, 430, 440, 450,
+  460, 610, 611, 620, 630, 640, 660, 650, 651, 652
+]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true

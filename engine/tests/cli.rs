@@ -4,7 +4,7 @@ use std::io::{BufRead, BufReader, Cursor, Write};
 use std::net::{Shutdown, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
@@ -18,9 +18,12 @@ use bg_engine::digest::sha256_bytes;
 use bg_engine::events::ChannelSink;
 use bg_engine::games::{FileSystemProvider, SystemFileSystem};
 use bg_engine::lock::TargetLock;
-use bg_engine::receipt::{InstallReceipt, ReceiptOutcome, RECEIPT_SCHEMA_VERSION};
-use bg_engine::registry::ManagedInstallRegistry;
+use bg_engine::receipt::{
+    ArtifactCacheOutcome, ArtifactReceipt, InstallReceipt, ReceiptOutcome, RECEIPT_SCHEMA_VERSION,
+};
+use bg_engine::registry::{CampaignAvailability, ManagedInstallRegistry};
 use bg_engine::session::SessionStore;
+use bg_engine::stage::TEST_DOCUMENTS_VARIABLE;
 use bg_engine::weidu::runner::RunnerControlHandle;
 use serde_json::Value;
 use tempfile::TempDir;
@@ -47,11 +50,12 @@ impl ArtifactServer {
             .expect("make artifact server nonblocking");
         let stop = Arc::new(AtomicBool::new(false));
         let thread_stop = Arc::clone(&stop);
+        let signatures = AtomicU64::new(0);
         let thread = thread::spawn(move || {
             while !thread_stop.load(Ordering::Acquire) {
                 match listener.accept() {
                     Ok((_stream, _)) if thread_stop.load(Ordering::Acquire) => break,
-                    Ok((stream, _)) => serve_artifact(stream, &artifacts),
+                    Ok((stream, _)) => serve_artifact(stream, &artifacts, &signatures),
                     Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
                         thread::sleep(Duration::from_millis(5));
                     }
@@ -78,7 +82,14 @@ impl Drop for ArtifactServer {
     }
 }
 
-fn serve_artifact(mut stream: TcpStream, artifacts: &BTreeMap<String, Vec<u8>>) {
+/// Serves exact artifact paths. `/signed/<path>` mimics a GitHub release download: it
+/// redirects to `<path>` with a fresh single-use signature, so every transfer of the same
+/// bytes reports a different final URL.
+fn serve_artifact(
+    mut stream: TcpStream,
+    artifacts: &BTreeMap<String, Vec<u8>>,
+    signatures: &AtomicU64,
+) {
     stream
         .set_nonblocking(false)
         .expect("make artifact connection blocking");
@@ -99,6 +110,23 @@ fn serve_artifact(mut stream: TcpStream, artifacts: &BTreeMap<String, Vec<u8>>) 
             break;
         }
     }
+    if let Some(signed) = path.strip_prefix("/signed") {
+        let signature = signatures.fetch_add(1, Ordering::AcqRel) + 1;
+        write!(
+            stream,
+            "HTTP/1.1 302 Found
+Location: {signed}?signature={signature}
+Content-Length: 0
+Connection: close
+
+"
+        )
+        .expect("write artifact redirect");
+        stream.flush().expect("flush artifact redirect");
+        let _ = stream.shutdown(Shutdown::Both);
+        return;
+    }
+    let path = path.split_once('?').map_or(path, |(path, _query)| path);
     let (status, body) = artifacts
         .get(path)
         .map(|body| ("200 OK", body.as_slice()))
@@ -125,7 +153,11 @@ fn zip_bytes(entries: &[(&str, &[u8])]) -> Vec<u8> {
 }
 
 fn cli() -> Command {
-    Command::new(env!("CARGO_BIN_EXE_chriz-bg-install"))
+    let mut command = Command::new(env!("CARGO_BIN_EXE_chriz-bg-install"));
+    // Process checks see no running program unless a test declares one, whatever else runs on
+    // this PC.
+    command.env("CHRIZ_BG_COLLECTION_TEST_RUNNING_EXECUTABLES", "");
+    command
 }
 
 fn run(args: &[&str]) -> Output {
@@ -378,6 +410,7 @@ fn display_name_cli_default_is_exact_and_custom_name_reaches_the_registry() {
 fn failed_install_fixture() -> (TempDir, PathBuf, PathBuf, PathBuf, PathBuf, PathBuf) {
     let temp = fixture_tempdir();
     let recipe = recipe_with_profiles(&temp);
+    use_production_invocation_mode(&recipe);
     let bg1 = copied_game(&temp, "steam-bgee-sod", "bg1");
     let bg2 = copied_game(&temp, "steam-bg2ee", "bg2");
     fs::write(bg1.join("setup-dirty.exe"), b"modified")
@@ -400,6 +433,8 @@ struct ExecutableFixture {
     cache: PathBuf,
     app_data: PathBuf,
     documents: PathBuf,
+    payload: Vec<u8>,
+    tool_archive: Vec<u8>,
 }
 
 fn executable_fixture() -> ExecutableFixture {
@@ -478,14 +513,7 @@ fn executable_fixture() -> ExecutableFixture {
         ),
     )
     .expect("write synthetic tool contract");
-    let mod_file = recipe.join("mods/eefixpack.toml");
-    let text = fs::read_to_string(&mod_file)
-        .expect("read fixture mod")
-        .replace(
-            "invocation_mode = \"explicit-tp2\"",
-            "invocation_mode = \"setup-name\"",
-        );
-    fs::write(mod_file, text).expect("select setup-name fixture mode");
+    use_production_invocation_mode(&recipe);
 
     ExecutableFixture {
         _temp: temp,
@@ -497,7 +525,25 @@ fn executable_fixture() -> ExecutableFixture {
         cache,
         app_data,
         documents,
+        payload,
+        tool_archive,
     }
+}
+
+fn use_production_invocation_mode(recipe: &Path) {
+    // The shared authoring fixture deliberately exercises explicit-TP2 parsing. Tests
+    // entering the production installer need its supported setup-name mode instead.
+    let mod_file = recipe.join("mods/eefixpack.toml");
+    let text = fs::read_to_string(&mod_file).expect("read fixture mod");
+    assert!(text.contains("invocation_mode = \"explicit-tp2\""));
+    fs::write(
+        mod_file,
+        text.replace(
+            "invocation_mode = \"explicit-tp2\"",
+            "invocation_mode = \"setup-name\"",
+        ),
+    )
+    .expect("select supported production fixture mode");
 }
 
 fn install_versioned_fixture_executable(recipe: &Path, game: &Path, profile_name: &str) {
@@ -594,9 +640,305 @@ fn executable_command(fixture: &ExecutableFixture) -> Command {
     let mut command = cli();
     command
         .env("LOCALAPPDATA", &fixture.app_data)
-        .env("CHRIZ_BG_COLLECTION_TEST_DOCUMENTS", &fixture.documents)
+        .env(TEST_DOCUMENTS_VARIABLE, &fixture.documents)
         .env("CHRIZ_TEST_MOCK_WEIDU_TP2", "EE_Fixpack/EE_Fixpack.tp2");
     command
+}
+
+/// A test build of the installer never falls back to the player's real Documents folder: an
+/// install that reaches its save folder without an isolated one stops there.
+#[cfg(windows)]
+#[test]
+fn install_without_an_isolated_documents_folder_stops_before_reserving_saves() {
+    let fixture = executable_fixture();
+    let mut install = executable_command(&fixture);
+    install
+        .env_remove(TEST_DOCUMENTS_VARIABLE)
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ));
+
+    let output = install
+        .output()
+        .expect("run install without isolated Documents");
+
+    assert!(!output.status.success(), "{}", stdout(&output));
+    assert!(
+        stderr(&output).contains("never use the real Documents folder"),
+        "{}",
+        stderr(&output)
+    );
+    assert!(!fixture.managed.join("bg1/engine.lua").exists());
+}
+
+/// A real program named like WeiDU, running outside the fixture's game folders until dropped.
+#[cfg(windows)]
+struct ForeignInstaller(std::process::Child);
+
+#[cfg(windows)]
+impl ForeignInstaller {
+    fn start(executable: &Path) -> Self {
+        use std::os::windows::process::CommandExt;
+        use windows_sys::Win32::System::Threading::CREATE_NO_WINDOW;
+
+        fs::create_dir_all(executable.parent().unwrap()).unwrap();
+        fs::copy(std::env::var_os("COMSPEC").unwrap(), executable).unwrap();
+        let child = Command::new(executable)
+            .args(["/D", "/C", "set /p wait_for_test="])
+            .creation_flags(CREATE_NO_WINDOW)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .unwrap();
+        Self(child)
+    }
+}
+
+#[cfg(windows)]
+impl Drop for ForeignInstaller {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+
+/// In a test build the installer sees only the programs a test declares running, so another
+/// program's WeiDU on this PC never decides a test (issue 9). A declared installer still blocks
+/// the manual checkpoint, wherever it runs.
+#[cfg(windows)]
+#[test]
+fn manual_checkpoint_checks_see_only_the_installers_a_test_declares() {
+    let fixture = executable_fixture();
+    let mut install = executable_command(&fixture);
+    install
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ))
+        .args(["--manual-pause-after", "eefixpack-bg1:0"]);
+    let paused = install.output().unwrap();
+    assert!(
+        paused.status.success(),
+        "{}
+{}",
+        stdout(&paused),
+        stderr(&paused)
+    );
+    let paused = json_stdout(&paused);
+    assert_eq!(paused["status"]["status"], "paused");
+    let install_id = paused["install_id"].as_str().unwrap();
+    let check = |declared: Option<&Path>| {
+        let mut command = executable_command(&fixture);
+        if let Some(declared) = declared {
+            command.env("CHRIZ_BG_COLLECTION_TEST_RUNNING_EXECUTABLES", declared);
+        }
+        command
+            .args([
+                "--json",
+                "check-manual-checkpoint",
+                fixture.managed.to_str().unwrap(),
+                "--install-id",
+                install_id,
+            ])
+            .output()
+            .unwrap()
+    };
+    let outside = fixture.managed.parent().unwrap().join("elsewhere");
+    let _foreign = ForeignInstaller::start(&outside.join("weidu.exe"));
+
+    // Tests declare no running program by default.
+    let unaffected = check(None);
+    assert!(
+        unaffected.status.success(),
+        "{}
+{}",
+        stdout(&unaffected),
+        stderr(&unaffected)
+    );
+
+    let declared = outside.join("Downloads").join("Setup-SomeMod.exe");
+    let blocked = check(Some(&declared));
+    assert!(!blocked.status.success(), "{}", stdout(&blocked));
+    let error = &json_stdout(&blocked)["error"];
+    assert_eq!(
+        error["code"], "manual_checkpoint_needs_attention",
+        "{error}"
+    );
+    let message = error["message"].as_str().unwrap();
+    assert!(
+        message.contains("Close the manual installer")
+            && message.contains(declared.to_str().unwrap()),
+        "{message}"
+    );
+}
+
+#[cfg(windows)]
+#[test]
+fn manual_checkpoints_resume_two_boundaries_and_finalize_with_dragonspear_history_intact() {
+    let fixture = executable_fixture();
+    let mut install = executable_command(&fixture);
+    install
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ))
+        .args([
+            "--manual-pause-after",
+            "eefixpack-bg1:0",
+            "--manual-pause-after",
+            "eefixpack-bg2:0",
+        ]);
+    let first = install.output().unwrap();
+    assert!(
+        first.status.success(),
+        "{}\n{}",
+        stdout(&first),
+        stderr(&first)
+    );
+    let first = json_stdout(&first);
+    assert_eq!(first["status"]["status"], "paused");
+    let install_id = first["install_id"].as_str().unwrap();
+    let frozen_path = fixture.managed.join(".chriz/recipe/payload.zip");
+    let original_recipe = fs::read(&frozen_path).unwrap();
+    assert_eq!(
+        fs::read_to_string(fixture.managed.join("bg1/WeiDU.log"))
+            .unwrap()
+            .lines()
+            .count(),
+        1
+    );
+    assert!(!fixture.managed.join(".chriz/install-receipt.json").exists());
+
+    // Reopening/resuming without explicit acceptance must preserve the pending pause.
+    let reopened = executable_command(&fixture)
+        .args(["--json", "resume", fixture.managed.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(reopened.status.success(), "{}", stdout(&reopened));
+    assert_eq!(json_stdout(&reopened)["status"]["status"], "paused");
+    for index in 0..2 {
+        if index == 1 {
+            let directory = fixture.managed.join("game/DragonspearUI");
+            fs::create_dir(&directory).unwrap();
+            fs::write(
+                directory.join("setup-DragonspearUI.tp2"),
+                "BACKUP ~DragonspearUI/backup~\nAUTHOR ~Fixture~\n",
+            )
+            .unwrap();
+            let path = fixture.managed.join("game/WeiDU.log");
+            let before = fs::read_to_string(&path).unwrap();
+            fs::write(path, format!("{before}~DragonspearUI/setup-DragonspearUI.tp2~ #0 #0 // Dragonspear UI++: reported version\n")).unwrap();
+            fs::write(
+                fixture.managed.join("game/SETUP-DRAGONSPEARUI.DEBUG"),
+                "SUCCESSFULLY INSTALLED Dragonspear UI++\n",
+            )
+            .unwrap();
+        }
+        let checked = executable_command(&fixture)
+            .args([
+                "--json",
+                "check-manual-checkpoint",
+                fixture.managed.to_str().unwrap(),
+                "--install-id",
+                install_id,
+            ])
+            .output()
+            .unwrap();
+        assert!(
+            checked.status.success(),
+            "{}\n{}",
+            stdout(&checked),
+            stderr(&checked)
+        );
+        let checkpoint = json_stdout(&checked)["checkpoint"].clone();
+        assert_eq!(checkpoint["target"], if index == 0 { "bg1" } else { "bg2" });
+        assert_eq!(checkpoint["additions"].as_array().unwrap().len(), index);
+        // A stale/forged review token never records acceptance.
+        let denied = executable_command(&fixture)
+            .args([
+                "--json",
+                "accept-manual-checkpoint",
+                fixture.managed.to_str().unwrap(),
+                "--install-id",
+                install_id,
+                "--review-token",
+                "stale",
+                "--accept-additions",
+            ])
+            .output()
+            .unwrap();
+        assert!(!denied.status.success());
+        let mut accept = executable_command(&fixture);
+        accept.args([
+            "--json",
+            "accept-manual-checkpoint",
+            fixture.managed.to_str().unwrap(),
+            "--install-id",
+            install_id,
+            "--review-token",
+            checkpoint["reviewToken"].as_str().unwrap(),
+        ]);
+        if index == 1 {
+            accept.arg("--accept-additions");
+        }
+        let accepted = accept.output().unwrap();
+        assert!(
+            accepted.status.success(),
+            "{}\n{}",
+            stdout(&accepted),
+            stderr(&accepted)
+        );
+        let resumed = executable_command(&fixture)
+            .args(["--json", "resume", fixture.managed.to_str().unwrap()])
+            .output()
+            .unwrap();
+        assert!(
+            resumed.status.success(),
+            "{}\n{}",
+            stdout(&resumed),
+            stderr(&resumed)
+        );
+        assert_eq!(
+            json_stdout(&resumed)["status"]["status"],
+            if index == 0 { "paused" } else { "complete" }
+        );
+    }
+    assert_eq!(fs::read(&frozen_path).unwrap(), original_recipe);
+    let receipt: InstallReceipt = serde_json::from_slice(
+        &fs::read(fixture.managed.join(".chriz/install-receipt.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(receipt.outcome, ReceiptOutcome::Succeeded);
+    assert_eq!(receipt.runs.len(), 3, "only the requested batch was split");
+    assert!(receipt.final_state.unwrap().logs.iter().any(|log| log
+        .components
+        .iter()
+        .any(|entry| entry.tp2.contains("dragonspearui"))));
+    assert!(fs::read_to_string(fixture.managed.join("game/WeiDU.log"))
+        .unwrap()
+        .contains("DragonspearUI"));
+    assert!(bg_engine::manual_checkpoint::game_update_guard(&fixture.managed).is_err());
+    let report = executable_command(&fixture)
+        .args(["--json", "report", fixture.managed.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        report.status.success(),
+        "{}\n{}",
+        stdout(&report),
+        stderr(&report)
+    );
 }
 
 #[test]
@@ -712,6 +1054,7 @@ fn unknown_feature_and_input_overrides_are_rejected_by_semantic_id() {
     let recipe = recipe.to_str().unwrap();
     for (flag, value, expected) in [
         ("--feature", "missing-feature=off", "missing-feature"),
+        ("--group", "missing-group=on", "missing-group"),
         (
             "--input",
             "missing-feature/value=integer:2",
@@ -722,6 +1065,623 @@ fn unknown_feature_and_input_overrides_are_rejected_by_semantic_id() {
         assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
         assert!(stderr(&output).contains(expected), "{}", stderr(&output));
     }
+}
+
+/// Fixture recipe with three optional `challenge-mode` members owning every fixture component.
+fn recipe_with_feature_group(temp: &TempDir) -> PathBuf {
+    let recipe = temp.path().join("recipe");
+    copy_tree(&fixture_recipe(), &recipe);
+    let collection = recipe.join("collection.toml");
+    let mut text = fs::read_to_string(&collection).unwrap();
+    text.push_str(
+        r#"
+
+[[feature_groups]]
+id = "challenge-mode"
+title = "Challenge Mode"
+description = "Fixture challenge rules."
+members = ["challenge-a", "challenge-b", "challenge-c"]
+
+[[features]]
+id = "challenge-a"
+title = "Challenge A"
+description = "Fixture challenge A"
+category = "difficulty"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "eefixpack-bg1", component = 0 }]
+
+[[features]]
+id = "challenge-b"
+title = "Challenge B"
+description = "Fixture challenge B"
+category = "difficulty"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "eefixpack-bg1", component = 2 }]
+
+[[features]]
+id = "challenge-c"
+title = "Challenge C"
+description = "Fixture challenge C"
+category = "difficulty"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "eefixpack-bg2", component = 0 }]
+"#,
+    );
+    fs::write(collection, text).unwrap();
+    recipe
+}
+
+fn planned_components(response: &Value) -> Vec<(String, Vec<u64>)> {
+    response["plan"]["runs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|run| {
+            (
+                run["run_id"].as_str().unwrap().to_owned(),
+                run["components"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|component| component.as_u64().unwrap())
+                    .collect(),
+            )
+        })
+        .collect()
+}
+
+#[test]
+fn plan_group_switch_expands_members_before_feature_overrides() {
+    let temp = fixture_tempdir();
+    let recipe = recipe_with_feature_group(&temp);
+    let recipe = recipe.to_str().unwrap();
+    let plan = |extra: &[&str]| {
+        let mut args = vec!["--json", "plan", recipe, "--preset", "recommended"];
+        args.extend_from_slice(extra);
+        let output = run(&args);
+        assert!(output.status.success(), "{extra:?}: {}", stderr(&output));
+        json_stdout(&output)
+    };
+
+    let off = plan(&[]);
+    assert!(planned_components(&off).is_empty());
+    assert_eq!(off["groups"][0]["id"], "challenge-mode");
+    assert_eq!(off["groups"][0]["state"], "off");
+
+    let on = plan(&["--group", "challenge-mode=on"]);
+    assert_eq!(
+        planned_components(&on),
+        vec![
+            ("eefixpack-bg1".to_owned(), vec![0, 2]),
+            ("eefixpack-bg2".to_owned(), vec![0]),
+        ]
+    );
+    assert_eq!(on["groups"][0]["state"], "on");
+    assert_eq!(on["normalized_selection"]["features"]["challenge-a"], true);
+    assert!(on["normalized_selection"]["features"]
+        .get("challenge-mode")
+        .is_none());
+
+    // `--feature` wins over the group for one member, wherever it appears on the command line.
+    for args in [
+        [
+            "--group",
+            "challenge-mode=on",
+            "--feature",
+            "challenge-b=off",
+        ],
+        [
+            "--feature",
+            "challenge-b=off",
+            "--group",
+            "challenge-mode=on",
+        ],
+    ] {
+        let mixed = plan(&args);
+        assert_eq!(
+            planned_components(&mixed),
+            vec![
+                ("eefixpack-bg1".to_owned(), vec![0]),
+                ("eefixpack-bg2".to_owned(), vec![0]),
+            ],
+            "{args:?}"
+        );
+        assert_eq!(mixed["groups"][0]["state"], "mixed");
+        assert_eq!(
+            mixed["groups"][0]["selected_members"],
+            serde_json::json!(["challenge-a", "challenge-c"])
+        );
+    }
+
+    let kept = plan(&[
+        "--group",
+        "challenge-mode=off",
+        "--feature",
+        "challenge-c=on",
+    ]);
+    assert_eq!(
+        planned_components(&kept),
+        vec![("eefixpack-bg2".to_owned(), vec![0])]
+    );
+
+    // Later group switches see earlier ones.
+    let toggled = plan(&[
+        "--group",
+        "challenge-mode=on",
+        "--group",
+        "challenge-mode=off",
+    ]);
+    assert!(planned_components(&toggled).is_empty());
+
+    let human = run(&[
+        "plan",
+        recipe,
+        "--preset",
+        "recommended",
+        "--group",
+        "challenge-mode=on",
+    ]);
+    assert!(human.status.success(), "{}", stderr(&human));
+    assert!(
+        stdout(&human)
+            .contains("Group challenge-mode (Challenge Mode): on, 3 of 3 available selected"),
+        "{}",
+        stdout(&human)
+    );
+}
+
+/// Fixture recipe whose `challenge-mode` group has the member `challenge-a` and a variant that
+/// picks `pace-harsh` instead of the recommended `pace-calm`.
+fn recipe_with_group_variant(temp: &TempDir) -> PathBuf {
+    let recipe = temp.path().join("recipe");
+    copy_tree(&fixture_recipe(), &recipe);
+    let collection = recipe.join("collection.toml");
+    let mut text = fs::read_to_string(&collection).unwrap();
+    text.push_str(
+        r#"
+
+[[feature_groups]]
+id = "challenge-mode"
+title = "Challenge Mode"
+description = "Fixture challenge rules."
+members = ["challenge-a"]
+variants = [{ choice_group = "pace", option = "pace-harsh", label = "Pace: harsh" }]
+
+[[features]]
+id = "challenge-a"
+title = "Challenge A"
+description = "Fixture challenge A"
+category = "difficulty"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "eefixpack-bg1", component = 0 }]
+
+[[features]]
+id = "pace-calm"
+title = "Calm pace"
+description = "Fixture calm pace"
+category = "difficulty"
+group_label = "Pace"
+choice_group = "pace"
+decision = "default"
+readiness = "ready"
+conflicts = [{ feature_id = "pace-harsh", reason = "Choose one pace." }]
+components = [{ run_id = "eefixpack-bg1", component = 2 }]
+
+[[features]]
+id = "pace-harsh"
+title = "Harsh pace"
+description = "Fixture harsh pace"
+category = "difficulty"
+group_label = "Pace"
+choice_group = "pace"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "pace-calm", reason = "Choose one pace." }]
+components = [{ run_id = "eefixpack-bg2", component = 0 }]
+"#,
+    );
+    fs::write(collection, text).unwrap();
+    recipe
+}
+
+#[test]
+fn plan_group_switch_picks_its_variant_and_an_explicit_choice_wins() {
+    let temp = fixture_tempdir();
+    let recipe = recipe_with_group_variant(&temp);
+    let recipe = recipe.to_str().unwrap();
+    let plan = |extra: &[&str]| {
+        let mut args = vec!["--json", "plan", recipe, "--preset", "recommended"];
+        args.extend_from_slice(extra);
+        let output = run(&args);
+        assert!(output.status.success(), "{extra:?}: {}", stderr(&output));
+        json_stdout(&output)
+    };
+
+    let off = plan(&[]);
+    assert_eq!(
+        planned_components(&off),
+        vec![("eefixpack-bg1".to_owned(), vec![2])]
+    );
+    assert_eq!(off["groups"][0]["state"], "off");
+    assert_eq!(off["groups"][0]["variants"][0]["choice_group"], "pace");
+    assert_eq!(off["groups"][0]["variants"][0]["option"], "pace-harsh");
+    assert_eq!(off["groups"][0]["variants"][0]["selected"], false);
+    assert_eq!(off["groups"][0]["variants"][0]["available"], true);
+
+    let on = plan(&["--group", "challenge-mode=on"]);
+    assert_eq!(
+        planned_components(&on),
+        vec![
+            ("eefixpack-bg1".to_owned(), vec![0]),
+            ("eefixpack-bg2".to_owned(), vec![0]),
+        ]
+    );
+    assert_eq!(on["groups"][0]["state"], "on");
+    assert_eq!(on["groups"][0]["variants"][0]["selected"], true);
+    assert_eq!(on["normalized_selection"]["features"]["pace-calm"], false);
+    assert_eq!(on["normalized_selection"]["features"]["pace-harsh"], true);
+
+    // An explicit option of the choice keeps the group from switching it, wherever it appears.
+    for args in [
+        ["--group", "challenge-mode=on", "--feature", "pace-calm=on"],
+        ["--feature", "pace-calm=on", "--group", "challenge-mode=on"],
+    ] {
+        let kept = plan(&args);
+        assert_eq!(
+            planned_components(&kept),
+            vec![("eefixpack-bg1".to_owned(), vec![0, 2])],
+            "{args:?}"
+        );
+        assert_eq!(kept["groups"][0]["state"], "mixed", "{args:?}");
+        assert_eq!(
+            kept["normalized_selection"]["features"]["pace-harsh"], false,
+            "{args:?}"
+        );
+    }
+
+    // An explicit choice that agrees with the group still lets it settle the rest of the choice:
+    // the variant option itself, or the recommended option switched off.
+    for args in [
+        ["--group", "challenge-mode=on", "--feature", "pace-harsh=on"],
+        ["--feature", "pace-calm=off", "--group", "challenge-mode=on"],
+    ] {
+        let agreed = plan(&args);
+        assert_eq!(
+            planned_components(&agreed),
+            planned_components(&on),
+            "{args:?}"
+        );
+        assert_eq!(agreed["groups"][0]["state"], "on", "{args:?}");
+        assert_eq!(
+            agreed["normalized_selection"]["features"]["pace-calm"], false,
+            "{args:?}"
+        );
+    }
+    // Switching the variant option itself off keeps the recommended option.
+    let declined = plan(&[
+        "--group",
+        "challenge-mode=on",
+        "--feature",
+        "pace-harsh=off",
+    ]);
+    assert_eq!(
+        planned_components(&declined),
+        vec![("eefixpack-bg1".to_owned(), vec![0, 2])]
+    );
+    assert_eq!(declined["groups"][0]["state"], "mixed");
+
+    // Switching the group off again restores the recommended option.
+    let toggled = plan(&[
+        "--group",
+        "challenge-mode=on",
+        "--group",
+        "challenge-mode=off",
+    ]);
+    assert_eq!(planned_components(&toggled), planned_components(&off));
+    assert_eq!(toggled["normalized_selection"], off["normalized_selection"]);
+
+    let human = run(&[
+        "plan",
+        recipe,
+        "--preset",
+        "recommended",
+        "--group",
+        "challenge-mode=on",
+    ]);
+    assert!(human.status.success(), "{}", stderr(&human));
+    assert!(
+        stdout(&human).contains(
+            "Group challenge-mode (Challenge Mode): on, 1 of 1 available selected, 1 of 1 available variants picked"
+        ),
+        "{}",
+        stdout(&human)
+    );
+}
+
+/// Fixture recipe whose preset switches the default `gate` off, with `challenge-c` requiring
+/// `gate`; `members` names the `challenge-mode` members among `challenge-a` and `challenge-c`.
+fn recipe_with_gated_group(temp: &TempDir, members: &[&str]) -> PathBuf {
+    let recipe = temp.path().join("recipe");
+    copy_tree(&fixture_recipe(), &recipe);
+    let collection = recipe.join("collection.toml");
+    let mut text = fs::read_to_string(&collection).unwrap();
+    let members = members
+        .iter()
+        .map(|member| format!("{member:?}"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    text.push_str(&format!(
+        r#"
+
+[[feature_groups]]
+id = "challenge-mode"
+title = "Challenge Mode"
+description = "Fixture challenge rules."
+members = [{members}]
+
+[[features]]
+id = "gate"
+title = "Gate"
+description = "Fixture prerequisite"
+category = "difficulty"
+decision = "default"
+readiness = "ready"
+components = [{{ run_id = "eefixpack-bg1", component = 0 }}]
+
+[[features]]
+id = "challenge-a"
+title = "Challenge A"
+description = "Fixture challenge A"
+category = "difficulty"
+decision = "optional"
+readiness = "ready"
+components = [{{ run_id = "eefixpack-bg1", component = 2 }}]
+
+[[features]]
+id = "challenge-c"
+title = "Challenge C"
+description = "Fixture challenge C"
+category = "difficulty"
+decision = "optional"
+readiness = "ready"
+requires = ["gate"]
+components = [{{ run_id = "eefixpack-bg2", component = 0 }}]
+"#
+    ));
+    fs::write(collection, text).unwrap();
+    let preset = recipe.join("presets/recommended.toml");
+    let mut text = fs::read_to_string(&preset).unwrap();
+    text.push_str("\n[selections]\ngate = \"off\"\n");
+    fs::write(preset, text).unwrap();
+    recipe
+}
+
+#[test]
+fn plan_group_switch_sees_an_explicit_prerequisite_override() {
+    let temp = fixture_tempdir();
+    let recipe = recipe_with_gated_group(&temp, &["challenge-a", "challenge-c"]);
+    let recipe = recipe.to_str().unwrap();
+    let plan = |extra: &[&str]| {
+        let mut args = vec!["--json", "plan", recipe, "--preset", "recommended"];
+        args.extend_from_slice(extra);
+        let output = run(&args);
+        assert!(output.status.success(), "{extra:?}: {}", stderr(&output));
+        json_stdout(&output)
+    };
+
+    // Without the prerequisite the group selects only the available member.
+    let gated = plan(&["--group", "challenge-mode=on"]);
+    assert_eq!(
+        planned_components(&gated),
+        vec![("eefixpack-bg1".to_owned(), vec![2])]
+    );
+
+    // An explicit prerequisite override is visible to the group, wherever it appears.
+    for args in [
+        ["--group", "challenge-mode=on", "--feature", "gate=on"],
+        ["--feature", "gate=on", "--group", "challenge-mode=on"],
+    ] {
+        let on = plan(&args);
+        assert_eq!(
+            planned_components(&on),
+            vec![
+                ("eefixpack-bg1".to_owned(), vec![0, 2]),
+                ("eefixpack-bg2".to_owned(), vec![0]),
+            ],
+            "{args:?}"
+        );
+        assert_eq!(on["groups"][0]["state"], "on", "{args:?}");
+        assert_eq!(
+            on["normalized_selection"]["features"]["challenge-c"], true,
+            "{args:?}"
+        );
+    }
+
+    // An explicit member choice still wins over the group.
+    let member_off = plan(&[
+        "--group",
+        "challenge-mode=on",
+        "--feature",
+        "gate=on",
+        "--feature",
+        "challenge-c=off",
+    ]);
+    assert_eq!(
+        planned_components(&member_off),
+        vec![("eefixpack-bg1".to_owned(), vec![0, 2])]
+    );
+    assert_eq!(member_off["groups"][0]["state"], "mixed");
+}
+
+#[test]
+fn plan_group_whose_only_member_needs_an_explicit_prerequisite_turns_on() {
+    let temp = fixture_tempdir();
+    let recipe = recipe_with_gated_group(&temp, &["challenge-c"]);
+    let recipe = recipe.to_str().unwrap();
+
+    let disabled = run(&[
+        "--json",
+        "plan",
+        recipe,
+        "--preset",
+        "recommended",
+        "--group",
+        "challenge-mode=on",
+    ]);
+    assert_eq!(disabled.status.code(), Some(1), "{}", stderr(&disabled));
+    assert_eq!(json_stdout(&disabled)["error"]["code"], "invalid_selection");
+
+    let output = run(&[
+        "--json",
+        "plan",
+        recipe,
+        "--preset",
+        "recommended",
+        "--group",
+        "challenge-mode=on",
+        "--feature",
+        "gate=on",
+    ]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    let on = json_stdout(&output);
+    assert_eq!(
+        planned_components(&on),
+        vec![
+            ("eefixpack-bg1".to_owned(), vec![0]),
+            ("eefixpack-bg2".to_owned(), vec![0]),
+        ]
+    );
+    assert_eq!(on["groups"][0]["state"], "on");
+}
+
+#[test]
+fn install_group_switch_sees_an_explicit_prerequisite_override() {
+    // `install` shares the plan's selection expansion. With the prerequisite switched on, the
+    // group's only member is available, so selection and planning succeed and install reaches
+    // the source-game freshness guard, which the deliberately modified BG1 copy then trips.
+    let temp = fixture_tempdir();
+    let recipe = recipe_with_gated_group(&temp, &["challenge-c"]);
+    use_production_invocation_mode(&recipe);
+    copy_tree(
+        &Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join(GAME_FIXTURES)
+            .join("profiles"),
+        &recipe.join("game-builds"),
+    );
+    let bg1 = copied_game(&temp, "steam-bgee-sod", "bg1");
+    let bg2 = copied_game(&temp, "steam-bg2ee", "bg2");
+    fs::write(bg1.join("setup-dirty.exe"), b"modified").expect("add modified-game residue");
+    let cache = temp.path().join("cache");
+    fs::create_dir(&cache).expect("create cache root");
+    // Each attempt gets its own managed root and app data, so one guarded attempt's campaign
+    // state or registry entry cannot affect another.
+    let install = |attempt: &str, extra: &[&str]| {
+        let managed = temp.path().join(format!("managed-{attempt}"));
+        let app_data = temp.path().join(format!("app-data-{attempt}"));
+        fs::create_dir(&app_data).expect("create app-data root");
+        let mut args = install_args(&recipe, &bg1, &bg2, &managed, &cache);
+        args.extend_from_slice(extra);
+        let output = cli()
+            .env("LOCALAPPDATA", &app_data)
+            .args(&args)
+            .output()
+            .expect("run guarded install");
+        assert_eq!(
+            output.status.code(),
+            Some(1),
+            "{extra:?}: {}",
+            stderr(&output)
+        );
+        assert!(!managed.join("bg1").exists(), "{extra:?}");
+        assert!(!managed.join("game").exists(), "{extra:?}");
+        json_stdout(&output)
+    };
+
+    let disabled = install("gated", &["--group", "challenge-mode=on"]);
+    assert_eq!(disabled["error"]["code"], "invalid_selection", "{disabled}");
+    assert!(
+        disabled["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("cannot be turned on"),
+        "{disabled}"
+    );
+
+    for (attempt, args) in [
+        (
+            "group-first",
+            ["--group", "challenge-mode=on", "--feature", "gate=on"],
+        ),
+        (
+            "feature-first",
+            ["--feature", "gate=on", "--group", "challenge-mode=on"],
+        ),
+    ] {
+        let enabled = install(attempt, &args);
+        assert_eq!(
+            enabled["error"]["code"], "source_not_fresh",
+            "{args:?}: {enabled}"
+        );
+    }
+}
+
+#[test]
+fn unknown_or_malformed_group_switches_are_rejected() {
+    let temp = fixture_tempdir();
+    let recipe = recipe_with_feature_group(&temp);
+    let recipe = recipe.to_str().unwrap();
+    let output = run(&[
+        "plan",
+        recipe,
+        "--preset",
+        "recommended",
+        "--group",
+        "hard-mode=on",
+    ]);
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    let error = stderr(&output);
+    assert!(
+        error.contains("unknown feature group \"hard-mode\""),
+        "{error}"
+    );
+    assert!(error.contains("valid groups: challenge-mode"), "{error}");
+
+    for value in [
+        "challenge-mode=true",
+        "challenge-mode=mixed",
+        "challenge-mode",
+    ] {
+        let output = run(&["plan", recipe, "--preset", "recommended", "--group", value]);
+        assert_eq!(
+            output.status.code(),
+            Some(1),
+            "{value}: {}",
+            stderr(&output)
+        );
+        assert!(
+            stderr(&output).contains("group override"),
+            "{}",
+            stderr(&output)
+        );
+    }
+
+    let output = run(&[
+        "--json",
+        "plan",
+        recipe,
+        "--preset",
+        "recommended",
+        "--group",
+        "hard-mode=on",
+    ]);
+    assert_eq!(output.status.code(), Some(1));
+    let response = json_stdout(&output);
+    assert_eq!(response["ok"], false);
+    assert_eq!(response["error"]["code"], "invalid_selection");
 }
 
 #[test]
@@ -1167,6 +2127,184 @@ fn install_executes_the_frozen_recipe_and_publishes_complete_durable_evidence() 
     }
 }
 
+/// Adds one configuration file to the named component of the synthetic EE Fixpack installer.
+fn author_config_file(fixture: &ExecutableFixture, component: &str, path: &str, content: &str) {
+    let mod_file = fixture.recipe.join("mods/eefixpack.toml");
+    let text = fs::read_to_string(&mod_file).expect("read synthetic installer");
+    let anchor = format!("name = \"{component}\"");
+    assert_eq!(text.matches(&anchor).count(), 1, "{anchor}");
+    let entry = format!(
+        "{anchor}\nconfig_files = [{{ path = {}, content = {} }}]",
+        serde_json::to_string(path).unwrap(),
+        serde_json::to_string(content).unwrap()
+    );
+    fs::write(&mod_file, text.replace(&anchor, &entry)).expect("author synthetic config file");
+}
+
+/// The evidence directory of one attempt of one pipeline step.
+fn step_attempt(fixture: &ExecutableFixture, step_id: &str, attempt: u32) -> PathBuf {
+    let replay = SessionStore::open(&fixture.managed)
+        .unwrap()
+        .replay()
+        .unwrap();
+    let step_key = &sha256_bytes(step_id.as_bytes())[..16];
+    fs::read_dir(
+        fixture
+            .managed
+            .join(".chriz/attempts")
+            .join(&replay.created().attempt_id)
+            .join("steps"),
+    )
+    .unwrap()
+    .filter_map(Result::ok)
+    .find(|entry| entry.file_name().to_string_lossy().ends_with(step_key))
+    .unwrap()
+    .path()
+    .join(format!("attempt-{attempt:04}"))
+}
+
+fn config_evidence(attempt: &Path) -> Value {
+    serde_json::from_slice(&fs::read(attempt.join("config-files.json")).unwrap()).unwrap()
+}
+
+#[cfg(windows)]
+#[test]
+fn install_places_component_config_files_before_weidu_in_both_games() {
+    const CONTENT: &str = "OUTER_SET fixed = 1\n";
+    let fixture = executable_fixture();
+    author_config_file(&fixture, "Core fixes", "EE_Fixpack/fixpack.txt", CONTENT);
+    let mut command = executable_command(&fixture);
+    // The synthetic WeiDU refuses to install unless the file is already in place.
+    command.env(
+        "CHRIZ_TEST_MOCK_WEIDU_REQUIRE_FILE",
+        "EE_Fixpack/fixpack.txt",
+    );
+    command.args(install_args(
+        &fixture.recipe,
+        &fixture.bg1,
+        &fixture.bg2,
+        &fixture.managed,
+        &fixture.cache,
+    ));
+
+    let output = command.output().expect("execute config-file install");
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&output),
+        stderr(&output)
+    );
+    let expected = serde_json::json!([{
+        "component": 0,
+        "path": "EE_Fixpack/fixpack.txt",
+        "sha256": sha256_bytes(CONTENT.as_bytes()),
+        "created": true,
+    }]);
+    for (root, step) in [
+        ("bg1", "install:eefixpack-bg1"),
+        ("game", "install:eefixpack-bg2"),
+    ] {
+        assert_eq!(
+            fs::read_to_string(fixture.managed.join(root).join("EE_Fixpack/fixpack.txt"))
+                .expect("placed config file"),
+            CONTENT
+        );
+        assert_eq!(config_evidence(&step_attempt(&fixture, step, 1)), expected);
+    }
+}
+
+/// A failed placement leaves WeiDU unstarted, so resuming retries the run instead of demanding
+/// a fresh copy of the games. A file placed before the failure is accepted again.
+#[cfg(windows)]
+#[test]
+fn failed_config_file_placement_is_retried_on_resume() {
+    const PLACED: &str = "OUTER_SET fixed = 1\n";
+    const CONTENT: &str = "OUTER_SET fixed = 2\n";
+    let fixture = executable_fixture();
+    // The first file can be placed; the folder of the second one is missing.
+    author_config_file(&fixture, "Core fixes", "EE_Fixpack/fixpack.txt", PLACED);
+    author_config_file(
+        &fixture,
+        "BG1 preparation fixes",
+        "EE_Fixpack/later/fixpack.txt",
+        CONTENT,
+    );
+    let mut install = executable_command(&fixture);
+    install.args(install_args(
+        &fixture.recipe,
+        &fixture.bg1,
+        &fixture.bg2,
+        &fixture.managed,
+        &fixture.cache,
+    ));
+
+    let output = install
+        .output()
+        .expect("execute install without the folder");
+
+    assert_eq!(output.status.code(), Some(1), "{}", stdout(&output));
+    let response = json_stdout(&output);
+    assert_eq!(
+        response["status"]["step_id"], "install:eefixpack-bg1",
+        "{response:#}"
+    );
+    assert!(
+        stdout_from_value(&response).contains("is missing"),
+        "{response:#}"
+    );
+    let failed = step_attempt(&fixture, "install:eefixpack-bg1", 1);
+    assert!(failed.join("pre-spawn-failure.json").is_file());
+    assert!(!failed.join("invocation.json").exists());
+    assert!(!failed.join("config-files.json").exists());
+    assert!(!fixture.managed.join("bg1/WeiDU.log").exists());
+    assert_eq!(
+        fs::read_to_string(fixture.managed.join("bg1/EE_Fixpack/fixpack.txt")).unwrap(),
+        PLACED
+    );
+
+    // The folder appears, as once a passing problem is fixed.
+    fs::create_dir(fixture.managed.join("bg1/EE_Fixpack/later")).unwrap();
+    let mut resume = executable_command(&fixture);
+    resume.args(["--json", "resume", fixture.managed.to_str().unwrap()]);
+    let output = resume.output().expect("resume after the failed placement");
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&output),
+        stderr(&output)
+    );
+    assert_eq!(
+        fs::read_to_string(fixture.managed.join("bg1/EE_Fixpack/later/fixpack.txt")).unwrap(),
+        CONTENT
+    );
+    let receipt: InstallReceipt = serde_json::from_slice(
+        &fs::read(fixture.managed.join(".chriz/install-receipt.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(receipt.runs[0].attempts.len(), 1);
+    assert_eq!(receipt.runs[0].attempts[0].attempt, 2);
+    assert_eq!(receipt.runs[0].attempts[0].components, vec![0, 2]);
+    assert_eq!(
+        config_evidence(&step_attempt(&fixture, "install:eefixpack-bg1", 2)),
+        serde_json::json!([
+            {
+                "component": 0,
+                "path": "EE_Fixpack/fixpack.txt",
+                "sha256": sha256_bytes(PLACED.as_bytes()),
+                "created": false,
+            },
+            {
+                "component": 2,
+                "path": "EE_Fixpack/later/fixpack.txt",
+                "sha256": sha256_bytes(CONTENT.as_bytes()),
+                "created": true,
+            }
+        ])
+    );
+}
+
 #[cfg(windows)]
 #[test]
 fn setup_name_log_override_reconciles_from_attempt_owned_stdout() {
@@ -1310,6 +2448,338 @@ fn display_name_and_recipe_are_both_frozen_across_a_failed_install_resume() {
     assert_eq!(cards[0].record.display_name, "Resumed BG");
 }
 
+/// Replace a fixture artifact's verified cache entry with a fresh transfer through the
+/// signed-redirect route, as happens when the download cache is lost and a GitHub release
+/// asset is fetched again: same original URL and bytes, new single-use final URL.
+#[cfg(windows)]
+fn reacquire_through_signed_redirect(fixture: &ExecutableFixture, path: &str, bytes: &[u8]) {
+    let digest = sha256_bytes(bytes);
+    let entry = fixture.cache.join("sha256").join(&digest[..2]);
+    for extension in ["archive", "json"] {
+        let file = entry.join(format!("{digest}.{extension}"));
+        if file.exists() {
+            fs::remove_file(&file).expect("remove fixture cache entry");
+        }
+    }
+    let (sink, _events) = ChannelSink::unbounded();
+    let acquired = ArtifactCache::open(&fixture.cache)
+        .expect("open fixture artifact cache")
+        .acquire(
+            &DownloadRequest {
+                request_id: format!("fixture-signed{}", path.replace(['/', '.'], "-")),
+                url: format!("{}/signed{path}", fixture._server.base_url),
+                expected_length: bytes.len() as u64,
+                expected_sha256: digest,
+                redirect_hosts: Vec::new(),
+                max_attempts: 1,
+            },
+            &sink,
+        )
+        .expect("download verified fixture archive through a signed redirect");
+    assert!(acquired.metadata.final_url.contains("?signature="));
+}
+
+#[cfg(windows)]
+fn read_artifact_receipt(path: &Path) -> ArtifactReceipt {
+    serde_json::from_slice(&fs::read(path).expect("read artifact evidence"))
+        .expect("parse artifact evidence")
+}
+
+#[cfg(windows)]
+#[test]
+fn resume_retains_first_acquisition_after_a_lost_cache_is_redownloaded_via_a_new_signed_url() {
+    let fixture = executable_fixture();
+    let archives = [
+        ("eefixpack", "/eefixpack.zip", fixture.payload.clone()),
+        ("weidu", "/weidu.zip", fixture.tool_archive.clone()),
+    ];
+    for (_, path, bytes) in &archives {
+        reacquire_through_signed_redirect(&fixture, path, bytes);
+    }
+    let marker = fixture._temp.path().join("mock-weidu-failed-once");
+    let failed = executable_command(&fixture)
+        .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ))
+        .output()
+        .expect("execute first synthetic attempt");
+    assert_eq!(failed.status.code(), Some(1), "{}", stderr(&failed));
+    assert_eq!(
+        json_stdout(&failed)["status"]["step_id"],
+        "install:eefixpack-bg1"
+    );
+
+    let evidence = fixture.managed.join(".chriz/evidence");
+    let first_evidence: BTreeMap<_, _> = archives
+        .iter()
+        .map(|(id, _, _)| {
+            let bytes = fs::read(evidence.join("artifacts").join(format!("{id}.json")))
+                .expect("read first acquisition evidence");
+            (*id, bytes)
+        })
+        .collect();
+    let first: BTreeMap<_, _> = archives
+        .iter()
+        .map(|(id, _, _)| {
+            (
+                *id,
+                read_artifact_receipt(&evidence.join("artifacts").join(format!("{id}.json"))),
+            )
+        })
+        .collect();
+    assert!(!evidence.join("artifact-reacquisitions").exists());
+
+    // The download cache is separate from the install folder and can disappear between
+    // attempts; the next transfer of the same bytes gets a different signed final URL.
+    for (_, path, bytes) in &archives {
+        reacquire_through_signed_redirect(&fixture, path, bytes);
+    }
+    let resumed = executable_command(&fixture)
+        .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
+        .args(["--json", "resume", fixture.managed.to_str().unwrap()])
+        .output()
+        .expect("resume synthetic campaign");
+    assert!(
+        resumed.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&resumed),
+        stderr(&resumed)
+    );
+
+    let receipt: InstallReceipt = serde_json::from_slice(
+        &fs::read(fixture.managed.join(".chriz/install-receipt.json")).unwrap(),
+    )
+    .unwrap();
+    for (id, _, _) in &archives {
+        assert_eq!(
+            fs::read(evidence.join("artifacts").join(format!("{id}.json"))).unwrap(),
+            first_evidence[id],
+            "first acquisition evidence for {id} must stay write-once"
+        );
+        assert_eq!(
+            receipt.artifacts.iter().find(|artifact| artifact.id == *id),
+            Some(&first[id]),
+            "the install receipt must carry the first acquisition of {id}"
+        );
+    }
+
+    // Payload materialization finished before the failure; WeiDU is re-verified by both
+    // resumed install steps, so the same reacquisition is observed twice but recorded once.
+    let reacquired = fs::read_dir(evidence.join("artifact-reacquisitions"))
+        .expect("read recorded reacquisitions")
+        .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(reacquired, ["weidu"]);
+    let records = fs::read_dir(evidence.join("artifact-reacquisitions/weidu"))
+        .expect("read recorded WeiDU reacquisitions")
+        .map(|entry| entry.unwrap().path())
+        .collect::<Vec<_>>();
+    assert_eq!(records.len(), 1, "{records:?}");
+    let later = read_artifact_receipt(&records[0]);
+    assert_ne!(later.final_url, first["weidu"].final_url);
+    assert!(later.final_url.contains("?signature="));
+    assert_eq!(later.cache_outcome, ArtifactCacheOutcome::Hit);
+    assert_eq!(
+        ArtifactReceipt {
+            final_url: first["weidu"].final_url.clone(),
+            cache_outcome: first["weidu"].cache_outcome,
+            ..later.clone()
+        },
+        first["weidu"]
+    );
+    assert_eq!(
+        records[0].file_stem().and_then(|stem| stem.to_str()),
+        Some(sha256_bytes(&serde_json::to_vec(&later).unwrap()).as_str())
+    );
+}
+
+/// The whole download cache was deleted between attempts, by hand or by the uninstaller.
+/// The interrupted build stays resumable, and resuming creates the cache again at its recorded
+/// path instead of stopping before the build continues.
+#[cfg(windows)]
+#[test]
+fn resume_recreates_a_deleted_download_cache() {
+    let fixture = executable_fixture();
+    let marker = fixture._temp.path().join("mock-weidu-failed-once");
+    let failed = executable_command(&fixture)
+        .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ))
+        .output()
+        .expect("execute first synthetic attempt");
+    assert_eq!(failed.status.code(), Some(1), "{}", stderr(&failed));
+    fs::rename(&fixture.cache, fixture._temp.path().join("deleted-cache"))
+        .expect("move the download cache away");
+    let registry =
+        ManagedInstallRegistry::open_or_create(&fixture.app_data.join("Chriz BG Collection"))
+            .expect("open campaign registry");
+    assert_eq!(
+        registry.list_campaigns().unwrap()[0].availability,
+        CampaignAvailability::Resumable
+    );
+
+    // The fixture's download addresses are unreachable, so stop the resumed step at its first
+    // check before it needs the tool archive: everything before it ran with the cache missing.
+    let stopped = executable_command(&fixture)
+        .env(
+            "CHRIZ_BG_COLLECTION_TEST_FAIL_RECHECK",
+            "invocation-build:install:eefixpack-bg1",
+        )
+        .args(["--json", "resume", fixture.managed.to_str().unwrap()])
+        .output()
+        .expect("resume without a download cache");
+    assert_eq!(stopped.status.code(), Some(1), "{}", stdout(&stopped));
+    let stopped = json_stdout(&stopped);
+    assert_eq!(stopped["status"]["step_id"], "install:eefixpack-bg1");
+    assert!(stopped["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|event| event["type"] == "campaign_started" && event["resumed"] == true));
+    assert!(fixture.cache.is_dir());
+
+    // What a resume downloads again, fetched here from the fixture server.
+    let cache = ArtifactCache::open(&fixture.cache).expect("open recreated cache");
+    let (sink, _events) = ChannelSink::unbounded();
+    for (path, bytes) in [
+        ("/eefixpack.zip", &fixture.payload),
+        ("/weidu.zip", &fixture.tool_archive),
+    ] {
+        cache
+            .acquire(
+                &DownloadRequest {
+                    request_id: format!("refetch{}", path.replace(['/', '.'], "-")),
+                    url: format!("{}{path}", fixture._server.base_url),
+                    expected_length: bytes.len() as u64,
+                    expected_sha256: sha256_bytes(bytes),
+                    redirect_hosts: Vec::new(),
+                    max_attempts: 1,
+                },
+                &sink,
+            )
+            .expect("download fixture archive again");
+    }
+    let resumed = executable_command(&fixture)
+        .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
+        .args(["--json", "resume", fixture.managed.to_str().unwrap()])
+        .output()
+        .expect("resume synthetic campaign");
+
+    assert!(
+        resumed.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&resumed),
+        stderr(&resumed)
+    );
+    assert!(fixture
+        .managed
+        .join(".chriz/install-receipt.json")
+        .is_file());
+    assert_eq!(registry.list().unwrap().len(), 1);
+}
+
+/// The published extraction of `bytes` beneath the fixture's extraction cache.
+#[cfg(windows)]
+fn published_extraction(fixture: &ExecutableFixture, bytes: &[u8]) -> PathBuf {
+    let digest = sha256_bytes(bytes);
+    let parent = fixture
+        .cache
+        .join("extracted/sha256-v3")
+        .join(&digest[..2])
+        .join(&digest);
+    let entries = fs::read_dir(&parent)
+        .expect("read published extraction contracts")
+        .map(|entry| entry.unwrap().path())
+        .collect::<Vec<_>>();
+    assert_eq!(entries.len(), 1, "{entries:?}");
+    entries.into_iter().next().unwrap()
+}
+
+/// The reported failure: a player deleted CEBG's cache folders by hand between attempts and
+/// a published extraction survived without its marker. Resuming must rebuild it from the
+/// verified archive and record the repair, not stop at "could not inspect extraction marker".
+#[cfg(windows)]
+#[test]
+fn resume_rebuilds_a_partially_deleted_extraction_and_records_the_repair() {
+    let fixture = executable_fixture();
+    let marker = fixture._temp.path().join("mock-weidu-failed-once");
+    let failed = executable_command(&fixture)
+        .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ))
+        .output()
+        .expect("execute first synthetic attempt");
+    assert_eq!(failed.status.code(), Some(1), "{}", stderr(&failed));
+    assert_eq!(
+        json_stdout(&failed)["status"]["step_id"],
+        "install:eefixpack-bg1"
+    );
+
+    // Both resumed install steps extract the WeiDU tool again before running it.
+    let tool = published_extraction(&fixture, &fixture.tool_archive);
+    let extraction_marker = tool.join(".chriz-bg-extraction.json");
+    fs::remove_file(&extraction_marker).expect("remove extraction marker");
+    assert!(tool.join("weidu.exe").is_file());
+
+    let resumed = executable_command(&fixture)
+        .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
+        .args(["--json", "resume", fixture.managed.to_str().unwrap()])
+        .output()
+        .expect("resume synthetic campaign");
+    assert!(
+        resumed.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&resumed),
+        stderr(&resumed)
+    );
+    assert!(extraction_marker.is_file());
+
+    let repairs = fixture.managed.join(".chriz/evidence/cache-repairs");
+    let repaired = fs::read_dir(&repairs)
+        .expect("read recorded cache repairs")
+        .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(repaired, ["weidu"]);
+    let records = fs::read_dir(repairs.join("weidu"))
+        .expect("read recorded WeiDU cache repairs")
+        .map(|entry| entry.unwrap().path())
+        .collect::<Vec<_>>();
+    assert_eq!(records.len(), 1, "{records:?}");
+    let bytes = fs::read(&records[0]).expect("read cache repair record");
+    let record: Value = serde_json::from_slice(&bytes).expect("parse cache repair record");
+    assert_eq!(record["cache"], "extraction");
+    assert_eq!(record["artifact_id"], "weidu");
+    assert_eq!(
+        record["artifact_sha256"],
+        sha256_bytes(&fixture.tool_archive)
+    );
+    let reason = record["reason"].as_str().unwrap();
+    assert!(
+        reason.contains("inspect extraction marker")
+            && reason.contains(".chriz-bg-extraction.json"),
+        "{reason}"
+    );
+    assert!(
+        !reason.contains(&*fixture.cache.to_string_lossy()),
+        "{reason}"
+    );
+}
+
 #[cfg(windows)]
 #[test]
 fn completed_mock_weidu_without_process_result_is_proven_on_resume_without_rerunning() {
@@ -1399,28 +2869,40 @@ fn completed_mock_weidu_without_process_result_is_proven_on_resume_without_rerun
     );
 }
 
+/// Stops the install of eefixpack-bg2 before WeiDU starts. `kind` names the guard that fails, or
+/// is "weidu-executable" for a failure to get the run's WeiDU executable.
 #[cfg(windows)]
 fn blocked_before_spawn_fixture(kind: &str) -> (ExecutableFixture, PathBuf) {
     let fixture = executable_fixture();
     let mut install = executable_command(&fixture);
-    install
-        .env(
+    if kind == "weidu-executable" {
+        install.env("CHRIZ_BG_COLLECTION_TEST_FAIL_TOOL", "eefixpack-bg2");
+    } else {
+        install.env(
             "CHRIZ_BG_COLLECTION_TEST_FAIL_RECHECK",
             format!("{kind}:install:eefixpack-bg2"),
-        )
-        .args(install_args(
-            &fixture.recipe,
-            &fixture.bg1,
-            &fixture.bg2,
-            &fixture.managed,
-            &fixture.cache,
-        ));
+        );
+    }
+    install.args(install_args(
+        &fixture.recipe,
+        &fixture.bg1,
+        &fixture.bg2,
+        &fixture.managed,
+        &fixture.cache,
+    ));
     let output = install
         .output()
         .expect("block synthetic guard before spawn");
     assert_eq!(output.status.code(), Some(1), "{}", stdout(&output));
     let response = json_stdout(&output);
     assert_eq!(response["status"]["step_id"], "install:eefixpack-bg2");
+    if kind == "weidu-executable" {
+        assert!(
+            stdout(&output).contains("simulated failure to get the WeiDU executable"),
+            "{}",
+            stdout(&output)
+        );
+    }
     let replay = SessionStore::open(&fixture.managed)
         .unwrap()
         .replay()
@@ -1439,6 +2921,7 @@ fn blocked_before_spawn_fixture(kind: &str) -> (ExecutableFixture, PathBuf) {
     .unwrap();
     let attempt = step.path().join("attempt-0001");
     assert!(attempt.join("before.log").is_file());
+    assert!(attempt.join("pre-spawn-failure.json").is_file());
     assert!(!attempt.join("process-result.json").exists());
     assert!(!attempt.join("stdout.log").exists());
     assert!(!fixture.managed.join("game/WeiDU.log").exists());
@@ -1477,6 +2960,7 @@ fn pre_spawn_guard_failures_resume_only_the_unstarted_run() {
         ("invocation-build", false),
         ("process-spawn", false),
         ("invocation-build", true),
+        ("weidu-executable", false),
     ] {
         let (fixture, attempt) = blocked_before_spawn_fixture(kind);
         if legacy {
@@ -1640,7 +3124,7 @@ fn launched_run_with_missing_invocation_is_never_classified_as_unstarted() {
 
 #[cfg(windows)]
 #[test]
-fn explicit_relative_tp2_stays_unavailable_without_signed_recipe_evidence() {
+fn explicit_relative_tp2_is_rejected_before_staging_or_freezing() {
     let fixture = executable_fixture();
     let mod_file = fixture.recipe.join("mods/eefixpack.toml");
     let text = fs::read_to_string(&mod_file)
@@ -1663,10 +3147,12 @@ fn explicit_relative_tp2_stays_unavailable_without_signed_recipe_evidence() {
 
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
     let response = json_stdout(&output);
-    assert_eq!(response["error"]["code"], "campaign_failed");
-    assert!(stdout_from_value(&response).contains(
-        "explicit-relative-TP2 invocation is unavailable until the signed recipe schema records separately reviewed compatibility evidence"
-    ));
+    assert_eq!(response["error"]["code"], "installer_launch_unsupported");
+    assert!(stdout_from_value(&response).contains("unsupported explicit-tp2 invocation"));
+    assert!(
+        !fixture.managed.exists(),
+        "must reject before creating the installation"
+    );
 }
 
 #[cfg(windows)]

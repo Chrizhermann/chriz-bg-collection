@@ -8,8 +8,9 @@ options (pick one).
 Decision column is Chris's. Where the pin-list targets a newer version the menu may differ — re-list after upgrade.
 
 This directory indexes the full menus generated for the mods listed below; it is not one
-file per manifest entry because soundsets and pseudo-installers are intentionally outside
-the component UI. The 22 historical single-component local fixes are all covered by the
+file per manifest entry because pseudo-installers and the reference install's other local
+soundsets are intentionally outside the component UI. Christopher's 18 published player
+voicepacks (the `CD_*` catalogs, October 22) are offered, one catalog each. Six third-party catalogs (October 23: NTOTSC, AC_QUEST, BLACKHEARTS, ZG_IWD_VOICES, THALAN, PPE) are offered, optional, unchecked and experimental: the three quest mods under "Quest mods", and since October 25 ZG_IWD_VOICES under "Audio", PPE under "Visuals" and THALAN under "Items". Sirene NPC for BG:EE (SIRENE_BG1, October 29) is offered as a default beside SIRENE_BG2. The 22 historical single-component local fixes are all covered by the
 [collection tail-fix migration inventory](COLLECTION_TAIL_FIXES.md). Every unresolved
 release, installer, and live-acceptance check is indexed separately in
 [curation follow-ups](FOLLOW_UPS.md); detailed evidence stays in each mod catalog.
@@ -51,11 +52,13 @@ or a file-specific UI/dependency note, not in the `Decision` value.
 | AJANTISBG2 | 9 | 1 | [AJANTISBG2.md](AJANTISBG2.md) |
 | SIRENE_BG2 | 9 | 3 | [SIRENE_BG2.md](SIRENE_BG2.md) |
 | ASCENSION | 19 | 16 | [ASCENSION.md](ASCENSION.md) |
-| SPELL_REV | 8 | 7 | [SPELL_REV.md](SPELL_REV.md) |
+| SPELL_REV | 10 | 7 | [SPELL_REV.md](SPELL_REV.md) |
+| SRCB_RR_COMPAT | 1 | 0 | [SRCB_RR_COMPAT.md](SRCB_RR_COMPAT.md) |
 | ARTISANSKITPACK | 59 | 47 | [ARTISANSKITPACK.md](ARTISANSKITPACK.md) |
 | BARDICWONDERS | 26 | 21 | [BARDICWONDERS.md](BARDICWONDERS.md) |
 | ARTISANSKITPACK_NPC | 18 | 6 | [ARTISANSKITPACK_NPC.md](ARTISANSKITPACK_NPC.md) |
 | IWDIFICATION | 23 | 8 | [IWDIFICATION.md](IWDIFICATION.md) |
+| KLATU | 1 | 1 | [KLATU.md](KLATU.md) |
 | IEPBANTERS | 12 | 7 | [IEPBANTERS.md](IEPBANTERS.md) |
 | CROSSMODBG2 | 3 | 3 | [CROSSMODBG2.md](CROSSMODBG2.md) |
 | ARTISANSKITPACK_TWEAK | 17 | 7 | [ARTISANSKITPACK_TWEAK.md](ARTISANSKITPACK_TWEAK.md) |
@@ -68,12 +71,37 @@ or a file-specific UI/dependency note, not in the `Decision` value.
 | AURA_BALANCE_PATCH_SPELLS | 1 | 1 | [AURA_BALANCE_PATCH_SPELLS.md](AURA_BALANCE_PATCH_SPELLS.md) |
 | BG2EE-EET-FIXPACK | 5 | 5 | [BG2EE-EET-FIXPACK.md](BG2EE-EET-FIXPACK.md) |
 | EET_TWEAKS | 64 | 1 | [EET_TWEAKS.md](EET_TWEAKS.md) |
-| CHRIZ-BG-MODPACK | 34 | 4 | [CHRIZ-BG-MODPACK.md](CHRIZ-BG-MODPACK.md) |
+| CHRIZ-BG-MODPACK | 43 | 4 | [CHRIZ-BG-MODPACK.md](CHRIZ-BG-MODPACK.md) |
 | SAFANA | 1 | 1 | [SAFANA.md](SAFANA.md) |
 | AKCB_BERSERKER | 1 | 1 | [AKCB_BERSERKER.md](AKCB_BERSERKER.md) |
-| CHRIZ-SOD-REMIX | 31 | 30 | [CHRIZ-SOD-REMIX.md](CHRIZ-SOD-REMIX.md) |
+| CHRIZ-SOD-REMIX | 40 | 30 | [CHRIZ-SOD-REMIX.md](CHRIZ-SOD-REMIX.md) |
 | EEEXREMOTE | 1 | 1 | [EEEXREMOTE.md](EEEXREMOTE.md) |
-| CHRIZ-BG-REBALANCE | 14 | 10 | [CHRIZ-BG-REBALANCE.md](CHRIZ-BG-REBALANCE.md) |
+| CHRIZ-BG-REBALANCE | 17 | 10 | [CHRIZ-BG-REBALANCE.md](CHRIZ-BG-REBALANCE.md) |
 | BUFFBOT | 2 | 2 | [BUFFBOT.md](BUFFBOT.md) |
 | ABETTORHLAREBALANCE | 1 | 1 | [ABETTORHLAREBALANCE.md](ABETTORHLAREBALANCE.md) |
 | AKCB_SHAPESHIFTER | 1 | 1 | [AKCB_SHAPESHIFTER.md](AKCB_SHAPESHIFTER.md) |
+| CD_NEERA | 1 | 1 | [CD_NEERA.md](CD_NEERA.md) |
+| CD_SAFANA | 1 | 1 | [CD_SAFANA.md](CD_SAFANA.md) |
+| CD_SAFSOD | 1 | 1 | [CD_SAFSOD.md](CD_SAFSOD.md) |
+| CD_JAHEBG1 | 1 | 1 | [CD_JAHEBG1.md](CD_JAHEBG1.md) |
+| CD_JAHEBG2 | 1 | 1 | [CD_JAHEBG2.md](CD_JAHEBG2.md) |
+| CD_YESLICK | 1 | 1 | [CD_YESLICK.md](CD_YESLICK.md) |
+| CD_EDWNBG1 | 1 | 1 | [CD_EDWNBG1.md](CD_EDWNBG1.md) |
+| CD_EDWNBG2 | 1 | 1 | [CD_EDWNBG2.md](CD_EDWNBG2.md) |
+| CD_AERIE | 1 | 1 | [CD_AERIE.md](CD_AERIE.md) |
+| CD_IMOBG1 | 1 | 1 | [CD_IMOBG1.md](CD_IMOBG1.md) |
+| CD_IMOBG2 | 1 | 1 | [CD_IMOBG2.md](CD_IMOBG2.md) |
+| CD_SAREVOK | 1 | 1 | [CD_SAREVOK.md](CD_SAREVOK.md) |
+| CD_AMELY | 1 | 0 | [CD_AMELY.md](CD_AMELY.md) |
+| CD_GROMN | 1 | 0 | [CD_GROMN.md](CD_GROMN.md) |
+| CD_AJANTI | 1 | 1 | [CD_AJANTI.md](CD_AJANTI.md) |
+| CD_VICBG1 | 1 | 0 | [CD_VICBG1.md](CD_VICBG1.md) |
+| CD_VICBG2 | 1 | 0 | [CD_VICBG2.md](CD_VICBG2.md) |
+| CD_GARITH | 1 | 0 | [CD_GARITH.md](CD_GARITH.md) |
+| NTOTSC | 17 | 0 | [NTOTSC.md](NTOTSC.md) |
+| AC_QUEST | 13 | 0 | [AC_QUEST.md](AC_QUEST.md) |
+| BLACKHEARTS | 2 | 0 | [BLACKHEARTS.md](BLACKHEARTS.md) |
+| ZG_IWD_VOICES | 1 | 0 | [ZG_IWD_VOICES.md](ZG_IWD_VOICES.md) |
+| THALAN | 1 | 0 | [THALAN.md](THALAN.md) |
+| PPE | 21 | 0 | [PPE.md](PPE.md) |
+| SIRENE_BG1 | 10 | 0 | [SIRENE_BG1.md](SIRENE_BG1.md) |

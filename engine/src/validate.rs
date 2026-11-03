@@ -6,8 +6,9 @@ use std::path::{Component as PathComponent, Path};
 
 use crate::error::EngineError;
 use crate::manifest::{
-    AcquisitionPolicy, Artifact, ComponentRef, Decision, GameRoot, InputSpec, InvocationMode,
-    PeMachine, Phase, Postcondition, PromptAnswer, Readiness, Source, SourceKind,
+    AcquisitionPolicy, Artifact, ComponentRef, Decision, Feature, FeatureGroup, GameRoot,
+    InputSpec, InvocationMode, PeMachine, Phase, Postcondition, PromptAnswer, Readiness, Source,
+    SourceKind, MAX_CONFIG_FILE_BYTES,
 };
 use crate::postcondition::{
     is_safe_normalized_relative_path, marker_len_exceeds, MAX_TEXT_FILE_MARKER_BYTES,
@@ -64,6 +65,8 @@ pub const RULE_BLOCKED_ARTIFACTS: &str = "blocked-artifacts";
 pub const RULE_PATHS: &str = "paths";
 /// Rule requiring run postconditions to be safe, bounded, and meaningful.
 pub const RULE_RUN_POSTCONDITIONS: &str = "run-postconditions";
+/// Rule requiring component configuration files to be bounded text inside their mod's folder.
+pub const RULE_COMPONENT_CONFIG_FILES: &str = "component-config-files";
 /// Rule preventing setup-name aliases from selecting the same TP2 implicitly.
 pub const RULE_SETUP_NAME_AMBIGUITY: &str = "setup-name-ambiguity";
 /// Rule preventing one installer component from running twice against one game root.
@@ -106,6 +109,19 @@ pub const RULE_FEATURE_INPUTS: &str = "feature-inputs";
 pub const RULE_PROMPT_INPUT_REFERENCES: &str = "prompt-input-references";
 /// Rule requiring visible blocked features to explain why they are unavailable.
 pub const RULE_FEATURE_READINESS: &str = "feature-readiness";
+/// Rule requiring feature group ids to be unique kebab-case identifiers.
+pub const RULE_FEATURE_GROUP_IDS: &str = "feature-group-ids";
+/// Rule requiring feature groups to have a title, a description, and members.
+pub const RULE_FEATURE_GROUP_CONTENT: &str = "feature-group-content";
+/// Rule requiring group members to be unique, existing, and in at most one group.
+pub const RULE_FEATURE_GROUP_MEMBERS: &str = "feature-group-members";
+/// Rule requiring group members to be independent optional features.
+pub const RULE_FEATURE_GROUP_MEMBER_DECISIONS: &str = "feature-group-member-decisions";
+/// Rule forbidding conflicts between the features one group switches on, in either direction.
+pub const RULE_FEATURE_GROUP_MEMBER_CONFLICTS: &str = "feature-group-member-conflicts";
+/// Rule requiring each group variant to pick a non-default option of a switchable choice
+/// group, with at most one group setting a variant for any choice group.
+pub const RULE_FEATURE_GROUP_VARIANTS: &str = "feature-group-variants";
 
 /// Runs the currently defined recipe validation rules in stable order.
 pub fn validate(manifest: &Manifest) -> Vec<Finding> {
@@ -117,6 +133,7 @@ pub fn validate(manifest: &Manifest) -> Vec<Finding> {
     check_blocked_artifacts(manifest, &mut findings);
     check_paths(manifest, &mut findings);
     check_run_postconditions(manifest, &mut findings);
+    check_component_config_files(manifest, &mut findings);
     check_setup_name_ambiguity(manifest, &mut findings);
     check_component_ids(manifest, &mut findings);
     check_component_placement(manifest, &mut findings);
@@ -136,6 +153,7 @@ pub fn validate(manifest: &Manifest) -> Vec<Finding> {
     check_feature_inputs(manifest, &mut findings);
     check_prompt_input_references(manifest, &mut findings);
     check_feature_readiness(manifest, &mut findings);
+    check_feature_groups(manifest, &mut findings);
     findings
 }
 
@@ -257,6 +275,77 @@ fn check_run_postconditions(manifest: &Manifest, findings: &mut Vec<Finding>) {
                             ),
                         );
                     }
+                }
+            }
+        }
+    }
+}
+
+fn check_component_config_files(manifest: &Manifest, findings: &mut Vec<Finding>) {
+    // Windows paths ignore case, so each file has exactly one declaration in the recipe.
+    let mut owners: BTreeMap<String, (&str, u32)> = BTreeMap::new();
+    for (mod_id, mod_file) in &manifest.mods {
+        let publish_roots = manifest
+            .artifacts
+            .get(&mod_file.artifact_id)
+            .map(|artifact| artifact.archive.publish_roots.as_slice())
+            .unwrap_or_default();
+        for component in &mod_file.components {
+            for file in &component.config_files {
+                let subject = format!(
+                    "installer {mod_id:?} component {} config file {:?}",
+                    component.id, file.path
+                );
+                if !is_safe_normalized_relative_path(&file.path) {
+                    error(
+                        findings,
+                        RULE_COMPONENT_CONFIG_FILES,
+                        format!("{subject} must be a normalized portable target-relative path"),
+                    );
+                } else if !publish_roots.iter().any(|root| {
+                    file.path
+                        .strip_prefix(root.as_str())
+                        .is_some_and(|rest| rest.starts_with('/'))
+                }) {
+                    error(
+                        findings,
+                        RULE_COMPONENT_CONFIG_FILES,
+                        format!(
+                            "{subject} must be inside a folder that artifact {:?} publishes",
+                            mod_file.artifact_id
+                        ),
+                    );
+                }
+                if file.content.is_empty() || file.content.len() > MAX_CONFIG_FILE_BYTES {
+                    error(
+                        findings,
+                        RULE_COMPONENT_CONFIG_FILES,
+                        format!(
+                            "{subject} must contain between 1 and {MAX_CONFIG_FILE_BYTES} bytes"
+                        ),
+                    );
+                }
+                if file.content.chars().any(|character| {
+                    character.is_control() && !matches!(character, '\t' | '\n' | '\r')
+                }) {
+                    error(
+                        findings,
+                        RULE_COMPONENT_CONFIG_FILES,
+                        format!(
+                            "{subject} must be text without control characters other than tabs and line breaks"
+                        ),
+                    );
+                }
+                if let Some((first_mod, first_component)) =
+                    owners.insert(file.path.to_ascii_lowercase(), (mod_id, component.id))
+                {
+                    error(
+                        findings,
+                        RULE_COMPONENT_CONFIG_FILES,
+                        format!(
+                            "{subject} is also declared by installer {first_mod:?} component {first_component}"
+                        ),
+                    );
                 }
             }
         }
@@ -1226,6 +1315,12 @@ fn check_feature_references(manifest: &Manifest, findings: &mut Vec<Finding>) {
             )
             .chain(
                 feature
+                    .requires_any
+                    .iter()
+                    .map(|target| ("alternative requirement", target)),
+            )
+            .chain(
+                feature
                     .conflicts
                     .iter()
                     .map(|conflict| ("conflict", &conflict.feature_id)),
@@ -1270,6 +1365,7 @@ fn check_feature_cycles(manifest: &Manifest, findings: &mut Vec<Finding>) {
                 .parent
                 .iter()
                 .chain(feature.requires.iter())
+                .chain(feature.requires_any.iter())
                 .map(String::as_str)
                 .collect::<Vec<_>>();
             (feature.id.as_str(), edges)
@@ -1493,4 +1589,278 @@ fn check_feature_readiness(manifest: &Manifest, findings: &mut Vec<Finding>) {
             }
         }
     }
+}
+
+fn is_kebab_case_id(value: &str) -> bool {
+    !value.is_empty()
+        && value.split('-').all(|part| {
+            !part.is_empty()
+                && part
+                    .bytes()
+                    .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())
+        })
+}
+
+fn check_feature_groups(manifest: &Manifest, findings: &mut Vec<Finding>) {
+    let features = manifest
+        .collection
+        .features
+        .iter()
+        .map(|feature| (feature.id.as_str(), feature))
+        .collect::<BTreeMap<_, _>>();
+    let mut choice_options = BTreeMap::<&str, Vec<&Feature>>::new();
+    for feature in &manifest.collection.features {
+        if let Some(choice_group) = feature.choice_group.as_deref() {
+            choice_options
+                .entry(choice_group)
+                .or_default()
+                .push(feature);
+        }
+    }
+    let mut group_ids = BTreeSet::new();
+    let mut member_owner = BTreeMap::<&str, &str>::new();
+    let mut variant_owner = BTreeMap::<&str, &str>::new();
+    for group in &manifest.collection.feature_groups {
+        if !is_kebab_case_id(&group.id) {
+            error(
+                findings,
+                RULE_FEATURE_GROUP_IDS,
+                format!(
+                    "feature group id {:?} must be lowercase kebab-case (a-z, 0-9 and single hyphens)",
+                    group.id
+                ),
+            );
+        }
+        if !group_ids.insert(group.id.as_str()) {
+            error(
+                findings,
+                RULE_FEATURE_GROUP_IDS,
+                format!("feature group id {:?} is declared more than once", group.id),
+            );
+        }
+        for (field, value) in [("title", &group.title), ("description", &group.description)] {
+            if value.trim().is_empty() {
+                error(
+                    findings,
+                    RULE_FEATURE_GROUP_CONTENT,
+                    format!("feature group {:?} must have a nonempty {field}", group.id),
+                );
+            }
+        }
+        if group.members.is_empty() && group.variants.is_empty() {
+            error(
+                findings,
+                RULE_FEATURE_GROUP_CONTENT,
+                format!(
+                    "feature group {:?} must list at least one member or variant",
+                    group.id
+                ),
+            );
+        }
+        let mut members = BTreeSet::new();
+        for member in &group.members {
+            if !members.insert(member.as_str()) {
+                error(
+                    findings,
+                    RULE_FEATURE_GROUP_MEMBERS,
+                    format!(
+                        "feature group {:?} lists member {member:?} more than once",
+                        group.id
+                    ),
+                );
+                continue;
+            }
+            if let Some(owner) = member_owner.insert(member.as_str(), group.id.as_str()) {
+                error(
+                    findings,
+                    RULE_FEATURE_GROUP_MEMBERS,
+                    format!(
+                        "feature {member:?} belongs to both feature groups {owner:?} and {:?}",
+                        group.id
+                    ),
+                );
+            }
+            let Some(feature) = features.get(member.as_str()) else {
+                error(
+                    findings,
+                    RULE_FEATURE_GROUP_MEMBERS,
+                    format!(
+                        "feature group {:?} references unknown feature {member:?}",
+                        group.id
+                    ),
+                );
+                continue;
+            };
+            if feature.decision != Decision::Optional {
+                error(
+                    findings,
+                    RULE_FEATURE_GROUP_MEMBER_DECISIONS,
+                    format!(
+                        "feature group {:?} member {member:?} must be an optional feature, not {}",
+                        group.id,
+                        format!("{:?}", feature.decision).to_lowercase()
+                    ),
+                );
+            }
+            if feature.choice_group.is_some() {
+                error(
+                    findings,
+                    RULE_FEATURE_GROUP_MEMBER_DECISIONS,
+                    format!(
+                        "feature group {:?} member {member:?} cannot belong to a choice group",
+                        group.id
+                    ),
+                );
+            }
+        }
+        let variant_options = check_feature_group_variants(
+            group,
+            &features,
+            &choice_options,
+            &mut variant_owner,
+            findings,
+        );
+        // Switching a group on requests every member and variant option at once; conflicting
+        // ones would then disable each other and leave the group off with no way to turn it on.
+        let requested = members
+            .iter()
+            .copied()
+            .chain(variant_options.iter().copied())
+            .collect::<BTreeSet<_>>();
+        let mut conflicting_pairs = BTreeSet::new();
+        for requested_id in &requested {
+            let Some(feature) = features.get(requested_id) else {
+                continue;
+            };
+            for conflict in &feature.conflicts {
+                let other = conflict.feature_id.as_str();
+                if other != *requested_id && requested.contains(other) {
+                    conflicting_pairs.insert(if *requested_id < other {
+                        (*requested_id, other)
+                    } else {
+                        (other, *requested_id)
+                    });
+                }
+            }
+        }
+        for (first, second) in conflicting_pairs {
+            let changes = if members.contains(first) && members.contains(second) {
+                format!("members {first:?} and {second:?}")
+            } else {
+                let kind = |id: &str| {
+                    if members.contains(id) {
+                        "member"
+                    } else {
+                        "variant option"
+                    }
+                };
+                format!("{} {first:?} and {} {second:?}", kind(first), kind(second))
+            };
+            error(
+                findings,
+                RULE_FEATURE_GROUP_MEMBER_CONFLICTS,
+                format!(
+                    "feature group {:?} {changes} conflict with each other; switching the group on would disable both",
+                    group.id
+                ),
+            );
+        }
+    }
+}
+
+/// Validates one group's variants and returns the options the group may pick.
+///
+/// A variant names an existing choice group and one of its options that differs from the
+/// recipe default. No option of that choice group may be mandatory, because the group must be
+/// able to deselect every alternative, and at most one variant across all groups may set a
+/// given choice group.
+fn check_feature_group_variants<'a>(
+    group: &'a FeatureGroup,
+    features: &BTreeMap<&'a str, &'a Feature>,
+    choice_options: &BTreeMap<&'a str, Vec<&'a Feature>>,
+    variant_owner: &mut BTreeMap<&'a str, &'a str>,
+    findings: &mut Vec<Finding>,
+) -> Vec<&'a str> {
+    let mut picked = Vec::new();
+    for variant in &group.variants {
+        let choice_group = variant.choice_group.as_str();
+        if variant
+            .label
+            .as_deref()
+            .is_some_and(|label| label.trim().is_empty())
+        {
+            error(
+                findings,
+                RULE_FEATURE_GROUP_CONTENT,
+                format!(
+                    "feature group {:?} variant for choice group {choice_group:?} has an empty label; omit it to show the option title",
+                    group.id
+                ),
+            );
+        }
+        let mut problems = Vec::new();
+        if let Some(owner) = variant_owner.insert(choice_group, group.id.as_str()) {
+            problems.push(if owner == group.id {
+                format!(
+                    "feature group {:?} sets a variant for choice group {choice_group:?} more than once",
+                    group.id
+                )
+            } else {
+                format!(
+                    "choice group {choice_group:?} has variants in both feature groups {owner:?} and {:?}",
+                    group.id
+                )
+            });
+        }
+        match choice_options.get(choice_group) {
+            None => problems.push(format!(
+                "feature group {:?} variant names unknown choice group {choice_group:?}",
+                group.id
+            )),
+            Some(options) if options.len() < 2 => problems.push(format!(
+                "feature group {:?} variant names choice group {choice_group:?}, which has only one option",
+                group.id
+            )),
+            Some(options) => {
+                for option in options {
+                    if option.decision == Decision::Mandatory {
+                        problems.push(format!(
+                            "feature group {:?} cannot switch choice group {choice_group:?}: option {:?} is mandatory",
+                            group.id, option.id
+                        ));
+                    }
+                }
+            }
+        }
+        match features.get(variant.option.as_str()) {
+            None => problems.push(format!(
+                "feature group {:?} variant references unknown feature {:?}",
+                group.id, variant.option
+            )),
+            Some(option) if option.choice_group.as_deref() != Some(choice_group) => {
+                problems.push(format!(
+                    "feature group {:?} variant option {:?} is not an option of choice group {choice_group:?}",
+                    group.id, variant.option
+                ));
+            }
+            Some(option) if option.decision == Decision::Default => problems.push(format!(
+                "feature group {:?} variant option {:?} is the recipe default of choice group {choice_group:?}; a variant must pick a different option",
+                group.id, variant.option
+            )),
+            Some(option) if option.decision != Decision::Optional => problems.push(format!(
+                "feature group {:?} variant option {:?} must be an optional feature, not {}",
+                group.id,
+                variant.option,
+                format!("{:?}", option.decision).to_lowercase()
+            )),
+            Some(_) => {}
+        }
+        if problems.is_empty() {
+            picked.push(variant.option.as_str());
+        }
+        for problem in problems {
+            error(findings, RULE_FEATURE_GROUP_VARIANTS, problem);
+        }
+    }
+    picked
 }

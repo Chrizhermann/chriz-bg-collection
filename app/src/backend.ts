@@ -1,4 +1,5 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
+import { decodeOperationProgress } from "./operation-feedback";
 
 import type {
   BackendStatus,
@@ -6,18 +7,32 @@ import type {
   CommandErrorPayload,
   DestinationEvaluation,
   FeatureControl,
+  FeatureGroup,
+  FeatureGroupVariant,
   FixtureOptions,
   FrozenReview,
   Freshness,
   GameCandidate,
   GameDiscovery,
+  GameLogFile,
+  GameLogStatus,
   GameRole,
   InstallationDefaults,
+  InstallationRemovalPreview,
+  InstallationRemovalResult,
+  LaunchInstallResult,
   InstalledComponent,
+  InstalledUpdatePlan,
   ManualArchiveSupply,
   ManualDownloadRequirement,
+  ManualBreakpoint,
+  ManualCheckpointOption,
+  ManualCheckpointStatus,
   ManagedInstallation,
+  ModUpgradePreview,
+  OperationProgress,
   NormalizedSelection,
+  PatchPreview,
   PhaseSummary,
   RunEventEnvelope,
   RunSnapshot,
@@ -46,7 +61,12 @@ export interface Backend {
     destination: string,
     bg1CandidateId: string,
     bg2CandidateId: string,
+    manualBreakpoints?: readonly ManualBreakpoint[],
   ): Promise<FrozenReview>;
+  getManualCheckpoint?(installId: string): Promise<ManualCheckpointStatus | null>;
+  checkManualCheckpoint?(installId: string): Promise<ManualCheckpointStatus>;
+  acceptManualCheckpoint?(installId: string, reviewToken: string, acceptAdditions: boolean): Promise<void>;
+  openManualCheckpointFolder?(installId: string): Promise<void>;
   startBuild(reviewToken: string, onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse>;
   resumeBuild(installId: string, onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse>;
   supplyManualArchive(artifactId: string): Promise<ManualArchiveSupply | null>;
@@ -60,13 +80,28 @@ export interface Backend {
   retryBuild(): Promise<BuildSnapshot>;
   exportDiagnostics(installId: string): Promise<{ readonly path: string } | null>;
   listManagedInstallations(): Promise<ManagedInstallation[]>;
-  launchInstall(installId: string): Promise<void>;
+  renameInstallation?(installId: string, name: string): Promise<{ readonly name: string }>;
+  previewInstallationRemoval(installId: string): Promise<InstallationRemovalPreview>;
+  removeInstallation(installId: string, confirmationToken: string): Promise<InstallationRemovalResult>;
+  launchInstall(installId: string, startRadar: boolean): Promise<LaunchInstallResult>;
+  /** Reads only: whether the game writes its log for crash reports, and where the evidence is. */
+  gameLogStatus?(installId: string): Promise<GameLogStatus>;
+  /** Turns the game log on or off for the next game start. */
+  setGameLog?(installId: string, enabled: boolean): Promise<GameLogStatus>;
   openInstallFolder(installId: string): Promise<void>;
   createDesktopShortcut(installId: string): Promise<{ readonly path: string }>;
   installRadar(installId: string): Promise<void>;
   getUpdates(): Promise<UpdateSummary>;
-  installAppUpdate(version: string): Promise<void>;
+  installAppUpdate(version: string, onProgress?: (progress: OperationProgress) => void): Promise<void>;
   activateRecipeUpdate(version: string): Promise<void>;
+  inspectInstalledUpdate?(installId: string): Promise<InstalledUpdatePlan>;
+  inspectModUpgrade?(installId: string): Promise<ModUpgradePreview>;
+  applyModUpgrade?(installId: string, reviewToken: string, fullBackup: boolean, backupSaves: boolean, onProgress?: (progress: OperationProgress) => void): Promise<ModUpgradePreview>;
+  restoreModUpgrade?(installId: string, undo: boolean, onProgress?: (progress: OperationProgress) => void): Promise<ModUpgradePreview>;
+  inspectInstallPatches?(installId: string): Promise<PatchPreview>;
+  applyInstallPatch?(installId: string, reviewToken: string, fullBackup: boolean, saveBackup: boolean, onProgress?: (progress: OperationProgress) => void): Promise<PatchPreview>;
+  undoInstallPatch?(installId: string, onProgress?: (progress: OperationProgress) => void): Promise<PatchPreview>;
+  restoreInstallPatch?(installId: string, onProgress?: (progress: OperationProgress) => void): Promise<PatchPreview>;
 }
 
 export type InvokeCommand = (
@@ -104,18 +139,52 @@ type GameDiscoveryWire = {
   readonly selected_bg2_id: string;
 };
 
-type FeatureControlWire = Omit<FeatureControl, "unavailableReason" | "sourceLabel" | "groupLabel" | "choiceGroup" | "choiceAvailable"> & {
+type FeatureControlWire = Omit<FeatureControl, "unavailableReason" | "sourceLabel" | "groupLabel" | "choiceGroup" | "choiceAvailable" | "requiresAny"> & {
   readonly unavailable_reason: string | null;
   readonly source_label?: string | null;
   readonly group_label?: string | null;
   readonly choice_group?: string | null;
   readonly choice_available?: boolean | null;
+  readonly requires_any?: readonly string[];
+};
+
+type FeatureGroupWire = {
+  readonly id: string;
+  readonly title: string;
+  readonly description: string;
+  readonly members: readonly string[];
+  readonly variants?: readonly {
+    readonly choice_group: string;
+    readonly option: string;
+    readonly label: string;
+    readonly options: readonly string[];
+    readonly recipe_default: readonly string[];
+  }[];
+};
+
+type FeatureGroupStateWire = {
+  readonly id: string;
+  readonly state: FeatureGroup["state"];
+  readonly selected_members: readonly string[];
+  readonly available_members: readonly string[];
+  readonly unavailable_members: readonly { readonly feature_id: string; readonly reason: string }[];
+  readonly variants?: readonly {
+    readonly choice_group: string;
+    readonly option: string;
+    readonly selected: boolean;
+    readonly available: boolean;
+    readonly unavailable_reason?: string | null;
+  }[];
+  readonly disabled_reason?: string | null;
 };
 
 type SelectionEvaluationWire = {
+  readonly manual_checkpoint_options?: readonly ManualCheckpointOption[];
+  readonly groups?: readonly FeatureGroupStateWire[];
   readonly view: {
     readonly categories: readonly string[];
     readonly controls: readonly FeatureControlWire[];
+    readonly groups?: readonly FeatureGroupWire[];
   };
   readonly normalized_selection: NormalizedSelection;
   readonly findings: readonly {
@@ -164,6 +233,7 @@ type ManualDownloadRequirementWire = {
 };
 
 type ManagedInstallationWire = {
+  readonly customized?: boolean;
   readonly id: string;
   readonly name: string;
   readonly path: string;
@@ -173,6 +243,7 @@ type ManagedInstallationWire = {
   readonly completed_at_millis: number | null;
   readonly available: boolean;
   readonly resumable: boolean;
+  readonly patch_recovery_needed?: boolean;
   readonly recipe_version?: string | null;
   readonly radar_version?: string | null;
   readonly consistency?: {
@@ -185,6 +256,7 @@ type ManagedInstallationWire = {
 };
 
 type UpdateSummaryWire = {
+  readonly lookup_trace_enabled?: boolean;
   readonly checked_at: string | null;
   readonly network_state: UpdateSummary["networkState"];
   readonly application: {
@@ -280,14 +352,58 @@ function projectCandidate(candidate: GameCandidateWire): GameCandidate {
   return candidate;
 }
 
+function projectFeatureGroups(evaluation: SelectionEvaluationWire): FeatureGroup[] {
+  const states = new Map((evaluation.groups ?? []).map(state => [state.id, state]));
+  return (evaluation.view.groups ?? []).flatMap((group) => {
+    const state = states.get(group.id);
+    if (!state) return [];
+    // A group whose variant states don't match its authored variants is left out like a group
+    // without state, rather than shown half-switched.
+    const authoredVariants = group.variants ?? [];
+    const stateVariants = state.variants ?? [];
+    if (stateVariants.length !== authoredVariants.length) return [];
+    const variantStates = new Map(stateVariants.map(variant => [variant.choice_group, variant]));
+    const variants: FeatureGroupVariant[] = [];
+    for (const variant of authoredVariants) {
+      const variantState = variantStates.get(variant.choice_group);
+      if (!variantState || variantState.option !== variant.option) return [];
+      variants.push({
+        choiceGroup: variant.choice_group,
+        option: variant.option,
+        label: variant.label,
+        options: variant.options,
+        recipeDefault: variant.recipe_default,
+        selected: variantState.selected,
+        available: variantState.available,
+        unavailableReason: variantState.unavailable_reason ?? null,
+      });
+    }
+    return [{
+      id: group.id,
+      title: group.title,
+      description: group.description,
+      members: group.members,
+      state: state.state,
+      selectedMembers: state.selected_members,
+      availableMembers: state.available_members,
+      unavailableMembers: state.unavailable_members.map(member => ({ featureId: member.feature_id, reason: member.reason })),
+      disabledReason: state.disabled_reason ?? null,
+      ...(variants.length === 0 ? {} : { variants }),
+    }];
+  });
+}
+
 function projectEvaluation(evaluation: SelectionEvaluationWire): SelectionEvaluation {
+  const featureGroups = projectFeatureGroups(evaluation);
   return {
+    ...(evaluation.manual_checkpoint_options === undefined ? {} : { manualCheckpointOptions: evaluation.manual_checkpoint_options }),
+    ...(featureGroups.length === 0 ? {} : { featureGroups }),
     view: {
       categories: evaluation.view.categories,
       controls: evaluation.view.controls.map((control) => {
         const { unavailable_reason: unavailableReason, source_label: sourceLabel, group_label: groupLabel,
-          choice_group: choiceGroup, choice_available: choiceAvailable, ...rest } = control;
-        return { ...rest, unavailableReason, sourceLabel, groupLabel, choiceGroup, choiceAvailable };
+          choice_group: choiceGroup, choice_available: choiceAvailable, requires_any: requiresAny, ...rest } = control;
+        return { ...rest, unavailableReason, sourceLabel, groupLabel, choiceGroup, choiceAvailable, requiresAny };
       }),
     },
     normalizedSelection: evaluation.normalized_selection,
@@ -398,6 +514,7 @@ export class NativeBackend implements Backend {
     destination: string,
     bg1CandidateId: string,
     bg2CandidateId: string,
+    manualBreakpoints?: readonly ManualBreakpoint[],
   ): Promise<FrozenReview> {
     const review = await this.#command<FrozenReviewWire>("freeze_review", {
       displayName,
@@ -405,6 +522,7 @@ export class NativeBackend implements Backend {
       destination,
       bg1CandidateId,
       bg2CandidateId,
+      ...(manualBreakpoints?.length ? { manualBreakpoints } : {}),
     });
     return {
       reviewToken: review.review_token,
@@ -420,6 +538,22 @@ export class NativeBackend implements Backend {
     const onEventChannel = this.#eventChannel((event) => onEvent(projectRunEvent(event as RunEventEnvelopeWire)));
     const started = await this.#command<StartBuildWire>("start_build", { reviewToken, onEvent: onEventChannel });
     return { runId: started.run_id };
+  }
+
+  getManualCheckpoint(installId: string): Promise<ManualCheckpointStatus | null> {
+    return this.#command("get_manual_checkpoint", { installId });
+  }
+
+  checkManualCheckpoint(installId: string): Promise<ManualCheckpointStatus> {
+    return this.#command("check_manual_checkpoint", { installId });
+  }
+
+  acceptManualCheckpoint(installId: string, reviewToken: string, acceptAdditions: boolean): Promise<void> {
+    return this.#command("accept_manual_checkpoint", { installId, reviewToken, acceptAdditions });
+  }
+
+  openManualCheckpointFolder(installId: string): Promise<void> {
+    return this.#command("open_manual_checkpoint_folder", { installId });
   }
 
   async resumeBuild(installId: string, onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse> {
@@ -489,6 +623,7 @@ export class NativeBackend implements Backend {
       completed_at_millis: completedAtMillis,
       recipe_version: recipeVersion,
       radar_version: radarVersion,
+      patch_recovery_needed: patchRecoveryNeeded,
       consistency,
       ...installation
     }) => ({
@@ -498,6 +633,7 @@ export class NativeBackend implements Backend {
       completedAtMillis,
       recipeVersion,
       radarVersion,
+      patchRecoveryNeeded,
       consistency: consistency == null ? undefined : {
         state: consistency.state,
         detail: consistency.detail,
@@ -508,8 +644,24 @@ export class NativeBackend implements Backend {
     }));
   }
 
-  async launchInstall(installId: string): Promise<void> {
-    await this.#command("launch_install", { installId });
+  launchInstall(installId: string, startRadar: boolean): Promise<LaunchInstallResult> {
+    return this.#command("launch_install", { installId, startRadar });
+  }
+
+  gameLogStatus(installId: string): Promise<GameLogStatus> {
+    return this.#command("game_log_status", { installId });
+  }
+
+  setGameLog(installId: string, enabled: boolean): Promise<GameLogStatus> {
+    return this.#command("set_game_log", { installId, enabled });
+  }
+
+  previewInstallationRemoval(installId: string): Promise<InstallationRemovalPreview> {
+    return this.#command("preview_installation_removal", { installId });
+  }
+
+  removeInstallation(installId: string, confirmationToken: string): Promise<InstallationRemovalResult> {
+    return this.#command("remove_installation", { installId, confirmationToken });
   }
 
   async openInstallFolder(installId: string): Promise<void> {
@@ -526,6 +678,15 @@ export class NativeBackend implements Backend {
 
   async getUpdates(): Promise<UpdateSummary> {
     const update = await this.#command<UpdateSummaryWire>("check_updates");
+    if (update.lookup_trace_enabled) {
+      // Local diagnostic builds only. A logging failure must not block Updates.
+      void this.#command("record_install_lookup_client", { report: {
+        checked_at: update.checked_at,
+        copies: update.managed_copies.map(copy => ({
+          install_id: copy.install_id, name: copy.name, path: copy.path, state: copy.state,
+        })),
+      } }).catch(() => undefined);
+    }
     return {
       checkedAt: update.checked_at,
       networkState: update.network_state,
@@ -568,12 +729,59 @@ export class NativeBackend implements Backend {
     };
   }
 
-  async installAppUpdate(version: string): Promise<void> {
-    await this.#command("install_app_update", { version });
+  async installAppUpdate(version: string, onProgress?: (progress: OperationProgress) => void): Promise<void> {
+    await this.#commandWithProgress("install_app_update", { version }, onProgress);
+  }
+
+  renameInstallation(installId: string, name: string): Promise<{ readonly name: string }> {
+    return this.#command("rename_installation", { installId, name });
   }
 
   async activateRecipeUpdate(version: string): Promise<void> {
     await this.#command("activate_recipe_update", { version });
+  }
+
+  inspectInstallPatches(installId: string): Promise<PatchPreview> {
+    return this.#command("inspect_install_patches", { installId });
+  }
+
+  inspectInstalledUpdate(installId: string): Promise<InstalledUpdatePlan> {
+    return this.#command("inspect_installed_update", { installId });
+  }
+
+  inspectModUpgrade(installId: string): Promise<ModUpgradePreview> {
+    return this.#command("inspect_mod_upgrade", { installId });
+  }
+
+  applyModUpgrade(installId: string, reviewToken: string, fullBackup: boolean, backupSaves: boolean, onProgress?: (progress: OperationProgress) => void): Promise<ModUpgradePreview> {
+    return this.#commandWithProgress("apply_mod_upgrade", { installId, reviewToken, fullBackup, backupSaves }, onProgress);
+  }
+
+  restoreModUpgrade(installId: string, undo: boolean, onProgress?: (progress: OperationProgress) => void): Promise<ModUpgradePreview> {
+    return this.#commandWithProgress("restore_mod_upgrade", { installId, undo }, onProgress);
+  }
+
+  applyInstallPatch(installId: string, reviewToken: string, fullBackup: boolean, saveBackup: boolean, onProgress?: (progress: OperationProgress) => void): Promise<PatchPreview> {
+    return this.#commandWithProgress("apply_install_patch", { installId, reviewToken, fullBackup, saveBackup }, onProgress);
+  }
+
+  undoInstallPatch(installId: string, onProgress?: (progress: OperationProgress) => void): Promise<PatchPreview> {
+    return this.#commandWithProgress("undo_install_patch", { installId }, onProgress);
+  }
+
+  restoreInstallPatch(installId: string, onProgress?: (progress: OperationProgress) => void): Promise<PatchPreview> {
+    return this.#commandWithProgress("restore_install_patch", { installId }, onProgress);
+  }
+
+  async #commandWithProgress<T>(command: string, args: Record<string, unknown>, onProgress?: (progress: OperationProgress) => void): Promise<T> {
+    if (!onProgress) return this.#command(command, args);
+    let active = true;
+    const channel = this.#eventChannel((event) => {
+      const progress = decodeOperationProgress(event);
+      if (active && progress) onProgress(progress);
+    });
+    try { return await this.#command(command, { ...args, onProgress: channel }); }
+    finally { active = false; }
   }
 
   async #command<T>(command: string, args?: Record<string, unknown>): Promise<T> {
@@ -614,6 +822,13 @@ function wait(milliseconds: number): Promise<void> {
 }
 
 export class FixtureBackend implements Backend {
+  readonly #patches = new Map<string, PatchPreview>();
+  readonly #modUpgrades = new Map<string, ModUpgradePreview>();
+  /** Installations whose game log is on. */
+  readonly #gameLogs = new Set<string>();
+  #patchReviewSequence = 0;
+  readonly #removedInstallations = new Set<string>();
+  readonly #removalTokens = new Map<string, string>();
   readonly #options: FixtureOptions;
   #evaluationCall = 0;
   #buildIndex = 0;
@@ -788,9 +1003,9 @@ export class FixtureBackend implements Backend {
 
   listManagedInstallations(): Promise<ManagedInstallation[]> {
     if (this.#options.managedInstallations !== undefined) {
-      return Promise.resolve([...this.#options.managedInstallations]);
+      return Promise.resolve(this.#options.managedInstallations.filter((install) => !this.#removedInstallations.has(install.id)));
     }
-    if (this.#buildIndex < 4) return Promise.resolve([]);
+    if (this.#buildIndex < 4 || this.#removedInstallations.has("fixture-install")) return Promise.resolve([]);
     return Promise.resolve([{
       id: "fixture-install",
       name: this.#options.textOverrides?.campaignName ?? "Chriz Easy BG",
@@ -804,8 +1019,49 @@ export class FixtureBackend implements Backend {
     }]);
   }
 
-  launchInstall(_installId: string): Promise<void> {
-    return Promise.resolve();
+  launchInstall(installId: string, startRadar: boolean): Promise<LaunchInstallResult> {
+    return Promise.resolve({ installId, radar: {
+      state: startRadar ? "started" : "not-requested", detail: null, technicalDetail: null,
+    }, gameSettings: { state: "unchanged", technicalDetail: null },
+    gameLog: { state: this.#gameLogs.has(installId) ? "kept" : "not-enabled", technicalDetail: null } });
+  }
+
+  async gameLogStatus(installId: string): Promise<GameLogStatus> {
+    const installation = (await this.listManagedInstallations()).find((copy) => copy.id === installId && copy.available);
+    if (!installation) throw new Error("Unknown fixture installation.");
+    const game = `${installation.path}\\game`;
+    const enabled = this.#gameLogs.has(installId);
+    const file = (name: string, present: boolean): GameLogFile => ({
+      path: `${game}\\${name}`, state: present ? "present" : "missing", sizeBytes: present ? "1048576" : null,
+      modifiedAtMillis: present ? 1_788_451_200_000 : null, detail: null,
+    });
+    return { installId, setting: enabled ? "on" : "off", detail: null, log: file("InfinityLoader.log", enabled),
+      previousLog: file("InfinityLoader-previous.log", false), crashFolder: `${game}\\InfinityLoader_Crash`, crashReports: 0 };
+  }
+
+  async setGameLog(installId: string, enabled: boolean): Promise<GameLogStatus> {
+    await this.gameLogStatus(installId);
+    if (enabled) this.#gameLogs.add(installId);
+    else this.#gameLogs.delete(installId);
+    return this.gameLogStatus(installId);
+  }
+
+  async previewInstallationRemoval(installId: string): Promise<InstallationRemovalPreview> {
+    const install = (await this.listManagedInstallations()).find((entry) => entry.id === installId);
+    if (!install) throw new Error("Unknown installation.");
+    const token = `fixture-remove-${install.id}-${this.#removalTokens.size}`;
+    this.#removalTokens.set(token, install.id);
+    return { installId, displayName: install.name, managedRoot: install.path,
+      action: install.status.toLowerCase().includes("folder moved") || install.status.toLowerCase().includes("not found") ? "forget" : "delete",
+      preservedSavePath: "C:\\Users\\Player\\Documents\\Chriz Easy BG", confirmationToken: token };
+  }
+
+  async removeInstallation(installId: string, confirmationToken: string): Promise<InstallationRemovalResult> {
+    const expected = this.#removalTokens.get(confirmationToken);
+    this.#removalTokens.delete(confirmationToken);
+    if (expected !== installId) throw new Error("Removal confirmation does not match.");
+    this.#removedInstallations.add(installId);
+    return { unusedSavePathKept: null };
   }
 
   openInstallFolder(_installId: string): Promise<void> {
@@ -836,6 +1092,93 @@ export class FixtureBackend implements Backend {
 
   activateRecipeUpdate(_version: string): Promise<void> {
     return Promise.resolve();
+  }
+
+  async inspectInstallPatches(installId: string): Promise<PatchPreview> {
+    const copies = (await this.getUpdates()).managedCopies;
+    const copy = copies.find((entry) => entry.installId === installId);
+    if (!copy) throw new Error("Unknown fixture installation.");
+    const current = this.#patches.get(installId);
+    if (current) return current;
+    const patch: PatchPreview = {
+      installId, patchId: "artisan-campaign-description-links-1.0", title: "Artisan kit-description links",
+      state: "available", detail: "Preview only: repairs character-creation description links without changing abilities or text.",
+      baseRecipeVersion: copy.installedRecipeVersion ?? "Unknown", appliedPatchIds: [],
+      reviewToken: `fixture-patch-${installId}-${++this.#patchReviewSequence}`, canUndo: false, canRestore: false,
+      fullBackupBytes: "12884901888", saveBackupBytes: "104857600", availableBytes: "107374182400",
+      backupPath: "C:\\Fixture\\CEBG-Backups",
+    };
+    this.#patches.set(installId, patch);
+    return patch;
+  }
+
+  async inspectInstalledUpdate(installId: string): Promise<InstalledUpdatePlan> {
+    const updates = await this.getUpdates();
+    const copy = updates.managedCopies.find((entry) => entry.installId === installId);
+    if (!copy) throw new Error("Unknown fixture installation.");
+    return {
+      installId, baseRecipeVersion: copy.installedRecipeVersion ?? "Unknown",
+      targetRecipeVersion: updates.recipe.currentVersion, state: "comparison-ready",
+      detail: "Preview fixture only. No real installation was inspected.",
+      choicesPreserved: true, issues: [], runs: [],
+    };
+  }
+
+  async applyInstallPatch(installId: string, reviewToken: string, _fullBackup: boolean, _saveBackup: boolean): Promise<PatchPreview> {
+    const patch = this.#patches.get(installId);
+    if (!patch || patch.state !== "available" || patch.reviewToken !== reviewToken) throw new Error("Check this fixture installation again before applying.");
+    const applied: PatchPreview = { ...patch, state: "applied", detail: "Preview only: the description-link fix was applied.", reviewToken: null, canUndo: true, appliedPatchIds: [patch.patchId] };
+    this.#patches.set(installId, applied);
+    return applied;
+  }
+
+  async inspectModUpgrade(installId: string): Promise<ModUpgradePreview> {
+    const current = this.#modUpgrades.get(installId);
+    if (current) return current;
+    const copy = (await this.getUpdates()).managedCopies.find(entry => entry.installId === installId);
+    if (!copy) throw new Error("Unknown fixture installation.");
+    const preview: ModUpgradePreview = {
+      installId, upgradeId: "buffbot-1.8.3-to-1.8.4", title: "BuffBot",
+      state: "available", detail: "Preview fixture only. No real installation was inspected.",
+      baseRecipeVersion: copy.installedRecipeVersion ?? "Unknown", installedVersion: "1.8.3-alpha", targetVersion: "1.8.4-alpha",
+      reviewToken: `fixture-mod-upgrade-${installId}`, canUndo: false, canRestore: false,
+      fullBackupBytes: "12884901888", saveBackupBytes: "104857600", availableBytes: "107374182400",
+      backupPath: "C:\\Fixture\\CEBG-Backups", saveCompatibility: "Preview only. No saved games are changed.", history: [],
+    };
+    this.#modUpgrades.set(installId, preview);
+    return preview;
+  }
+
+  async applyModUpgrade(installId: string, reviewToken: string, _fullBackup: boolean, _backupSaves: boolean): Promise<ModUpgradePreview> {
+    const preview = this.#modUpgrades.get(installId);
+    if (!preview || preview.state !== "available" || preview.reviewToken !== reviewToken) throw new Error("Check this fixture installation again before updating.");
+    const applied: ModUpgradePreview = { ...preview, state: "applied", installedVersion: preview.targetVersion,
+      detail: "Preview only: BuffBot was updated. No game files changed.", reviewToken: null, canUndo: true,
+      history: [...preview.history, { transactionId: "fixture-upgrade", fromVersion: preview.installedVersion ?? "Unknown", toVersion: preview.targetVersion, state: "applied" }],
+    };
+    this.#modUpgrades.set(installId, applied);
+    return applied;
+  }
+
+  async restoreModUpgrade(installId: string, undo: boolean): Promise<ModUpgradePreview> {
+    const preview = this.#modUpgrades.get(installId);
+    if (!preview || !(undo ? preview.canUndo : preview.canRestore)) throw new Error("No fixture update can be restored.");
+    this.#modUpgrades.delete(installId);
+    const restored = await this.inspectModUpgrade(installId);
+    const result = { ...restored, history: preview.history.map(entry => ({ ...entry, state: "restored" })) };
+    this.#modUpgrades.set(installId, result);
+    return result;
+  }
+
+  async undoInstallPatch(installId: string): Promise<PatchPreview> {
+    const patch = this.#patches.get(installId);
+    if (!patch || patch.state !== "applied" || !patch.canUndo) throw new Error("No fixture fix can be undone.");
+    this.#patches.delete(installId);
+    return this.inspectInstallPatches(installId);
+  }
+
+  async restoreInstallPatch(_installId: string): Promise<PatchPreview> {
+    throw new Error("No interrupted fixture patch needs recovery.");
   }
 
   #snapshot(): BuildSnapshot {

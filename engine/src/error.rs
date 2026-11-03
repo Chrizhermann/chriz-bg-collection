@@ -11,6 +11,26 @@ pub enum EngineError {
         #[source]
         source: std::io::Error,
     },
+    /// The failed filesystem operation, without discarding its original cause.
+    #[error("{operation} failed at {path}: {source}")]
+    FolderOperation {
+        /// Stable, human-readable operation description.
+        operation: &'static str,
+        /// Folder or ownership marker being accessed.
+        path: std::path::PathBuf,
+        /// Original I/O or safety error, retained for accurate classification.
+        #[source]
+        source: Box<EngineError>,
+    },
+    /// Cleanup failed after an operation had already failed; neither cause is lost.
+    #[error("{original}; cleanup also failed: {cleanup}")]
+    CleanupFailed {
+        /// The operation that actually prevented installation from continuing.
+        #[source]
+        original: Box<EngineError>,
+        /// Secondary cleanup failure, not a replacement for the original cause.
+        cleanup: Box<EngineError>,
+    },
     #[error("toml parse error in {path}: {source}")]
     ManifestParse {
         path: std::path::PathBuf,
@@ -210,6 +230,63 @@ pub enum EngineError {
         /// Explanation of the validation failure.
         reason: String,
     },
+}
+
+impl EngineError {
+    /// Returns the original operation's cause, never a secondary cleanup error.
+    ///
+    /// Callers must still distinguish I/O errors from ownership and safety failures.
+    /// In particular, a collision is not made retryable by a cleanup I/O failure.
+    pub fn primary_cause(&self) -> &Self {
+        match self {
+            Self::FolderOperation { source, .. } => source.primary_cause(),
+            Self::CleanupFailed { original, .. } => original.primary_cause(),
+            _ => self,
+        }
+    }
+
+    /// Returns the failed folder operation, ignoring secondary cleanup context.
+    pub fn folder_operation(&self) -> Option<(&'static str, &std::path::Path)> {
+        match self {
+            Self::FolderOperation {
+                operation, path, ..
+            } => Some((*operation, path)),
+            Self::CleanupFailed { original, .. } => original.folder_operation(),
+            _ => None,
+        }
+    }
+
+    /// Stable presentation code for a contextual folder failure.
+    ///
+    /// This classifies the cause for display only. It does not grant retry,
+    /// overwrite, cleanup or resume permission, and never classifies a secondary
+    /// cleanup error in place of the original failure.
+    pub fn folder_failure_code(&self) -> Option<&'static str> {
+        use std::io::ErrorKind;
+
+        self.folder_operation()?;
+        Some(match self.primary_cause() {
+            Self::Io { source, .. } => {
+                #[cfg(windows)]
+                if matches!(source.raw_os_error(), Some(32 | 33)) {
+                    return Some("folder_in_use");
+                }
+                match source.kind() {
+                    ErrorKind::PermissionDenied => "folder_access_denied",
+                    ErrorKind::NotFound | ErrorKind::NotConnected => "folder_unavailable",
+                    ErrorKind::AlreadyExists
+                    | ErrorKind::NotADirectory
+                    | ErrorKind::IsADirectory => "folder_conflict",
+                    _ => "folder_failed",
+                }
+            }
+            Self::SaveRootCollision { .. }
+            | Self::UnsafeStagingEntry { .. }
+            | Self::UnsafeStagingRelationship { .. }
+            | Self::GameIdentity { .. } => "folder_conflict",
+            _ => "folder_failed",
+        })
+    }
 }
 
 /// Convenience alias for engine results.

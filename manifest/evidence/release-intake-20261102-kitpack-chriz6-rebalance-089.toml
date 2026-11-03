@@ -1,0 +1,99 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-11-02"
+command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 <TP2 path>, for the four TP2s; chriz-bg-author artifact verify <artifact.toml> --cache-root <same cache>, for each profile; python -I tools/check_native_component_order.py --recipe-root manifest --recipe-root recipes/curated-full-current --mod-id <mod> --archive <downloaded ZIP from that cache>"
+scope = "Two content fixes for CEBG 0.1.0 (Christopher, 2026-11-02): the Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.6 replaces chriz.5 for the main, NPC and tweak installers, and BG Rebalance v0.8.9 replaces v0.8.8, in both recipe profiles. Both are normal GitHub releases marked Latest, with annotated tags on the merge commits of fork PR #17 (d70d213, published 2026-11-01 21:41 UTC) and Rebalance PR #25 (bb3f11b, published 2026-11-01 21:45 UTC). Each release ZIP was downloaded anonymously into its own fresh cache for the inspection; the manifest artifact TOML's verify fetched it once more into that cache's production namespace, and the curated profile's byte-identical copy verified as a cache hit. All passed the production acquisition and extraction contracts; length and SHA-256 match the published assets, and the final host is release-assets.githubusercontent.com. The Kitpack ZIP's 3,016 entries (118,376,614 bytes uncompressed, largest entry 6,142,193 bytes, depth 7, highest compression ratio 431.1) and the Rebalance ZIP's 66 entries (2,800,322 bytes uncompressed, largest entry 1,364,992 bytes for the unpublished setup executable, depth 4, highest compression ratio 16.3) stay within the unchanged archive limits of the previous pins, and every expected TP2 matches directly with the new VERSION on line 3. All 2,667 files under the Kitpack's published roots match the tag commit's tree byte for byte; all 61 under the Rebalance's published roots match it, 13 byte for byte and 48 apart from their CRLF line endings. The native TP2 declaration order matches both recipes, the manifest profile's Kitpack main run included since issue 77. The chriz.5 and v0.8.8 records and their artifact TOMLs stay as history. This is automated source/package verification, not a combined WeiDU install or gameplay acceptance; the owners' lab results and tests are in the release notes."
+
+# Kitpack: against chriz.5 the published files that change are the three TP2s (VERSION only)
+# and two animation files, werewolf_white/C0W2A1.BAM and werewolf_greater_white/C0W5A1.BAM,
+# which were byte for byte copies of their A1E files (no frames in the five base
+# directions; BG2:EE 2.7.3.0 then builds the sprite's FX rectangle from uninitialized values
+# and can crash near a wall). Both are now copies of the same fur's A2 file
+# (C0W2A2.BAM 53d734982b3c, C0W5A2.BAM 0ffa6a34dcbf). No BEGIN, DESIGNATED, SUBCOMPONENT,
+# GROUP, REQUIRE or FORBID line changes, so components, their order and every recorded
+# decision are unchanged. The ZIP is the git archive of the tag commit, like chriz.5's.
+[[artifacts]]
+mod_id = "artisanskitpack"
+artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.6"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v4.81a-dev.85928f9-chriz.6"
+source_commit = "d70d213a5dd55be27f7aab6e65e0eefdcddae687"
+immutable_source_url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.6/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.6.zip"
+actual_length = 89856136
+actual_sha256 = "9644f01cdeeebf56912723e53267e91feb4404fb5c8d7305e0b112189095777e"
+tp2_sha256 = "3caa09bd7aebcadbff99efa915127a2e38817a94bf9da5205a1e4ce7034949dc"
+native_components = [
+  1, 2, 3, 20000, 20001, 8001, 8101, 8102, 8002, 8003, 8004, 10001, 10002, 10003, 10004, 1100,
+  1003, 1006, 1004, 1005, 1007, 1002, 1000, 1001, 1008, 1009, 1010, 2000, 2010, 2011, 2012, 2002,
+  2003, 3000, 3010, 3003, 3011, 3004, 3001, 3002, 3005, 5300, 5100, 5110, 5111, 5200, 5001, 5002,
+  7000, 7004, 7007, 7006, 7008, 7001, 7002, 7003, 7005, 9001, 30001
+]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "artisanskitpack-npc"
+artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.6"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v4.81a-dev.85928f9-chriz.6"
+source_commit = "d70d213a5dd55be27f7aab6e65e0eefdcddae687"
+immutable_source_url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.6/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.6.zip"
+actual_length = 89856136
+actual_sha256 = "9644f01cdeeebf56912723e53267e91feb4404fb5c8d7305e0b112189095777e"
+tp2_sha256 = "fcaffbf39865971e654a8aa79e3d3b2f43f4201e1f1aec6b3668d856723ad7fa"
+native_components = [
+  1101, 1102, 1103, 1104, 2001, 3101, 3102, 5101, 5102, 7101, 7102, 7104, 21001, 9101, 10004,
+  20002, 200010, 99001
+]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "artisanskitpack-tweak"
+artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.6"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v4.81a-dev.85928f9-chriz.6"
+source_commit = "d70d213a5dd55be27f7aab6e65e0eefdcddae687"
+immutable_source_url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.6/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.6.zip"
+actual_length = 89856136
+actual_sha256 = "9644f01cdeeebf56912723e53267e91feb4404fb5c8d7305e0b112189095777e"
+tp2_sha256 = "5941459341aed310ca34e063cbc63dd99fc716c15a9a28c7d067ddc0a356755c"
+native_components = [
+  51010, 20101, 12012, 20021, 3210, 1209, 1110, 3202, 3302, 7203, 7205, 8204, 110000, 1, 2,
+  300010, 1010000, 1020000, 2000001
+]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+# Rebalance: against v0.8.8 the published files that change are the TP2 (VERSION only), the
+# English setup.tra (the two spell texts in Spell Revisions' layout, the wand's charge line
+# and the names of the tail's new texts-only components) and lib/sr_antimagic.tpa (210 and
+# 211 write those texts and repoint the scrolls, the Wand of Spell Striking's line and
+# sibling spells such as Artisan's Kitpack's monk Spellstrike C0MK#009 and SCS's wand spell
+# DW#WNDSS). No mechanic and no component of the main TP2 changes; the texts-only
+# components 212 and 213 exist only in the release's separate CBR_SR_ANTIMAGIC package,
+# which neither recipe installs or pins.
+[[artifacts]]
+mod_id = "chriz-bg-rebalance"
+artifact_id = "chriz-bg-rebalance-0.8.9"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v0.8.9"
+source_commit = "bb3f11b7a2d631b50254eb556ca477197033fa52"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.9/chriz-bg-rebalance-v0.8.9-windows.zip"
+actual_length = 1844195
+actual_sha256 = "da03fe9e2a36f5af155311197e68d6f82ead270426015363fa161ad56e8ea6f2"
+tp2_sha256 = "b5ec45b650f5d0f15c2c312615b928d0d30269591c151c308e1f7a8e505217dc"
+native_components = [
+  100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 402, 403, 404, 405, 406,
+  407, 409, 408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360
+]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true

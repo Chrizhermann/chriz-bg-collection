@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -124,14 +125,73 @@ class CatalogParserTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[2] / "docs" / "curation" / "components"
         rows = load_catalogs(root)
 
-        self.assertEqual(len(rows), 1_189)
+        # October 13 intake adds Modpack 237/238/650/651/660 and SoD 177/198/285.
+        # October 14 intake adds Modpack 230-234, Rebalance 330-332 and 14 Tweaks
+        # snapshot rows; the snapshot withdraws Tweaks 260 and 3470.
+        # October 18: EEex v1.3.1 adds Attack Info 9 with an open Decision.
+        # October 20: Modpack alpha.13 adds 239 and, with open Decisions, 135/460/652.
+        # October 22: 18 player voicepack catalogs (CD_*) add one default row each.
+        # October 23: SoD Remix v0.6.15 adds the Imoen choice 292 (default), 293/294.
+        # October 23: six optional quest-mod catalogs add 55 rows (NTOTSC 17,
+        # AC_QUEST 13, BLACKHEARTS 2, ZG_IWD_VOICES 1, THALAN 1, PPE 21).
+        # October 26: Rebalance v0.8.5 adds Chris Revisions 340; Modpack alpha.14 adds no row.
+        # October 28: Rebalance v0.8.6 adds the Time Stop and Haste effect clocks 360.
+        # October 29: the SIRENE_BG1 catalog (Sirene NPC for BG:EE) adds 10 rows.
+        # October 29: Rebalance v0.8.8 adds Druid weapons 410 and Alaghor of Clangeddin
+        # weapons 411, and Artisan's Kitpack chriz.5 adds tweak 7205.
+        self.assertEqual(len(rows), 1_351)
         self.assertEqual(
             decision_totals(rows),
             {
-                Decision.EXCLUDED: 584,
-                Decision.OPTIONAL: 161,
-                Decision.DEFAULT: 301,
-                Decision.MANDATORY: 143,
+                # October 14: 11 new Tweaks rows are not offered, 260/3470 are gone,
+                # and Tweaks 3220 plus SCS 3010/3021 are offered.
+                # October 18: EEex 9 is not installed until Christopher decides.
+                # October 20: neither are Modpack 135, 460 and 652.
+                # October 23: nor Black Hearts 20005 (BG2:EE without EET) and PPE 310/320.
+                # October 26: EEex 9 leaves the excluded rows (Christopher, 2026-10-25),
+                # and so do Modpack 135, 460 and 652 with the alpha.14 pin.
+                # October 29: Artisan tweak 1010000 leaves the excluded rows, and Sirene
+                # BG1's other portraits 1, 2, 4 and 5 are not offered.
+                Decision.EXCLUDED: 527,
+                # September 22 approval moves HGO 38 from optional to default.
+                # October 12 moves Emotion 301 back to optional.
+                # October 13 makes EET's desktop shortcut (EET 100) optional.
+                # October 13 intake: campaign XP caps Modpack 650/651 are optional.
+                # October 14: SCS 3010, Rebalance 330 and Tweaks 2760 are optional.
+                # October 16: all 19 remaining default UB rows become optional.
+                # October 23: SoD Imoen alternatives 293/294 are optional.
+                # October 23: the 16 BG1UB defaults become optional, and so are 47 of the
+                # 55 quest-mod rows (all but their 5 defaults and 3 excluded rows).
+                # October 26: EEex Attack Info 9 is optional and off (Christopher, 2026-10-25),
+                # and so is Modpack chapter XP caps 652, which needs 650.
+                # October 27: Tweaks 2292 (druids level on the cleric XP table) is optional.
+                # October 29: Sirene BG1's alternate classes 7, 8 and 9 are optional.
+                Decision.OPTIONAL: 335,
+                # Approved Rebalance 111/302 defaults; Artisan 51010 is optional.
+                # October 13: bard ceilings Rebalance 420/421 and Bardic 3010 are defaults;
+                # EET 100 (desktop shortcut) leaves the defaults.
+                # October 13 intake: Modpack 237/238/660 are defaults and scrolls 430
+                # moves from mandatory to default.
+                # October 14: Modpack 230-234, Rebalance 331/332, SCS 3021 and
+                # Tweaks 3220/3500/3510 are defaults.
+                # October 16: UB leaves the defaults (19 rows move to optional).
+                # October 20: Modpack EET join XP 239 is a default.
+                # October 22: so are the 18 player voicepacks.
+                # October 23: and SoD Imoen choice 292 (the vanilla BG2 dual-class).
+                # October 23: BG1UB leaves the defaults (16 rows move to optional); the
+                # quest mods' main components NTotSC 0 and PPE 0 and Ascalon's first
+                # variants 2/5/10 are defaults inside their unchecked mods.
+                # October 26: Rebalance Chris Revisions 340 is a default (Christopher, 2026-10-25),
+                # and so are Modpack 135 (Dorn's ambush fix) and 460 (party AI Defensive Stance).
+                # October 27: Tweaks 2292 leaves the defaults (Christopher, 2026-10-27).
+                # October 28: Rebalance 360 is a default (Christopher, 2026-10-27).
+                # October 29: Artisan tweak 1010000 is a default (Christopher, 2026-10-26),
+                # and so are Sirene BG1 0, 3 and 6 (Christopher, 2026-10-29).
+                # October 29: Rebalance 410 and 411 are defaults (Christopher, 2026-10-29),
+                # and so is Artisan tweak 7205 (Christopher, 2026-10-29).
+                Decision.DEFAULT: 335,
+                # October 13 intake: SoD 177/198/285 join the mandatory bundle (430 left it).
+                Decision.MANDATORY: 154,
             },
         )
 
@@ -353,13 +413,70 @@ default = "none"
 
         result = audit_curation_map(rows, curation_map)
 
-        self.assertEqual(result.mapped_rows, 1_189)
-        self.assertEqual(result.excluded_rows, 584)
-        self.assertEqual(result.feature_rows + result.omission_rows, 605)
-        self.assertEqual(result.choice_groups, 61)
-        self.assertEqual(result.optional_none_groups, 13)
-        self.assertEqual(result.fixed_groups, 10)
-        self.assertIn("rows=1189", coverage_report(rows, result))
+        # October 18: EEex v1.3.1's Attack Info 9 is listed with an open Decision.
+        # October 20: Modpack 239 maps to a feature; 135/460/652 have open Decisions.
+        # October 22: each of the 18 voicepack rows maps to its own feature.
+        # October 23: SoD Remix 292/293/294 map to one feature each.
+        # October 23: the 52 offered quest-mod rows map to one feature each.
+        # October 26: EEex 9 and Rebalance 340 map to one feature each, and so do
+        # Modpack 135, 460 and 652 (alpha.14 pin).
+        # October 28: Rebalance 360 maps to one feature (v0.8.6 pin).
+        # October 29: Artisan tweak 1010000 moves from the excluded rows to its feature,
+        # and the six offered SIRENE_BG1 rows map to one feature each.
+        # October 29: Rebalance 410 and 411 map to one feature each (v0.8.8 pin), and so
+        # does Artisan tweak 7205 (chriz.5 pin).
+        self.assertEqual(result.mapped_rows, 1_351)
+        self.assertEqual(result.excluded_rows, 527)
+        self.assertEqual(result.feature_rows + result.omission_rows, 824)
+        # October 14: Rebalance potion uniqueness and SCS fine weapons choices.
+        # October 23: the SoD Remix Imoen in Shadows of Amn choice.
+        # October 23: ten quest-mod choices (Ascalon's three with their first variant as
+        # default; NTotSC's two and PPE's five with none preselected) and PPE's
+        # single Jaheira portrait option as a fixed group.
+        # October 27: the Tweaks Anthology druid level choice (2292) has none preselected.
+        # October 29: Sirene BG1's class choice (True Paladin preselected) and its
+        # single portrait option as a fixed group.
+        self.assertEqual(result.choice_groups, 88)
+        self.assertEqual(result.optional_none_groups, 31)
+        self.assertEqual(result.fixed_groups, 12)
+        self.assertIn("rows=1351", coverage_report(rows, result))
+
+    def test_september16_intake_rows_match_the_approved_recipe_features(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        rows = {
+            RowKey(row.catalog, row.component_id): row
+            for row in load_catalogs(root / "docs/curation/components")
+        }
+        curation_map = load_curation_map(root / "manifest/curation-map.toml")
+        target_by_row = {row: target for target in curation_map.targets for row in target.rows}
+        collection = tomllib.loads((root / "manifest/collection.toml").read_text())
+        features = {feature["id"]: feature for feature in collection["features"]}
+        approved = {
+            "CHRIZ-BG-MODPACK": ("chriz-bg-modpack", {188: "mandatory", 189: "mandatory", 199: "default", 620: "default"}),
+            "CHRIZ-SOD-REMIX": ("chriz-sod-remix", {115: "mandatory", 135: "mandatory", 256: "mandatory", 257: "optional", 265: "mandatory", 266: "mandatory"}),
+            "CHRIZ-BG-REBALANCE": ("chriz-bg-rebalance", {110: "optional", 111: "default"}),
+            "SPELL_REV": ("spell-rev", {80: "default", 81: "optional"}),
+            "SRCB_RR_COMPAT": ("srcb-rr-compat", {0: "mandatory"}),
+        }
+        for catalog, (mod_id, components) in approved.items():
+            for component, decision in components.items():
+                with self.subTest(catalog=catalog, component=component):
+                    key = RowKey(catalog, component)
+                    self.assertTrue(key in rows, f"missing approved catalog row {key}")
+                    self.assertEqual(rows[key].decision.value, decision)
+                    self.assertTrue(key in target_by_row, f"missing approved mapping {key}")
+                    target = target_by_row[key]
+                    feature = features[target.target_id]
+                    self.assertEqual(target.kind, "feature")
+                    self.assertEqual(target.parent, f"mod:{mod_id}")
+                    self.assertEqual(feature["decision"], decision)
+                    self.assertTrue(any(ref["component"] == component for ref in feature["components"]))
+
+        lightning = next((group for group in curation_map.choice_groups
+                          if group.group_id == "spell-rev-lightning-bolt"), None)
+        self.assertIsNotNone(lightning, "missing approved Lightning Bolt choice group")
+        self.assertEqual(lightning.options, (RowKey("SPELL_REV", 80), RowKey("SPELL_REV", 81)))
+        self.assertEqual(lightning.default, "SPELL_REV:80")
 
     def test_current_map_freezes_reviewed_omissions_and_atomic_bundles(self) -> None:
         root = Path(__file__).resolve().parents[2]
@@ -385,9 +502,12 @@ default = "none"
                 RowKey("DLCMERGER", 3),
                 RowKey("HIDDENGAMEPLAYOPTIONS", 40),
                 RowKey("IWDIFICATION", 120),
-                RowKey("SAFANA", 0),
                 RowKey("UB", 19),
             },
+        )
+        self.assertEqual(
+            targets["feature:safana:mandatory-components"].rows,
+            (RowKey("SAFANA", 0),),
         )
         self.assertEqual(
             targets["feature:artisanskitpack:component-5110"].rows,
@@ -423,8 +543,10 @@ default = "none"
                 for component_id in (
                     100,
                     110,
+                    115,
                     120,
                     130,
+                    135,
                     140,
                     150,
                     145,
@@ -432,11 +554,13 @@ default = "none"
                     170,
                     180,
                     175,
+                    177,
                     185,
                     190,
                     195,
                     210,
                     197,
+                    198,
                     187,
                     200,
                     215,
@@ -447,9 +571,13 @@ default = "none"
                     240,
                     250,
                     255,
+                    256,
                     260,
+                    265,
+                    266,
                     270,
                     280,
+                    285,
                     290,
                     900,
                     910,

@@ -2,14 +2,39 @@ schema = 1
 release = "v0.1.0-alpha.1"
 preset = "chris-recommended"
 approved_tail_runs = [
+  "safana-bg2",
+  "chriz-bg-modpack-late-companions-bg2",
+  "spell-rev-lightning-bg2",
   "bardicwonders-dialogue-patch-bg2",
   "chriz-sod-remix-bg2",
   "hiddengameplayoptions-bg2",
   "chriz-bg-rebalance-bg2",
+  "bardicwonders-progression-bg2",
   "chriz-bg-modpack-bg2",
   "cdtweaks-spell-save-penalties-bg2",
   "spell-rev-npc-spellbooks-bg2",
+  "chriz-bg-modpack-baeloth-bg2",
+  "voicepack-neera-bg2",
+  "voicepack-safana-bg1-bg2",
+  "voicepack-safana-sod-bg2",
+  "voicepack-jaheira-bg1-bg2",
+  "voicepack-jaheira-bg2-bg2",
+  "voicepack-yeslick-bg2",
+  "voicepack-edwin-bg1-bg2",
+  "voicepack-edwin-bg2-bg2",
+  "voicepack-aerie-bg2",
+  "voicepack-imoen-bg1-bg2",
+  "voicepack-imoen-bg2-bg2",
+  "voicepack-sarevok-bg2",
+  "voicepack-amelyssan-bg2",
+  "voicepack-gromnir-il-khan-bg2",
+  "voicepack-ajantis-bg2",
+  "voicepack-viconia-bg1-bg2",
+  "voicepack-viconia-bg2-bg2",
+  "voicepack-garithos-bg2",
+  "klatu-armor-thieving-bg2",
   "buffbot-bg2",
+  "chriz-bg-modpack-scrolls-bg2",
 ]
 
 [[omissions]]
@@ -24,21 +49,14 @@ feature_id = "feature:artisanskitpack:component-8101"
 approved_by = "Christopher"
 approved_on = "2026-09-04"
 reason = "This component is incompatible with the selected Spell Revisions setup."
-user_facing_limitation = "Revised Stormlord is unavailable when Spell Revisions is selected."
-
-[[omissions]]
-feature_id = "feature:artisanskitpack-npc:component-5102"
-approved_by = "Christopher"
-approved_on = "2026-09-04"
-reason = "This component is incompatible with the selected Spell Revisions setup."
-user_facing_limitation = "Red Wizard Edwin is unavailable when Spell Revisions is selected."
+user_facing_limitation = "The Pale Master option 'Unholy' Necromancy Spells Only is unavailable when Spell Revisions is selected."
 
 [[omissions]]
 feature_id = "feature:artisanskitpack-npc:component-10004"
 approved_by = "Christopher"
 approved_on = "2026-09-04"
 reason = "This component is incompatible with the selected Spell Revisions setup."
-user_facing_limitation = "Stormlord Yeslick is unavailable when Spell Revisions is selected."
+user_facing_limitation = "Make Rasaad a Sacred Fist is unavailable when Spell Revisions is selected."
 
 [[omissions]]
 feature_id = "feature:randomiser:component-10300"
@@ -53,6 +71,13 @@ approved_by = "Christopher"
 approved_on = "2026-09-04"
 reason = "The maintained repair is selected conditionally and stays inactive unless the optional Branwen component is selected."
 user_facing_limitation = "Branwen's Spell Revisions Spiritual Hammer repair is selected only when Branwen is selected."
+
+[[omissions]]
+feature_id = "feature:chriz-bg-modpack:component-640"
+approved_by = "Christopher"
+approved_on = "2026-09-29"
+reason = "The mandatory compatibility helper is conditional on a classic UI provider; the recommended interface requires no adapter."
+user_facing_limitation = "Classic interface text compatibility is installed automatically only with Lefreut or Dragonspear UI++."
 
 
 [[omissions]]

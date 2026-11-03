@@ -1,0 +1,32 @@
+id = "safana-in-amn-v05"
+name = "Safana in Amn"
+version = "05"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-tag-archive"
+url = "https://github.com/RoxanneSHS/SafanaBG2/archive/refs/tags/v05.zip"
+reference = "v05"
+expected_filename = "v05.zip"
+expected_length = 1097005
+sha256 = "29672c878cfb8dbec35d106e4baa4559b1eded55b035e80fdbf831f08f69cad6"
+redirect_hosts = ["codeload.github.com"]
+
+[archive]
+kind = "zip"
+root_rule = "single-wrapper"
+publish_roots = ["Safana"]
+tp2_paths = ["Safana/Safana.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 128
+max_entry_uncompressed_bytes = 2097152
+max_total_uncompressed_bytes = 4194304
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/RoxanneSHS/SafanaBG2"
+license = "Fetch-only official mod source; no redistribution by the collection"
+url = "https://github.com/RoxanneSHS/SafanaBG2/tree/81d2fa099eafad6b6d1485a743db78b5001e82ad"
+reviewed_on = "2026-09-16"

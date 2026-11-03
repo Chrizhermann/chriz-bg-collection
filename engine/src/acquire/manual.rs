@@ -120,17 +120,27 @@ pub fn publish_manual_archive(
         ));
     }
 
-    if let Some(existing) = inspect_existing_destination(destination)? {
-        if existing.sha256 == verified.sha256 && existing.length == verified.length {
+    let replaces_invalid = match inspect_existing_destination(destination)? {
+        Some(existing)
+            if existing.sha256 == verified.sha256 && existing.length == verified.length =>
+        {
             return Ok(existing);
         }
-    }
+        Some(_) => true,
+        None => false,
+    };
 
     let temporary = temporary_sibling(destination)?;
     let copy_result = copy_and_verify(selected, &temporary, expected_sha256, expected_length);
     if let Err(error) = copy_result {
         let _ = fs::remove_file(&temporary);
         return Err(error);
+    }
+    if replaces_invalid {
+        if let Err(error) = allow_replacing_invalid_cache_file(destination) {
+            let _ = fs::remove_file(&temporary);
+            return Err(error);
+        }
     }
     // The rename replaces an invalid cache file in one step; the path is never left empty.
     if let Err(source) = fs_retry::rename(&temporary, destination) {
@@ -167,6 +177,50 @@ fn inspect_existing_destination(
         Ok(verified) => Ok(Some(verified)),
         Err(error) => Err(error),
     }
+}
+
+/// Windows refuses to rename onto a read-only file, while the removal this rename replaced
+/// deleted one. Clear the attribute of the invalid cache file at `destination`, and only when it
+/// is set. The file is opened without following a link and checked through that handle, so
+/// nothing but that regular file is ever changed.
+#[cfg(windows)]
+fn allow_replacing_invalid_cache_file(destination: &Path) -> Result<(), AcquireError> {
+    use std::os::windows::fs::{MetadataExt, OpenOptionsExt};
+    use windows_sys::Win32::Storage::FileSystem::{
+        FILE_ATTRIBUTE_REPARSE_POINT, FILE_FLAG_OPEN_REPARSE_POINT, FILE_READ_ATTRIBUTES,
+        FILE_WRITE_ATTRIBUTES,
+    };
+
+    let io_error = |source| AcquireError::Io {
+        action: "clear read-only attribute of invalid manual archive cache file",
+        path: destination.to_path_buf(),
+        source,
+    };
+    let file = OpenOptions::new()
+        .access_mode(FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES)
+        .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT)
+        .open(destination)
+        .map_err(io_error)?;
+    let metadata = file.metadata().map_err(io_error)?;
+    if !metadata.is_file() || metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+        return Err(AcquireError::InvalidRequest(
+            "manual archive cache path must be a regular non-symlink file".to_owned(),
+        ));
+    }
+    let mut permissions = metadata.permissions();
+    if !permissions.readonly() {
+        return Ok(());
+    }
+    // On Windows this clears only FILE_ATTRIBUTE_READONLY; no Unix mode bits are involved.
+    #[allow(clippy::permissions_set_readonly_false)]
+    permissions.set_readonly(false);
+    file.set_permissions(permissions).map_err(io_error)
+}
+
+/// A rename onto a read-only file is allowed elsewhere, so nothing needs to change.
+#[cfg(not(windows))]
+fn allow_replacing_invalid_cache_file(_destination: &Path) -> Result<(), AcquireError> {
+    Ok(())
 }
 
 fn copy_and_verify(

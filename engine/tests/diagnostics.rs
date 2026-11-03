@@ -189,6 +189,72 @@ fn exports_eet_compatibility_hash_evidence_without_mod_payloads() {
 }
 
 #[test]
+fn exports_config_file_evidence_without_the_placed_file() {
+    let fixture = fixture(false);
+    let evidence = br#"[{"component":3347,"path":"cdtweaks/cdtweaks.txt","sha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","created":true}]"#;
+    write(
+        &fixture.managed,
+        ".chriz/attempts/attempt-001/steps/0001-0123456789abcdef/attempt-0001/config-files.json",
+        evidence,
+    );
+    write(
+        &fixture.managed,
+        "game/cdtweaks/cdtweaks.txt",
+        b"not for diagnostics",
+    );
+    let bundle = export_diagnostics(&DiagnosticsRequest {
+        managed_root: fixture.managed,
+        attempt_id: "attempt-001".into(),
+        output_path: fixture.output,
+        redact_roots: vec![fixture.home],
+    })
+    .unwrap();
+    let entries = zip_entries(&bundle.path);
+    let exported = entries
+        .iter()
+        .find(|(name, _)| name.ends_with("/config-files.json"))
+        .expect("placed configuration files must be listed in diagnostics");
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&exported.1).unwrap(),
+        serde_json::from_slice::<serde_json::Value>(evidence).unwrap()
+    );
+    assert!(!entries
+        .iter()
+        .any(|(name, _)| name.ends_with("cdtweaks.txt")));
+}
+
+#[test]
+fn exports_ui_launch_correction_evidence_without_mod_payloads() {
+    let fixture = fixture(false);
+    let evidence = br#"{"fix_id":"infinity-ui-1.28-setup-name-v1","original_mode":"explicit-tp2","effective_mode":"setup-name"}"#;
+    write(&fixture.managed, ".chriz/attempts/attempt-001/steps/0001-0123456789abcdef/attempt-0001/ui-invocation-compatibility.json", evidence);
+    write(
+        &fixture.managed,
+        "game/infinity_ui/infinity_ui.tp2",
+        b"not for diagnostics",
+    );
+    let bundle = export_diagnostics(&DiagnosticsRequest {
+        managed_root: fixture.managed,
+        attempt_id: "attempt-001".into(),
+        output_path: fixture.output,
+        redact_roots: vec![fixture.home],
+    })
+    .unwrap();
+    let entries = zip_entries(&bundle.path);
+    let exported = entries
+        .iter()
+        .find(|(name, _)| name.ends_with("/ui-invocation-compatibility.json"))
+        .unwrap();
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&exported.1).unwrap(),
+        serde_json::from_slice::<serde_json::Value>(evidence).unwrap()
+    );
+    assert!(!entries
+        .iter()
+        .any(|(name, _)| name.ends_with("infinity_ui.tp2")));
+}
+
+#[test]
 fn summary_explains_empty_attempts_without_claiming_the_process_never_started() {
     let fixture = fixture(false);
     write(&fixture.managed, ".chriz/attempts/attempt-001/receipt.json", &serde_json::to_vec(&serde_json::json!({
@@ -586,4 +652,163 @@ safe diagnostic line\n",
         );
     }
     assert!(searchable.contains("safe diagnostic line"));
+}
+
+#[test]
+fn exports_only_named_patch_evidence_and_redacts_pending_json() {
+    check_update_evidence("patches/cebg-v1");
+}
+
+#[test]
+fn exports_only_named_mod_upgrade_evidence_without_backups_or_player_data() {
+    check_update_evidence("mod-upgrades/v1");
+}
+
+fn check_update_evidence(namespace: &str) {
+    let fixture = fixture(true);
+    let transaction = format!(".chriz/{namespace}/1758326400000000000");
+    let evidence = serde_json::to_vec(&serde_json::json!({
+        "managed_root": fixture.home.join("Games/Test"),
+        "nested": { "token": "invented-patch-secret" },
+        "patch_id": "artisan-campaign-description-links-1.0"
+    }))
+    .unwrap();
+    let mut expected_names = Vec::new();
+    for stem in [
+        "prepared",
+        "applied",
+        "restoring",
+        "restored",
+        "failure",
+        "invocation",
+    ] {
+        for extension in ["json", "pending"] {
+            let name = format!("{stem}.{extension}");
+            write(
+                &fixture.managed,
+                &format!("{transaction}/{name}"),
+                &evidence,
+            );
+            expected_names.push(format!("{namespace}/1758326400000000000/{name}"));
+        }
+    }
+    for name in ["attempt.debug", "output.log"] {
+        write(
+            &fixture.managed,
+            &format!("{transaction}/{name}"),
+            format!(
+                "reading {}\nAuthorization: Bearer invented-patch-token\nvisible patch log\n",
+                fixture.home.display()
+            )
+            .as_bytes(),
+        );
+        expected_names.push(format!("{namespace}/1758326400000000000/{name}"));
+    }
+    for relative in [
+        format!("{transaction}/affected/prepared.json"),
+        format!("{transaction}/payload/invocation.json"),
+        format!("{transaction}/weidu.exe"),
+        format!("{transaction}/game/dialog.tlk"),
+        format!("{transaction}/profile/save/BALDUR.GAM"),
+        format!("{transaction}/notes.txt"),
+        format!("{transaction}/unknown.json"),
+        ".chriz/patches/cebg-v1/freeform/prepared.json".to_owned(),
+        ".chriz/patches/cebg-v1/prepared.json".to_owned(),
+        ".chriz/patches/other/123/prepared.json".to_owned(),
+        format!(".chriz/patches/cebg-v1/{}/prepared.json", "1".repeat(40)),
+    ] {
+        write(
+            &fixture.managed,
+            &relative,
+            b"private excluded patch material",
+        );
+    }
+    let result = export_diagnostics(&DiagnosticsRequest {
+        managed_root: fixture.managed.clone(),
+        attempt_id: "attempt-001".to_owned(),
+        output_path: fixture.output,
+        redact_roots: vec![fixture.home.clone()],
+    })
+    .unwrap();
+    let entries = zip_entries(&result.path);
+    let patch_entries = entries
+        .iter()
+        .filter(|(name, _)| name.starts_with(namespace))
+        .collect::<Vec<_>>();
+    expected_names.sort();
+    assert_eq!(
+        patch_entries
+            .iter()
+            .map(|(name, _)| name.to_string())
+            .collect::<Vec<_>>(),
+        expected_names
+    );
+    for (name, bytes) in patch_entries {
+        let text = String::from_utf8_lossy(bytes);
+        assert!(!text.contains(fixture.home.to_string_lossy().as_ref()));
+        assert!(!text.contains("invented-patch-secret"));
+        assert!(!text.contains("invented-patch-token"));
+        assert!(text.contains("<redacted-home>"));
+        if name.ends_with(".json") || name.ends_with(".pending") {
+            let value: serde_json::Value = serde_json::from_slice(bytes).unwrap();
+            assert_eq!(value["nested"]["token"], "<redacted-sensitive-value>");
+            assert_eq!(value["patch_id"], "artisan-campaign-description-links-1.0");
+        } else {
+            assert!(text.contains("visible patch log"));
+        }
+    }
+    assert_eq!(
+        std::fs::read(
+            fixture
+                .managed
+                .join(format!("{transaction}/prepared.pending"))
+        )
+        .unwrap(),
+        evidence,
+    );
+}
+
+#[test]
+fn rejects_oversized_patch_evidence_without_publishing_a_bundle() {
+    let fixture = fixture(false);
+    let relative = ".chriz/patches/cebg-v1/123/output.log";
+    write(&fixture.managed, relative, b"");
+    std::fs::OpenOptions::new()
+        .write(true)
+        .open(fixture.managed.join(relative))
+        .unwrap()
+        .set_len(64 * 1024 * 1024 + 1)
+        .unwrap();
+    let error = export_diagnostics(&DiagnosticsRequest {
+        managed_root: fixture.managed,
+        attempt_id: "attempt-001".to_owned(),
+        output_path: fixture.output.clone(),
+        redact_roots: vec![fixture.home],
+    })
+    .unwrap_err();
+    assert!(error.to_string().contains("size limit"), "{error}");
+    assert!(!fixture.output.exists());
+}
+
+#[test]
+fn rejects_a_directory_at_a_named_patch_evidence_file() {
+    let fixture = fixture(false);
+    std::fs::create_dir_all(
+        fixture
+            .managed
+            .join(".chriz/patches/cebg-v1/123/prepared.json"),
+    )
+    .unwrap();
+    let error = export_diagnostics(&DiagnosticsRequest {
+        managed_root: fixture.managed,
+        attempt_id: "attempt-001".to_owned(),
+        output_path: fixture.output.clone(),
+        redact_roots: vec![fixture.home],
+    })
+    .unwrap_err();
+    assert!(
+        error.to_string().contains("direct non-symlink file"),
+        "{error}"
+    );
+    assert!(!fixture.output.exists());
 }

@@ -1,7 +1,66 @@
 # ARTISANSKITPACK — components
 
 Listed at reference version **6.0**; refreshed for the selected fork release
-**chriz-v1.3.1** (`ac718614991e34b4f720807bec5edc96266c6c5e`).
+**chriz-v1.3.1** (`ac718614991e34b4f720807bec5edc96266c6c5e`). The recipes pin
+**v4.81a-dev.85928f9-chriz.6** (tag commit `d70d213`, pinned 2026-11-02), which replaced
+chriz.5 (tag commit `10a4a29`, pinned 2026-10-29); its TP2 declares the same 59 components
+in the same order as listed here. Against chriz.1 it changes five things, the first three
+only when the EEex weapon usability is installed:
+
+- chriz.2: every sorcerer kit, the Dragon Disciple included, can equip daggers,
+  quarterstaves, darts and slings without proficiency pips again, like mages. Since
+  upstream commit `7464043` the class weapon grants come from `WEAPPROF.2DA`, which has
+  no sorcerer column; both the first-run generator and the "Update EEex-based Weapon
+  Usability Changes" tweak now use the mage column for sorcerers.
+- chriz.3: Eldritch Knight and Arcane Trickster sorcerers keep their extra kit weapons
+  when `C0PR#CL` runs, at a level-up and on joining, instead of losing them until
+  Kitpack's helper creature gives them back. The new `eeex/kit_weapon_grants.tpa` makes
+  "apply `C0PR#KG`" the last effect of `C0PR#CL`, and `C0PR#KG` runs again the kit
+  chains that grant or remove weapons. It runs in the weapon usability generator and
+  where Kitpack registers such a chain: in the collection, the Eldritch Knight sorcerer
+  part of `20000` and tweak `8204` (also Favored Soul `30001` and tweak `1010000`,
+  which the collection does not offer).
+- chriz.4: monks can equip quarterstaves after Monk Revisions (`10001`), which gives them
+  quarterstaff pips in `WEAPPROF.2DA` after the weapon usability generator has written
+  `C0PR#CL`'s class grants; `10001` now writes them again. Plain shamans and the kits
+  that a component adds late, such as Sacred Fist and Enlightened Fist (`10003`) and the
+  Ninja (`10004`), are held to their class and kit weapons from joining the party and
+  at every level-up instead of only once Kitpack's helper creature applies `C0PR#CL`:
+  every component of this installer now ends by giving every class and kit ability
+  table, the shaman's `CLABSH01` included, "apply `C0PR#CL`" at every level, and so do
+  NPC `2001` and `5102` and tweak `1020000`. The class grants and these entries come
+  from the new `eeex/class_weapon_grants.tpa`; both do nothing without `C0PR#CL.SPL`.
+  The fork's labs passed on BG2:EE 2.7.3.0 with EEex 1.3.1, in the collection's
+  Kitpack order and in another order; EET was not covered.
+- chriz.5: the Invisible Blade (`7005`) and Bardic Wonders' Dancer can use the katanas
+  they may train and the rogue and bard items that the item files closed to them. Like
+  the Elementalist (`5001`), they borrow the Shapeshifter's item usability bit to keep
+  out of armor, and the item files set that bit wherever druids may not use an item.
+  `7005` and `5001` now call a pass (`lib/shapeshifter_kit_bit.tpa`) after adding their
+  kit: it takes the bit off such items, body armor excepted, and blocks every other kit
+  with the bit there through an exact kit check, so the Shapeshifter and the
+  Elementalist, both druid kits, stay blocked. Tweak `7205` and tweak `1010000` run the
+  same pass for items and kits that later mods add (see
+  [ARTISANSKITPACK_TWEAK](ARTISANSKITPACK_TWEAK.md)). The fork's labs passed on three
+  BG2:EE 2.7.3.0 games with EEex 1.3.1; EET and installations without EEex were not
+  covered.
+- chriz.6: the Shapeshifter's white and greater white werewolf forms (Shapeshifter
+  Overhaul `5110`/`5111` animations) no longer crash the game. Their attack 1 files
+  `werewolf_white/C0W2A1.BAM` and `werewolf_greater_white/C0W5A1.BAM` were copies of
+  the `A1E` files, without frames for the five base directions; when BG2:EE 2.7.3.0
+  draws such an empty cycle near a wall, it builds the sprite's FX rectangle from
+  uninitialized values and the wall clipping crashes the game or corrupts memory (seen in
+  play and reproduced in a lab on 2026-11-02). Both files are now copies of the same
+  fur's attack 2, so in those five directions attack 1 shows attack 2's art. A fork test
+  checks every werewolf animation for empty direction cycles. Only the two files and the
+  three VERSION lines change.
+
+No component, order or decision changes. Existing installations are not changed by
+chriz.3, chriz.4, chriz.5 or chriz.6, which have no tail patch (Christopher, 2026-10-26
+and 2026-10-27: new installations only; chriz.5's and chriz.6's release notes say the
+same); chriz.2's
+sorcerer fix has one, `AKCB_SORCERER_WEAPONS`,
+which the collection does not install.
 59 entries, 47 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
 
 ## UI/dependency notes
@@ -16,9 +75,13 @@ Listed at reference version **6.0**; refreshed for the selected fork release
 - `30001` is unavailable for every recommended collection route. Its global priest
   delivery is based on a stale snapshot and remains unsafe even without Spell Revisions.
 - `1` genuinely broadens ordinary class/race availability, but deliberately does not
-  remove every kit, dual-class, or gnome Mage restriction. No currently selected
-  Tweaks Anthology component duplicates `1/2`; future overlapping `2350/2351/2353/2357/2358`
+  remove every kit, dual-class, or gnome Mage restriction. Default Tweaks Anthology
+  `2380` complements it by expanding playable kit eligibility, including elf mage
+  specialists; it does not replace `1/2`. Future overlapping `2350/2351/2353/2357/2358`
   and `2550`–`2552` choices must be mutually exclusive in the UI.
+- Martyr `3005`: Sirene NPC for BG2, installed after it, replaces its unused
+  `c0ilms2a.spl` with an unrelated, also unused file of the same name. No in-game effect
+  in the tested Recommended install; see [SIRENE_BG2](SIRENE_BG2.md).
 
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|
