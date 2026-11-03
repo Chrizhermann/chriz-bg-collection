@@ -7,11 +7,13 @@ Rows `237`, `238`, `650`, `651` and `660` and the reworked `430` came with
 [next batch intake](../../plans/2026-10-13-next-batch-intake.md)). **v0.2.0-alpha.12**
 (2026-10-14) added the companion stat rows `230`–`234`. **v0.2.0-alpha.13**
 (2026-10-20) added EET join XP `239`, Dorn's ambush fix `135`, the party AI fix `460` and
-chapter XP caps `652`, and made campaign XP banking `650`/`651` work. The recipe now pins
-**v0.2.0-alpha.14** (published 2026-10-26), which keeps scrolls `430` on for the whole
-session and stops `650` from losing script variables; it adds and removes no component.
-With the alpha.14 pin the collection also offers `135`, `460` and `652` (see below).
-64 current or historical entries; the collection exposes 47. Component `195` already includes the work from standalone component
+chapter XP caps `652`, and made campaign XP banking `650`/`651` work. **v0.2.0-alpha.14**
+(published 2026-10-26) keeps scrolls `430` on for the whole session and stops `650` from
+losing script variables; it adds and removes no component. With the alpha.14 pin the
+collection also offers `135`, `460` and `652` (see below). The recipe now pins
+**v0.2.0-alpha.15** (published 2026-11-03), which adds only Marek's Boomerang Dagger `670`,
+a default for 0.1.1 (see below).
+65 current or historical entries; the collection exposes 48. Component `195` already includes the work from standalone component
 `160`; Hexxat's three class routes are one at-most-one choice.
 The four ✓ marks record the old reference install, not the new default recipe.
 
@@ -39,7 +41,8 @@ The four ✓ marks record the old reference install, not the new default recipe.
 - The public alpha implements `110`, `130`, `140`, `160`, `170`, `190`, `192`–`198`,
   `188`, `189`, `199`, `220`–`225`, `400`, `410`, `430`, `440`, `450`, `610`, `611`, `620`, `630`, and `640`. It contains no advertised
   FAIL placeholders. Alpha.11 added `237`, `238`, `650`, `651` and `660`; alpha.12 added
-  `230`–`234`; alpha.13 added `135`, `239`, `460` and `652`; alpha.14 adds none.
+  `230`–`234`; alpha.13 added `135`, `239`, `460` and `652`; alpha.14 added none;
+  alpha.15 adds `670`.
 - Dorn's ambush fix `135` (alpha.13) is **default (Christopher's decision,
   2026-10-25)**. When Dorn catches up with Senjak and Dorotea in BG1, the cutscene no
   longer locks the camera on Senjak, and Senjak's script releases a lock once he turns
@@ -109,6 +112,23 @@ The four ✓ marks record the old reference install, not the new default recipe.
 - Degrodel `660` is default: refusing to hand over the Helm of Balduran makes Degrodel
   and his servants attack; handing it over keeps the normal reward. It runs in the main
   post-EET_end Modpack run after `630`.
+- Marek's Boomerang Dagger `670` (alpha.15) is **default (Christopher, 2026-11-03)**. Since
+  BG1 NPC Project left the defaults, BG1 and SoD had no Boomerang Dagger +2 (`DAGG11`): its
+  only source there was that mod's Kivan sea-elf quest. Both of Marek's creature files,
+  `MAREK.CRE` (the first meeting in the north-east district of Baldur's Gate) and
+  `MAREK1.CRE` (the antidote fight at the Blushing Mermaid), now carry one unequipped
+  dagger in the backpack; only one Marek can die, so one dagger drops. When the Kivan
+  quest's Shipwreck's Coast script already creates the dagger, `670` changes nothing, so
+  ticking BG1 NPC Project needs no conflict rule. Its TP2 needs `MAREK.CRE` or `MAREK1.CRE`
+  and `DAGG11.ITM`, which this BG2-based install gets from EET's BG1 import, so the feature
+  requires EET's core. It runs in the main post-EET_end Modpack run after `660`, in TP2
+  order, after SCS and every other mod of the recipe that changes Marek's files. The
+  Modpack's guide asks for `670` before mods that read creature items, such as the Item
+  Randomiser; the recipe's Randomiser fork v8.1.1 runs earlier, but `DAGG11` is only in its
+  BG2 lists, so the Randomiser never handles Marek's dagger and the order changes nothing. If
+  the dagger joins the Randomiser's BG1 pool (see [FOLLOW_UPS](FOLLOW_UPS.md)), `670` has to
+  move before it.
+  Not yet tested in a game: the two Marek fights and the drop.
 - Kivan quest guard `130` is mandatory with BG1NPC Banters/Quests/Interjections `10`
   and SCS general AI `6000`, after EET import and SCS. It is independent of Kivan's
   Archer choice `198`; never add standalone `KIVAN_QUEST_FIX` alongside it. Its
@@ -209,5 +229,6 @@ The four ✓ marks record the old reference install, not the new default recipe.
 | 651 | Campaign XP caps - also cap SoA until ToB (requires 650; experimental) | chriz-bg-modpack: Gameplay tweaks | | | optional |
 | 652 | Campaign XP caps - chapter-by-chapter XP caps across BG1, SoD, SoA, and ToB (requires 650; experimental) | chriz-bg-modpack: Gameplay tweaks | | | optional |
 | 660 | Degrodel: hand over the Helm of Balduran or keep it and fight him | chriz-bg-modpack: Gameplay tweaks | | | default |
+| 670 | Marek: carry the Boomerang Dagger +2 in BG1 (drops it when he dies) | chriz-bg-modpack: Gameplay tweaks | | | default |
 | 640 | Legacy UI translation helper compatibility | chriz-bg-modpack: Compatibility | | | mandatory |
 | 460 | Party AI Defensive Stance: obey the "Use special abilities" option | chriz-bg-modpack: Compatibility | | | default |

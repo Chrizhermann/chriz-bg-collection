@@ -97,11 +97,13 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
 
     def test_reviewed_modpack_compatibility_release_preserves_selection(self):
         mod = tomllib.loads((self.output / "mods/chriz-bg-modpack.toml").read_text())
-        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.14")
-        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.14.toml").read_text())
-        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.14")
-        self.assertEqual(artifact["source"]["expected_length"], 10550312)
-        self.assertEqual(artifact["source"]["sha256"], "45c767b21342d1c7c23ded6cd52aef29b4054daf9cc949613d8f6620207a356c")
+        # November 3: alpha.15 adds Marek's Boomerang Dagger 670; alpha.14 stays as history.
+        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.15")
+        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.15.toml").read_text())
+        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.15")
+        self.assertEqual(artifact["source"]["expected_length"], 10555318)
+        self.assertEqual(artifact["source"]["sha256"], "a6031332c10c0bd5ee72b63ff1e1a870b1ef1b5e056f59e3542949e0c4ba7d8d")
+        self.assertTrue((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.14.toml").exists())
         self.assertFalse((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
         # Alpha.18 adds Rebalance 301/302 after alpha.17's interval-save controls;
         # Modpack also restores Evandra defaults and switches 610 to 611.
@@ -138,8 +140,10 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # October 29: the Kitpack chriz.5 pin adds default katana fix 7205 to the late tweak run.
         # November 3: BG1 NPC Project is optional and off (Christopher, 2026-11-03), which
         # removes its 8 defaults, its bg1npc-bg1 run and the Kivan quest guard Modpack 130.
-        self.assertEqual(len(without_controls), 466)
-        self.assertEqual(len(selected), 467)
+        # November 3: the Modpack alpha.15 pin adds default Marek's Boomerang Dagger 670 to
+        # the main post-EET_end Modpack run.
+        self.assertEqual(len(without_controls), 467)
+        self.assertEqual(len(selected), 468)
         self.assertEqual(len({run for run, _ in selected}), 69)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
@@ -240,8 +244,9 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # October 28: Rebalance 360 is selected by default.
         # October 29: so are Artisan tweak 1010000, Sirene NPC for BG:EE 0, 3 and 6,
         # Rebalance 410 and 411 (v0.8.8 pin) and Artisan tweak 7205 (chriz.5 pin).
-        # November 3: BG1 NPC Project's 8 defaults and Modpack 130 are not.
-        self.assertEqual(len(baseline), 467)
+        # November 3: BG1 NPC Project's 8 defaults and Modpack 130 are not; Modpack 670
+        # (alpha.15 pin) is.
+        self.assertEqual(len(baseline), 468)
         self.assertEqual(self.selected({feature_id: "off"}), baseline)
         baeloth = "feature:chriz-bg-modpack:component-235"
         self.assertEqual(self.features[baeloth]["decision"], "optional")

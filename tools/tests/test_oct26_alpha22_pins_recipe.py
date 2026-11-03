@@ -14,7 +14,9 @@ v1.11.0 pin and keeps its components and order, and BuffBot v1.12.6 (November 1,
 test_nov01_buffbot_pin_recipe) supersedes v1.12.1 in turn. The chriz.3, v0.8.5 and v1.11.0
 records and artifacts stay as verified here. The Kitpack fork chriz.5 (October 29,
 test_oct29_kitpack_chriz5_pin_recipe) then supersedes chriz.4 and adds tweak 7205, which is
-checked against its own record.
+checked against its own record. Chriz BG Modpack alpha.15 (November 3,
+test_nov03_modpack_alpha15_marek_dagger_recipe) supersedes the alpha.14 pin and adds 670,
+also checked against its own record.
 """
 
 from pathlib import Path
@@ -68,6 +70,11 @@ LATER_ROWS["ARTISANSKITPACK_TWEAK"] = {7205}
 SUCCESSORS.update({mod_id: "artisans-kitpack-4.81a-dev.85928f9-chriz.6"
                    for mod_id in ("artisanskitpack", "artisanskitpack-npc", "artisanskitpack-tweak")})
 SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.9"
+# The November 3 intake (test_nov03_modpack_alpha15_marek_dagger_recipe) replaces Modpack
+# alpha.14 with alpha.15, which declares Marek's Boomerang Dagger 670 between 660 and 650.
+SUCCESSORS["chriz-bg-modpack"] = "chriz-bg-modpack-0.2.0-alpha.15"
+LATER_COMPONENTS["chriz-bg-modpack"] = {670}
+LATER_ROWS["CHRIZ-BG-MODPACK"] = {670}
 # Per mod: the new pin, the superseded pin (kept as history), its tag, the archive name and
 # the catalog that lists the mod's components.
 PINS = {
@@ -351,9 +358,10 @@ class Oct26Alpha22PinBatchTests(unittest.TestCase):
             features = {feature["id"]: feature for feature in collection["features"]}
             runs = {run["run_id"]: run for run in collection["runs"]}
             order = [run["run_id"] for run in collection["runs"]]
-            # Alpha.13's TP2 declares 135 after 130 and 460 after 450.
+            # Alpha.13's TP2 declares 135 after 130 and 460 after 450; alpha.15's 670 follows
+            # 660 (test_nov03_modpack_alpha15_marek_dagger_recipe).
             self.assertEqual(runs[MODPACK_MAIN_RUN]["components"],
-                             [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660])
+                             [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660, 670])
             self.assertEqual(runs[MODPACK_MAIN_RUN]["phase"], "post-eet-end")
             # 135 installs after the mods that change Dorn's ambush scripts, such as EET,
             # and 460 after EET and the party AI writers; SCS changes neither.
@@ -419,7 +427,7 @@ class Oct26Alpha22PinBatchTests(unittest.TestCase):
             self.assertNotIn(CHAPTER_CAPS, group["members"])
         self.assertEqual(NATIVE_RUN_ORDERS[CAMPAIGN_RUN], [650, 651, 652])
         self.assertEqual(NATIVE_RUN_ORDERS[MODPACK_MAIN_RUN],
-                         [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660])
+                         [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660, 670])
 
     def test_superseded_records_still_match_their_kept_artifacts(self):
         superseded = {

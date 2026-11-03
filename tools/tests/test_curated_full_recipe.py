@@ -284,7 +284,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.1.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
             modpack = tomllib.loads((output / "mods/chriz-bg-modpack.toml").read_text(encoding="utf-8"))
-            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.14")
+            # November 3: alpha.15 (Marek's Boomerang Dagger 670) replaces alpha.14.
+            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.15")
             collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
             preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))
             mods = {path.stem for path in (output / "mods").glob("*.toml")}
@@ -423,7 +424,12 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # mod:bg1npc is optional and off, its components keep their decisions; with
                 # the mod back to default and on, the chriz.5 digest
                 # 9a03e46d776b7885bdb5bf426db90dd8aeb9feb64b2c1b32b49201766a32e77a returns.
-                "53944ad6b3baa0eb92482b4ff17f8f6247ac2226f9b6d53556db73459ff1562a",
+                # November 3, Modpack alpha.15 pin: default Marek's Boomerang Dagger 670 after
+                # 660 in the main post-EET_end Modpack run, requiring EET's core (Christopher,
+                # 2026-11-03); without its feature, run component and preset entry the BG1 NPC
+                # Project digest 53944ad6b3baa0eb92482b4ff17f8f6247ac2226f9b6d53556db73459ff1562a
+                # returns.
+                "e43f6d204b3b98c491e290050d065173287082b3717972346e44535528a7fb2d",
             )
 
             legacy_bg1npc_groups = {

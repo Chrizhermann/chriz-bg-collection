@@ -1,0 +1,32 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-11-03"
+command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 setup-chriz-bg-modpack.tp2; chriz-bg-author artifact verify <artifact.toml> --cache-root <same cache>, for each profile; python -I tools/check_native_component_order.py --recipe-root manifest --recipe-root recipes/curated-full-current --mod-id chriz-bg-modpack --archive <downloaded ZIP from that cache>"
+scope = "Chriz BG Modpack v0.2.0-alpha.15 for CEBG 0.1.1 (Christopher, 2026-11-03): it replaces alpha.14 in both recipe profiles and adds component 670, Marek carrying the Boomerang Dagger +2 in BG1, as a default. It is a normal GitHub release, not a pre-release, with an annotated tag on the merge commit of Modpack PR #18 (0920504, published 2026-11-03 01:33 UTC). The release ZIP was downloaded anonymously into a fresh cache for the inspection; the manifest artifact TOML's verify fetched it once more into that cache's production namespace, and the curated profile's byte-identical copy verified as a cache hit. Both passed the production acquisition and extraction contracts; length and SHA-256 match the published asset and its digest, and the final host is release-assets.githubusercontent.com. The ZIP's 154 entries (12,549,914 bytes uncompressed, largest entry 8,232,364 bytes, depth 5, highest compression ratio 6.3) stay within the unchanged archive limits of the alpha.14 pin, and the expected TP2 matches directly with the new VERSION on line 3. All 126 files under the published roots match the tag commit's tree byte for byte. Against alpha.14 the tag is exactly one commit ahead, and the release notes say that everything else is unchanged. The native TP2 declaration order matches both recipes. The alpha.14 record and its artifact TOML stay as history. This is automated source/package verification, not a combined WeiDU install or gameplay acceptance; the release reports synthetic WeiDU tests and installs on copies of BG:EE and EET game files, and the two Marek fights and the drop are not yet tested in a game."
+
+# Against alpha.14 the published files that change are the TP2 (VERSION and the new 670
+# block after 660), the English setup.tra (670's name and installer messages only) and the
+# new chriz-bg-modpack/lib/cbm_marek_boomerang_dagger.tpa. 670 requires MAREK.CRE or
+# MAREK1.CRE and DAGG11.ITM, gives each Marek file one unequipped dagger in its first free
+# backpack slot, and changes nothing when the Shipwreck's Coast script already creates
+# DAGG11, as BG1 NPC Project's Kivan quest does. Every other component, its TP2 block and the
+# order stay as in alpha.14; 670 is declared between 660 and 650.
+[[artifacts]]
+mod_id = "chriz-bg-modpack"
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.15"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v0.2.0-alpha.15"
+source_commit = "0920504b954ff8d7e8a3640f58acbe4b33242b85"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.15/chriz-bg-modpack-v0.2.0-alpha.15.zip"
+actual_length = 10555318
+actual_sha256 = "a6031332c10c0bd5ee72b63ff1e1a870b1ef1b5e056f59e3542949e0c4ba7d8d"
+tp2_sha256 = "02eede43558cb3007f2f52d9b2d8d027d97b437a520c604d859677b5c43799a0"
+native_components = [
+  110, 130, 135, 140, 160, 170, 188, 189, 190, 192, 193, 194, 195, 196, 197, 198, 199, 220, 221,
+  222, 223, 224, 225, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 400, 410, 430, 440, 450,
+  460, 610, 611, 620, 630, 640, 660, 670, 650, 651, 652
+]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true

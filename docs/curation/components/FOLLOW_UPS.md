@@ -548,6 +548,19 @@ Cross-repository status. Component detail stays in the sections below and in the
     item file, so the new component does not need to ship it.
   - Candidates: see the candidate list in the coordinator notes. The Randomiser's BG1
     pool entry needs the carrier's CRE resref, script name and area.
+  - The carrier is Marek (Christopher, 2026-11-03): Modpack
+    [v0.2.0-alpha.15](https://github.com/Chrizhermann/chriz-bg-modpack/releases/tag/v0.2.0-alpha.15)
+    adds `670`, which gives both Marek files, `MAREK.CRE` (first meeting, north-east
+    district of Baldur's Gate) and `MAREK1.CRE` (antidote fight at the Blushing Mermaid),
+    one unequipped dagger in the backpack and changes nothing when the Kivan quest already
+    gives it. Pinned in both recipes and on in Recommended for 0.1.1 (evidence in
+    `manifest/evidence/release-intake-20261103-modpack-alpha15.toml`); the 0.1.1 ledger
+    records it. Not yet tested in a game: the two Marek fights and the drop.
+  - Still open: the Randomiser's BG1 pool. The recipe's Randomiser fork v8.1.1 has
+    `DAGG11` only in its BG2 lists, so it never handles Marek's dagger. If the dagger joins
+    the BG1 pool with Marek as its holder, `670` has to install before the Randomiser (the
+    Modpack's guide asks for that order); today it runs in the post-EET_end Modpack run,
+    after the Randomiser.
 
 **Ready to start**
 
