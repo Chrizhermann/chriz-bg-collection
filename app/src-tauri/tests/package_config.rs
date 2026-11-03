@@ -66,6 +66,7 @@ fn bundle_resources_include_production_game_profiles() {
         "curation-map.toml",
         "install-order.tsv",
         "mod-sources.tsv",
+        "own-mods.toml",
     ] {
         assert!(!resources.contains_key(&format!("../../manifest/{authoring}")));
     }
