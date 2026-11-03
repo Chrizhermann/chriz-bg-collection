@@ -80,6 +80,18 @@ describe("managed patch recovery projection", () => {
   });
 });
 
+describe("installation end summary", () => {
+  it("reads the summary of one installation by its registry id", async () => {
+    const notes = [
+      "Left out: Snowytoes. Its download could not be used.",
+      "If something does not work as expected, please report it so the collection can be fixed.",
+    ];
+    const invoke = vi.fn(async () => notes);
+    await expect(new NativeBackend(invoke).installationSummary("managed-one")).resolves.toEqual(notes);
+    expect(invoke).toHaveBeenLastCalledWith("installation_summary", { installId: "managed-one" });
+  });
+});
+
 describe("explicit installation removal", () => {
   it("uses only the registry id and confirmed token on the native command boundary", async () => {
     const preview = { installId: "managed-one", displayName: "Test", managedRoot: "D:\\Test", action: "delete", approximateSizeBytes: "12884901888", preservedSavePath: null, confirmationToken: "bound-token" };

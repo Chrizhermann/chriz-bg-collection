@@ -33,7 +33,8 @@ const IMOEN_SOD_LEVEL_DUAL: &str = "feature:chriz-sod-remix:component-294";
 // a default (Christopher, 2026-10-27); v0.8.7 (October 29 intake) renames 360 to True Time
 // Stop – fair Haste & Slow and keeps every component and the order. v0.8.8 (October 29)
 // declares Druid weapons 410 and Alaghor of Clangeddin weapons 411 between 302 and 420, both
-// defaults (Christopher, 2026-10-29).
+// defaults (Christopher, 2026-10-29). v0.8.9 (November 2) rewrites the Pierce Magic 210 and
+// Spellstrike 211 texts and keeps every component and the order.
 const BG_REBALANCE_COMPONENTS: &[u32] = &[
     100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 410, 411, 420, 421,
     310, 130, 220, 320, 331, 332, 340, 360,
@@ -239,24 +240,24 @@ fn offers_imoen_in_shadows_of_amn_as_one_choice_with_the_vanilla_dual_by_default
 fn freezes_the_reviewed_bg_rebalance_release() {
     let manifest = recipe();
     let artifact_id = &manifest.mods["chriz-bg-rebalance"].artifact_id;
-    assert_eq!(artifact_id, "chriz-bg-rebalance-0.8.8");
+    assert_eq!(artifact_id, "chriz-bg-rebalance-0.8.9");
     let artifact = &manifest.artifacts[artifact_id];
-    assert_eq!(artifact.version, "0.8.8");
+    assert_eq!(artifact.version, "0.8.9");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.8/chriz-bg-rebalance-v0.8.8-windows.zip"
+        "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.9/chriz-bg-rebalance-v0.8.9-windows.zip"
     );
-    assert_eq!(artifact.source.reference, "v0.8.8");
+    assert_eq!(artifact.source.reference, "v0.8.9");
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-bg-rebalance-v0.8.8-windows.zip")
+        Some("chriz-bg-rebalance-v0.8.9-windows.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(1_839_187));
+    assert_eq!(artifact.source.expected_length, Some(1_844_195));
     assert_eq!(
         artifact.source.sha256,
-        "dec0544b3cc0f2197b5791e89cf0eb73d2cdb563d3ae35c254d0da719d89a2e3"
+        "da03fe9e2a36f5af155311197e68d6f82ead270426015363fa161ad56e8ea6f2"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(

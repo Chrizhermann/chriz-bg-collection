@@ -225,6 +225,9 @@ fn candidate(
     }
 }
 
+/// An answer the fake engine stored: managed root, install id, decision id, token and answer.
+type StoredAnswer = (PathBuf, String, String, String, bg_engine::decision::Answer);
+
 struct FakeBridgeEngine {
     bg1: PathBuf,
     bg2: PathBuf,
@@ -239,6 +242,12 @@ struct FakeBridgeEngine {
     profile_repair_result: Mutex<Result<bool, String>>,
     profile_folders: Mutex<Vec<String>>,
     profile_folder_error: Mutex<Option<String>>,
+    /// The question a campaign waits for, as the engine would report it.
+    decision: Mutex<Option<bg_engine::cli::DecisionStatus>>,
+    /// Every answer stored.
+    answers: Mutex<Vec<StoredAnswer>>,
+    /// What a resume ends with; complete by default.
+    resume_status: Mutex<Option<CampaignStatus>>,
 }
 
 impl FakeBridgeEngine {
@@ -257,6 +266,9 @@ impl FakeBridgeEngine {
             profile_repair_result: Mutex::new(Ok(false)),
             profile_folders: Mutex::new(Vec::new()),
             profile_folder_error: Mutex::new(None),
+            decision: Mutex::new(None),
+            answers: Mutex::new(Vec::new()),
+            resume_status: Mutex::new(None),
         }
     }
 
@@ -582,8 +594,105 @@ impl BridgeEngine for FakeBridgeEngine {
             install_id: "install-fixture".to_owned(),
             managed_root: managed_root.to_path_buf(),
             plan_sha256: "11".repeat(32),
-            status: CampaignStatus::Complete,
+            status: self
+                .resume_status
+                .lock()
+                .unwrap()
+                .clone()
+                .unwrap_or(CampaignStatus::Complete),
         })
+    }
+
+    fn inspect_decision(
+        &self,
+        _managed_root: &Path,
+        expected_install_id: &str,
+    ) -> Result<Option<bg_engine::cli::DecisionStatus>, bg_engine::cli::CliError> {
+        Ok(self
+            .decision
+            .lock()
+            .unwrap()
+            .clone()
+            .filter(|decision| decision.install_id == expected_install_id))
+    }
+
+    fn answer_decision(
+        &self,
+        managed_root: &Path,
+        expected_install_id: &str,
+        decision_id: &str,
+        token: &str,
+        answer: bg_engine::decision::Answer,
+    ) -> Result<(), bg_engine::cli::CliError> {
+        self.answers.lock().unwrap().push((
+            managed_root.to_path_buf(),
+            expected_install_id.to_owned(),
+            decision_id.to_owned(),
+            token.to_owned(),
+            answer,
+        ));
+        Ok(())
+    }
+}
+
+/// A changed installer tool from a host the recipe did not review, as the ledger and the
+/// engine's `check-decision` describe it.
+fn unreviewed_tool_question() -> bg_engine::decision::Question {
+    bg_engine::decision::Question {
+        kind: bg_engine::decision::QuestionKind::UnreviewedTool,
+        artifact_id: "weidu".to_owned(),
+        artifact_kind: bg_engine::orchestrator::ArtifactKind::Tool,
+        reviewed: bg_engine::session::FrozenIdentity {
+            id: "weidu".to_owned(),
+            version: "249.00".to_owned(),
+            sha256: "33".repeat(32),
+            length: 10,
+        },
+        served: Some(bg_engine::decision::ServedDownload {
+            filename: Some("weidu.zip".to_owned()),
+            length: 12,
+            sha256: "44".repeat(32),
+            link: "https://example.invalid/weidu.zip".to_owned(),
+            final_url: "https://mirror.example.invalid/weidu.zip".to_owned(),
+            hosts: vec![
+                "example.invalid".to_owned(),
+                "mirror.example.invalid".to_owned(),
+            ],
+            unreviewed_hosts: vec!["mirror.example.invalid".to_owned()],
+        }),
+        reason: None,
+        leave_out: None,
+    }
+}
+
+fn unreviewed_tool_status(install_id: &str, decision_id: &str) -> bg_engine::cli::DecisionStatus {
+    use bg_engine::cli::{AnswerText, DecisionStatus, QuestionTexts};
+    use bg_engine::decision::Answer;
+    let question = unreviewed_tool_question();
+    DecisionStatus {
+        install_id: install_id.to_owned(),
+        step_id: "acquire:weidu".to_owned(),
+        decision_id: decision_id.to_owned(),
+        token: question.token(),
+        texts: QuestionTexts {
+            message: "A newer version of WeiDU was found. The reviewed version is no longer available at this link. Install it anyway? It came from mirror.example.invalid, which the collection did not review. If you're not sure, stop the installation.".to_owned(),
+            details: vec!["File: weidu.zip".to_owned()],
+            answers: vec![
+                AnswerText {
+                    answer: Answer::Yes,
+                    label: "Install it".to_owned(),
+                },
+                AnswerText {
+                    answer: Answer::No,
+                    label: "Stop the installation".to_owned(),
+                },
+            ],
+            focus: Answer::No,
+            after_no: "You chose to stop. Resume this installation to check the download again."
+                .to_owned(),
+        },
+        question,
+        answer: None,
     }
 }
 
@@ -966,7 +1075,11 @@ fn discovery_groups_roles_and_selects_each_candidate_independently() {
         discovery.bg1_candidates[0].build.as_deref(),
         Some("2.7.3.0")
     );
-    assert!(!discovery.bg2_candidates[0].eligible);
+    assert!(discovery.bg1_candidates[0].tested);
+    // A GOG copy is usable, with its "less tested" warning; it is not the tested setup.
+    assert!(discovery.bg2_candidates[0].eligible);
+    assert!(!discovery.bg2_candidates[0].tested);
+    assert!(discovery.bg2_candidates[0].label.contains("less tested"));
 }
 
 #[test]
@@ -984,8 +1097,13 @@ fn explicit_game_paths_are_inspected_by_the_engine_before_projection() {
         game.canonicalize().unwrap()
     );
     assert!(!inspected.path.starts_with(r"\\?\"));
-    assert!(!inspected.eligible);
-    assert!(!inspected.findings.is_empty());
+    // The fixture's program has no readable version: a warning, not a stop.
+    assert!(inspected.eligible);
+    assert!(!inspected.tested);
+    assert!(inspected
+        .findings
+        .iter()
+        .any(|finding| finding.contains("game version")));
 }
 
 #[test]
@@ -3030,4 +3148,159 @@ fn missing_release_keys_and_endpoints_are_clear_non_destructive_update_state() {
     assert_eq!(update.managed_copies.len(), 1);
     assert_eq!(update.managed_copies[0].install_id, "install-update-state");
     assert_eq!(update.managed_copies[0].state, "unknown");
+}
+
+/// A campaign whose ledger holds a question is listed as waiting for an answer and stays
+/// resumable; the bridge shows the engine's question with its texts and token, and stores the
+/// player's answer for exactly that installation.
+#[test]
+fn a_waiting_question_is_listed_shown_and_answered_through_the_bridge() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let root = recipe.parent().unwrap().to_path_buf();
+    let cache = root.join("cache");
+    let app_data = root.join("app-data");
+    let waiting =
+        publish_started_campaign(&app_data, &root.join("waiting"), &cache, "install-waiting");
+    waiting
+        .append(SessionEvent::StepStarted {
+            step_id: "acquire:weidu".to_owned(),
+            attempt: 1,
+        })
+        .unwrap();
+    let question = unreviewed_tool_question();
+    let decision_id = question.decision_id("acquire:weidu", 1);
+    waiting
+        .append(SessionEvent::DecisionRequired {
+            step_id: "acquire:weidu".to_owned(),
+            attempt: 1,
+            decision_id: decision_id.clone(),
+            question: Box::new(question),
+        })
+        .unwrap();
+    let engine = Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2")));
+    *engine.decision.lock().unwrap() =
+        Some(unreviewed_tool_status("install-waiting", &decision_id));
+    let bridge = NativeBridge::with_engine_and_system(
+        recipe,
+        "recommended",
+        &cache,
+        app_data,
+        engine.clone(),
+        Arc::new(RecordingBridgeSystem::default()),
+    );
+
+    let cards = bridge.list_managed_installations().unwrap();
+    assert_eq!(cards.len(), 1);
+    assert_eq!(cards[0].status, "Waiting for your answer");
+    assert!(cards[0].resumable);
+
+    let pending = bridge
+        .get_pending_decision("install-waiting")
+        .unwrap()
+        .expect("the question");
+    let wire = serde_json::to_value(&pending).unwrap();
+    assert_eq!(wire["installId"], "install-waiting");
+    assert_eq!(wire["decisionId"], decision_id.as_str());
+    assert_eq!(wire["token"], unreviewed_tool_question().token());
+    assert_eq!(wire["kind"], "unreviewed_tool");
+    assert_eq!(wire["artifactId"], "weidu");
+    assert_eq!(wire["focus"], "no");
+    assert_eq!(
+        wire["answers"],
+        json!([
+            { "answer": "yes", "label": "Install it" },
+            { "answer": "no", "label": "Stop the installation" },
+        ])
+    );
+    assert_eq!(wire["details"], json!(["File: weidu.zip"]));
+    assert!(wire["message"]
+        .as_str()
+        .unwrap()
+        .ends_with("If you're not sure, stop the installation."));
+    assert_eq!(
+        wire["afterNo"],
+        "You chose to stop. Resume this installation to check the download again."
+    );
+    assert_eq!(wire["answered"], serde_json::Value::Null);
+
+    bridge
+        .answer_decision(
+            "install-waiting",
+            &decision_id,
+            &pending.token,
+            bg_engine::decision::Answer::Yes,
+        )
+        .unwrap();
+    let canonical = root.join("waiting").canonicalize().unwrap();
+    assert_eq!(
+        engine.answers.lock().unwrap().as_slice(),
+        &[(
+            canonical,
+            "install-waiting".to_owned(),
+            decision_id.clone(),
+            pending.token.clone(),
+            bg_engine::decision::Answer::Yes,
+        )]
+    );
+    // The answer arrives as the engine's spelling.
+    assert_eq!(
+        serde_json::from_value::<bg_engine::decision::Answer>(json!("leave_out")).unwrap(),
+        bg_engine::decision::Answer::LeaveOut
+    );
+
+    let unknown = bridge.get_pending_decision("install-unknown");
+    assert_eq!(unknown.unwrap_err().code, "managed_install_unknown");
+    let unknown = bridge.answer_decision(
+        "install-unknown",
+        &decision_id,
+        &pending.token,
+        bg_engine::decision::Answer::No,
+    );
+    assert_eq!(unknown.unwrap_err().code, "managed_install_unknown");
+}
+
+/// A resume that stops for a question ends as resumable and waiting, not as a failure: the run
+/// snapshot reports it without an error.
+#[test]
+fn a_resume_that_stops_for_a_question_is_waiting_not_failed() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let root = recipe.parent().unwrap().to_path_buf();
+    let cache = root.join("cache");
+    let app_data = root.join("app-data");
+    publish_started_campaign(&app_data, &root.join("asking"), &cache, "install-asking");
+    let engine = Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2")));
+    let question = unreviewed_tool_question();
+    *engine.resume_status.lock().unwrap() = Some(CampaignStatus::DecisionRequired {
+        step_id: "acquire:weidu".to_owned(),
+        decision_id: question.decision_id("acquire:weidu", 1),
+        question: Box::new(question),
+    });
+    let bridge = NativeBridge::with_engine_and_system(
+        recipe,
+        "recommended",
+        &cache,
+        app_data,
+        engine,
+        Arc::new(RecordingBridgeSystem::default()),
+    );
+
+    let started = bridge.resume_build("install-asking", |_| {}).unwrap();
+
+    let deadline = Instant::now() + Duration::from_secs(2);
+    let snapshot = loop {
+        let snapshot = bridge.get_run_snapshot(&started.run_id).unwrap();
+        if snapshot.report.is_some() {
+            break snapshot;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "worker did not publish its report"
+        );
+        std::thread::sleep(Duration::from_millis(5));
+    };
+    assert_eq!(snapshot.status, "decision_required");
+    assert!(snapshot.error.is_none(), "{:?}", snapshot.error);
+    let wire = serde_json::to_value(snapshot.report.unwrap()).unwrap();
+    assert_eq!(wire["status"]["status"], "decision_required");
+    assert_eq!(wire["status"]["step_id"], "acquire:weidu");
 }

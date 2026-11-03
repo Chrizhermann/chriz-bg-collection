@@ -476,6 +476,19 @@ pub async fn list_managed_installations(
 }
 
 #[tauri::command]
+pub async fn installation_summary(
+    state: State<'_, BridgeState>,
+    install_id: String,
+) -> Result<Vec<String>, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .clone();
+    background(move || bridge.installation_summary(&install_id)).await
+}
+
+#[tauri::command]
 pub async fn preview_installation_removal(
     state: State<'_, BridgeState>,
     install_id: String,
@@ -908,6 +921,35 @@ pub async fn open_manual_checkpoint_folder(
         .unwrap_or_else(|p| p.into_inner())
         .clone();
     background(move || bridge.open_manual_checkpoint_folder(&install_id)).await
+}
+
+#[tauri::command]
+pub async fn get_pending_decision(
+    state: State<'_, BridgeState>,
+    install_id: String,
+) -> Result<Option<crate::bridge::PendingDecisionResponse>, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || bridge.get_pending_decision(&install_id)).await
+}
+
+#[tauri::command]
+pub async fn answer_decision(
+    state: State<'_, BridgeState>,
+    install_id: String,
+    decision_id: String,
+    token: String,
+    answer: bg_engine::decision::Answer,
+) -> Result<(), CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || bridge.answer_decision(&install_id, &decision_id, &token, answer)).await
 }
 
 #[tauri::command]

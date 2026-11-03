@@ -4,8 +4,13 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::decision::{
+    answered_decisions, Answer, AnswerSource, AnsweredDecision, LeaveOutClosure, PendingDecision,
+    Question, QuestionKind, RecordedAnswer, ServedDownload, UnusableReason,
+};
 use crate::digest::{plan_digest, sha256_bytes};
 use crate::error::EngineError;
 use crate::events::{EngineEvent, EventSink, StepOutcome};
@@ -30,7 +35,8 @@ pub struct CampaignRequest {
 }
 
 /// Whether a frozen object is a mod payload or an executable tool.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ArtifactKind {
     /// Installer payload that may be materialized into one or both staged roots.
     Payload,
@@ -58,6 +64,62 @@ impl MaterializationTask {
     }
 }
 
+/// What acquiring one frozen artifact found.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AcquisitionOutcome {
+    /// The artifact is in the cache and can be used.
+    Ready,
+    /// The payload's current download cannot be used, for example because its archive layout
+    /// changed beyond the safe fallback. When the recipe can do without this mod and without
+    /// everything that depends on it, the player is asked whether to continue without them.
+    LeaveOut {
+        /// Why, by kind, with the display-safe sentence recorded in the ledger and the receipt.
+        reason: UnusableReason,
+    },
+    /// The link serves a newer or different file that passed every check, or a changed tool
+    /// came from a host the recipe did not review. Nothing about it is recorded yet: the
+    /// player is asked first ([`QuestionKind::ChangedDownload`] or
+    /// [`QuestionKind::UnreviewedTool`]).
+    Ask {
+        /// Which question.
+        kind: QuestionKind,
+        /// What the link served.
+        served: ServedDownload,
+    },
+}
+
+/// What applying the answer "install it" to a changed download found.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AnsweredAcquisition {
+    /// Exactly the file that was asked about is recorded and can be used.
+    Accepted,
+    /// The situation the question asked about no longer holds, for example because the
+    /// reviewed file is now in the download folder. The step acquires its artifact anew.
+    Withdrawn {
+        /// What changed.
+        why: String,
+    },
+    /// The file asked about is gone and the link serves yet another one. This attempt ends;
+    /// the next one asks anew.
+    LinkChanged {
+        /// Display-safe detail for the ledger.
+        detail: String,
+    },
+}
+
+/// A payload whose download could not be used, so the campaign continued without it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LeftOutArtifact {
+    /// Frozen payload identity that is left out.
+    pub artifact_id: String,
+    /// Why its download could not be used.
+    pub reason: String,
+    /// Planned runs no longer installed because of it, including runs of mods that need it.
+    pub runs: Vec<String>,
+    /// Planned runs still installed, but with fewer components or other prompt answers.
+    pub changed_runs: Vec<String>,
+}
+
 /// A materialization either reconciled to completion or proved this copy unsafe to resume.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MaterializationOutcome {
@@ -67,6 +129,16 @@ pub enum MaterializationOutcome {
     FreshCopyRequired {
         /// Evidence summary suitable for diagnostics and the UI.
         reason: String,
+    },
+    /// The payload's current download cannot be placed, for example because a file of its
+    /// changed archive would overwrite another one, and no attempt of this step has written
+    /// anything. When the recipe can do without this mod and without everything that depends
+    /// on it, and none of their files are placed yet, the player is asked whether to continue
+    /// without them; otherwise this copy needs a fresh start, as for
+    /// [`MaterializationOutcome::FreshCopyRequired`].
+    LeaveOut {
+        /// Why, by kind, with the display-safe sentence recorded in the ledger and the receipt.
+        reason: UnusableReason,
     },
 }
 
@@ -241,6 +313,20 @@ pub struct ReceiptDraft {
     pub created: CampaignCreated,
     /// Exact plan whose digest was frozen in [`Self::created`].
     pub plan: InstallPlan,
+    /// Payloads left out because their downloads could not be used, in ledger order.
+    pub left_out: Vec<LeftOutArtifact>,
+    /// The plan actually installed when payloads were left out; `None` means [`Self::plan`].
+    pub installed_plan: Option<InstallPlan>,
+    /// Every answer to a question about a download, in ledger order, earlier "No" answers
+    /// included.
+    pub decisions: Vec<AnsweredDecision>,
+}
+
+impl ReceiptDraft {
+    /// The plan this campaign installs: the frozen plan minus everything left out.
+    pub fn effective_plan(&self) -> &InstallPlan {
+        self.installed_plan.as_ref().unwrap_or(&self.plan)
+    }
 }
 
 /// Terminal state of one orchestration call.
@@ -266,6 +352,15 @@ pub enum CampaignOutcome {
         step_id: String,
         /// Durable evidence summary.
         reason: String,
+    },
+    /// A step asked the player a question about a download and waits for the answer. Nothing
+    /// is recorded for the download; the step stays unresolved, and a resume continues once
+    /// an answer is there.
+    DecisionRequired {
+        /// The step that asks.
+        step_id: String,
+        /// The question's id.
+        decision_id: String,
     },
 }
 
@@ -319,8 +414,87 @@ pub trait CampaignPreflight {
 /// Acquires one frozen payload/tool into the shared content-addressed cache.
 pub trait ArtifactAcquirer {
     /// Acquire and reverify one identity. Implementations rely on the cache's own digest lock.
-    fn acquire(&mut self, identity: &FrozenIdentity, kind: ArtifactKind)
-        -> Result<(), StepFailure>;
+    fn acquire(
+        &mut self,
+        identity: &FrozenIdentity,
+        kind: ArtifactKind,
+    ) -> Result<AcquisitionOutcome, StepFailure>;
+
+    /// The part of `plan` that remains when the `left_out` payloads are not installed,
+    /// together with everything that depends on them. Fails when the installation cannot
+    /// continue without them, for example because the recipe always installs one of them.
+    ///
+    /// Called only when a payload is left out. The ledger records which runs that removed or
+    /// changed, so a resume rebuilds the remaining plan from that record, even after an app
+    /// update that derives remaining plans differently.
+    fn plan_without(
+        &mut self,
+        plan: &InstallPlan,
+        left_out: &[String],
+    ) -> Result<InstallPlan, StepFailure> {
+        let _ = (plan, left_out);
+        Err(StepFailure::new(
+            "This installer cannot continue without a mod whose download cannot be used.",
+        ))
+    }
+
+    /// The player-facing name of a frozen artifact, for messages.
+    fn artifact_name(&self, artifact_id: &str) -> String {
+        artifact_id.to_owned()
+    }
+
+    /// One sentence that names the question, for the installation log and for the reason of
+    /// a "No" answer.
+    fn describe_question(&self, question: &Question) -> String {
+        let name = self.artifact_name(&question.artifact_id);
+        match (&question.kind, &question.reason) {
+            (QuestionKind::UnusableDownload, Some(reason)) => {
+                format!("{name} can't be installed ({}).", reason.short())
+            }
+            (QuestionKind::UnreviewedTool, _) => format!(
+                "a newer version of {name} was found, from a host the collection did not review."
+            ),
+            _ => format!("a newer version of {name} was found."),
+        }
+    }
+
+    /// The answer to `decision`, a question this installation asked and the ledger has not
+    /// answered: the player's, when one is waiting, else a preset answer for this run. `None`
+    /// keeps the installation waiting for the player. Without an answer service every question
+    /// waits.
+    fn decision_answer(
+        &mut self,
+        decision: &PendingDecision,
+    ) -> Result<Option<(Answer, AnswerSource)>, StepFailure> {
+        let _ = decision;
+        Ok(None)
+    }
+
+    /// Whether the download folder holds the reviewed archive of `identity` now, looking only
+    /// there and never asking its link.
+    fn reviewed_is_available(
+        &mut self,
+        identity: &FrozenIdentity,
+        kind: ArtifactKind,
+    ) -> Result<bool, StepFailure> {
+        let _ = (identity, kind);
+        Ok(false)
+    }
+
+    /// Applies the answer "install it" to `question`, a changed download of `identity`: records
+    /// exactly the file that was asked about, getting it again from its link when the download
+    /// folder lost it, but only with the same length and SHA-256.
+    fn acquire_answered(
+        &mut self,
+        identity: &FrozenIdentity,
+        kind: ArtifactKind,
+        question: &Question,
+    ) -> Result<AnsweredAcquisition, StepFailure> {
+        let _ = (identity, kind, question);
+        Err(StepFailure::new(
+            "This installer cannot install a download that differs from the reviewed one.",
+        ))
+    }
 }
 
 /// Stages independent game copies and applies the deterministic save identity boundary.
@@ -369,9 +543,11 @@ pub trait InstallLogVerifier {
     }
 
     /// Persist a durable baseline or verify explicit acceptance. False means remain paused.
+    /// `plan` is the plan being installed, which lacks runs of left-out payloads.
     fn manual_checkpoint(
         &mut self,
         _checkpoint: &crate::manual_checkpoint::FrozenCheckpoint,
+        _plan: &InstallPlan,
     ) -> Result<bool, StepFailure> {
         Err(StepFailure::new(
             "Manual checkpoints are not supported by this backend.",
@@ -418,7 +594,8 @@ pub trait InstallLogVerifier {
         result: ProcessResult,
     ) -> Result<InstallReconciliation, StepFailure>;
 
-    /// Verify the complete final active stack against the exact frozen run plan.
+    /// Verify the complete final active stack against the plan being installed: the exact
+    /// frozen run plan, minus the runs of left-out payloads.
     fn verify_final(&mut self, plan: &InstallPlan) -> Result<(), StepFailure>;
 }
 
@@ -491,7 +668,7 @@ where
     D: CampaignDependencies,
     S: EventSink,
 {
-    let schedule = build_schedule(request, &dependencies.manual_checkpoints())?;
+    let mut schedule = build_schedule(request, &dependencies.manual_checkpoints())?;
     reject_protected_or_relative_target(&request.created.managed_root)?;
     reject_lock_registry_overlap(request)?;
 
@@ -508,7 +685,7 @@ where
         resumed,
     });
 
-    let progress = Progress::from_replay(&replay, &schedule)?;
+    let progress = Progress::from_replay(&replay, &mut schedule, &request.plan)?;
     dependencies
         .record_campaign(replay.created())
         .map_err(|failure| OrchestratorError::CampaignIndex(failure.into_message()))?;
@@ -525,7 +702,7 @@ where
             ),
         });
         emit_finished(sink, &step_id, StepOutcome::Failed);
-        write_terminal_receipt(dependencies, request, &replay, &outcome)?;
+        write_terminal_receipt(dependencies, request, &replay, &progress, &outcome)?;
         drop(target_lock);
         return Ok(outcome);
     }
@@ -542,7 +719,7 @@ where
                 step_id: "preflight".to_owned(),
                 reason,
             };
-            write_terminal_receipt(dependencies, request, &store.replay()?, &outcome)?;
+            write_terminal_receipt(dependencies, request, &store.replay()?, &progress, &outcome)?;
             return Ok(outcome);
         }
         emit_finished(sink, "preflight", StepOutcome::Succeeded);
@@ -567,6 +744,16 @@ where
             install_id: request.created.install_id.clone(),
             after_step_id: after_step_id.clone(),
         });
+    } else if let CampaignOutcome::DecisionRequired {
+        step_id,
+        decision_id,
+    } = &outcome
+    {
+        sink.emit(EngineEvent::DecisionRequired {
+            install_id: request.created.install_id.clone(),
+            step_id: step_id.clone(),
+            decision_id: decision_id.clone(),
+        });
     }
     drop(target_lock);
     Ok(outcome)
@@ -585,7 +772,8 @@ enum PipelineKind {
     Acquire(FrozenIdentity, ArtifactKind),
     Stage(GameRole),
     Materialize(MaterializationTask),
-    Install(usize),
+    /// One run of the plan being installed (fewer components when a dependency was left out).
+    Install(Box<PlannedRun>),
     ManualCheckpoint(Box<crate::manual_checkpoint::FrozenCheckpoint>),
     FinalIdentity,
     FinalVerify,
@@ -695,11 +883,11 @@ fn build_schedule(
             kind: PipelineKind::Materialize(task),
         });
     }
-    for (index, run) in request.plan.runs.iter().enumerate() {
+    for run in &request.plan.runs {
         schedule.push(PipelineStep {
             id: format!("install:{}", run.run_id),
             label: format!("Install {}", run.mod_id),
-            kind: PipelineKind::Install(index),
+            kind: PipelineKind::Install(Box::new(run.clone())),
         });
         for checkpoint in checkpoints
             .iter()
@@ -790,92 +978,243 @@ struct Progress {
     unresolved: Option<(String, u32)>,
     last_failed: BTreeMap<String, u32>,
     fresh_copy_required: Option<(String, String)>,
+    /// Payloads left out so far, in ledger order.
+    left_out: Vec<LeftOutArtifact>,
+    /// The frozen plan minus everything left out so far.
+    effective_plan: InstallPlan,
+    /// The question that the unresolved step asked and that was not withdrawn.
+    pending: Option<PendingDecision>,
 }
 
 impl Progress {
+    /// Replays the ledger against the schedule. A recorded leave-out rebuilds the remaining
+    /// plan from the runs it records, checks it against the recorded digest, and removes the
+    /// steps that are no longer needed from the rest of `schedule`, exactly as when it
+    /// happened.
     fn from_replay(
         replay: &SessionReplay,
-        schedule: &[PipelineStep],
+        schedule: &mut Vec<PipelineStep>,
+        frozen_plan: &InstallPlan,
     ) -> Result<Self, OrchestratorError> {
-        let positions = schedule
-            .iter()
-            .enumerate()
-            .map(|(index, step)| (step.id.as_str(), index))
-            .collect::<BTreeMap<_, _>>();
-        let mut completed_prefix = 0_usize;
-        let mut attempts = BTreeMap::<String, u32>::new();
-        let mut unresolved = None;
-        let mut last_failed = BTreeMap::new();
-        let mut fresh_copy_required = None;
+        let mut progress = Self {
+            completed_prefix: 0,
+            attempts: BTreeMap::new(),
+            unresolved: None,
+            last_failed: BTreeMap::new(),
+            fresh_copy_required: None,
+            left_out: Vec::new(),
+            effective_plan: frozen_plan.clone(),
+            pending: None,
+        };
 
         for record in replay.records.iter().skip(1) {
+            if !matches!(
+                record.event,
+                SessionEvent::DecisionRequired { .. }
+                    | SessionEvent::DecisionAnswered { .. }
+                    | SessionEvent::DecisionWithdrawn { .. }
+            ) {
+                progress.pending = None;
+            }
             match &record.event {
-                SessionEvent::StepStarted { step_id, attempt } => {
-                    let position = positions.get(step_id.as_str()).ok_or_else(|| {
-                        OrchestratorError::InvalidCampaign(format!(
-                            "ledger contains unknown step {step_id:?}"
-                        ))
-                    })?;
-                    if *position != completed_prefix {
+                SessionEvent::DecisionRequired {
+                    step_id,
+                    attempt,
+                    decision_id,
+                    question,
+                } => {
+                    if progress.unresolved.as_ref() != Some(&(step_id.clone(), *attempt)) {
                         return Err(OrchestratorError::InvalidCampaign(format!(
-                            "ledger started {step_id:?} out of order; expected {:?}",
-                            schedule.get(completed_prefix).map(|step| &step.id)
+                            "question {decision_id} for {step_id:?} has no matching intent"
                         )));
                     }
-                    let expected_attempt = attempts
-                        .get(step_id)
-                        .copied()
-                        .unwrap_or(0)
-                        .checked_add(1)
-                        .ok_or_else(|| {
-                            OrchestratorError::InvalidCampaign(format!(
-                                "attempt counter overflow for {step_id:?}"
-                            ))
-                        })?;
+                    let asks_own_artifact = match &schedule[progress.completed_prefix].kind {
+                        PipelineKind::Acquire(identity, kind) => {
+                            identity == &question.reviewed && *kind == question.artifact_kind
+                        }
+                        PipelineKind::Materialize(task) => {
+                            task.artifact_id == question.artifact_id
+                                && question.kind == QuestionKind::UnusableDownload
+                        }
+                        _ => false,
+                    };
+                    if !asks_own_artifact {
+                        return Err(OrchestratorError::InvalidCampaign(format!(
+                            "question {decision_id} at step {step_id:?} is not about what that step acquires or places"
+                        )));
+                    }
+                    progress.pending = Some(PendingDecision {
+                        step_id: step_id.clone(),
+                        attempt: *attempt,
+                        decision_id: decision_id.clone(),
+                        question: question.as_ref().clone(),
+                        answer: None,
+                    });
+                }
+                SessionEvent::DecisionAnswered {
+                    decision_id,
+                    answer,
+                    source,
+                    ..
+                } => {
+                    let Some(pending) = progress
+                        .pending
+                        .as_mut()
+                        .filter(|pending| &pending.decision_id == decision_id)
+                    else {
+                        return Err(OrchestratorError::InvalidCampaign(format!(
+                            "answer to {decision_id} has no standing question"
+                        )));
+                    };
+                    if !pending.question.offers(*answer) {
+                        return Err(OrchestratorError::InvalidCampaign(format!(
+                            "answer to {decision_id} is not one the question offers"
+                        )));
+                    }
+                    pending.answer = Some(RecordedAnswer {
+                        answer: *answer,
+                        source: *source,
+                        answered_at: record.recorded_at,
+                    });
+                }
+                SessionEvent::DecisionWithdrawn { decision_id, .. } => {
+                    if progress
+                        .pending
+                        .as_ref()
+                        .is_none_or(|pending| &pending.decision_id != decision_id)
+                    {
+                        return Err(OrchestratorError::InvalidCampaign(format!(
+                            "withdrawal of {decision_id} has no standing question"
+                        )));
+                    }
+                    progress.pending = None;
+                }
+                SessionEvent::StepStarted { step_id, attempt } => {
+                    if schedule.get(progress.completed_prefix).map(|step| &step.id) != Some(step_id)
+                    {
+                        return Err(OrchestratorError::InvalidCampaign(
+                            if schedule.iter().any(|step| &step.id == step_id) {
+                                format!(
+                                    "ledger started {step_id:?} out of order; expected {:?}",
+                                    schedule.get(progress.completed_prefix).map(|step| &step.id)
+                                )
+                            } else {
+                                format!("ledger contains unknown step {step_id:?}")
+                            },
+                        ));
+                    }
+                    let expected_attempt = progress.next_attempt(step_id)?;
                     if *attempt != expected_attempt {
                         return Err(OrchestratorError::InvalidCampaign(format!(
                             "step {step_id:?} attempt {attempt} is not monotonic; expected {expected_attempt}"
                         )));
                     }
-                    attempts.insert(step_id.clone(), *attempt);
-                    unresolved = Some((step_id.clone(), *attempt));
+                    progress.attempts.insert(step_id.clone(), *attempt);
+                    progress.unresolved = Some((step_id.clone(), *attempt));
                 }
                 SessionEvent::StepCompleted { step_id, attempt } => {
-                    if unresolved.as_ref() != Some(&(step_id.clone(), *attempt)) {
+                    if progress.unresolved.as_ref() != Some(&(step_id.clone(), *attempt)) {
                         return Err(OrchestratorError::InvalidCampaign(format!(
                             "completion for {step_id:?} has no matching intent"
                         )));
                     }
-                    completed_prefix += 1;
-                    unresolved = None;
-                    last_failed.remove(step_id);
+                    progress.completed_prefix += 1;
+                    progress.unresolved = None;
+                    progress.last_failed.remove(step_id);
+                }
+                SessionEvent::ArtifactLeftOut {
+                    step_id,
+                    attempt,
+                    artifact_id,
+                    detail,
+                    plan_sha256,
+                    removed_runs,
+                    changed_runs,
+                } => {
+                    if progress.unresolved.as_ref() != Some(&(step_id.clone(), *attempt)) {
+                        return Err(OrchestratorError::InvalidCampaign(format!(
+                            "left-out record for {step_id:?} has no matching intent"
+                        )));
+                    }
+                    let step = &schedule[progress.completed_prefix];
+                    let at_materialization = match &step.kind {
+                        PipelineKind::Acquire(identity, ArtifactKind::Payload)
+                            if &identity.id == artifact_id =>
+                        {
+                            false
+                        }
+                        PipelineKind::Materialize(task) if &task.artifact_id == artifact_id => true,
+                        _ => {
+                            return Err(OrchestratorError::InvalidCampaign(format!(
+                                "ledger leaves out {artifact_id:?} at step {step_id:?}, which neither acquires nor places that payload"
+                            )))
+                        }
+                    };
+                    let mut ids = progress.left_out_ids();
+                    ids.push(artifact_id.clone());
+                    // The record, not a new derivation, says what remains: a resume after an
+                    // app update installs exactly what the campaign chose when it happened.
+                    let plan = apply_plan_change(
+                        &progress.effective_plan,
+                        removed_runs,
+                        changed_runs,
+                    )
+                    .map_err(|detail| {
+                        OrchestratorError::InvalidCampaign(format!(
+                            "the record that the installation continues without {artifact_id:?} does not fit the plan before it: {detail}"
+                        ))
+                    })?;
+                    validate_reduced_plan(&progress.effective_plan, &plan, &ids)?;
+                    if plan_digest(&plan)? != *plan_sha256 {
+                        return Err(OrchestratorError::InvalidCampaign(format!(
+                            "the plan without {artifact_id:?} differs from the one recorded when it was left out"
+                        )));
+                    }
+                    if at_materialization {
+                        let placed = placed_payloads_left_behind(
+                            &schedule[..progress.completed_prefix],
+                            &progress.left_out_ids(),
+                            artifact_id,
+                            &plan,
+                        );
+                        if !placed.is_empty() {
+                            return Err(OrchestratorError::InvalidCampaign(format!(
+                                "ledger leaves out {artifact_id:?} although files of {placed:?} were already placed"
+                            )));
+                        }
+                    }
+                    progress.record_left_out(schedule, artifact_id, detail, plan);
+                    progress.completed_prefix += 1;
+                    progress.unresolved = None;
+                    progress.last_failed.remove(step_id);
                 }
                 SessionEvent::StepFailed {
                     step_id, attempt, ..
                 } => {
-                    if unresolved.as_ref() != Some(&(step_id.clone(), *attempt)) {
+                    if progress.unresolved.as_ref() != Some(&(step_id.clone(), *attempt)) {
                         return Err(OrchestratorError::InvalidCampaign(format!(
                             "failure for {step_id:?} has no matching intent"
                         )));
                     }
-                    unresolved = None;
-                    last_failed.insert(step_id.clone(), *attempt);
+                    progress.unresolved = None;
+                    progress.last_failed.insert(step_id.clone(), *attempt);
                 }
                 SessionEvent::FreshCopyRequired {
                     step_id,
                     attempt,
                     detail,
                 } => {
-                    let matches_active = unresolved.as_ref() == Some(&(step_id.clone(), *attempt));
-                    let upgrades_failure = last_failed.get(step_id) == Some(attempt);
+                    let matches_active =
+                        progress.unresolved.as_ref() == Some(&(step_id.clone(), *attempt));
+                    let upgrades_failure = progress.last_failed.get(step_id) == Some(attempt);
                     if !matches_active && !upgrades_failure {
                         return Err(OrchestratorError::InvalidCampaign(format!(
                             "fresh-copy seal for {step_id:?} has no matching intent"
                         )));
                     }
-                    unresolved = None;
-                    last_failed.remove(step_id);
-                    fresh_copy_required = Some((step_id.clone(), detail.clone()));
+                    progress.unresolved = None;
+                    progress.last_failed.remove(step_id);
+                    progress.fresh_copy_required = Some((step_id.clone(), detail.clone()));
                 }
                 SessionEvent::Created(_) => {
                     return Err(OrchestratorError::InvalidCampaign(
@@ -885,13 +1224,75 @@ impl Progress {
             }
         }
 
-        Ok(Self {
-            completed_prefix,
-            attempts,
-            unresolved,
-            last_failed,
-            fresh_copy_required,
-        })
+        Ok(progress)
+    }
+
+    fn left_out_ids(&self) -> Vec<String> {
+        self.left_out
+            .iter()
+            .map(|left_out| left_out.artifact_id.clone())
+            .collect()
+    }
+
+    /// Records one left-out payload whose acquisition step is at `completed_prefix`, and
+    /// drops the later steps that `plan` no longer needs. Earlier steps stay as they ran.
+    fn record_left_out(
+        &mut self,
+        schedule: &mut Vec<PipelineStep>,
+        artifact_id: &str,
+        reason: &str,
+        plan: InstallPlan,
+    ) -> &LeftOutArtifact {
+        let remaining = plan
+            .runs
+            .iter()
+            .map(|run| (run.run_id.as_str(), run))
+            .collect::<BTreeMap<_, _>>();
+        let mut runs = Vec::new();
+        let mut changed_runs = Vec::new();
+        for run in &self.effective_plan.runs {
+            match remaining.get(run.run_id.as_str()) {
+                None => runs.push(run.run_id.clone()),
+                Some(kept) if *kept != run => changed_runs.push(run.run_id.clone()),
+                Some(_) => {}
+            }
+        }
+        let tail = schedule.split_off(self.completed_prefix + 1);
+        schedule.extend(tail.into_iter().filter_map(|mut step| {
+            let keep = match &mut step.kind {
+                PipelineKind::Acquire(identity, _) => plan.runs.iter().any(|run| {
+                    run.artifact_id == identity.id || run.weidu_artifact_id == identity.id
+                }),
+                PipelineKind::Materialize(task) => plan
+                    .runs
+                    .iter()
+                    .any(|run| run.artifact_id == task.artifact_id && run.target == task.target),
+                PipelineKind::Install(run) => match remaining.get(run.run_id.as_str()) {
+                    Some(kept) => {
+                        **run = (*kept).clone();
+                        true
+                    }
+                    None => false,
+                },
+                PipelineKind::Preflight
+                | PipelineKind::Stage(_)
+                | PipelineKind::ManualCheckpoint(_)
+                | PipelineKind::FinalIdentity
+                | PipelineKind::FinalVerify
+                | PipelineKind::Receipt => true,
+            };
+            keep.then_some(step)
+        }));
+        self.effective_plan = plan;
+        self.left_out.push(LeftOutArtifact {
+            artifact_id: artifact_id.to_owned(),
+            reason: reason.to_owned(),
+            runs,
+            changed_runs,
+        });
+        self.left_out
+            .last()
+            .expect("left-out payload was just recorded")
     }
 
     fn next_attempt(&self, step_id: &str) -> Result<u32, OrchestratorError> {
@@ -908,9 +1309,176 @@ impl Progress {
     }
 }
 
+/// What leaving a payload out changes in `previous`: the runs `reduced` no longer has, in plan
+/// order, and the runs it keeps in another form, as `reduced` has them.
+fn plan_change(previous: &InstallPlan, reduced: &InstallPlan) -> (Vec<String>, Vec<PlannedRun>) {
+    let kept = reduced
+        .runs
+        .iter()
+        .map(|run| (run.run_id.as_str(), run))
+        .collect::<BTreeMap<_, _>>();
+    let mut removed = Vec::new();
+    let mut changed = Vec::new();
+    for run in &previous.runs {
+        match kept.get(run.run_id.as_str()) {
+            None => removed.push(run.run_id.clone()),
+            Some(kept) if *kept != run => changed.push((*kept).clone()),
+            Some(_) => {}
+        }
+    }
+    (removed, changed)
+}
+
+/// Applies a recorded [`plan_change`] to `previous`. Fails when the record names runs that
+/// `previous` does not have, or names one run twice.
+fn apply_plan_change(
+    previous: &InstallPlan,
+    removed: &[String],
+    changed: &[PlannedRun],
+) -> Result<InstallPlan, String> {
+    let planned = previous
+        .runs
+        .iter()
+        .map(|run| run.run_id.as_str())
+        .collect::<BTreeSet<_>>();
+    let mut removed_ids = BTreeSet::new();
+    for run_id in removed {
+        if !planned.contains(run_id.as_str()) {
+            return Err(format!("removed run {run_id:?} is not planned"));
+        }
+        if !removed_ids.insert(run_id.as_str()) {
+            return Err(format!("run {run_id:?} is removed twice"));
+        }
+    }
+    let mut changed_by_id = BTreeMap::new();
+    for run in changed {
+        if !planned.contains(run.run_id.as_str()) {
+            return Err(format!("changed run {:?} is not planned", run.run_id));
+        }
+        if removed_ids.contains(run.run_id.as_str())
+            || changed_by_id.insert(run.run_id.as_str(), run).is_some()
+        {
+            return Err(format!("run {:?} is recorded twice", run.run_id));
+        }
+    }
+    Ok(InstallPlan {
+        runs: previous
+            .runs
+            .iter()
+            .filter(|run| !removed_ids.contains(run.run_id.as_str()))
+            .map(|run| {
+                changed_by_id
+                    .get(run.run_id.as_str())
+                    .map_or_else(|| run.clone(), |changed| (*changed).clone())
+            })
+            .collect(),
+    })
+}
+
+/// The payloads whose files a completed step already placed on a game although `plan` no
+/// longer installs them there: the payload being left out, or a mod leaving with it. Payloads
+/// left out before (`left_out`) never had files placed, since a leave-out requires that.
+fn placed_payloads_left_behind(
+    completed: &[PipelineStep],
+    left_out: &[String],
+    artifact_id: &str,
+    plan: &InstallPlan,
+) -> Vec<String> {
+    let mut placed = Vec::<String>::new();
+    for step in completed {
+        let PipelineKind::Materialize(task) = &step.kind else {
+            continue;
+        };
+        let still_installed = task.artifact_id != artifact_id
+            && plan
+                .runs
+                .iter()
+                .any(|run| run.artifact_id == task.artifact_id && run.target == task.target);
+        if !still_installed
+            && !left_out.contains(&task.artifact_id)
+            && !placed.contains(&task.artifact_id)
+        {
+            placed.push(task.artifact_id.clone());
+        }
+    }
+    placed
+}
+
+/// Fails closed when a backend's remaining plan is not exactly a part of the plan before it:
+/// leaving a payload out may only remove runs, components and the prompts that went with
+/// them, never add, reorder or retarget anything.
+fn validate_reduced_plan(
+    previous: &InstallPlan,
+    reduced: &InstallPlan,
+    left_out: &[String],
+) -> Result<(), OrchestratorError> {
+    let invalid = |detail: String| {
+        OrchestratorError::InvalidCampaign(format!(
+            "the plan without {left_out:?} is not part of the plan before it: {detail}"
+        ))
+    };
+    let mut previous_runs = previous.runs.iter();
+    for run in &reduced.runs {
+        let Some(before) = previous_runs.find(|before| before.run_id == run.run_id) else {
+            return Err(invalid(format!(
+                "run {:?} is new or out of order",
+                run.run_id
+            )));
+        };
+        if run.mod_id != before.mod_id
+            || run.target != before.target
+            || run.phase != before.phase
+            || run.args != before.args
+            || run.artifact_id != before.artifact_id
+            || run.weidu_artifact_id != before.weidu_artifact_id
+        {
+            return Err(invalid(format!(
+                "run {:?} changed its identity",
+                run.run_id
+            )));
+        }
+        if left_out.contains(&run.artifact_id) {
+            return Err(invalid(format!(
+                "run {:?} still installs a left-out payload",
+                run.run_id
+            )));
+        }
+        let mut before_components = before.components.iter();
+        if run.components.is_empty()
+            || !run
+                .components
+                .iter()
+                .all(|component| before_components.any(|before| before == component))
+        {
+            return Err(invalid(format!(
+                "run {:?} has components that were not planned in this order",
+                run.run_id
+            )));
+        }
+        if run
+            .prompt_scripts
+            .iter()
+            .any(|script| !run.components.contains(&script.component.component))
+        {
+            return Err(invalid(format!(
+                "run {:?} answers prompts of components it does not install",
+                run.run_id
+            )));
+        }
+        if !run.postconditions.is_empty() && run.postconditions != before.postconditions {
+            return Err(invalid(format!(
+                "run {:?} has checks that were not planned",
+                run.run_id
+            )));
+        }
+    }
+    Ok(())
+}
+
 fn build_receipt_draft(
     request: &CampaignRequest,
     replay: &SessionReplay,
+    progress: &Progress,
     outcome: ReceiptDraftOutcome,
 ) -> Result<ReceiptDraft, OrchestratorError> {
     let first = replay.records.first().ok_or_else(|| {
@@ -945,6 +1513,9 @@ fn build_receipt_draft(
         outcome,
         created: request.created.clone(),
         plan: request.plan.clone(),
+        left_out: progress.left_out.clone(),
+        installed_plan: (!progress.left_out.is_empty()).then(|| progress.effective_plan.clone()),
+        decisions: answered_decisions(&replay.records),
     })
 }
 
@@ -952,6 +1523,7 @@ fn write_terminal_receipt<D>(
     dependencies: &mut D,
     request: &CampaignRequest,
     replay: &SessionReplay,
+    progress: &Progress,
     outcome: &CampaignOutcome,
 ) -> Result<(), OrchestratorError>
 where
@@ -963,7 +1535,7 @@ where
                 "success receipt must be written by the receipt pipeline step".to_owned(),
             ));
         }
-        CampaignOutcome::Paused { .. } => {
+        CampaignOutcome::Paused { .. } | CampaignOutcome::DecisionRequired { .. } => {
             return Err(OrchestratorError::InvalidCampaign(
                 "a paused campaign must not publish a terminal receipt".to_owned(),
             ));
@@ -979,7 +1551,7 @@ where
             }
         }
     };
-    let draft = build_receipt_draft(request, replay, draft_outcome)?;
+    let draft = build_receipt_draft(request, replay, progress, draft_outcome)?;
     dependencies
         .write(&draft)
         .map_err(|failure| OrchestratorError::TerminalReceipt(failure.into_message()))
@@ -1005,13 +1577,22 @@ where
         while self.progress.completed_prefix < self.schedule.len() {
             let step = self.schedule[self.progress.completed_prefix].clone();
             let outcome = match step.kind.clone() {
-                PipelineKind::Install(index) => self.run_install(&step, index)?,
+                PipelineKind::Install(run) => self.run_install(&step, *run)?,
                 _ => self.run_simple(&step)?,
             };
             if let Some(outcome) = outcome {
                 let replay = self.store.replay()?;
-                if !matches!(outcome, CampaignOutcome::Paused { .. }) {
-                    write_terminal_receipt(self.dependencies, self.request, &replay, &outcome)?;
+                if !matches!(
+                    outcome,
+                    CampaignOutcome::Paused { .. } | CampaignOutcome::DecisionRequired { .. }
+                ) {
+                    write_terminal_receipt(
+                        self.dependencies,
+                        self.request,
+                        &replay,
+                        &self.progress,
+                        &outcome,
+                    )?;
                 }
                 return Ok(outcome);
             }
@@ -1031,11 +1612,23 @@ where
         step: &PipelineStep,
     ) -> Result<Option<CampaignOutcome>, OrchestratorError> {
         let attempt = self.begin_or_resume(step)?;
+        if let Some(pending) = self.progress.pending.clone() {
+            if pending.step_id != step.id || pending.attempt != attempt.attempt {
+                return Err(OrchestratorError::InvalidCampaign(format!(
+                    "question {} belongs to {:?}, not to the next step {:?}",
+                    pending.decision_id, pending.step_id, step.id
+                )));
+            }
+            return self.continue_decision(step, &attempt, pending);
+        }
         let execution = match &step.kind {
             PipelineKind::ManualCheckpoint(checkpoint) => {
                 // The preceding WeiDU invocation has exited and its exact log/debug
                 // evidence is complete. Never hand over a suspended child process.
-                match self.dependencies.manual_checkpoint(checkpoint) {
+                match self
+                    .dependencies
+                    .manual_checkpoint(checkpoint, &self.progress.effective_plan)
+                {
                     Ok(false) => {
                         return Ok(Some(CampaignOutcome::Paused {
                             after_step_id: step.id.clone(),
@@ -1051,73 +1644,674 @@ where
                     .initial(self.request, &replay)
                     .map(|()| SimpleExecution::Complete)
             }
-            PipelineKind::Acquire(identity, kind) => self
-                .dependencies
-                .acquire(identity, *kind)
-                .map(|()| SimpleExecution::Complete),
+            PipelineKind::Acquire(identity, kind) => self.acquire_execution(identity, *kind),
             PipelineKind::Stage(role) => {
                 let target = role_target(*role);
                 self.recheck(step, target, MutationKind::Stage)
                     .and_then(|()| self.dependencies.stage(*role))
                     .map(|()| SimpleExecution::Complete)
             }
-            PipelineKind::Materialize(task) => self
+            PipelineKind::Materialize(task) => match self
                 .recheck(step, task.target, MutationKind::Materialize)
                 .and_then(|()| self.dependencies.materialize(task))
-                .map(|outcome| match outcome {
-                    MaterializationOutcome::Complete => SimpleExecution::Complete,
-                    MaterializationOutcome::FreshCopyRequired { reason } => {
-                        SimpleExecution::FreshCopyRequired(reason)
-                    }
-                }),
+            {
+                Ok(MaterializationOutcome::Complete) => Ok(SimpleExecution::Complete),
+                Ok(MaterializationOutcome::FreshCopyRequired { reason }) => {
+                    Ok(SimpleExecution::FreshCopyRequired(reason))
+                }
+                Ok(MaterializationOutcome::LeaveOut { reason }) => {
+                    Ok(self.leave_out_at_materialization(task, reason))
+                }
+                Err(failure) => Err(failure),
+            },
             PipelineKind::FinalIdentity => self
                 .recheck(step, GameRoot::Bg2, MutationKind::FinalIdentity)
                 .and_then(|()| self.dependencies.finalize_identity())
                 .map(|()| SimpleExecution::Complete),
             PipelineKind::FinalVerify => self
                 .dependencies
-                .verify_final(&self.request.plan)
+                .verify_final(&self.progress.effective_plan)
                 .map(|()| SimpleExecution::Complete),
             PipelineKind::Receipt => (|| {
                 let replay = self
                     .store
                     .replay()
                     .map_err(|error| StepFailure::new(error.to_string()))?;
-                let draft =
-                    build_receipt_draft(self.request, &replay, ReceiptDraftOutcome::Succeeded)
-                        .map_err(|error| StepFailure::new(error.to_string()))?;
+                let draft = build_receipt_draft(
+                    self.request,
+                    &replay,
+                    &self.progress,
+                    ReceiptDraftOutcome::Succeeded,
+                )
+                .map_err(|error| StepFailure::new(error.to_string()))?;
                 self.dependencies
                     .write(&draft)
                     .map(|()| SimpleExecution::Complete)
             })(),
             PipelineKind::Install(_) => unreachable!("install steps use run_install"),
         };
+        self.finish_simple(step, &attempt, execution)
+    }
 
+    /// Ends or continues a simple step as `execution` says.
+    fn finish_simple(
+        &mut self,
+        step: &PipelineStep,
+        attempt: &StepAttempt,
+        execution: Result<SimpleExecution, StepFailure>,
+    ) -> Result<Option<CampaignOutcome>, OrchestratorError> {
         match execution {
             Ok(SimpleExecution::Complete) => {
-                self.complete_step(step, &attempt)?;
+                self.complete_step(step, attempt)?;
                 Ok(None)
             }
+            Ok(SimpleExecution::Ask(question)) => self.ask(step, attempt, *question),
             Ok(SimpleExecution::FreshCopyRequired(reason)) => {
-                self.seal_fresh_copy(step, &attempt, reason).map(Some)
+                self.seal_fresh_copy(step, attempt, reason).map(Some)
             }
+            Err(failure) => self.failed(step, attempt, failure.into_message()),
+        }
+    }
+
+    /// Acquires `identity` and says how its step goes on: complete, or with a question.
+    fn acquire_execution(
+        &mut self,
+        identity: &FrozenIdentity,
+        kind: ArtifactKind,
+    ) -> Result<SimpleExecution, StepFailure> {
+        match self.dependencies.acquire(identity, kind)? {
+            AcquisitionOutcome::Ready => Ok(SimpleExecution::Complete),
+            AcquisitionOutcome::LeaveOut { reason } => {
+                self.unusable_question(identity, kind, reason)
+            }
+            AcquisitionOutcome::Ask {
+                kind: question_kind,
+                served,
+            } => self.changed_question(identity, kind, question_kind, served),
+        }
+    }
+
+    /// The question whether to continue without `identity`, whose download cannot be used, and
+    /// without everything that needs it. A tool, or a payload the recipe cannot do without,
+    /// fails the step instead: that is never a question.
+    fn unusable_question(
+        &mut self,
+        identity: &FrozenIdentity,
+        kind: ArtifactKind,
+        reason: UnusableReason,
+    ) -> Result<SimpleExecution, StepFailure> {
+        if kind == ArtifactKind::Tool {
+            return Err(self.cannot_do_without(&identity.id, &reason, None));
+        }
+        let mut ids = self.progress.left_out_ids();
+        ids.push(identity.id.clone());
+        let plan = match self.dependencies.plan_without(&self.request.plan, &ids) {
+            Ok(plan) => plan,
             Err(failure) => {
-                let reason = failure.into_message();
-                self.fail_step(step, &attempt, &reason)?;
-                Ok(Some(CampaignOutcome::Failed {
+                return Err(self.cannot_do_without(&identity.id, &reason, Some(failure)))
+            }
+        };
+        let leave_out = self.closure(&plan, &ids)?;
+        Ok(SimpleExecution::Ask(Box::new(Question {
+            kind: QuestionKind::UnusableDownload,
+            artifact_id: identity.id.clone(),
+            artifact_kind: kind,
+            reviewed: identity.clone(),
+            served: None,
+            reason: Some(reason),
+            leave_out: Some(leave_out),
+        })))
+    }
+
+    /// The question whether to install a changed download of `identity`. Leaving the mod out
+    /// is offered too when the recipe can do without it; never for a tool.
+    fn changed_question(
+        &mut self,
+        identity: &FrozenIdentity,
+        kind: ArtifactKind,
+        question_kind: QuestionKind,
+        served: ServedDownload,
+    ) -> Result<SimpleExecution, StepFailure> {
+        let fits = match question_kind {
+            QuestionKind::ChangedDownload => true,
+            QuestionKind::UnreviewedTool => kind == ArtifactKind::Tool,
+            QuestionKind::UnusableDownload => false,
+        };
+        if !fits {
+            return Err(StepFailure::new(format!(
+                "acquiring {} asked a {} question, which does not fit it",
+                identity.id,
+                question_kind.as_str()
+            )));
+        }
+        let leave_out = if kind == ArtifactKind::Payload {
+            let mut ids = self.progress.left_out_ids();
+            ids.push(identity.id.clone());
+            match self.dependencies.plan_without(&self.request.plan, &ids) {
+                Ok(plan) => Some(self.closure(&plan, &ids)?),
+                // A part the recipe cannot do without is only offered to install or stop.
+                Err(_) => None,
+            }
+        } else {
+            None
+        };
+        Ok(SimpleExecution::Ask(Box::new(Question {
+            kind: question_kind,
+            artifact_id: identity.id.clone(),
+            artifact_kind: kind,
+            reviewed: identity.clone(),
+            served: Some(served),
+            reason: None,
+            leave_out,
+        })))
+    }
+
+    /// What leaving out `ids` changes in the plan being installed, for a question.
+    fn closure(&self, plan: &InstallPlan, ids: &[String]) -> Result<LeaveOutClosure, StepFailure> {
+        validate_reduced_plan(&self.progress.effective_plan, plan, ids)
+            .map_err(|error| StepFailure::new(error.to_string()))?;
+        let (removed_runs, changed_runs) = plan_change(&self.progress.effective_plan, plan);
+        Ok(LeaveOutClosure {
+            removed_runs,
+            changed_runs,
+            plan_sha256: plan_digest(plan).map_err(|error| StepFailure::new(error.to_string()))?,
+        })
+    }
+
+    /// The stop of a step whose artifact cannot be used and that the collection cannot do
+    /// without: a tool, or a part the recipe always installs.
+    fn cannot_do_without(
+        &self,
+        artifact_id: &str,
+        reason: &UnusableReason,
+        failure: Option<StepFailure>,
+    ) -> StepFailure {
+        let mut message = format!(
+            "{} can't be installed ({}), and the collection can't be installed without it. Try again later; if it keeps happening, please report it.\n{}",
+            self.dependencies.artifact_name(artifact_id),
+            reason.short(),
+            nonempty_detail(&reason.detail)
+        );
+        if let Some(failure) = failure {
+            message.push('\n');
+            message.push_str(&failure.into_message());
+        }
+        StepFailure::new(message)
+    }
+
+    /// The question whether to continue without the payload of `task`, whose files cannot be
+    /// placed, when none of its files or those of the payloads leaving with it are placed yet.
+    /// Otherwise this copy needs a fresh start, because a mod that is not installed must not
+    /// leave files behind: other mods detect mods by their files. A part the recipe cannot do
+    /// without needs a fresh start too.
+    fn leave_out_at_materialization(
+        &mut self,
+        task: &MaterializationTask,
+        reason: UnusableReason,
+    ) -> SimpleExecution {
+        let detail = nonempty_detail(&reason.detail);
+        let earlier = self.progress.left_out_ids();
+        let mut ids = earlier.clone();
+        ids.push(task.artifact_id.clone());
+        let plan = match self.dependencies.plan_without(&self.request.plan, &ids) {
+            Ok(plan) => plan,
+            Err(failure) => {
+                return SimpleExecution::FreshCopyRequired(format!("{detail}\n{failure}"));
+            }
+        };
+        let placed = placed_payloads_left_behind(
+            &self.schedule[..self.progress.completed_prefix],
+            &earlier,
+            &task.artifact_id,
+            &plan,
+        );
+        if !placed.is_empty() {
+            return SimpleExecution::FreshCopyRequired(format!(
+                "{detail}\nThe installation cannot leave it out at this point, because files of {} are already in this game copy.",
+                placed.join(", ")
+            ));
+        }
+        let leave_out = match self.closure(&plan, &ids) {
+            Ok(leave_out) => leave_out,
+            Err(failure) => {
+                return SimpleExecution::FreshCopyRequired(format!("{detail}\n{failure}"));
+            }
+        };
+        let Some(identity) = self
+            .request
+            .created
+            .artifact_identities
+            .iter()
+            .find(|identity| identity.id == task.artifact_id)
+        else {
+            return SimpleExecution::FreshCopyRequired(format!(
+                "{detail}\nThe payload {} has no frozen identity.",
+                task.artifact_id
+            ));
+        };
+        SimpleExecution::Ask(Box::new(Question {
+            kind: QuestionKind::UnusableDownload,
+            artifact_id: task.artifact_id.clone(),
+            artifact_kind: ArtifactKind::Payload,
+            reviewed: identity.clone(),
+            served: None,
+            reason: Some(reason),
+            leave_out: Some(leave_out),
+        }))
+    }
+
+    /// Records `question` for this step, then goes on as its answer allows: at once with a
+    /// preset answer, else the installation waits for the player.
+    fn ask(
+        &mut self,
+        step: &PipelineStep,
+        attempt: &StepAttempt,
+        question: Question,
+    ) -> Result<Option<CampaignOutcome>, OrchestratorError> {
+        let decision_id = question.decision_id(&step.id, attempt.attempt);
+        // The same question came back after it was withdrawn in this attempt, as when a link
+        // alternates between two files: this attempt ends instead of asking in a loop.
+        let withdrawn_before = self.store.replay()?.records.iter().any(|record| {
+            matches!(
+                &record.event,
+                SessionEvent::DecisionWithdrawn { decision_id: withdrawn, .. }
+                    if *withdrawn == decision_id
+            )
+        });
+        if withdrawn_before {
+            return self.failed(
+                step,
+                attempt,
+                format!(
+                    "The same question came back after it no longer applied: {} Its link keeps changing; try again later.",
+                    self.dependencies.describe_question(&question)
+                ),
+            );
+        }
+        self.store.append(SessionEvent::DecisionRequired {
+            step_id: step.id.clone(),
+            attempt: attempt.attempt,
+            decision_id: decision_id.clone(),
+            question: Box::new(question.clone()),
+        })?;
+        self.log(
+            step,
+            format!(
+                "Question {decision_id}: {}",
+                self.dependencies.describe_question(&question)
+            ),
+        );
+        let pending = PendingDecision {
+            step_id: step.id.clone(),
+            attempt: attempt.attempt,
+            decision_id,
+            question,
+            answer: None,
+        };
+        self.progress.pending = Some(pending.clone());
+        self.continue_decision(step, attempt, pending)
+    }
+
+    /// Applies the answer to the standing question of this step, once there is one. Without
+    /// an answer the installation stops again with the same question: nothing is downloaded
+    /// or computed again.
+    fn continue_decision(
+        &mut self,
+        step: &PipelineStep,
+        attempt: &StepAttempt,
+        mut pending: PendingDecision,
+    ) -> Result<Option<CampaignOutcome>, OrchestratorError> {
+        let waiting = |pending: &PendingDecision| {
+            Ok(Some(CampaignOutcome::DecisionRequired {
+                step_id: pending.step_id.clone(),
+                decision_id: pending.decision_id.clone(),
+            }))
+        };
+        let answer = match pending.answer {
+            Some(recorded) => recorded.answer,
+            None => {
+                let found = match self.dependencies.decision_answer(&pending) {
+                    Ok(found) => found,
+                    Err(failure) => {
+                        // An answer that cannot be used ends this attempt; the next one asks
+                        // anew, with a new id.
+                        self.withdraw(
+                            step,
+                            attempt,
+                            &pending,
+                            &format!("its answer cannot be used: {failure}"),
+                        )?;
+                        return self.failed(step, attempt, failure.into_message());
+                    }
+                };
+                let Some((answer, source)) = found else {
+                    return waiting(&pending);
+                };
+                if !pending.question.offers(answer) {
+                    self.log(
+                        step,
+                        format!(
+                            "The answer {} does not fit question {}; waiting for another answer.",
+                            answer.flag_value(),
+                            pending.decision_id
+                        ),
+                    );
+                    return waiting(&pending);
+                }
+                let record = self.store.append(SessionEvent::DecisionAnswered {
                     step_id: step.id.clone(),
-                    reason,
-                }))
+                    attempt: attempt.attempt,
+                    decision_id: pending.decision_id.clone(),
+                    answer,
+                    source,
+                })?;
+                self.log(
+                    step,
+                    format!(
+                        "Answer to question {}: {} ({}).",
+                        pending.decision_id,
+                        answer.flag_value(),
+                        match source {
+                            AnswerSource::Player => "given by the player",
+                            AnswerSource::Preset => "preset for this run",
+                        }
+                    ),
+                );
+                pending.answer = Some(RecordedAnswer {
+                    answer,
+                    source,
+                    answered_at: record.recorded_at,
+                });
+                self.progress.pending = Some(pending.clone());
+                answer
+            }
+        };
+        if answer == Answer::No {
+            let reason = format!(
+                "You chose to stop: {}",
+                self.dependencies.describe_question(&pending.question)
+            );
+            return self.failed(step, attempt, reason);
+        }
+        if pending.question.leaves_out(answer) {
+            return self.apply_leave_out(step, attempt, pending);
+        }
+        self.apply_install_anyway(step, attempt, pending)
+    }
+
+    /// Leaves the payload of an answered question out with exactly the closure recorded when it
+    /// was asked; nothing derives it again. A placing step plans again first: when its files
+    /// can be placed now, the question is withdrawn and the mod is installed.
+    fn apply_leave_out(
+        &mut self,
+        step: &PipelineStep,
+        attempt: &StepAttempt,
+        pending: PendingDecision,
+    ) -> Result<Option<CampaignOutcome>, OrchestratorError> {
+        let question = &pending.question;
+        let closure = question.leave_out.clone().ok_or_else(|| {
+            OrchestratorError::InvalidCampaign(format!(
+                "question {} has no closure to leave its mod out with",
+                pending.decision_id
+            ))
+        })?;
+        let at_materialization = match &step.kind {
+            // The reviewed archive may have come back to the download folder meanwhile, as when
+            // another installation downloaded it: then the mod is installed after all. This
+            // looks only into the download folder; nothing asks the link.
+            PipelineKind::Acquire(identity, kind) => {
+                match self.dependencies.reviewed_is_available(identity, *kind) {
+                    Ok(false) => false,
+                    Ok(true) => {
+                        self.withdraw(
+                            step,
+                            attempt,
+                            &pending,
+                            "the reviewed version is in the download folder now",
+                        )?;
+                        let execution = self.acquire_execution(identity, *kind);
+                        return self.finish_simple(step, attempt, execution);
+                    }
+                    Err(failure) => return self.failed(step, attempt, failure.into_message()),
+                }
+            }
+            PipelineKind::Materialize(task) => {
+                let planned = self
+                    .recheck(step, task.target, MutationKind::Materialize)
+                    .and_then(|()| self.dependencies.materialize(task));
+                match planned {
+                    Ok(MaterializationOutcome::LeaveOut { reason }) => {
+                        let current = Question {
+                            reason: Some(reason.clone()),
+                            ..question.clone()
+                        };
+                        if current.decision_id(&step.id, attempt.attempt) != pending.decision_id {
+                            self.withdraw(
+                                step,
+                                attempt,
+                                &pending,
+                                &format!(
+                                    "its files now cannot be placed for another reason: {}",
+                                    reason.detail
+                                ),
+                            )?;
+                            let execution = self.leave_out_at_materialization(task, reason);
+                            return self.finish_simple(step, attempt, Ok(execution));
+                        }
+                    }
+                    Ok(MaterializationOutcome::Complete) => {
+                        self.withdraw(
+                            step,
+                            attempt,
+                            &pending,
+                            "its files could be placed after all",
+                        )?;
+                        self.complete_step(step, attempt)?;
+                        return Ok(None);
+                    }
+                    Ok(MaterializationOutcome::FreshCopyRequired { reason }) => {
+                        self.withdraw(
+                            step,
+                            attempt,
+                            &pending,
+                            "this game copy needs a fresh start",
+                        )?;
+                        return self.seal_fresh_copy(step, attempt, reason).map(Some);
+                    }
+                    Err(failure) => return self.failed(step, attempt, failure.into_message()),
+                }
+                true
+            }
+            _ => {
+                return Err(OrchestratorError::InvalidCampaign(format!(
+                    "question {} cannot leave a mod out at step {:?}",
+                    pending.decision_id, step.id
+                )))
+            }
+        };
+        let artifact_id = question.artifact_id.clone();
+        let plan = apply_plan_change(
+            &self.progress.effective_plan,
+            &closure.removed_runs,
+            &closure.changed_runs,
+        )
+        .map_err(|detail| {
+            OrchestratorError::InvalidCampaign(format!(
+                "the closure recorded with question {} does not fit the plan: {detail}",
+                pending.decision_id
+            ))
+        })?;
+        if plan_digest(&plan)? != closure.plan_sha256 {
+            return Err(OrchestratorError::InvalidCampaign(format!(
+                "the plan without {artifact_id:?} differs from the one recorded with question {}",
+                pending.decision_id
+            )));
+        }
+        if at_materialization {
+            let placed = placed_payloads_left_behind(
+                &self.schedule[..self.progress.completed_prefix],
+                &self.progress.left_out_ids(),
+                &artifact_id,
+                &plan,
+            );
+            if !placed.is_empty() {
+                self.withdraw(
+                    step,
+                    attempt,
+                    &pending,
+                    &format!(
+                        "files of {} are already in this game copy",
+                        placed.join(", ")
+                    ),
+                )?;
+                return self
+                    .seal_fresh_copy(
+                        step,
+                        attempt,
+                        format!(
+                            "The installation cannot leave {artifact_id} out at this point, because files of {} are already in this game copy.",
+                            placed.join(", ")
+                        ),
+                    )
+                    .map(Some);
             }
         }
+        let detail = match (&question.reason, &question.served) {
+            (Some(reason), _) => nonempty_detail(&reason.detail),
+            (None, Some(served)) => format!(
+                "its official link now serves a different file ({}), and you chose to leave it out",
+                describe_served(served)
+            ),
+            (None, None) => "you chose to leave it out".to_owned(),
+        };
+        self.leave_out(step, attempt, &artifact_id, &detail, plan)?;
+        Ok(None)
+    }
+
+    /// Installs the changed download of an answered question: exactly the file asked about.
+    fn apply_install_anyway(
+        &mut self,
+        step: &PipelineStep,
+        attempt: &StepAttempt,
+        pending: PendingDecision,
+    ) -> Result<Option<CampaignOutcome>, OrchestratorError> {
+        let PipelineKind::Acquire(identity, kind) = &step.kind else {
+            return Err(OrchestratorError::InvalidCampaign(format!(
+                "question {} cannot install a download at step {:?}",
+                pending.decision_id, step.id
+            )));
+        };
+        match self
+            .dependencies
+            .acquire_answered(identity, *kind, &pending.question)
+        {
+            Ok(AnsweredAcquisition::Accepted) => {
+                self.complete_step(step, attempt)?;
+                Ok(None)
+            }
+            Ok(AnsweredAcquisition::Withdrawn { why }) => {
+                self.withdraw(step, attempt, &pending, &why)?;
+                let execution = self.acquire_execution(identity, *kind);
+                self.finish_simple(step, attempt, execution)
+            }
+            Ok(AnsweredAcquisition::LinkChanged { detail }) => self.failed(step, attempt, detail),
+            Err(failure) => self.failed(step, attempt, failure.into_message()),
+        }
+    }
+
+    /// Withdraws the standing question of this step: the situation it asked about changed.
+    fn withdraw(
+        &mut self,
+        step: &PipelineStep,
+        attempt: &StepAttempt,
+        pending: &PendingDecision,
+        why: &str,
+    ) -> Result<(), OrchestratorError> {
+        let why = nonempty_detail(why);
+        self.store.append(SessionEvent::DecisionWithdrawn {
+            step_id: step.id.clone(),
+            attempt: attempt.attempt,
+            decision_id: pending.decision_id.clone(),
+            why: why.clone(),
+        })?;
+        self.progress.pending = None;
+        self.log(
+            step,
+            format!("Question {} no longer applies: {why}", pending.decision_id),
+        );
+        Ok(())
+    }
+
+    /// A technical-log line on `step`.
+    fn log(&self, step: &PipelineStep, line: String) {
+        self.sink.emit(EngineEvent::ConsoleLine {
+            step_id: step.id.clone(),
+            stream: crate::events::Stream::Stdout,
+            line,
+        });
+    }
+
+    /// Fails this attempt of `step` with `reason`.
+    fn failed(
+        &mut self,
+        step: &PipelineStep,
+        attempt: &StepAttempt,
+        reason: String,
+    ) -> Result<Option<CampaignOutcome>, OrchestratorError> {
+        self.fail_step(step, attempt, &reason)?;
+        Ok(Some(CampaignOutcome::Failed {
+            step_id: step.id.clone(),
+            reason,
+        }))
+    }
+
+    /// Durably ends an acquisition or placing step by leaving its payload out, then continues
+    /// with the remaining plan. The ledger records which runs that removed or changed, and a
+    /// resume rebuilds the plan from that record.
+    fn leave_out(
+        &mut self,
+        step: &PipelineStep,
+        attempt: &StepAttempt,
+        artifact_id: &str,
+        reason: &str,
+        plan: InstallPlan,
+    ) -> Result<(), OrchestratorError> {
+        let mut ids = self.progress.left_out_ids();
+        ids.push(artifact_id.to_owned());
+        validate_reduced_plan(&self.progress.effective_plan, &plan, &ids)?;
+        let (removed_runs, changed_runs) = plan_change(&self.progress.effective_plan, &plan);
+        self.store.append(SessionEvent::ArtifactLeftOut {
+            step_id: step.id.clone(),
+            attempt: attempt.attempt,
+            artifact_id: artifact_id.to_owned(),
+            detail: reason.to_owned(),
+            plan_sha256: plan_digest(&plan)?,
+            removed_runs,
+            changed_runs,
+        })?;
+        let left_out = self
+            .progress
+            .record_left_out(&mut self.schedule, artifact_id, reason, plan)
+            .clone();
+        self.progress.unresolved = None;
+        self.progress.pending = None;
+        self.progress.last_failed.remove(&step.id);
+        self.progress.completed_prefix += 1;
+        self.sink.emit(EngineEvent::ArtifactLeftOut {
+            artifact_id: left_out.artifact_id,
+            reason: left_out.reason,
+            runs: left_out.runs,
+            changed_runs: left_out.changed_runs,
+        });
+        emit_finished(self.sink, &step.id, StepOutcome::Skipped);
+        Ok(())
     }
 
     fn run_install(
         &mut self,
         step: &PipelineStep,
-        run_index: usize,
+        run: PlannedRun,
     ) -> Result<Option<CampaignOutcome>, OrchestratorError> {
-        let run = self.request.plan.runs[run_index].clone();
         if self.active_phase != Some(run.phase) {
             self.sink.emit(EngineEvent::PhaseStarted {
                 name: friendly_phase(run.phase).to_owned(),
@@ -1387,6 +2581,7 @@ where
             attempt: attempt.attempt,
         })?;
         self.progress.unresolved = None;
+        self.progress.pending = None;
         self.progress.last_failed.remove(&step.id);
         self.progress.completed_prefix += 1;
         emit_finished(self.sink, &step.id, StepOutcome::Succeeded);
@@ -1405,6 +2600,7 @@ where
             detail: nonempty_detail(reason),
         })?;
         self.progress.unresolved = None;
+        self.progress.pending = None;
         self.progress
             .last_failed
             .insert(step.id.clone(), attempt.attempt);
@@ -1428,6 +2624,7 @@ where
             detail: nonempty_detail(&reason),
         })?;
         self.progress.unresolved = None;
+        self.progress.pending = None;
         self.progress.last_failed.remove(&step.id);
         self.progress.fresh_copy_required = Some((step.id.clone(), reason.clone()));
         self.emit_fresh_copy(step, &reason);
@@ -1483,6 +2680,19 @@ where
 enum SimpleExecution {
     Complete,
     FreshCopyRequired(String),
+    /// The player is asked this question before the step goes on.
+    Ask(Box<Question>),
+}
+
+/// "name, N bytes, SHA-256 x" of a served file, for the ledger.
+fn describe_served(served: &ServedDownload) -> String {
+    match &served.filename {
+        Some(filename) => format!(
+            "{filename}, {} bytes, SHA-256 {}",
+            served.length, served.sha256
+        ),
+        None => format!("{} bytes, SHA-256 {}", served.length, served.sha256),
+    }
 }
 
 fn validate_remaining(

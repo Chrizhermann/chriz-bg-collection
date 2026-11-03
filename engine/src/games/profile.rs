@@ -239,6 +239,7 @@ fn validate_discovery_identities(profiles: &[GameProfile], root: &Path) -> Resul
                 .map(|app_id| vec![app_id.to_string()])
                 .unwrap_or_default(),
             Storefront::Gog => profile.gog_game_ids.clone(),
+            Storefront::Beamdog | Storefront::Microsoft | Storefront::Other => Vec::new(),
         };
         for identifier in identifiers {
             let identity = format!(
@@ -287,7 +288,7 @@ fn validate_profile(profile: &mut GameProfile, path: &Path) -> Result<()> {
         return invalid(
             path,
             format!(
-                "locale {:?} is not the verified alpha locale {VERIFIED_ALPHA_LOCALE:?}",
+                "locale {:?} is not the verified locale {VERIFIED_ALPHA_LOCALE:?}",
                 profile.locale
             ),
         );

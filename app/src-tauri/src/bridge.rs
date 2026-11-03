@@ -12,9 +12,9 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use bg_engine::cli::{
     diagnostics_for_managed_install, discover_games as engine_discover_games, inspect_game,
-    install_campaign_reviewed, plan_recipe, resume_campaign_controlled_expected, review_install,
-    validate_recipe, CampaignReport, CliError, InstallCommandRequest, InstallReviewIdentity,
-    SelectionOverrides, ValidationProfile,
+    inspect_game_as, install_campaign_reviewed, plan_recipe, resume_campaign_controlled_expected,
+    review_install, validate_recipe, CampaignReport, CliError, InstallCommandRequest,
+    InstallReviewIdentity, SelectionOverrides, ValidationProfile,
 };
 use bg_engine::digest::{plan_digest, selection_digest, sha256_bytes};
 use bg_engine::events::{EngineEvent, EventSink};
@@ -108,6 +108,91 @@ pub trait BridgeEngine: Send + Sync {
     /// Proves the installation's isolated game profile is still its own and adds the
     /// portraits folder the game does not create. Returns the profile folder.
     fn prepare_profile_folder(&self, record: &ManagedInstallRecord) -> Result<PathBuf, String>;
+    /// The question about a download that the installation at `managed_root` waits for.
+    fn inspect_decision(
+        &self,
+        managed_root: &Path,
+        expected_install_id: &str,
+    ) -> Result<Option<bg_engine::cli::DecisionStatus>, CliError> {
+        bg_engine::cli::inspect_decision(managed_root, expected_install_id)
+    }
+    /// Stores the player's answer to that question, under the installation's lock.
+    fn answer_decision(
+        &self,
+        managed_root: &Path,
+        expected_install_id: &str,
+        decision_id: &str,
+        token: &str,
+        answer: bg_engine::decision::Answer,
+    ) -> Result<(), CliError> {
+        bg_engine::cli::answer_decision(
+            managed_root,
+            expected_install_id,
+            decision_id,
+            token,
+            answer,
+        )
+    }
+}
+
+/// A question about a download that an installation waits for, as the app shows it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PendingDecisionResponse {
+    pub install_id: String,
+    pub step_id: String,
+    pub decision_id: String,
+    /// Binds the answer to exactly this question.
+    pub token: String,
+    pub kind: bg_engine::decision::QuestionKind,
+    pub artifact_id: String,
+    /// The question in English, with the mods that depend on the download.
+    pub message: String,
+    /// Further details, shown collapsed.
+    pub details: Vec<String>,
+    /// The answers offered, in order, with their button labels.
+    pub answers: Vec<PendingDecisionAnswer>,
+    /// The answer whose button has the initial focus.
+    pub focus: bg_engine::decision::Answer,
+    /// What the app says after "Stop the installation".
+    pub after_no: String,
+    /// The answer already stored and waiting for the resume, if any.
+    pub answered: Option<bg_engine::decision::Answer>,
+}
+
+/// One offered answer and its button label.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PendingDecisionAnswer {
+    pub answer: bg_engine::decision::Answer,
+    pub label: String,
+}
+
+impl From<bg_engine::cli::DecisionStatus> for PendingDecisionResponse {
+    fn from(status: bg_engine::cli::DecisionStatus) -> Self {
+        Self {
+            install_id: status.install_id,
+            step_id: status.step_id,
+            decision_id: status.decision_id,
+            token: status.token,
+            kind: status.question.kind,
+            artifact_id: status.question.artifact_id,
+            message: status.texts.message,
+            details: status.texts.details,
+            answers: status
+                .texts
+                .answers
+                .into_iter()
+                .map(|answer| PendingDecisionAnswer {
+                    answer: answer.answer,
+                    label: answer.label,
+                })
+                .collect(),
+            focus: status.texts.focus,
+            after_no: status.texts.after_no,
+            answered: status.answer,
+        }
+    }
 }
 
 /// Operating-system actions kept behind the native bridge's validated identity boundary.
@@ -210,7 +295,15 @@ impl BridgeEngine for SystemBridgeEngine {
         recipe: &Path,
         candidate: &GameCandidate,
     ) -> Result<GameCandidate, CliError> {
-        inspect_game(recipe, candidate.role, &candidate.root).map(|report| report.candidate)
+        // The store discovery or the first inspection named stays: a folder alone does not
+        // always show it, for example a GOG install without its `goggame-*.info` file.
+        inspect_game_as(
+            recipe,
+            candidate.role,
+            candidate.storefront,
+            &candidate.root,
+        )
+        .map(|report| report.candidate)
     }
 
     fn review(&self, request: &InstallCommandRequest) -> Result<InstallReviewIdentity, CliError> {
@@ -622,8 +715,18 @@ pub enum CandidateFreshness {
     UnverifiedStorefront,
     /// Core hashes do not match a known clean variant.
     UnknownFingerprint,
-    /// The locale is not supported by the alpha.
+    /// The game is set to a language other than English.
     UnsupportedLocale,
+    /// Leftovers of earlier mod installs, which the copy leaves out.
+    LeftOut,
+    /// Siege of Dragonspear is already merged into the folder (Beamdog copies).
+    SodMerged,
+    /// Files every installation needs are missing.
+    MissingFiles,
+    /// Game files could not be read.
+    Unreadable,
+    /// A Microsoft Store folder that Windows protects.
+    ProtectedFolder,
 }
 
 /// UI-safe projection of an inspected source game.
@@ -642,8 +745,11 @@ pub struct GameCandidateResponse {
     pub build: Option<String>,
     /// Highest-priority freshness category.
     pub freshness: CandidateFreshness,
-    /// Whether this exact source can be used by the current alpha.
+    /// Whether an installation can use this exact source, tested or with warnings.
     pub eligible: bool,
+    /// Whether it is the tested setup (store, version, language and files); a usable source
+    /// that is not tested installs with the warnings in `findings`.
+    pub tested: bool,
     /// Every engine finding, without suppressing simultaneous problems.
     pub findings: Vec<String>,
 }
@@ -769,7 +875,7 @@ impl NativeBridge {
         }
         profiles.push(InstallProfileResponse {
             id: "public-alpha".to_owned(),
-            label: "Smaller downloadable alpha".to_owned(),
+            label: "Smaller downloadable setup".to_owned(),
             description: "Limited setup using automatically downloadable mods only.".to_owned(),
         });
         profiles
@@ -1368,6 +1474,23 @@ impl NativeBridge {
         result
     }
 
+    /// End-summary lines of one completed installation, in English: mods left out because their
+    /// downloads could not be used, and downloads or tools that differed from their reviewed
+    /// versions. Empty when the installation used exactly the reviewed files.
+    pub fn installation_summary(&self, install_id: &str) -> Result<Vec<String>, CommandError> {
+        let record = self.available_managed_install(install_id)?.record;
+        bg_engine::cli::report_managed_install(&record.managed_root)
+            .map(|report| report.notes)
+            .map_err(|error| {
+                CommandError::new(
+                    "installation_summary_unavailable",
+                    "The summary of this installation could not be read.",
+                    "The installation itself is complete. Export diagnostics from My installs if this keeps happening.",
+                    error.to_string(),
+                )
+            })
+    }
+
     /// Launches the exact verified InfinityLoader path owned by one available registry id.
     pub fn launch_install(
         &self,
@@ -1811,6 +1934,34 @@ impl NativeBridge {
                     error,
                 )
             })
+    }
+
+    /// The question about a download that a resumable installation waits for; `None` when it
+    /// waits for none.
+    pub fn get_pending_decision(
+        &self,
+        install_id: &str,
+    ) -> Result<Option<PendingDecisionResponse>, CommandError> {
+        let root = self.resumable_campaign(install_id)?;
+        self.engine
+            .inspect_decision(&root, install_id)
+            .map(|decision| decision.map(PendingDecisionResponse::from))
+            .map_err(CommandError::from_cli)
+    }
+
+    /// Stores the player's answer to the question `decision_id` of a resumable installation.
+    /// The app then resumes the installation, which applies it.
+    pub fn answer_decision(
+        &self,
+        install_id: &str,
+        decision_id: &str,
+        token: &str,
+        answer: bg_engine::decision::Answer,
+    ) -> Result<(), CommandError> {
+        let root = self.resumable_campaign(install_id)?;
+        self.engine
+            .answer_decision(&root, install_id, decision_id, token, answer)
+            .map_err(CommandError::from_cli)
     }
 
     pub fn accept_manual_checkpoint(
@@ -2275,11 +2426,11 @@ impl NativeBridge {
                 format!("registered {registered:?}; re-inspected {inspected:?}"),
             ));
         }
-        if inspected.eligibility != Eligibility::Eligible || inspected.fingerprint.is_none() {
+        if !inspected.eligibility.is_usable() || inspected.fingerprint.is_none() {
             return Err(CommandError::new(
                 "source_not_fresh",
-                "A selected source is not a verified clean supported game.",
-                "Repair or reinstall that game, then run detection again.",
+                "A selected game folder cannot be used for an installation.",
+                "Open the game's details on the install screen to see why, fix it, then check the games again.",
                 format!("candidate at {} is {inspected:?}", inspected.root.display()),
             ));
         }
@@ -2421,7 +2572,7 @@ impl NativeBridge {
                 "build_already_running",
                 "Another installer build is already running.",
                 "Wait for the current build to finish or cancel it first.",
-                "the private alpha permits one active WeiDU campaign per process",
+                "CEBG permits one active WeiDU campaign per process",
             ));
         }
         runtime.active_runs.insert(run_id.clone(), controls);
@@ -2487,7 +2638,11 @@ fn finish_worker(
             (Some(report), None)
         }
         Ok(Ok(report))
-            if matches!(report.status, bg_engine::cli::CampaignStatus::Paused { .. }) =>
+            if matches!(
+                report.status,
+                bg_engine::cli::CampaignStatus::Paused { .. }
+                    | bg_engine::cli::CampaignStatus::DecisionRequired { .. }
+            ) =>
         {
             (Some(report), None)
         }
@@ -2530,6 +2685,10 @@ fn finish_worker(
         if let Some(snapshot) = state.run_snapshots.get_mut(run_id) {
             snapshot.status = match report.as_ref().map(|report| &report.status) {
                 Some(bg_engine::cli::CampaignStatus::Paused { .. }) => "paused".to_owned(),
+                // Resumable, not a failure: the app shows the question.
+                Some(bg_engine::cli::CampaignStatus::DecisionRequired { .. }) => {
+                    "decision_required".to_owned()
+                }
                 _ if error.is_some() => "failed".to_owned(),
                 _ => "complete".to_owned(),
             };
@@ -3230,18 +3389,22 @@ fn project_candidate(candidate: GameCandidate) -> Result<GameCandidateResponse, 
         GameRole::BgeeSod => "BG:EE + SoD",
         GameRole::Bg2ee => "BGII:EE",
     };
-    let (storefront_id, storefront) = match candidate.storefront {
-        Storefront::Steam => ("steam", "Steam"),
-        Storefront::Gog => ("gog", "GOG"),
+    let storefront_id = match candidate.storefront {
+        Storefront::Steam => "steam",
+        Storefront::Gog => "gog",
+        Storefront::Beamdog => "beamdog",
+        Storefront::Microsoft => "microsoft",
+        Storefront::Other => "other",
     };
-    let status = match freshness {
-        CandidateFreshness::Fresh => "clean",
-        CandidateFreshness::Modified => "modified",
-        CandidateFreshness::UnsupportedVersion => "unsupported version",
-        CandidateFreshness::MissingSod => "SoD missing",
-        CandidateFreshness::UnverifiedStorefront => "verify storefront",
-        CandidateFreshness::UnknownFingerprint => "unknown files",
-        CandidateFreshness::UnsupportedLocale => "unsupported language",
+    let storefront = candidate.storefront.display_name();
+    let status = match (candidate.eligibility, freshness) {
+        (Eligibility::Eligible, CandidateFreshness::LeftOut) => "clean, leftovers left out",
+        (Eligibility::Eligible, _) => "clean",
+        (Eligibility::Experimental, _) => "less tested",
+        (Eligibility::Ineligible, CandidateFreshness::MissingSod) => "SoD missing",
+        (Eligibility::Ineligible, CandidateFreshness::ProtectedFolder) => "protected folder",
+        (Eligibility::Ineligible, CandidateFreshness::Unreadable) => "cannot be read",
+        (Eligibility::Ineligible, _) => "files missing",
     };
     let identity = format!(
         "{:?}\0{:?}\0{canonical_path}",
@@ -3254,7 +3417,8 @@ fn project_candidate(candidate: GameCandidate) -> Result<GameCandidateResponse, 
         storefront: storefront_id.to_owned(),
         build: candidate.build,
         freshness,
-        eligible: candidate.eligibility == Eligibility::Eligible,
+        eligible: candidate.eligibility.is_usable(),
+        tested: candidate.eligibility == Eligibility::Eligible,
         findings: candidate
             .findings
             .into_iter()
@@ -3317,18 +3481,24 @@ fn project_managed_campaign(
     card: ManagedCampaignCard,
 ) -> Result<ManagedInstallationResponse, CommandError> {
     let path = display_windows_path(&card.record.managed_root)?;
-    let manual_pause = bg_engine::session::SessionStore::open(&card.record.managed_root)
+    let replay = bg_engine::session::SessionStore::open(&card.record.managed_root)
         .and_then(|store| store.replay_for_inspection())
-        .ok()
-        .is_some_and(|replay| {
-            replay
-                .unresolved_step()
-                .is_some_and(|step| step.starts_with("checkpoint:manual-"))
-        });
+        .ok();
+    let manual_pause = replay.as_ref().is_some_and(|replay| {
+        replay
+            .unresolved_step()
+            .is_some_and(|step| step.starts_with("checkpoint:manual-"))
+    });
+    // A question about a download waits for the player's answer.
+    let waiting_for_answer = replay
+        .as_ref()
+        .and_then(|replay| replay.pending_decision())
+        .is_some();
     let customized =
         bg_engine::manual_checkpoint::is_customized(&card.record.managed_root).unwrap_or(true);
     let (status, resumable) = match card.availability {
         CampaignAvailability::Resumable if manual_pause => ("Paused for your mods", true),
+        CampaignAvailability::Resumable if waiting_for_answer => ("Waiting for your answer", true),
         CampaignAvailability::Resumable => ("Build interrupted — ready to resume", true),
         CampaignAvailability::FreshCopyRequired => {
             ("Needs attention — automatic resume unavailable", false)
@@ -3356,12 +3526,19 @@ fn project_managed_campaign(
 
 fn candidate_freshness(candidate: &GameCandidate) -> CandidateFreshness {
     for (kind, freshness) in [
+        // What stops an installation first, then the warnings by weight.
+        (
+            FindingKind::ProtectedFolder,
+            CandidateFreshness::ProtectedFolder,
+        ),
+        (FindingKind::Unreadable, CandidateFreshness::Unreadable),
+        (FindingKind::MissingFiles, CandidateFreshness::MissingFiles),
+        (FindingKind::MissingSod, CandidateFreshness::MissingSod),
         (FindingKind::Modified, CandidateFreshness::Modified),
         (
             FindingKind::UnsupportedVersion,
             CandidateFreshness::UnsupportedVersion,
         ),
-        (FindingKind::MissingSod, CandidateFreshness::MissingSod),
         (
             FindingKind::UnsupportedLocale,
             CandidateFreshness::UnsupportedLocale,
@@ -3374,6 +3551,8 @@ fn candidate_freshness(candidate: &GameCandidate) -> CandidateFreshness {
             FindingKind::UnverifiedStorefront,
             CandidateFreshness::UnverifiedStorefront,
         ),
+        (FindingKind::SodMerged, CandidateFreshness::SodMerged),
+        (FindingKind::LeftOut, CandidateFreshness::LeftOut),
     ] {
         if candidate
             .findings
@@ -3387,10 +3566,12 @@ fn candidate_freshness(candidate: &GameCandidate) -> CandidateFreshness {
 }
 
 fn sort_candidates(candidates: &mut [GameCandidateResponse]) {
+    // The tested setup first, then other usable copies, then those that cannot be used.
     candidates.sort_by(|left, right| {
         right
             .eligible
             .cmp(&left.eligible)
+            .then_with(|| right.tested.cmp(&left.tested))
             .then_with(|| left.label.cmp(&right.label))
             .then_with(|| left.path.cmp(&right.path))
     });

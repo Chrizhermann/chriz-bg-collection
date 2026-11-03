@@ -11,10 +11,26 @@ use std::thread;
 use std::time::Duration;
 
 fn main() {
+    // Tests that must prove which program bytes ran name a log here: every run appends the
+    // SHA-256 of its own executable.
+    if let Some(log) = env::var_os("CHRIZ_TEST_MOCK_RUN_LOG") {
+        if let Err(error) = log_run(Path::new(&log)) {
+            eprintln!("mock-child: could not log this run: {error}");
+            std::process::exit(2);
+        }
+    }
     if let Err(error) = dispatch(env::args_os().skip(1).collect()) {
         eprintln!("mock-child: {error}");
         std::process::exit(2);
     }
+}
+
+fn log_run(log: &Path) -> io::Result<()> {
+    use sha2::{Digest, Sha256};
+
+    let bytes = fs::read(env::current_exe()?)?;
+    let mut file = fs::OpenOptions::new().create(true).append(true).open(log)?;
+    writeln!(file, "{}", hex::encode(Sha256::digest(&bytes)))
 }
 
 fn dispatch(args: Vec<OsString>) -> io::Result<()> {

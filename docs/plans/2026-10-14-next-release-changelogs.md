@@ -6,7 +6,9 @@ Labels: **Mandatory** = always installed with its mod; **Default** = selected in
 Chris's Recommended; **Optional** = offered, unchecked; **Pending** = waiting for
 Christopher's choice. Version the next release properly; never republish over
 alpha.21. The [alpha.20 drafts](2026-10-13-next-release-changelogs.md) are already
-published.
+published. Christopher decided on 2026-11-01 that this release is app and collection
+**0.1.0** (prepared as alpha.22); the player-facing notes are in
+[`docs/release-notes-0.1.0.md`](../release-notes-0.1.0.md).
 
 ## Installer changelog
 
@@ -350,6 +352,17 @@ unchanged.
   cannot use them. (Artisan's Kitpack fork chriz.5)
   - Existing games keep the old sorcerer, Eldritch Knight, Arcane Trickster, monk,
     shaman, Invisible Blade and Dancer weapon behavior until you install again.
+- **The Shapeshifter's white and greater white werewolves no longer crash the game**
+  (Default, with the Shapeshifter Overhaul's werewolf sprites). Their overhand swing had
+  no animation in five of the eight directions; drawing it next to a wall could crash the
+  game or silently corrupt memory. In those directions the swing now shows the same
+  werewolf's other attack. (Artisan's Kitpack fork chriz.6)
+- **Pierce Magic and Spellstrike describe what they do** (Default). Their descriptions now
+  have Spell Revisions' usual layout, with level, school, range, the list of protections
+  they remove, and the changed effects: Pierce Magic halves Magic Resistance for 5 rounds
+  (by at least 10 and at most 40 points), and Spellstrike gives a 15% chance of spell
+  failure for 2 rounds. Their scrolls, the Wand of Spell Striking and the monk's
+  Spellstrike show the same texts. Only the texts change. (Rebalance v0.8.9)
 - **EEex Remote Console** (Optional, experimental): after you return to the main menu
   from character creation, the load screen or the options, the single-player menu no
   longer stays behind the game's screens for the rest of the session. Its installer
@@ -358,7 +371,7 @@ unchanged.
 ### Mod versions
 
 - Chriz BG Modpack v0.2.0-alpha.14 (was alpha.11)
-- BG Rebalance v0.8.8 (was v0.8.2)
+- BG Rebalance v0.8.9 (was v0.8.2)
 - Bardic Wonders v2.9c-balance.8 (was balance.7)
 - EEex v1.3.1 (was v1.2.0)
 - The Tweaks Anthology: development version `7649ced`, 134 changes after v18
@@ -369,7 +382,7 @@ unchanged.
 - BuffBot v1.12.6 (was v1.10.0)
 - EEex Remote Console v0.2.1 (was v0.2.0)
 - Spell Revisions fork v4.21-chriz.7 (was v4.21-chriz.5)
-- The Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.5 (was chriz.1)
+- The Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.6 (was chriz.1)
 - Northern Tales of the Sword Coast: development version `f0ef953`, 35 changes after
   v5.0.0 (new). The collection pins this exact version because v5.0.0 lacks a fix
   that SCS needs and the Island of the Sirines on the worldmap.
@@ -382,13 +395,13 @@ unchanged.
 - Sirene NPC for BG:EE: development version `1c86000` (new). The collection pins this
   exact version because the last release, v3.1, installs on BG:EE only, not on EET.
 
-## Release-note entry (collection alpha.22)
+## Release-note entry (collection 0.1.0)
 
-**Collection alpha.22** updates Chriz BG Modpack to v0.2.0-alpha.14, BG
-Rebalance to v0.8.8, Bardic Wonders to v2.9c-balance.8, SoD Remix to v0.6.16,
+**Collection 0.1.0** updates Chriz BG Modpack to v0.2.0-alpha.14, BG
+Rebalance to v0.8.9, Bardic Wonders to v2.9c-balance.8, SoD Remix to v0.6.16,
 EEex to v1.3.1, BuffBot to v1.12.6, EEex Remote Console to v0.2.1, the Spell
 Revisions fork to v4.21-chriz.7, the Artisan's Kitpack fork to
-v4.81a-dev.85928f9-chriz.5 and The Tweaks Anthology to its current development
+v4.81a-dev.85928f9-chriz.6 and The Tweaks Anthology to its current development
 version. New in Chris's Recommended: Christopher's revisions of Aid, Luck, Bless,
 Chaotic Commands, Prayer and Recitation; True Time Stop – fair Haste & Slow, with a
 Time Stop that stops everything but the caster and Haste and Slow that no longer change
@@ -431,7 +444,9 @@ Knight and Arcane Trickster sorcerers keep their kit weapons when they level up 
 join the party. Monks can equip quarterstaves with Monk Revisions, and shamans without a
 kit, Sacred Fists, Enlightened Fists and Ninjas are held to their weapons from the start.
 The Invisible Blade and Bardic Wonders' Dancer can use katanas and the rogue and bard
-items that kept them out, also those that later mods add.
+items that kept them out, also those that later mods add. The Shapeshifter's white and
+greater white werewolves no longer crash the game, and Pierce Magic and Spellstrike, their
+scrolls and the Wand of Spell Striking describe what the spells now do.
 EEex's attack info display is offered as an option. These changes
 apply to new installations; existing games and saves are unchanged.
 
@@ -558,6 +573,25 @@ apply to new installations; existing games and saves are unchanged.
   without EEex. Its new tweak `7205` (Default; Christopher, 2026-10-29) runs before
   `8204` in the late tweak run, and `1010000`, which ends that run, ends with the same
   pass (`ARTISANSKITPACK_TWEAK.md`).
+- **Artisan's Kitpack fork chriz.6** (pinned 2026-11-02, Christopher's OK of that day)
+  changes only the two white werewolf attack 1 files and the three VERSION lines; the
+  components, their order and every decision stay. The crash was seen in play and
+  reproduced in a lab on a copy of a CEBG game on 2.7.3.0, where the old `C0W5A1.BAM`
+  crashed within two minutes and the A2 copy ran seven minutes without a crash; the
+  fork's new test checks every werewolf BAM for empty direction cycles. The
+  lab used the fixed file as an override copy, not an install of the release, and the
+  white fur `C0W2A1` was checked offline only. There is no tail: existing games keep the
+  broken files until a new installation (a one-off repair for a running game is
+  possible and waits for Christopher).
+- **Rebalance v0.8.9** (pinned 2026-11-02, Christopher's OK of that day) changes texts
+  only: `210` and `211` write their descriptions in Spell Revisions' layout and repoint the
+  scrolls, the Wand of Spell Striking's charge line and sibling spells (Artisan's Kitpack's
+  `C0MK#009`, SCS's `DW#WNDSS`) that still showed the old mechanic. The recipe installs
+  `210`/`211` fresh, so its selection does not change; the texts-only components
+  `212`/`213` for existing installations ship in the separate `CBR_SR_ANTIMAGIC` package,
+  which the collection does not install. Its owner suite (833 tests with WeiDU 249) and dry
+  runs on copies of two real installations' resources passed; the texts have not been
+  seen in a running game yet, and other languages keep the English texts as before.
 - **Sirene NPC for BG:EE** (Default; Christopher, 2026-10-29) is a GitHub commit archive
   of unreleased `master`, like the Sirene NPC for BG2 pin. Both Sirene mods now install
   after Artisan's Kitpack's main run, Sirene BG1 first: the Kitpack's Martyr kit stays

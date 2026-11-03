@@ -10,7 +10,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use thiserror::Error;
 
 use crate::digest::{plan_digest, selection_digest, sha256_bytes};
-use crate::games::{Eligibility, GameCandidate, GameRole};
+use crate::games::{GameCandidate, GameRole};
 use crate::resolve::InstallPlan;
 use crate::session::{CampaignCreated, FrozenIdentity, SessionReplay};
 
@@ -245,12 +245,8 @@ pub fn initial_preflight_with(
     if paths_equal(&bg1, &bg2) {
         return Err(PreflightError::DuplicateSource { path: bg1 });
     }
-    if request.bg1_source.build != request.bg2_source.build {
-        return Err(PreflightError::SourceNotFresh {
-            label: "source pair",
-            reason: "supported build identities differ".to_owned(),
-        });
-    }
+    // Games of different versions are allowed: the game check already warned about every
+    // version other than the tested one.
     validate_required_inputs(
         "artifact",
         request.required_artifacts,
@@ -384,11 +380,12 @@ pub fn recheck_target_before_mutation_with(
         }
     }
     tlks.push(validate_tlk(&language_tlk, &target)?);
-    host.probe_exclusive_writable_files(&tlks)
-        .map_err(|error| PreflightError::TlkUnavailable {
+    probe_tlks_outlasting_brief_holds(host, &tlks).map_err(|error| {
+        PreflightError::TlkUnavailable {
             path: error.path,
             source: error.source,
-        })?;
+        }
+    })?;
     Ok(())
 }
 
@@ -493,10 +490,21 @@ fn validate_source_candidate(
             ),
         });
     }
-    if candidate.eligibility != Eligibility::Eligible {
+    if !candidate.eligibility.is_usable() {
+        let reasons = candidate
+            .findings
+            .iter()
+            .filter(|finding| finding.kind.blocks_installation())
+            .map(|finding| finding.message.as_str())
+            .collect::<Vec<_>>()
+            .join(" ");
         return Err(PreflightError::SourceNotFresh {
             label,
-            reason: format!("eligibility is {:?}", candidate.eligibility),
+            reason: if reasons.is_empty() {
+                "it can no longer be used".to_owned()
+            } else {
+                reasons
+            },
         });
     }
     if candidate.fingerprint.as_deref() != Some(expected_fingerprint) {
@@ -746,11 +754,24 @@ fn probe_existing_tlks(
             Err(source) => return Err(PreflightError::TlkUnavailable { path: tlk, source }),
         }
     }
-    host.probe_exclusive_writable_files(&existing)
-        .map_err(|error| PreflightError::TlkUnavailable {
+    probe_tlks_outlasting_brief_holds(host, &existing).map_err(|error| {
+        PreflightError::TlkUnavailable {
             path: error.path,
             source: error.source,
-        })
+        }
+    })
+}
+
+/// Probes that `paths` are exclusively writable, trying again while another program, such as a
+/// virus scanner, briefly holds one of them. A lasting hold still fails after the retries.
+fn probe_tlks_outlasting_brief_holds(
+    host: &dyn PreflightHost,
+    paths: &[PathBuf],
+) -> Result<(), ExclusiveFileError> {
+    crate::fs_retry::retry_while_held(
+        || host.probe_exclusive_writable_files(paths),
+        |error| Some(&error.source),
+    )
 }
 
 /// Refuses while a program started from inside `folder` runs, such as the game, its loader or an

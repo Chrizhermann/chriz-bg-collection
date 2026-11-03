@@ -363,18 +363,36 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // Easy IWD (Christopher, 2026-11-01): again only the Recommended plan changes, in the
     // buffbot-bg2 run's artifact id. With v1.12.1 restored, the previous plan digests return
     // (manifest 8b323328…, curated d0b7318d…).
+    // Re-pinned on November 1 for issue 77 (Christopher's decision of 2026-11-01): the
+    // manifest's artisanskitpack-main-bg2 and randomiser-bg2 runs follow their TP2s'
+    // declaration order, as the curated recipe already did. Only the manifest's collection
+    // and plan digests change, in those two runs' component order; its selection and all
+    // curated digests stay. With the old order restored, the previous manifest digests
+    // return (collection f338fc11…, plan 9e1d3c91…).
+    // Re-pinned on November 2 for Artisan's Kitpack chriz.6 (white werewolf crash fix) and
+    // BG Rebalance v0.8.9 (Pierce Magic and Spellstrike texts), which go into 0.1.0
+    // (Christopher, 2026-11-02): in both recipes only the Recommended plan changes, in the
+    // selected Kitpack runs' and the Rebalance run's artifact ids; components, order and
+    // the selection stay. With chriz.5 and v0.8.8 restored, the previous plan digests return
+    // (manifest 75caa696…, curated 1de1d6c6…).
+    // Re-pinned on November 3 when BG1 NPC Project left the defaults (Christopher,
+    // 2026-11-03): mod:bg1npc is optional and off in both recipes, so its feature changes
+    // the collection digests, its preset entry the selection digests, and the plans lose
+    // the bg1npc-bg1 run and the Kivan quest guard Modpack 130. With the mod back to default
+    // and on, all six previous digests return (manifest b0fd4879…, 2447350d…, 94416a3d…;
+    // curated bb95f458…, 7cf6a3b5…, 3cf7e8f4…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "f338fc118fe8a2264b2ae95ef2baf1b634b3f236de82d73757296d693878efd0",
-            "2447350d05c9e316570f961b1b2efda6f89882c596b393a8ebb0f94662ae171f",
-            "9e1d3c91aa450d5b7abeec26702ead154cb393f5a1f8df4a5cb2fa5d638a9fa1",
+            "9a32652029dc2d35dfe940e67753830a562af375e47ebab9c24f347a71b83106",
+            "baefd1bdbae87ec62f46487fe563cac19f48b2a1da557c8d4a14bbfcd2b59c62",
+            "749cb2da25c6a7ab1e286bc498bd14ebf32f972cb69123b52808d1393d73c7c8",
         ),
         (
             "../recipes/curated-full-current",
-            "bb95f4581529cfb6dadd14cb382c996b6c9b91dfaca70a2c4e59a9da286999b2",
-            "7cf6a3b5aa6a6ac274186247768145a5e66522bb3dd9d35df2dd04678d045f02",
-            "1de1d6c6aae0b8b2a2282ce418e204f74fa85521a7248715f5a500037f402970",
+            "460a03664109cb38c04f464bacfddbcacc6301d167329aad118de421664debe0",
+            "5d1dbddea6422ec87fc559f83106f9847c0169a601af2f2d4c23fd0fba227d3a",
+            "e13c0693addac73b38fefe1e2b3ef8b32532920f40414b0204fa91fc605487c6",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

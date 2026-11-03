@@ -444,6 +444,69 @@ fn locked_root_tlk_is_rejected_before_mutation() {
     ));
 }
 
+/// A host whose TLK probe fails while another program briefly holds the file, for the first
+/// `held_for` calls, as a virus scanner does.
+struct BrieflyHeldTlkHost {
+    held_for: usize,
+    calls: std::cell::Cell<usize>,
+}
+
+impl PreflightHost for BrieflyHeldTlkHost {
+    fn available_space(&self, path: &Path) -> io::Result<u64> {
+        FakeHost::default().available_space(path)
+    }
+
+    fn volume_key(&self, path: &Path) -> io::Result<std::ffi::OsString> {
+        FakeHost::default().volume_key(path)
+    }
+
+    fn probe_directory_writable(&self, path: &Path) -> io::Result<()> {
+        FakeHost::default().probe_directory_writable(path)
+    }
+
+    fn running_executable_paths(&self) -> io::Result<Vec<PathBuf>> {
+        Ok(Vec::new())
+    }
+
+    fn probe_exclusive_writable_files(&self, paths: &[PathBuf]) -> Result<(), ExclusiveFileError> {
+        let call = self.calls.get() + 1;
+        self.calls.set(call);
+        if call <= self.held_for {
+            const ERROR_SHARING_VIOLATION: i32 = 32;
+            return Err(ExclusiveFileError {
+                path: paths[0].clone(),
+                source: io::Error::from_raw_os_error(ERROR_SHARING_VIOLATION),
+            });
+        }
+        Ok(())
+    }
+}
+
+// Windows names the sharing violation that a brief hold causes; elsewhere it is no such error.
+#[cfg(windows)]
+#[test]
+fn a_tlk_briefly_held_by_another_program_is_probed_again_instead_of_stopping() {
+    let fixture = Fixture::new();
+    let target = fixture.destination.join("game");
+    create_target(&target);
+    let host = BrieflyHeldTlkHost {
+        held_for: 3,
+        calls: std::cell::Cell::new(0),
+    };
+
+    recheck_target_before_mutation_with(&target, "en_US", &host).unwrap();
+    assert_eq!(host.calls.get(), 4);
+
+    // A hold that lasts still stops, after the retries, with the file named.
+    let lasting = BrieflyHeldTlkHost {
+        held_for: usize::MAX,
+        calls: std::cell::Cell::new(0),
+    };
+    let error = recheck_target_before_mutation_with(&target, "en_US", &lasting).unwrap_err();
+    assert!(matches!(error, PreflightError::TlkUnavailable { .. }));
+    assert!(lasting.calls.get() > 1);
+}
+
 #[test]
 fn locked_language_tlk_is_rejected_before_mutation() {
     let fixture = Fixture::new();
@@ -549,6 +612,43 @@ fn current_plan_must_match_the_frozen_plan_digest() {
             ..
         }
     ));
+}
+
+/// Less tested sources and two games of different versions once stopped here; now they pass,
+/// with the warnings the game check showed. A source that cannot be used still stops.
+#[test]
+fn less_tested_sources_of_different_versions_pass_and_unusable_ones_stop() {
+    let fixture = Fixture::new();
+    let artifacts = artifact_inputs();
+    let tools = tool_inputs();
+    let mut gog_bg1 = fixture.bg1.clone();
+    gog_bg1.storefront = Storefront::Gog;
+    gog_bg1.build = Some("2.6.6.0".to_owned());
+    gog_bg1.eligibility = Eligibility::Experimental;
+    gog_bg1.findings = vec![GameFinding {
+        kind: FindingKind::UnverifiedStorefront,
+        message: "GOG copies are less tested than Steam copies.".to_owned(),
+        paths: Vec::new(),
+    }];
+    let mut less_tested = request(&fixture, &artifacts, &tools);
+    less_tested.bg1_source = &gog_bg1;
+    initial_preflight_with(&less_tested, &FakeHost::default()).unwrap();
+
+    let mut unusable_bg1 = gog_bg1.clone();
+    unusable_bg1.eligibility = Eligibility::Ineligible;
+    unusable_bg1.findings.push(GameFinding {
+        kind: FindingKind::MissingSod,
+        message: "Siege of Dragonspear is missing.".to_owned(),
+        paths: Vec::new(),
+    });
+    let mut unusable = request(&fixture, &artifacts, &tools);
+    unusable.bg1_source = &unusable_bg1;
+    let error = initial_preflight_with(&unusable, &FakeHost::default()).unwrap_err();
+    assert!(
+        matches!(&error, PreflightError::SourceNotFresh { label: "BGEE+SoD", reason }
+            if reason.contains("Siege of Dragonspear is missing")),
+        "{error}"
+    );
 }
 
 #[test]

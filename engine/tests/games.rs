@@ -3,9 +3,11 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use bg_engine::games::discovery::StoreFolders;
 use bg_engine::games::{
-    discover_games, inspect_game_path, DirectoryEntry, Eligibility, FileKind, FileSystemProvider,
-    FindingKind, GameError, GameProfiles, GameRole, RegistryHive, RegistryProvider, Storefront,
+    detect_storefront, discover_games, discover_games_with, inspect_game_path,
+    inspect_game_path_with_language, DirectoryEntry, Eligibility, FileKind, FileSystemProvider,
+    FindingKind, GameProfiles, GameRole, RegistryHive, RegistryProvider, Storefront,
     SystemFileSystem,
 };
 use sha2::{Digest, Sha256};
@@ -586,7 +588,7 @@ fn discovers_gog_registry_records_but_keeps_them_experimental() {
 }
 
 #[test]
-fn modified_gog_candidate_stays_ineligible_and_retains_storefront_warning() {
+fn modified_gog_candidate_installs_with_modified_and_storefront_warnings() {
     let temp = tempfile::tempdir().unwrap();
     let mut fs_provider = FixtureFileSystem::default();
     let root = fixture_game(
@@ -605,10 +607,16 @@ fn modified_gog_candidate_stays_ineligible_and_retains_storefront_warning() {
         &root,
     )
     .unwrap();
-    assert_eq!(candidate.eligibility, Eligibility::Ineligible);
+    // Formerly a stop; now the installation continues with both warnings.
+    assert_eq!(candidate.eligibility, Eligibility::Experimental);
+    assert!(candidate.fingerprint.is_some());
     assert!(has_finding(&candidate, FindingKind::Modified));
     assert!(has_finding(&candidate, FindingKind::UnverifiedStorefront));
     assert!(!has_finding(&candidate, FindingKind::Fresh));
+    assert!(candidate
+        .findings
+        .iter()
+        .all(|finding| !finding.kind.blocks_installation()));
 }
 
 #[test]
@@ -641,7 +649,7 @@ fn browse_inspection_uses_the_explicit_storefront_profile() {
 }
 
 #[test]
-fn supported_build_with_modified_core_inventory_is_ineligible() {
+fn supported_build_with_modified_core_inventory_installs_with_a_warning() {
     let temp = tempfile::tempdir().unwrap();
     let mut fs_provider = FixtureFileSystem::default();
     let root = fixture_game(
@@ -660,8 +668,14 @@ fn supported_build_with_modified_core_inventory_is_ineligible() {
         &root,
     )
     .unwrap();
-    assert_eq!(candidate.eligibility, Eligibility::Ineligible);
-    assert!(has_finding(&candidate, FindingKind::Modified));
+    assert_eq!(candidate.eligibility, Eligibility::Experimental);
+    assert!(candidate.fingerprint.is_some());
+    let modified = candidate
+        .findings
+        .iter()
+        .find(|finding| finding.kind == FindingKind::Modified)
+        .expect("a modified warning");
+    assert!(modified.message.contains("continues"), "{modified:?}");
     assert!(!has_finding(&candidate, FindingKind::Fresh));
 }
 
@@ -685,12 +699,49 @@ fn missing_sod_is_reported_separately() {
         &root,
     )
     .unwrap();
+    // Kept: the collection is built on Siege of Dragonspear.
     assert_eq!(candidate.eligibility, Eligibility::Ineligible);
     assert!(has_finding(&candidate, FindingKind::MissingSod));
+    assert!(!has_finding(&candidate, FindingKind::SodMerged));
 }
 
 #[test]
-fn stale_dlc_merger_residue_is_modified_even_after_store_core_update() {
+fn already_merged_sod_without_its_archive_installs_with_a_warning() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut fs_provider = FixtureFileSystem::default();
+    let root = fixture_game(
+        "steam-bgee-sod",
+        &temp.path().join("merged-sod"),
+        &mut fs_provider,
+        "2.6.6.0",
+    );
+    fs::remove_file(root.join("dlc/sod-dlc.zip")).unwrap();
+    fs::create_dir_all(root.join("movies")).unwrap();
+    fs::write(root.join("movies/sodcin05.wbm"), b"merged SoD movie").unwrap();
+
+    let candidate = inspect_game_path(
+        &profiles(),
+        &fs_provider,
+        GameRole::BgeeSod,
+        Storefront::Beamdog,
+        &root,
+    )
+    .unwrap();
+    assert_eq!(
+        candidate.eligibility,
+        Eligibility::Experimental,
+        "{candidate:#?}"
+    );
+    assert_eq!(candidate.storefront, Storefront::Beamdog);
+    assert!(has_finding(&candidate, FindingKind::SodMerged));
+    assert!(has_finding(&candidate, FindingKind::UnverifiedStorefront));
+    assert!(has_finding(&candidate, FindingKind::UnsupportedVersion));
+    assert!(!has_finding(&candidate, FindingKind::MissingSod));
+    assert!(candidate.fingerprint.is_some());
+}
+
+#[test]
+fn leftovers_of_earlier_mod_installs_are_left_out_and_the_clean_game_stays_tested() {
     let temp = tempfile::tempdir().unwrap();
     let mut fs_provider = FixtureFileSystem::default();
     let root = fixture_game(
@@ -701,6 +752,13 @@ fn stale_dlc_merger_residue_is_modified_even_after_store_core_update() {
     );
     fs::create_dir_all(root.join("dlcmerger")).unwrap();
     fs::write(root.join("setup-dlcmerger.exe"), b"stale tool").unwrap();
+    fs::write(
+        root.join("WeiDU.log"),
+        b"// Log of Currently Installed WeiDU Mods\n",
+    )
+    .unwrap();
+    fs::create_dir_all(root.join("stratagems")).unwrap();
+    fs::write(root.join("stratagems/readme.txt"), b"mod folder").unwrap();
 
     let candidate = inspect_game_path(
         &profiles(),
@@ -710,14 +768,47 @@ fn stale_dlc_merger_residue_is_modified_even_after_store_core_update() {
         &root,
     )
     .unwrap();
-    assert_eq!(candidate.eligibility, Eligibility::Ineligible);
-    assert!(candidate.findings.iter().any(|finding| {
-        finding.kind == FindingKind::Modified && finding.message.contains("DLC Merger 1.7")
-    }));
+    // Formerly "modified" and a stop: the leftovers are left out of the copy, which is then
+    // the tested clean game.
+    assert_eq!(
+        candidate.eligibility,
+        Eligibility::Eligible,
+        "{candidate:#?}"
+    );
+    assert!(has_finding(&candidate, FindingKind::Fresh));
+    let left_out = candidate
+        .findings
+        .iter()
+        .filter(|finding| finding.kind == FindingKind::LeftOut)
+        .collect::<Vec<_>>();
+    assert!(left_out
+        .iter()
+        .any(|finding| finding.message.contains("DLC Merger 1.7")
+            && finding.message.contains("leaves them out")));
+    let generic = left_out
+        .iter()
+        .find(|finding| finding.message.contains("Leftovers"))
+        .expect("one finding for the other leftovers");
+    assert!(generic.message.contains("WeiDU.log"), "{generic:?}");
+    assert!(generic.message.contains("stratagems"), "{generic:?}");
+    assert!(!has_finding(&candidate, FindingKind::Modified));
+
+    // The leftovers still belong to the source's identity: a change to one is noticed.
+    let before = candidate.fingerprint.clone();
+    fs::write(root.join("WeiDU.log"), b"changed").unwrap();
+    let after = inspect_game_path(
+        &profiles(),
+        &fs_provider,
+        GameRole::BgeeSod,
+        Storefront::Steam,
+        &root,
+    )
+    .unwrap();
+    assert_ne!(before, after.fingerprint);
 }
 
 #[test]
-fn clean_inventory_with_an_unknown_core_fingerprint_fails_closed() {
+fn clean_inventory_with_an_unknown_core_fingerprint_installs_with_a_warning() {
     let temp = tempfile::tempdir().unwrap();
     let mut fs_provider = FixtureFileSystem::default();
     let root = fixture_game(
@@ -736,8 +827,83 @@ fn clean_inventory_with_an_unknown_core_fingerprint_fails_closed() {
         &root,
     )
     .unwrap();
-    assert_eq!(candidate.eligibility, Eligibility::Ineligible);
+    assert_eq!(candidate.eligibility, Eligibility::Experimental);
     assert!(has_finding(&candidate, FindingKind::UnknownFingerprint));
+    assert!(!has_finding(&candidate, FindingKind::Fresh));
+}
+
+#[test]
+fn another_game_version_installs_with_a_version_warning() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut fs_provider = FixtureFileSystem::default();
+    let root = fixture_game(
+        "steam-bg2ee",
+        &temp.path().join("older"),
+        &mut fs_provider,
+        "2.6.6.0",
+    );
+
+    let candidate = inspect_game_path(
+        &profiles(),
+        &fs_provider,
+        GameRole::Bg2ee,
+        Storefront::Steam,
+        &root,
+    )
+    .unwrap();
+    assert_eq!(candidate.eligibility, Eligibility::Experimental);
+    assert_eq!(candidate.build.as_deref(), Some("2.6.6.0"));
+    let version = candidate
+        .findings
+        .iter()
+        .find(|finding| finding.kind == FindingKind::UnsupportedVersion)
+        .expect("a version warning");
+    assert!(version.message.contains("2.6.6.0") && version.message.contains("2.7.3.0"));
+    // Its clean files are not known, so a file difference is not a finding of its own.
+    assert!(!has_finding(&candidate, FindingKind::UnknownFingerprint));
+    assert!(candidate.fingerprint.is_some());
+}
+
+#[test]
+fn a_game_set_to_another_language_installs_with_a_language_warning() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut fs_provider = FixtureFileSystem::default();
+    let root = fixture_game(
+        "steam-bg2ee",
+        &temp.path().join("german"),
+        &mut fs_provider,
+        "2.7.3.0",
+    );
+
+    let candidate = inspect_game_path_with_language(
+        &profiles(),
+        &fs_provider,
+        GameRole::Bg2ee,
+        Storefront::Steam,
+        &root,
+        Some("german"),
+    )
+    .unwrap();
+    assert_eq!(candidate.eligibility, Eligibility::Experimental);
+    let language = candidate
+        .findings
+        .iter()
+        .find(|finding| finding.kind == FindingKind::UnsupportedLocale)
+        .expect("a language warning");
+    assert!(language.message.contains("German"), "{language:?}");
+
+    for english in ["english", "en-US", "en_US"] {
+        let candidate = inspect_game_path_with_language(
+            &profiles(),
+            &fs_provider,
+            GameRole::Bg2ee,
+            Storefront::Steam,
+            &root,
+            Some(english),
+        )
+        .unwrap();
+        assert_eq!(candidate.eligibility, Eligibility::Eligible, "{english}");
+    }
 }
 
 #[test]
@@ -766,7 +932,7 @@ fn inspection_accumulates_unsupported_version_and_missing_sod() {
 }
 
 #[test]
-fn unexpected_override_content_prevents_freshness() {
+fn unexpected_override_content_installs_with_a_warning() {
     let temp = tempfile::tempdir().unwrap();
     let mut fs_provider = FixtureFileSystem::default();
     let root = fixture_game(
@@ -785,8 +951,9 @@ fn unexpected_override_content_prevents_freshness() {
         &root,
     )
     .unwrap();
-    assert_eq!(candidate.eligibility, Eligibility::Ineligible);
+    assert_eq!(candidate.eligibility, Eligibility::Experimental);
     assert!(has_finding(&candidate, FindingKind::Modified));
+    assert!(!has_finding(&candidate, FindingKind::Fresh));
 }
 
 #[test]
@@ -821,7 +988,7 @@ fn optional_missing_root_tlk_and_override_match_a_real_27_clean_variant() {
 }
 
 #[test]
-fn missing_required_localized_tlk_remains_ineligible_for_real_27_layout() {
+fn missing_english_texts_stay_a_stop_with_a_plain_reason() {
     let temp = tempfile::tempdir().unwrap();
     let profiles = real_27_optional_surface_profiles(&temp.path().join("profiles"));
     let mut fs_provider = FixtureFileSystem::default();
@@ -844,8 +1011,14 @@ fn missing_required_localized_tlk_remains_ineligible_for_real_27_layout() {
     )
     .unwrap();
 
+    // Kept: every WeiDU run writes the English texts, so they must exist.
     assert_eq!(candidate.eligibility, Eligibility::Ineligible);
-    assert!(has_finding(&candidate, FindingKind::Modified));
+    let missing = candidate
+        .findings
+        .iter()
+        .find(|finding| finding.kind == FindingKind::MissingFiles)
+        .expect("a missing-files finding");
+    assert!(missing.message.contains("English"), "{missing:?}");
     assert!(!has_finding(&candidate, FindingKind::Fresh));
 }
 
@@ -872,8 +1045,9 @@ fn linked_optional_override_is_not_treated_as_an_absent_clean_surface() {
     )
     .unwrap();
 
+    // Kept: the copy refuses links, so a linked folder cannot be copied.
     assert_eq!(candidate.eligibility, Eligibility::Ineligible);
-    assert!(has_finding(&candidate, FindingKind::Modified));
+    assert!(has_finding(&candidate, FindingKind::Unreadable));
     assert!(!has_finding(&candidate, FindingKind::Fresh));
 }
 
@@ -902,7 +1076,8 @@ fn linked_override_surface_is_never_treated_as_an_empty_clean_tree() {
         Eligibility::Ineligible,
         "{candidate:#?}"
     );
-    assert!(has_finding(&candidate, FindingKind::Modified));
+    assert!(has_finding(&candidate, FindingKind::Unreadable));
+    assert!(candidate.fingerprint.is_none());
 }
 
 #[test]
@@ -930,12 +1105,13 @@ fn linked_ancestor_cannot_supply_an_otherwise_clean_fingerprinted_file() {
         Eligibility::Ineligible,
         "{candidate:#?}"
     );
-    assert!(has_finding(&candidate, FindingKind::Modified));
+    assert!(has_finding(&candidate, FindingKind::MissingFiles));
+    assert!(has_finding(&candidate, FindingKind::Unreadable));
     assert!(!has_finding(&candidate, FindingKind::Fresh));
 }
 
 #[test]
-fn colliding_inventory_identity_is_modified_instead_of_overwritten() {
+fn colliding_inventory_identity_is_unreadable_instead_of_overwritten() {
     let temp = tempfile::tempdir().unwrap();
     let profile_dir = temp.path().join("profiles");
     fs::create_dir_all(&profile_dir).unwrap();
@@ -986,66 +1162,132 @@ fn colliding_inventory_identity_is_modified_instead_of_overwritten() {
         Eligibility::Ineligible,
         "{candidate:#?}"
     );
-    assert!(has_finding(&candidate, FindingKind::Modified));
+    assert!(has_finding(&candidate, FindingKind::Unreadable));
     assert!(!has_finding(&candidate, FindingKind::Fresh));
 }
 
-#[test]
-fn steam_manifest_traversal_is_rejected_pathfully() {
-    let temp = tempfile::tempdir().unwrap();
-    let steam_root = temp.path().join("Steam");
+/// A Steam root with the BG:EE manifest of the fixtures and a game folder for it.
+fn steam_with_bgee(temp: &Path, fs_provider: &mut FixtureFileSystem) -> (PathBuf, PathBuf) {
+    let steam_root = temp.join("Steam");
     fs::create_dir_all(steam_root.join("steamapps")).unwrap();
-    fs::write(
-        steam_root.join("steamapps/libraryfolders.vdf"),
-        format!(
-            "\"libraryfolders\" {{ \"0\" {{ \"path\" \"{}\" }} }}",
-            steam_root.to_string_lossy().replace('\\', "\\\\")
-        ),
+    fs::copy(
+        Path::new(FIXTURES).join("steam/appmanifest_228280.acf"),
+        steam_root.join("steamapps/appmanifest_228280.acf"),
     )
     .unwrap();
+    let manifest = fs::read_to_string(steam_root.join("steamapps/appmanifest_228280.acf")).unwrap();
+    let install_dir = manifest
+        .lines()
+        .find_map(|line| {
+            let line = line.trim();
+            line.strip_prefix("\"installdir\"")
+                .map(|rest| rest.trim().trim_matches('"').to_owned())
+        })
+        .unwrap();
+    let game = fixture_game(
+        "steam-bgee-sod",
+        &steam_root.join("steamapps/common").join(install_dir),
+        fs_provider,
+        "2.7.3.0",
+    );
+    (steam_root, game)
+}
+
+fn steam_registry(steam_root: &Path) -> FixtureRegistry {
+    let mut registry = FixtureRegistry::default();
+    registry.value(
+        RegistryHive::CurrentUser,
+        STEAM_KEY,
+        "SteamPath",
+        steam_root.to_string_lossy(),
+    );
+    registry
+}
+
+#[test]
+fn an_unsafe_steam_manifest_is_skipped_without_hiding_the_other_game() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut fs_provider = FixtureFileSystem::default();
+    let (steam_root, bgee) = steam_with_bgee(temp.path(), &mut fs_provider);
     fs::write(
         steam_root.join("steamapps/appmanifest_257350.acf"),
         "\"AppState\" { \"appid\" \"257350\" \"installdir\" \"../escape\" }",
     )
     .unwrap();
-    let mut registry = FixtureRegistry::default();
-    registry.value(
-        RegistryHive::CurrentUser,
-        STEAM_KEY,
-        "SteamPath",
-        steam_root.to_string_lossy(),
-    );
 
-    let error = discover_games(&profiles(), &registry, &FixtureFileSystem::default()).unwrap_err();
-    assert!(error.to_string().contains("appmanifest_257350.acf"));
-    assert!(error.to_string().contains("installdir"));
+    // Formerly the whole search failed; now only the unsafe record is skipped.
+    let candidates =
+        discover_games(&profiles(), &steam_registry(&steam_root), &fs_provider).unwrap();
+    assert_eq!(candidates.len(), 1, "{candidates:#?}");
+    assert_eq!(candidates[0].role, GameRole::BgeeSod);
+    assert_eq!(candidates[0].root, fs::canonicalize(bgee).unwrap());
+    assert!(candidates
+        .iter()
+        .all(|candidate| !candidate.root.to_string_lossy().contains("escape")));
 }
 
 #[test]
-fn relative_steam_library_path_is_rejected_pathfully() {
+fn a_malformed_steam_manifest_is_skipped_without_hiding_the_other_game() {
     let temp = tempfile::tempdir().unwrap();
-    let steam_root = temp.path().join("Steam");
-    fs::create_dir_all(steam_root.join("steamapps")).unwrap();
+    let mut fs_provider = FixtureFileSystem::default();
+    let (steam_root, _) = steam_with_bgee(temp.path(), &mut fs_provider);
+    fs::write(
+        steam_root.join("steamapps/appmanifest_257350.acf"),
+        "\"AppState\" { \"appid\" ",
+    )
+    .unwrap();
+
+    let candidates =
+        discover_games(&profiles(), &steam_registry(&steam_root), &fs_provider).unwrap();
+    assert_eq!(candidates.len(), 1, "{candidates:#?}");
+    assert_eq!(candidates[0].eligibility, Eligibility::Eligible);
+}
+
+#[test]
+fn a_relative_steam_library_is_skipped_and_the_steam_folder_still_searched() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut fs_provider = FixtureFileSystem::default();
+    let (steam_root, _) = steam_with_bgee(temp.path(), &mut fs_provider);
     fs::write(
         steam_root.join("steamapps/libraryfolders.vdf"),
         "\"libraryfolders\" { \"1\" { \"path\" \"relative-library\" } }",
     )
     .unwrap();
-    let mut registry = FixtureRegistry::default();
-    registry.value(
-        RegistryHive::CurrentUser,
-        STEAM_KEY,
-        "SteamPath",
-        steam_root.to_string_lossy(),
-    );
 
-    let error = discover_games(&profiles(), &registry, &FixtureFileSystem::default()).unwrap_err();
-    assert!(error.to_string().contains("libraryfolders.vdf"), "{error}");
-    assert!(error.to_string().contains("absolute"), "{error}");
+    let candidates =
+        discover_games(&profiles(), &steam_registry(&steam_root), &fs_provider).unwrap();
+    assert_eq!(candidates.len(), 1, "{candidates:#?}");
+    assert_eq!(candidates[0].storefront, Storefront::Steam);
 }
 
 #[test]
-fn steam_candidate_permission_error_is_not_hidden_as_an_absent_game() {
+fn steam_language_setting_reaches_the_game_check() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut fs_provider = FixtureFileSystem::default();
+    let (steam_root, _) = steam_with_bgee(temp.path(), &mut fs_provider);
+    let manifest = steam_root.join("steamapps/appmanifest_228280.acf");
+    let text = fs::read_to_string(&manifest).unwrap();
+    let closing = text.rfind('}').unwrap();
+    fs::write(
+        &manifest,
+        format!(
+            "{}\"UserConfig\" {{ \"language\" \"french\" }}\n}}\n",
+            &text[..closing]
+        ),
+    )
+    .unwrap();
+
+    let candidates =
+        discover_games(&profiles(), &steam_registry(&steam_root), &fs_provider).unwrap();
+    assert_eq!(candidates.len(), 1, "{candidates:#?}");
+    assert_eq!(candidates[0].eligibility, Eligibility::Experimental);
+    assert!(candidates[0].findings.iter().any(|finding| {
+        finding.kind == FindingKind::UnsupportedLocale && finding.message.contains("French")
+    }));
+}
+
+#[test]
+fn a_steam_game_folder_that_cannot_be_read_is_listed_with_its_reason() {
     let temp = tempfile::tempdir().unwrap();
     let steam_root = temp.path().join("Steam");
     fs::create_dir_all(steam_root.join("steamapps")).unwrap();
@@ -1070,20 +1312,263 @@ fn steam_candidate_permission_error_is_not_hidden_as_an_absent_game() {
         "2.7.3.0",
     );
     fs_provider.override_kind_error(root.clone(), io::ErrorKind::PermissionDenied);
+
+    // Formerly the whole search failed; now the folder is listed, unusable, with the reason.
+    let candidates =
+        discover_games(&profiles(), &steam_registry(&steam_root), &fs_provider).unwrap();
+    assert_eq!(candidates.len(), 1, "{candidates:#?}");
+    let candidate = &candidates[0];
+    assert_eq!(candidate.root, root);
+    assert_eq!(candidate.eligibility, Eligibility::Ineligible);
+    let finding = candidate
+        .findings
+        .iter()
+        .find(|finding| finding.kind == FindingKind::Unreadable)
+        .expect("an unreadable finding");
+    assert!(finding.message.contains("injected"), "{finding:?}");
+}
+
+/// The fixture profiles without their GOG ones, like the shipped recipes, which have only
+/// Steam profiles.
+fn steam_only_profiles(directory: &Path) -> GameProfiles {
+    fs::create_dir_all(directory).unwrap();
+    for name in ["steam-bgee-sod.toml", "steam-bg2ee.toml"] {
+        fs::copy(
+            Path::new(FIXTURES).join("profiles").join(name),
+            directory.join(name),
+        )
+        .unwrap();
+    }
+    GameProfiles::load(directory).unwrap()
+}
+
+#[test]
+fn gog_records_with_the_real_product_ids_are_found_without_a_gog_profile() {
+    let temp = tempfile::tempdir().unwrap();
+    let profiles = steam_only_profiles(&temp.path().join("profiles"));
+    let mut fs_provider = FixtureFileSystem::default();
+    let bg1 = fixture_game(
+        "steam-bgee-sod",
+        &temp.path().join("GOG Games/Baldur's Gate Enhanced Edition"),
+        &mut fs_provider,
+        "2.7.3.0",
+    );
+    let bg2 = fixture_game(
+        "steam-bg2ee",
+        &temp
+            .path()
+            .join("GOG Games/Baldur's Gate II - Enhanced Edition"),
+        &mut fs_provider,
+        "2.7.3.0",
+    );
+    let wow = r"SOFTWARE\WOW6432Node\GOG.com\Games";
     let mut registry = FixtureRegistry::default();
+    registry.set_subkeys(
+        RegistryHive::LocalMachine,
+        wow,
+        &["1207666353", "1207666373", "1459335293", "999"],
+    );
+    for (id, root, language) in [
+        ("1207666353", &bg1, "english"),
+        ("1207666373", &bg2, "German"),
+    ] {
+        let key = format!(r"{wow}\{id}");
+        registry.value(RegistryHive::LocalMachine, &key, "gameID", id);
+        registry.value(
+            RegistryHive::LocalMachine,
+            &key,
+            "path",
+            root.to_string_lossy(),
+        );
+        registry.value(RegistryHive::LocalMachine, &key, "language", language);
+    }
+    // The SoD DLC record has no path of its own, and an unrelated game is ignored.
     registry.value(
-        RegistryHive::CurrentUser,
-        STEAM_KEY,
-        "SteamPath",
-        steam_root.to_string_lossy(),
+        RegistryHive::LocalMachine,
+        &format!(r"{wow}\999"),
+        "gameID",
+        "999",
     );
 
-    let error = discover_games(&profiles(), &registry, &fs_provider).unwrap_err();
-    let GameError::Io { path, .. } = &error else {
-        panic!("expected a pathful I/O error, got {error}");
-    };
-    assert_eq!(path, &root);
-    assert!(error.to_string().contains("injected"), "{error}");
+    let candidates = discover_games(&profiles, &registry, &fs_provider).unwrap();
+    assert_eq!(candidates.len(), 2, "{candidates:#?}");
+    for candidate in &candidates {
+        assert_eq!(candidate.storefront, Storefront::Gog);
+        // Formerly no candidate at all; now usable, with the "less tested" warning.
+        assert_eq!(
+            candidate.eligibility,
+            Eligibility::Experimental,
+            "{candidate:#?}"
+        );
+        assert!(has_finding(candidate, FindingKind::UnverifiedStorefront));
+        assert!(candidate.fingerprint.is_some());
+    }
+    let bg2 = candidates
+        .iter()
+        .find(|candidate| candidate.role == GameRole::Bg2ee)
+        .unwrap();
+    assert!(has_finding(bg2, FindingKind::UnsupportedLocale));
+}
+
+#[test]
+fn gog_and_beamdog_games_in_their_default_folders_are_found() {
+    let temp = tempfile::tempdir().unwrap();
+    let profiles = steam_only_profiles(&temp.path().join("profiles"));
+    let mut fs_provider = FixtureFileSystem::default();
+    let gog_library = temp.path().join("GOG Games");
+    let gog_bg2 = fixture_game(
+        "steam-bg2ee",
+        &gog_library.join("Baldur's Gate II - Enhanced Edition"),
+        &mut fs_provider,
+        "2.7.3.0",
+    );
+    fs::write(
+        gog_bg2.join("goggame-1207666373.info"),
+        br#"{ "gameId": "1207666373", "language": "French" }"#,
+    )
+    .unwrap();
+    // A folder of the right name without GOG's info file is not taken for a GOG game.
+    fixture_game(
+        "steam-bgee-sod",
+        &gog_library.join("Baldur's Gate Enhanced Edition"),
+        &mut fs_provider,
+        "2.7.3.0",
+    );
+    let beamdog_games = temp.path().join("Beamdog/Games");
+    let beamdog_bg1 = fixture_game(
+        "steam-bgee-sod",
+        &beamdog_games.join("00806"),
+        &mut fs_provider,
+        "2.6.6.0",
+    );
+    fs::remove_file(beamdog_bg1.join("dlc/sod-dlc.zip")).unwrap();
+    fs::create_dir_all(beamdog_bg1.join("movies")).unwrap();
+    fs::write(beamdog_bg1.join("movies/sodcin05.wbm"), b"merged").unwrap();
+
+    let candidates = discover_games_with(
+        &profiles,
+        &FixtureRegistry::default(),
+        &fs_provider,
+        &StoreFolders {
+            beamdog_games: vec![beamdog_games, temp.path().join("missing")],
+            gog_libraries: vec![gog_library],
+        },
+    )
+    .unwrap();
+    assert_eq!(candidates.len(), 2, "{candidates:#?}");
+    let gog = candidates
+        .iter()
+        .find(|candidate| candidate.storefront == Storefront::Gog)
+        .unwrap();
+    assert_eq!(gog.role, GameRole::Bg2ee);
+    assert_eq!(gog.eligibility, Eligibility::Experimental);
+    assert!(has_finding(gog, FindingKind::UnsupportedLocale));
+    let beamdog = candidates
+        .iter()
+        .find(|candidate| candidate.storefront == Storefront::Beamdog)
+        .unwrap();
+    assert_eq!(beamdog.role, GameRole::BgeeSod);
+    assert_eq!(
+        beamdog.eligibility,
+        Eligibility::Experimental,
+        "{beamdog:#?}"
+    );
+    assert!(has_finding(beamdog, FindingKind::SodMerged));
+    assert!(has_finding(beamdog, FindingKind::UnverifiedStorefront));
+}
+
+#[test]
+fn a_microsoft_store_folder_is_named_as_protected_instead_of_failing_obscurely() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().join("WindowsApps").join("BaldursGate_1.0_x64");
+    fs::create_dir_all(&root).unwrap();
+
+    let candidate = inspect_game_path(
+        &profiles(),
+        &FixtureFileSystem::default(),
+        GameRole::Bg2ee,
+        Storefront::Microsoft,
+        &root,
+    )
+    .unwrap();
+    assert_eq!(candidate.eligibility, Eligibility::Ineligible);
+    assert_eq!(candidate.storefront, Storefront::Microsoft);
+    let protected = candidate
+        .findings
+        .iter()
+        .find(|finding| finding.kind == FindingKind::ProtectedFolder)
+        .expect("a protected-folder finding");
+    assert!(
+        protected.message.contains("Microsoft Store"),
+        "{protected:?}"
+    );
+    assert!(protected.message.contains("Steam or GOG"), "{protected:?}");
+    assert_eq!(
+        detect_storefront(&FixtureFileSystem::default(), &root),
+        Storefront::Microsoft
+    );
+}
+
+#[test]
+fn a_browsed_folder_names_its_store_by_what_it_holds_and_where_it_is() {
+    let temp = tempfile::tempdir().unwrap();
+    let fs_provider = FixtureFileSystem::default();
+    let gog = temp.path().join("Games/BG2");
+    fs::create_dir_all(&gog).unwrap();
+    fs::write(gog.join("goggame-1207666373.info"), b"{}").unwrap();
+    let steam = temp.path().join("SteamLibrary/steamapps/common/BG2");
+    let beamdog = temp.path().join("BeamDog/Games/00783");
+    let xbox = temp.path().join("XboxGames/Baldur's Gate/Content");
+    let other = temp.path().join("Copies/BG2");
+    for folder in [&steam, &beamdog, &xbox, &other] {
+        fs::create_dir_all(folder).unwrap();
+    }
+    assert_eq!(detect_storefront(&fs_provider, &gog), Storefront::Gog);
+    assert_eq!(detect_storefront(&fs_provider, &steam), Storefront::Steam);
+    assert_eq!(
+        detect_storefront(&fs_provider, &beamdog),
+        Storefront::Beamdog
+    );
+    assert_eq!(
+        detect_storefront(&fs_provider, &xbox),
+        Storefront::Microsoft
+    );
+    assert_eq!(detect_storefront(&fs_provider, &other), Storefront::Other);
+}
+
+#[test]
+fn a_copied_steam_game_of_unknown_store_is_the_tested_setup_when_its_files_match() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut fs_provider = FixtureFileSystem::default();
+    let root = fixture_game(
+        "steam-bg2ee",
+        &temp.path().join("Copies/BG2"),
+        &mut fs_provider,
+        "2.7.3.0",
+    );
+    let candidate = inspect_game_path(
+        &profiles(),
+        &fs_provider,
+        GameRole::Bg2ee,
+        Storefront::Other,
+        &root,
+    )
+    .unwrap();
+    assert_eq!(candidate.eligibility, Eligibility::Eligible);
+    assert_eq!(candidate.storefront, Storefront::Steam);
+
+    fs::write(root.join("chitin.key"), b"changed").unwrap();
+    let changed = inspect_game_path(
+        &profiles(),
+        &fs_provider,
+        GameRole::Bg2ee,
+        Storefront::Other,
+        &root,
+    )
+    .unwrap();
+    assert_eq!(changed.eligibility, Eligibility::Experimental);
+    assert_eq!(changed.storefront, Storefront::Other);
+    assert!(has_finding(&changed, FindingKind::UnverifiedStorefront));
 }
 
 #[cfg(windows)]
