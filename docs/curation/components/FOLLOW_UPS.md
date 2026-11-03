@@ -723,6 +723,15 @@ Cross-repository status. Component detail stays in the sections below and in the
   Challenge Mode. Reasons: fewer bugs, and no exploits through shops or stashed items. The
   exact area list is defined together with Christopher later.
 
+**Ideas for later (Christopher, 2026-11-04)**
+
+- Rogue Rebalancing: we may reuse and improve its code, crediting its author aVENGER, as we
+  credit every mod (license CC BY-NC-SA 3.0; last release v4.92 of 2018). Christopher,
+  2026-11-04: settled, not to be raised again and never a blocker. His view: popular and
+  used in every kind of setup, but old, partly not well written, and some items are too
+  strong late in the game. The loot of the Chosen of Cyric encounter (`11`, on in
+  Recommended) is great to win, but a bit much overall.
+
 **Larger projects:** Time Stop/Haste (Rebalance `360`, above); script engine / Fight Director
 (design with Christopher; it also takes enemy mages' Dispelling Screen, Christopher,
 2026-10-27); configurable Spell Revisions (recover branch
