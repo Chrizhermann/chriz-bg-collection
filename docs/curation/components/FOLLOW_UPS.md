@@ -723,6 +723,24 @@ Cross-repository status. Component detail stays in the sections below and in the
   Challenge Mode. Reasons: fewer bugs, and no exploits through shops or stashed items. The
   exact area list is defined together with Christopher later.
 
+**Ideas for later (Christopher, 2026-11-04)**
+
+- Rogue Rebalancing: reuse its code and improve it. Christopher's view: it is popular and
+  used in every kind of setup, but old, partly not well written, and some items are too
+  strong, above all late in the game. The loot of the Chosen of Cyric encounter (`11`, on in
+  Recommended) is great to win, but a bit much overall. Its license, checked on 2026-11-04:
+  - Creative Commons BY-NC-SA 3.0 Unported (`rr/doc/rr_license.html`, and the readme's
+    Legal Notice). The author is aVENGER.
+  - v4.92 of 2018-05-19 in the Spellhold Studios repository is the last release; nothing
+    has changed since.
+  - The license allows copying, changing and passing on, with credit, for non-commercial
+    use, and under the same license.
+  - Parts taken from others fall under their own authors' terms, not aVENGER's license.
+    Examples: Detectable Spells, G3 code, Nythrun's macros, ToBEx files, and icons and
+    portraits borrowed from IWD2, NWN and The Frozen North.
+
+  The way forward is Christopher's decision.
+
 **Larger projects:** Time Stop/Haste (Rebalance `360`, above); script engine / Fight Director
 (design with Christopher; it also takes enemy mages' Dispelling Screen, Christopher,
 2026-10-27); configurable Spell Revisions (recover branch
