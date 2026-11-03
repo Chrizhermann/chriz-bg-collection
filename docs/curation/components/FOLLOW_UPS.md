@@ -608,6 +608,14 @@ Cross-repository status. Component detail stays in the sections below and in the
   Also: manual downloads (Evandra) accept a newer version, as #69 does for links. GOG,
   other game versions and non-English games install with a warning instead of stopping
   (Christopher, 2026-10-30).
+  Chriz Easy BG, for 0.1.1 (2026-11-03): all of it is in a stack of five PRs from the
+  `claude/fewer-blockers-*` branches into the next-release branch, awaiting Christopher's
+  review and merge OK (sources, retries, optional runs, manual downloads, environment).
+  On Christopher's request of 2026-11-03 the game check also finds GOG (registry records
+  and default folders) and Beamdog client copies and installs from them with a "less
+  tested" warning, and names a Microsoft Store folder as protected. Steam 2.7.3.0 in
+  English stays the tested setup. Not yet in the IWD app; Mac and Linux (Proton/Wine) are a
+  later research item.
 - Balance, close to vanilla (Christopher, 2026-10-30), collected as "Chris Revisions" (the
   name BG Rebalance `340` already carries). His line: characters, items, encounters and
   spells may be a little unbalanced, but neither too strong nor too weak: no must-haves or

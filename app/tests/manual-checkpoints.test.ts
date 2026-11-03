@@ -116,7 +116,7 @@ describe("manual component boundaries", () => {
     const backend = new CheckpointBackend();
     const games = await backend.discoverGames();
     const evaluation = await backend.evaluateBuild({ platform: "windows", features: {}, inputs: {} });
-    const readiness = { starting: false, name: "New game", bg1: games.bg1Candidates.find(game => game.eligible), bg2: games.bg2Candidates.find(game => game.eligible),
+    const readiness = { starting: false, bg1: games.bg1Candidates.find(game => game.eligible), bg2: games.bg2Candidates.find(game => game.eligible),
       destination: { path: "D:\\New", safe: true, title: "Ready", detail: "" }, evaluation, evaluationPending: false };
     expect(installationReadiness({ ...readiness, manualBreakpoints: [{ runId: "eeex-batch", component: 1 }] })).toBe(true);
     expect(installationReadiness({ ...readiness, manualBreakpoints: [{ runId: "gone", component: 1 }] })).toBe(false);

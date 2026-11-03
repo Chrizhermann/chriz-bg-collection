@@ -43,9 +43,17 @@ struct Fixture {
 
 impl Fixture {
     fn new() -> Self {
+        Self::new_in(&[])
+    }
+
+    /// The installation in `managed` below the given folder names.
+    fn new_in(parents: &[&str]) -> Self {
         let temp = tempfile::tempdir().unwrap();
-        let root = temp.path().join("managed");
-        fs::create_dir(&root).unwrap();
+        let root = parents
+            .iter()
+            .fold(temp.path().to_path_buf(), |path, name| path.join(name))
+            .join("managed");
+        fs::create_dir_all(&root).unwrap();
         let root = fs::canonicalize(root).unwrap();
         let game = root.join("game");
         fakegame::FakeGame::build(&game).unwrap();
@@ -372,6 +380,28 @@ fn available_preview_has_a_stable_review_token_and_does_not_write() {
     assert!(!fixture.cache.exists());
     assert_eq!(file_bytes(&fixture.game()), fixture.original);
     fixture.assert_original();
+}
+
+#[test]
+fn a_registered_copy_below_steamapps_or_program_files_offers_its_fix() {
+    for parents in [
+        &["steamapps", "common"][..],
+        &["Program Files"][..],
+        &["Program Files (x86)", "Games"][..],
+    ] {
+        let mut fixture = Fixture::new_in(parents);
+        validate_context(&fixture.ctx()).unwrap_or_else(|error| panic!("{parents:?}: {error}"));
+        let preview = inspect(&fixture.ctx(), &catalog()).unwrap();
+        assert_eq!(preview.state, "available", "{parents:?}");
+        fixture.assert_original();
+
+        // The protection that remains: the root must be the registered copy its receipt names.
+        fixture.record.receipt_sha256 = "00".repeat(32);
+        assert_eq!(
+            validate_context(&fixture.ctx()).unwrap_err(),
+            "Installation receipt changed."
+        );
+    }
 }
 
 #[test]

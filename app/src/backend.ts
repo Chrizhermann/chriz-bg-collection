@@ -916,12 +916,17 @@ export class FixtureBackend implements Backend {
 
   inspectDestination(path: string, _bg1CandidateId: string, _bg2CandidateId: string): Promise<DestinationEvaluation> {
     const normalized = path.trim();
-    const safe = normalized.length > 3 && !normalized.toLowerCase().includes("steamapps");
+    const safe = normalized.length > 3;
+    // Like the native check: a Steam or Windows program folder warns but stays usable.
+    const note = /(^|[\\/])(steamapps|program files|program files \(x86\))([\\/]|$)/iu.test(normalized)
+      ? "Steam or Windows may change files in this folder, so a folder elsewhere is safer. CEBG can still install here."
+      : undefined;
     return Promise.resolve({
       path: normalized,
       safe,
       title: safe ? "Ready to install" : "Choose a separate install location",
-      detail: safe ? "The source games and their saves will remain untouched." : "The collection cannot be built inside a store-managed game folder.",
+      detail: safe ? note ?? "The source games and their saves will remain untouched." : "Choose a complete folder path, such as D:\\Games\\Chriz Easy BG.",
+      ...(safe && note !== undefined ? { note } : {}),
       requiredSpace: "62 GB",
       availableSpace: "184 GB",
     });

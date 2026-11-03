@@ -263,12 +263,14 @@ fn create_real_27_target(root: &Path) {
 }
 
 #[test]
-fn insufficient_total_space_is_rejected() {
+fn space_below_the_certain_need_is_rejected() {
     let fixture = Fixture::new();
     let artifacts = artifact_inputs();
     let tools = tool_inputs();
+    // The copied games (40) and the exact downloads (20) are certain; less free space would
+    // fill the disk.
     let host = FakeHost {
-        free_space: 99,
+        free_space: 59,
         ..FakeHost::default()
     };
 
@@ -276,10 +278,37 @@ fn insufficient_total_space_is_rejected() {
     assert!(matches!(
         error,
         PreflightError::InsufficientSpace {
-            required: 100,
-            available: 99
+            required: 60,
+            available: 59
         }
     ));
+}
+
+#[test]
+fn space_between_the_certain_need_and_the_estimate_warns_and_continues() {
+    let fixture = Fixture::new();
+    let artifacts = artifact_inputs();
+    let tools = tool_inputs();
+    for free_space in [60, 99] {
+        let host = FakeHost {
+            free_space,
+            ..FakeHost::default()
+        };
+
+        let report = initial_preflight_with(&request(&fixture, &artifacts, &tools), &host)
+            .expect("free space above the certain need continues");
+        assert_eq!(report.required_space, 100);
+        assert_eq!(report.available_space, free_space);
+        assert_eq!(report.warnings.len(), 1, "{:?}", report.warnings);
+        let warning = &report.warnings[0];
+        assert!(warning.contains("may need up to 100 bytes"), "{warning}");
+        assert!(
+            warning.contains(&format!("{free_space} bytes is free")),
+            "{warning}"
+        );
+        assert!(warning.contains("upper bound"), "{warning}");
+        assert!(warning.contains("installation continues"), "{warning}");
+    }
 }
 
 #[cfg(windows)]
@@ -338,9 +367,10 @@ fn a_separate_cache_volume_gets_its_own_space_check() {
     let fixture = Fixture::new();
     let artifacts = artifact_inputs();
     let tools = tool_inputs();
+    // The cache volume certainly needs the exact downloads (20).
     let host = FakeHost {
         free_space: 50,
-        cache_free_space: 49,
+        cache_free_space: 19,
         separate_cache_volume: true,
         ..FakeHost::default()
     };
@@ -349,10 +379,58 @@ fn a_separate_cache_volume_gets_its_own_space_check() {
     assert!(matches!(
         error,
         PreflightError::InsufficientCacheSpace {
-            required: 50,
-            available: 49
+            required: 20,
+            available: 19
         }
     ));
+
+    // The destination volume certainly needs the copied games (40).
+    let host = FakeHost {
+        free_space: 39,
+        cache_free_space: 50,
+        separate_cache_volume: true,
+        ..FakeHost::default()
+    };
+    let error = initial_preflight_with(&request(&fixture, &artifacts, &tools), &host).unwrap_err();
+    assert!(matches!(
+        error,
+        PreflightError::InsufficientSpace {
+            required: 40,
+            available: 39
+        }
+    ));
+}
+
+#[test]
+fn a_separate_cache_volume_below_its_estimate_warns_and_continues() {
+    let fixture = Fixture::new();
+    let artifacts = artifact_inputs();
+    let tools = tool_inputs();
+    // Destination estimate 40 + 10, cache estimate 20 + 30: both short, both above certain.
+    let host = FakeHost {
+        free_space: 45,
+        cache_free_space: 49,
+        separate_cache_volume: true,
+        ..FakeHost::default()
+    };
+
+    let report = initial_preflight_with(&request(&fixture, &artifacts, &tools), &host)
+        .expect("both volumes above their certain need continue");
+    assert_eq!(report.available_space, 94);
+    assert_eq!(report.warnings.len(), 2, "{:?}", report.warnings);
+    assert!(report.warnings[0]
+        .contains("the installation folder may need up to 50 bytes and 45 bytes is free"));
+    assert!(report.warnings[1]
+        .contains("the download cache may need up to 50 bytes and 49 bytes is free"));
+
+    let roomy = FakeHost {
+        free_space: 50,
+        cache_free_space: 50,
+        separate_cache_volume: true,
+        ..FakeHost::default()
+    };
+    let report = initial_preflight_with(&request(&fixture, &artifacts, &tools), &roomy).unwrap();
+    assert!(report.warnings.is_empty(), "{:?}", report.warnings);
 }
 
 #[test]
@@ -729,6 +807,7 @@ fn clean_initial_and_per_run_preflights_pass() {
     let report = initial_preflight_with(&request(&fixture, &artifacts, &tools), &host).unwrap();
     assert_eq!(report.required_space, 100);
     assert_eq!(report.available_space, 100);
+    assert!(report.warnings.is_empty(), "{:?}", report.warnings);
 
     let target = fixture.destination.join("game");
     create_target(&target);

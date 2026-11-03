@@ -90,14 +90,11 @@ fn validate_context(ctx: &Context<'_>) -> Result<(), String> {
     }
     files::direct(&r.managed_root)?;
     files::direct(&ctx.game())?;
+    // No folder-name heuristic (such as `steamapps` or Program Files): what keeps an update
+    // inside a CEBG copy is that the root is a registered installation whose receipt matches.
     if !r.managed_root.is_absolute()
         || fs::canonicalize(&r.managed_root).map_err(err)? != r.managed_root
         || crate::preflight::is_creator_protected_destination(&r.managed_root)
-        || r.managed_root
-            .to_string_lossy()
-            .to_ascii_lowercase()
-            .split(['\\', '/'])
-            .any(|p| matches!(p, "steamapps" | "program files" | "program files (x86)"))
     {
         return Err("Updates require a separate, registered game folder.".into());
     }

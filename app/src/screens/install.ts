@@ -8,7 +8,7 @@ import type {
   SelectionEvaluation,
 } from "../contracts";
 import { actionButton, element, screenIntro } from "../components/app-shell";
-import { installationReadiness, sourceStatus, sourceVersionNote, validateInstallationName } from "../state";
+import { installationReadiness, sourceStatus, sourceVersionNote } from "../state";
 import { invalidBreakpoints } from "../components/manual-checkpoints";
 
 export interface InstallScreenModel {
@@ -16,7 +16,8 @@ export interface InstallScreenModel {
   readonly selectedBg1Id: string;
   readonly selectedBg2Id: string;
   readonly installationName: string;
-  readonly installationNameError?: string | null;
+  /** "Will be saved as “…”." when the name is saved in another form; never blocks. */
+  readonly installationNameNote?: string | null;
   readonly destination: DestinationEvaluation;
   readonly evaluation: SelectionEvaluation | null;
   readonly evaluationPending: boolean;
@@ -217,11 +218,11 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
   const location = field("Install location", "install-location", model.destination.path);
   name.input.disabled = model.starting;
   location.input.disabled = model.starting;
-  const nameError = model.installationNameError ?? validateInstallationName(model.installationName);
-  const nameHelp = element("p", nameError === null ? "field-help" : "field-error", nameError ?? "This name also labels your installation in CEBG.");
+  const nameNote = model.installationNameNote ?? null;
+  const nameHelp = element("p", "field-help", nameNote ?? "This name also labels your installation in CEBG.");
   nameHelp.id = "install-name-help";
+  nameHelp.setAttribute("aria-live", "polite");
   name.input.setAttribute("aria-describedby", nameHelp.id);
-  if (nameError !== null) name.input.setAttribute("aria-invalid", "true");
   name.wrapper.append(nameHelp);
   name.input.addEventListener("change", () => void actions.changeName(name.input.value));
   const locationControls = element("div", "location-controls");
@@ -232,6 +233,15 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
   locationHelp.id = "install-location-help";
   location.input.setAttribute("aria-describedby", locationHelp.id);
   location.wrapper.append(locationHelp);
+  if (model.destination.safe && model.destination.note) {
+    // A usable folder CEBG still has something to say about: it installs into a new folder
+    // inside it, or Steam or Windows may change files there.
+    const locationNote = element("p", "field-help", model.destination.note);
+    locationNote.id = "install-location-note";
+    locationNote.setAttribute("role", "status");
+    location.input.setAttribute("aria-describedby", `${locationHelp.id} ${locationNote.id}`);
+    location.wrapper.append(locationNote);
+  }
   if (!model.destination.safe) {
     const locationFinding = element("div", "location-finding");
     locationFinding.id = "install-location-finding";
@@ -294,9 +304,8 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
 
   const bg1 = selectedCandidate(model.discovery.bg1Candidates, model.selectedBg1Id);
   const bg2 = selectedCandidate(model.discovery.bg2Candidates, model.selectedBg2Id);
-  const selectionReady = nameError === null && installationReadiness({
+  const selectionReady = installationReadiness({
     starting: model.starting,
-    name: model.installationName,
     bg1,
     bg2,
     destination: model.destination,
