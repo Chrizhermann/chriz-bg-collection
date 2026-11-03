@@ -10,7 +10,10 @@
   components 212/213 ship in a separate package that the collection does not install.
 
 Static pin, evidence, component, selection, order and release-text checks for both recipe
-profiles only. Nothing here is a game installation or gameplay acceptance.
+profiles only. Nothing here is a game installation or gameplay acceptance. The November 3
+intake (test_nov03_rebalance_0810_pin_recipe) supersedes the Rebalance pin with v0.8.10 for
+0.1.2, which changes only Flail of the Ages 302 and no component; the v0.8.9 record,
+artifacts and 0.1.0 texts stay as verified here.
 """
 
 from pathlib import Path
@@ -26,7 +29,7 @@ EVIDENCE = "manifest/evidence/release-intake-20261102-kitpack-chriz6-rebalance-0
 PROFILES = ["manifest", "recipes/curated-full-current"]
 KITPACK_MODS = ("artisanskitpack", "artisanskitpack-npc", "artisanskitpack-tweak")
 # Per pin: the new artifact, the superseded one, the previous record, tag, tag commit,
-# archive name, length and SHA-256.
+# archive name, length and SHA-256, and the later pin that replaced it, if any.
 PINS = {
     "kitpack": {
         "mods": KITPACK_MODS,
@@ -51,6 +54,8 @@ PINS = {
                "chriz-bg-rebalance-v0.8.9-windows.zip",
         "length": 1_844_195,
         "sha256": "da03fe9e2a36f5af155311197e68d6f82ead270426015363fa161ad56e8ea6f2",
+        # The November 3 intake moves both profiles to v0.8.10.
+        "successor": "chriz-bg-rebalance-0.8.10",
     },
 }
 REBALANCE_RUN = "chriz-bg-rebalance-bg2"
@@ -140,7 +145,8 @@ class Nov02FixPinsTests(unittest.TestCase):
                     for mod_id in pin["mods"]:
                         self.assertIn(profile_name, self.records[mod_id]["recipe_profiles"])
                         mod = _load(directory / f"mods/{mod_id}.toml")
-                        self.assertEqual(mod["artifact_id"], pin["pin"], mod_id)
+                        # A superseded pin stays available as history, verified as recorded here.
+                        self.assertEqual(mod["artifact_id"], pin.get("successor", pin["pin"]), mod_id)
                         self.assertIn(mod["tp2"], artifact["archive"]["tp2_paths"])
         # The checked-in curated artifacts are the generator's copies of the authored pins.
         for pin in PINS.values():
@@ -177,8 +183,10 @@ class Nov02FixPinsTests(unittest.TestCase):
     def test_pin_list_and_changelog_draft_name_the_fixes(self):
         pin_list = (ROOT / "docs/pin-list-2.7.md").read_text(encoding="utf-8")
         for pin in PINS.values():
-            self.assertEqual(pin_list.count(f"| {pin['tag'].removeprefix('v')} |"), 2, pin["pin"])
-            self.assertEqual(pin_list.count(f"`{pin['sha256'][:12]}…`"), 2, pin["pin"])
+            # The pin list names only current pins: twice each, a superseded one not at all.
+            count = 0 if "successor" in pin else 2
+            self.assertEqual(pin_list.count(f"| {pin['tag'].removeprefix('v')} |"), count, pin["pin"])
+            self.assertEqual(pin_list.count(f"`{pin['sha256'][:12]}…`"), count, pin["pin"])
         changelog = " ".join((ROOT / "docs/plans/2026-10-14-next-release-changelogs.md")
                              .read_text(encoding="utf-8").split())
         for phrase in ("**The Shapeshifter's white and greater white werewolves no longer crash the game**",

@@ -381,18 +381,23 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // the bg1npc-bg1 run and the Kivan quest guard Modpack 130. With the mod back to default
     // and on, all six previous digests return (manifest b0fd4879…, 2447350d…, 94416a3d…;
     // curated bb95f458…, 7cf6a3b5…, 3cf7e8f4…).
+    // Re-pinned on November 4 for BG Rebalance v0.8.10 (Flail of the Ages 302 without Spell
+    // Revisions), which goes into 0.1.2 (Christopher, 2026-11-04): in both recipes only the
+    // Recommended plan changes, in the Rebalance run's artifact id; components, order and the
+    // selection stay. With v0.8.9 restored, the previous plan digests return (manifest
+    // 9a20fbbf…, curated ee3d8e3b…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
             "c90f8f1b57deda983af1eafb2ffdd987eba60c253907f14972d10c3fd144b855",
             "253015344c72b69bd35011cb03f9dbf8ad395999deb9fa5a3278ed7baa943c1e",
-            "9a20fbbf693c053ef811157c749645945c62903c684a8136244d3f34f2fbd551",
+            "d5629b5664620b43b1b21f5eb6f00b444173204b61d31dd4bd2dde4ac0e6b2eb",
         ),
         (
             "../recipes/curated-full-current",
             "28812dc15b2863260be1c9cd54ab195a393a08404a9ca16a7a837f82c853568a",
             "7a1ba97da70cba541ce9e05c68c3b0d999d41e5ec8b724745f2efd43ce3ecbf2",
-            "ee3d8e3b51a929dc3236032fc2b4e51139da5f0fe1bf9a50e2d1debd0e2d9989",
+            "3cd844e77bd7834e9ce0b944d319a81f8049fdf384d86c3f85f7557d0de34048",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();
