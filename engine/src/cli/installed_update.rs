@@ -158,8 +158,9 @@ pub(crate) fn verify_installed_baseline(
         }
     }
     let suffix = crate::patches::verified_log_suffix(&root).map_err(problem)?;
-    // Each hotpatch checked the whole mod list it left; the latest one's must be the current one.
-    let hotpatches = crate::hotpatch::verified_log_suffix(&root).map_err(problem)?;
+    // Each hotpatch or whole-mod update checked the whole mod list it left; the latest one's must
+    // be the current one, byte for byte. `None` when none is recorded.
+    let hotpatches = crate::hotpatch::verified_log(&root).map_err(problem)?;
     let upgrade = crate::mod_upgrades::active_upgrade(&root).map_err(problem)?;
     if let Some(u) = &upgrade {
         let source = base.plan.runs.iter().find(|r| r.run_id == u.run_id);
@@ -194,7 +195,7 @@ pub(crate) fn verify_installed_baseline(
         let mut expected = final_log.components.clone();
         if final_log.target == GameRoot::Bg2 {
             expected.extend(suffix.clone());
-            expected.extend(hotpatches.clone());
+            expected.extend(hotpatches.iter().flatten().cloned());
         }
         if active.len() != expected.len()
             || active.iter().zip(&expected).any(|(actual, expected)| {
@@ -202,7 +203,7 @@ pub(crate) fn verify_installed_baseline(
                     || actual.language != expected.language
                     || actual.component != expected.component
             })
-            || ((final_log.target == GameRoot::Bg1 || (suffix.is_empty() && hotpatches.is_empty()))
+            || ((final_log.target == GameRoot::Bg1 || (suffix.is_empty() && hotpatches.is_none()))
                 && !sha256_bytes(&bytes).eq_ignore_ascii_case(
                     upgrade
                         .as_ref()
@@ -235,6 +236,25 @@ pub(crate) fn verify_installed_baseline(
                 length: 4_241_150,
             },
         );
+    }
+    // A whole-mod update replaced its mod's release in every run of that mod.
+    for update in crate::hotpatch::update::applied(&root).map_err(problem)? {
+        for run in base
+            .plan
+            .runs
+            .iter()
+            .filter(|run| run.mod_id == update.mod_id)
+        {
+            replacements.insert(
+                run.run_id.clone(),
+                crate::session::FrozenIdentity {
+                    id: format!("{}-{}", update.mod_id, update.to_version),
+                    version: update.to_version.clone(),
+                    sha256: update.release.sha256.clone(),
+                    length: update.release.length,
+                },
+            );
+        }
     }
     Ok(VerifiedInstalledBaseline {
         manifest: old,

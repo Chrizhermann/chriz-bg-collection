@@ -31,7 +31,7 @@ const NEW_CREATURE: &[u8] = b"CRE V9.0 synthetic Belhifet after the hotpatch";
 const CATALOG: &str = r#"
 schema = 1
 game = "iwdee"
-runtime_files = ["infinityloader.ini", "buffbot_*.log"]
+runtime_files = ["infinityloader.ini", "buffbot_*.log", "override/bfbot_presets/**"]
 
 [gate]
 recommended_preset = "chris-recommended"
@@ -59,6 +59,47 @@ title = "Belhifet"
 summary = "Belhifet fights with new tactics."
 save_applicability = "before-area-visit"
 condition_note = "Saves made before the last fight get it."
+
+[[updates]]
+mod = "buffbot"
+title = "BuffBot"
+summary = "Brings BuffBot to its newest release."
+artifact = "buffbot-1.16.0"
+"#;
+
+const BUFFBOT_ARTIFACT: &str = r#"
+id = "buffbot-1.16.0"
+name = "BuffBot"
+version = "1.16.0"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://example.invalid/buffbot-v1.16.0.zip"
+reference = "v1.16.0"
+expected_filename = "buffbot-v1.16.0.zip"
+expected_length = 5797041
+sha256 = "ce38d81102f717acf709cc8a7827586f8ab6ff5ff450aaca42f0b5d513da0082"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["buffbot"]
+tp2_paths = ["buffbot/setup-buffbot.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 2048
+max_entry_uncompressed_bytes = 16777216
+max_total_uncompressed_bytes = 67108864
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://example.invalid/"
+license = "Fetch-only"
+url = "https://example.invalid/"
+reviewed_on = "2026-11-04"
 "#;
 
 const ARTIFACT: &str = r#"
@@ -154,6 +195,20 @@ fn recipe() -> crate::Manifest {
 
 impl Fixture {
     fn new() -> Self {
+        Self::build(
+            BASE_LOG,
+            vec![LogComponentReceipt {
+                tp2: "stratagems/setup-stratagems.tp2".into(),
+                language: 0,
+                component: 1000,
+            }],
+            &|_| {},
+        )
+    }
+
+    /// A finished installation whose mod list is `log` with the rows `components`; `setup` adds
+    /// game files before the installer's record of the folder is taken.
+    fn build(log: &[u8], components: Vec<LogComponentReceipt>, setup: &dyn Fn(&Path)) -> Self {
         let temp = tempfile::tempdir().unwrap();
         let root = temp.path().join("managed");
         fs::create_dir(&root).unwrap();
@@ -168,7 +223,7 @@ impl Fixture {
             format!("engine_name = '{ENGINE_NAME}'\n").as_bytes(),
         );
         write(&game.join("weidu.conf"), b"lang_dir = en_US\r\n");
-        write(&game.join("WeiDU.log"), BASE_LOG);
+        write(&game.join("WeiDU.log"), log);
         write(&game.join("chitin.key"), b"KEY V1  synthetic");
         write(
             &game.join("InfinityLoader.ini"),
@@ -179,6 +234,7 @@ impl Fixture {
         write(&game.join("override/other.itm"), b"ITM V1   unrelated");
         write(&game.join("data/AREA.BIF"), b"BIFFV1  synthetic");
         fs::create_dir_all(game.join("stratagems/backup/1000")).unwrap();
+        setup(&game);
         let save_root = root.join("profile");
         write(&save_root.join(SAVE), b"synthetic save; never changed");
 
@@ -213,12 +269,8 @@ impl Fixture {
             final_state: Some(FinalReceiptState {
                 logs: vec![FinalLogReceipt {
                     target: GameRoot::Bg2,
-                    sha256: sha256_bytes(BASE_LOG),
-                    components: vec![LogComponentReceipt {
-                        tp2: "stratagems/setup-stratagems.tp2".into(),
-                        language: 0,
-                        component: 1000,
-                    }],
+                    sha256: sha256_bytes(log),
+                    components,
                 }],
                 bg1_engine_name: None,
                 bg2_engine_name: ENGINE_NAME.into(),
@@ -263,6 +315,10 @@ impl Fixture {
         write(
             &catalog_dir.join("mods/chriz-iwd-encounters.toml"),
             INSTALLER.as_bytes(),
+        );
+        write(
+            &catalog_dir.join("artifacts/buffbot-1.16.0.toml"),
+            BUFFBOT_ARTIFACT.as_bytes(),
         );
         let catalog = catalog::load(&catalog_dir).unwrap();
 
@@ -870,4 +926,522 @@ fn checking_reads_but_never_writes() {
     assert_eq!(f.now(), before);
     assert!(!f.root().join(".chriz/hotpatches").exists());
     f.assert_untouched();
+}
+
+// Whole-mod updates: BuffBot 1.12.6 -> 1.16.0, with the EEex Remote Console after it. WeiDU's
+// re-installation is written by hand, as above for hotpatches.
+
+const BUFFBOT_TP2: &str = "buffbot/setup-buffbot.tp2";
+const OLD_TP2: &[u8] = b"BACKUP ~weidu_external/backup/buffbot~\r\nVERSION ~v1.12.6~\r\nLANGUAGE ~English~ ~english~ ~buffbot/lang/english/setup.tra~\r\nLANGUAGE ~German~ ~german~ ~buffbot/lang/german/setup.tra~\r\nBEGIN @100 DESIGNATED 1\r\nBEGIN @111 DESIGNATED 0\r\n";
+// The new release lists its languages the other way round: English is number 1 there.
+const NEW_TP2: &[u8] = b"BACKUP ~weidu_external/backup/buffbot~\r\nVERSION ~v1.16.0~\r\nLANGUAGE ~German~ ~german~ ~buffbot/lang/german/setup.tra~\r\nLANGUAGE ~English~ ~english~ ~buffbot/lang/english/setup.tra~\r\nBEGIN @100 DESIGNATED 1\r\nBEGIN @111 DESIGNATED 0\r\n";
+const OLD_CORE: &[u8] = b"-- BuffBot core 1.12.6";
+const NEW_CORE: &[u8] = b"-- BuffBot core 1.16.0";
+const OLD_ONLY: &[u8] = b"-- only in 1.12.6";
+const NEW_ONLY: &[u8] = b"-- new in 1.16.0";
+const REMOTE: &[u8] = b"-- EEex Remote Console";
+const PRESET: &str = "override/bfbot_presets/Zyntris.lua";
+
+fn buffbot_log(language: u32, version: &str, extra: &str) -> Vec<u8> {
+    format!(
+        "// Synthetic mod list\r\n~STRATAGEMS/SETUP-STRATAGEMS.TP2~ #0 #1000 // Fixture: v1\r\n~BUFFBOT/SETUP-BUFFBOT.TP2~ #{language} #1 // BuffBot: EEex LuaJIT Support (auto-detected): v{version}\r\n~BUFFBOT/SETUP-BUFFBOT.TP2~ #{language} #0 // BuffBot: In-Game Buff Automation: v{version}\r\n~SETUP-EEEXREMOTE.TP2~ #0 #0 // EEex Remote Console: v0.2.1\r\n{extra}"
+    )
+    .into_bytes()
+}
+
+fn buffbot_rows(extra: &[(&str, u32)]) -> Vec<LogComponentReceipt> {
+    [
+        ("stratagems/setup-stratagems.tp2", 1000),
+        (BUFFBOT_TP2, 1),
+        (BUFFBOT_TP2, 0),
+        ("setup-eeexremote.tp2", 0),
+    ]
+    .iter()
+    .chain(extra)
+    .map(|(tp2, component)| LogComponentReceipt {
+        tp2: (*tp2).into(),
+        language: 0,
+        component: *component,
+    })
+    .collect()
+}
+
+fn buffbot_files(game: &Path) {
+    write(&game.join("buffbot/setup-buffbot.tp2"), OLD_TP2);
+    write(&game.join("buffbot/BfBotCor.lua"), OLD_CORE);
+    write(&game.join("buffbot/BfBotOld.lua"), OLD_ONLY);
+    write(&game.join("buffbot/lang/english/setup.tra"), b"@1 = ~old~");
+    write(&game.join("buffbot/lang/german/setup.tra"), b"@1 = ~alt~");
+    write(&game.join("override/BfBotCor.lua"), OLD_CORE);
+    write(&game.join("override/BfBotOld.lua"), OLD_ONLY);
+    write(&game.join("override/bfbot_l10n.tra"), b"@1 = ~old~");
+    write(
+        &game.join("weidu_external/backup/buffbot/0/UNINSTALL.0"),
+        b"override\\BfBotCor.lua\r\noverride\\BfBotOld.lua\r\noverride\\bfbot_l10n.tra\r\n",
+    );
+    write(
+        &game.join("weidu_external/backup/buffbot/1/UNINSTALL.1"),
+        b"",
+    );
+    write(
+        &game.join("setup-eeexremote.tp2"),
+        b"BACKUP ~weidu_external/backup/eeexremote~\r\nBEGIN ~Remote~ DESIGNATED 0\r\n",
+    );
+    write(&game.join("eeexremote/M_EEexRC.lua"), REMOTE);
+    write(&game.join("override/M_EEexRC.lua"), REMOTE);
+    write(
+        &game.join("weidu_external/backup/eeexremote/0/UNINSTALL.0"),
+        b"override\\M_EEexRC.lua\r\n",
+    );
+}
+
+fn success(count: usize) -> Vec<u8> {
+    b"SUCCESSFULLY INSTALLED x\r\n".repeat(count)
+}
+
+impl Fixture {
+    fn buffbot() -> Self {
+        Self::buffbot_with("", &[], &|_| {})
+    }
+
+    fn buffbot_with(extra_log: &str, extra_rows: &[(&str, u32)], setup: &dyn Fn(&Path)) -> Self {
+        let f = Self::build(
+            &buffbot_log(0, "1.12.6", extra_log),
+            buffbot_rows(extra_rows),
+            &|game| {
+                buffbot_files(game);
+                setup(game);
+            },
+        );
+        // Played since: the player exported a preset.
+        write(&f.game().join(PRESET), b"-- the player's own preset");
+        let release = f.temp.path().join("release");
+        write(&release.join("buffbot/setup-buffbot.tp2"), NEW_TP2);
+        write(&release.join("buffbot/BfBotCor.lua"), NEW_CORE);
+        write(&release.join("buffbot/BfBotNew.lua"), NEW_ONLY);
+        write(
+            &release.join("buffbot/lang/english/setup.tra"),
+            b"@1 = ~new~",
+        );
+        write(
+            &release.join("buffbot/lang/german/setup.tra"),
+            b"@1 = ~neu~",
+        );
+        f
+    }
+
+    fn update_entry(&self) -> &catalog::ModUpdate {
+        self.catalog.update("buffbot").unwrap()
+    }
+
+    fn update_assess(&self) -> update::Assessment {
+        update::assess_with(
+            &self.ctx(),
+            &self.catalog,
+            self.update_entry(),
+            &self.history(),
+            Ok(self.baseline()),
+        )
+    }
+
+    /// Plan and prepare the update as apply does, after its checks and backups.
+    fn update_prepare(&self) -> (PathBuf, Prepared) {
+        let ctx = self.ctx();
+        let history = self.history();
+        let assessment = self.update_assess();
+        assert!(assessment.refusals.is_empty(), "{:?}", assessment.refusals);
+        let manifest = recipe();
+        let pinned = &manifest.artifacts[&manifest.mods["buffbot"].artifact_id];
+        let release = update::release(self.update_entry(), pinned).unwrap();
+        let plan = update::plan(
+            &ctx,
+            self.update_entry(),
+            assessment.baseline.as_ref().unwrap(),
+            assessment.installed.as_ref().unwrap(),
+            assessment.reinstalled.clone(),
+            assessment.untrusted,
+            &release,
+            &self.temp.path().join("release"),
+            "en_US".into(),
+        )
+        .unwrap();
+        let existing = fs::read_dir(ctx.state()).map_or(0, |folders| folders.count());
+        let dir = ctx.state().join(format!("{:020}", existing + 1));
+        files::create(&dir.join("identity"), self.record.install_id.as_bytes()).unwrap();
+        let prepared = update::prepare(
+            &ctx,
+            &self.catalog,
+            &dir,
+            &plan,
+            assessment.current.as_ref().unwrap(),
+            &self.tool,
+            files::hash(&self.tool).unwrap(),
+            history.head(),
+        )
+        .unwrap();
+        (dir, prepared)
+    }
+
+    /// What WeiDU's re-installation writes: the new release's files in `override/`, a new
+    /// uninstall list, the Remote Console put back as it was, the rows with the new version and
+    /// English under its new number.
+    fn update_weidu(&self, dir: &Path, prepared: &Prepared) {
+        update::place_release(&self.ctx(), dir, prepared).unwrap();
+        let game = self.game();
+        write(&game.join("override/BfBotCor.lua"), NEW_CORE);
+        fs::remove_file(game.join("override/BfBotOld.lua")).unwrap();
+        write(&game.join("override/BfBotNew.lua"), NEW_ONLY);
+        write(&game.join("override/bfbot_l10n.tra"), b"@1 = ~new~");
+        write(
+            &game.join("weidu_external/backup/buffbot/0/UNINSTALL.0"),
+            b"override\\BfBotCor.lua\r\noverride\\BfBotNew.lua\r\noverride\\bfbot_l10n.tra\r\n",
+        );
+        write(&game.join("override/M_EEexRC.lua"), REMOTE);
+        write(&game.join("WeiDU.log"), &buffbot_log(1, "1.16.0", ""));
+    }
+
+    fn update_apply(&self) -> PathBuf {
+        let (dir, prepared) = self.update_prepare();
+        self.update_weidu(&dir, &prepared);
+        let evidence = transaction::WeiduEvidence {
+            exit_code: 0,
+            debug: success(4),
+            stdout: Vec::new(),
+        };
+        update::reinstalled_as_planned(
+            &fs::read(dir.join("affected/weidu.log")).unwrap(),
+            &fs::read(self.game().join("WeiDU.log")).unwrap(),
+            &evidence,
+            &prepared,
+            Some("1.16.0"),
+        )
+        .unwrap();
+        update::record_applied(&self.ctx(), &self.catalog, &dir, &prepared).unwrap();
+        dir
+    }
+
+    fn assert_preset_kept(&self) {
+        assert_eq!(
+            fs::read(self.game().join(PRESET)).unwrap(),
+            b"-- the player's own preset"
+        );
+    }
+}
+
+#[test]
+fn a_buffbot_update_is_recorded_and_undo_puts_back_every_byte() {
+    let f = Fixture::buffbot();
+    let assessment = f.update_assess();
+    assert_eq!(assessment.installed.as_ref().unwrap().version, "1.12.6");
+    assert!(!assessment.untrusted);
+    let reinstalled = &assessment.reinstalled;
+    assert_eq!(reinstalled.len(), 1, "{reinstalled:?}");
+    assert_eq!(reinstalled[0].name, "EEex Remote Console");
+    assert_eq!(reinstalled[0].mod_folder.as_deref(), Some("eeexremote"));
+    assert_eq!(
+        reinstalled[0].backup_folder,
+        "weidu_external/backup/eeexremote"
+    );
+
+    let dir = f.update_apply();
+    let prepared: Prepared =
+        serde_json::from_slice(&fs::read(dir.join("prepared.json")).unwrap()).unwrap();
+    assert_eq!(prepared.package.components, [1, 0]);
+    assert_eq!(prepared.package.language, 1, "English by its folder");
+    // The old release's files and the overwritten ones are kept in the record itself.
+    for name in [
+        "buffbot/bfbotold.lua",
+        "override/bfbotold.lua",
+        "override/bfbotcor.lua",
+        "weidu_external/backup/buffbot/0/uninstall.0",
+        "override/m_eeexrc.lua",
+    ] {
+        assert!(prepared.saved.contains_key(name), "{name}");
+    }
+    let history = f.history();
+    assert_eq!(history.entries[0].state, State::Applied);
+    assert!(history.applied_ids().is_empty(), "an update is no hotpatch");
+    let updates = history.applied_updates();
+    assert_eq!(updates.len(), 1);
+    assert_eq!(updates[0].from_version, "1.12.6");
+    assert_eq!(updates[0].to_version, "1.16.0");
+    assert_eq!(update::applied(f.root()).unwrap().len(), 1);
+    assert_eq!(verified_log(f.root()).unwrap(), Some(vec![]));
+    assert_eq!(history.expected_state(f.root()).unwrap(), f.now());
+    assert!(!f.game().join("buffbot/BfBotOld.lua").exists());
+    assert_eq!(
+        fs::read(f.game().join("buffbot/BfBotNew.lua")).unwrap(),
+        NEW_ONLY
+    );
+    launch_guard(f.root()).unwrap();
+    f.assert_preset_kept();
+    f.assert_untouched();
+
+    let preview = restore(&f.ctx(), &f.catalog, true).unwrap();
+    assert!(!preview.can_undo, "{preview:?}");
+    f.assert_original();
+    f.assert_preset_kept();
+    assert_eq!(f.history().entries[0].state, State::Restored);
+    assert!(f.history().applied_updates().is_empty());
+    assert_eq!(
+        fs::read(f.game().join("buffbot/BfBotOld.lua")).unwrap(),
+        OLD_ONLY
+    );
+}
+
+#[test]
+fn hotpatches_follow_a_buffbot_update_and_undo_goes_back_one_change_at_a_time() {
+    let f = Fixture::buffbot();
+    assert!(!update::undo_offered(&f.ctx(), "buffbot").unwrap());
+    f.update_apply();
+    assert!(update::undo_offered(&f.ctx(), "buffbot").unwrap());
+    assert!(!update::undo_offered(&f.ctx(), "other").unwrap());
+    let assessment = f.assess(f.baseline());
+    assert!(assessment.refusals.is_empty(), "{:?}", assessment.refusals);
+    assert_eq!(assessment.next.unwrap().id, "belhifet-1");
+    f.apply();
+    assert!(
+        !update::undo_offered(&f.ctx(), "buffbot").unwrap(),
+        "the latest change is the hotpatch"
+    );
+    let history = f.history();
+    assert_eq!(history.applied_ids(), ["belhifet-1"]);
+    assert_eq!(history.applied_updates().len(), 1);
+    assert_eq!(verified_log(f.root()).unwrap(), Some(vec![row()]));
+    // A later update needs WeiDU to put the hotpatch back after BuffBot.
+    let reinstalled = f.update_assess().reinstalled;
+    assert_eq!(
+        reinstalled
+            .iter()
+            .map(|other| other.name.as_str())
+            .collect::<Vec<_>>(),
+        ["EEex Remote Console", "Belhifet fight"]
+    );
+
+    restore(&f.ctx(), &f.catalog, true).unwrap();
+    assert!(update::undo_offered(&f.ctx(), "buffbot").unwrap());
+    let history = f.history();
+    assert!(history.applied_ids().is_empty());
+    assert_eq!(history.applied_updates().len(), 1, "only the hotpatch went");
+    assert_eq!(
+        fs::read(f.game().join("override/BfBotCor.lua")).unwrap(),
+        NEW_CORE
+    );
+    restore(&f.ctx(), &f.catalog, true).unwrap();
+    f.assert_original();
+    f.assert_preset_kept();
+}
+
+#[test]
+fn an_update_that_left_the_old_files_is_not_recorded() {
+    let f = Fixture::buffbot();
+    let (dir, prepared) = f.update_prepare();
+    update::place_release(&f.ctx(), &dir, &prepared).unwrap();
+    // WeiDU wrote the new version into the mod list but installed nothing.
+    write(&f.game().join("WeiDU.log"), &buffbot_log(1, "1.16.0", ""));
+    let error = update::record_applied(&f.ctx(), &f.catalog, &dir, &prepared).unwrap_err();
+    assert!(error.contains("still the old release's"), "{error}");
+    assert!(error.contains("override/bfbotcor.lua"), "{error}");
+    restore(&f.ctx(), &f.catalog, false).unwrap();
+    f.assert_original();
+}
+
+#[test]
+fn mods_installed_again_after_it_must_give_the_same_files() {
+    let f = Fixture::buffbot();
+    let (dir, prepared) = f.update_prepare();
+    f.update_weidu(&dir, &prepared);
+    write(
+        &f.game().join("override/M_EEexRC.lua"),
+        b"-- something else",
+    );
+    let error = update::record_applied(&f.ctx(), &f.catalog, &dir, &prepared).unwrap_err();
+    assert!(error.contains("did not give the same files"), "{error}");
+    assert!(error.contains("EEex Remote Console"), "{error}");
+    restore(&f.ctx(), &f.catalog, false).unwrap();
+    f.assert_original();
+    f.assert_preset_kept();
+}
+
+#[test]
+fn changes_outside_the_update_area_fail_and_are_left_for_a_closer_look() {
+    let f = Fixture::buffbot();
+    let (dir, prepared) = f.update_prepare();
+    f.update_weidu(&dir, &prepared);
+    write(
+        &f.game().join("data/NEW.BIF"),
+        b"BIFFV1  biffed by an update",
+    );
+    let error = update::record_applied(&f.ctx(), &f.catalog, &dir, &prepared).unwrap_err();
+    assert!(error.contains("outside its area"), "{error}");
+    let error = restore(&f.ctx(), &f.catalog, false).unwrap_err();
+    assert!(error.contains("closer look"), "{error}");
+    assert!(launch_guard(f.root()).is_err());
+}
+
+#[test]
+fn the_update_is_judged_by_its_mod_list_and_result_lines() {
+    let f = Fixture::buffbot();
+    let (dir, prepared) = f.update_prepare();
+    let before = fs::read(dir.join("affected/weidu.log")).unwrap();
+    let judge = |after: &[u8], debug: Vec<u8>, code: i32, version: Option<&str>| {
+        update::reinstalled_as_planned(
+            &before,
+            after,
+            &transaction::WeiduEvidence {
+                exit_code: code,
+                debug,
+                stdout: Vec::new(),
+            },
+            &prepared,
+            version,
+        )
+    };
+    let after = buffbot_log(1, "1.16.0", "");
+    judge(&after, success(3), 0, Some("1.16.0")).unwrap();
+    // WeiDU installs a component taken off by the cascade twice; more results are fine.
+    judge(&after, success(7), 0, Some("1.16.0")).unwrap();
+    let mut warned = success(3);
+    warned.extend_from_slice(b"INSTALLED WITH WARNINGS x\r\n");
+    judge(&after, warned.clone(), 3, Some("1.16.0")).unwrap();
+    // WeiDU notes the old installation of each component it installed again.
+    let noted = [
+        &after[..],
+        b"// Recently Uninstalled: ~BUFFBOT/SETUP-BUFFBOT.TP2~ #0 #1 // BuffBot: EEex LuaJIT Support (auto-detected): v1.12.6
+",
+        b"// Recently Uninstalled: ~BUFFBOT/SETUP-BUFFBOT.TP2~ #0 #0 // BuffBot: In-Game Buff Automation: v1.12.6
+",
+    ]
+    .concat();
+    judge(&noted, success(3), 0, Some("1.16.0")).unwrap();
+    let garbled = [
+        &after[..],
+        b"// Recently Uninstalled: something
+",
+    ]
+    .concat();
+    assert!(judge(&garbled, success(3), 0, Some("1.16.0"))
+        .unwrap_err()
+        .contains("uninstalled"));
+    for (after, debug, code, version, says) in [
+        (
+            after.clone(),
+            warned.clone(),
+            0,
+            Some("1.16.0"),
+            "exit code",
+        ),
+        (after.clone(), success(4), 3, Some("1.16.0"), "exit code"),
+        // BuffBot 1 and 0 and the Remote Console: at least three results.
+        (after.clone(), success(2), 0, Some("1.16.0"), "results"),
+        (
+            after.clone(),
+            [success(3), b"NOT INSTALLED DUE TO ERRORS x\r\n".to_vec()].concat(),
+            0,
+            Some("1.16.0"),
+            "exit code",
+        ),
+        (
+            buffbot_log(1, "1.12.6", ""),
+            success(4),
+            0,
+            Some("1.16.0"),
+            "1.16.0",
+        ),
+        // English kept its old number, which is German in the new release.
+        (
+            buffbot_log(0, "1.16.0", ""),
+            success(4),
+            0,
+            Some("1.16.0"),
+            "order",
+        ),
+        (
+            [
+                &after[..],
+                b"// Recently Uninstalled: ~SETUP-X.TP2~ #0 #0\r\n",
+            ]
+            .concat(),
+            success(4),
+            0,
+            Some("1.16.0"),
+            "uninstalled",
+        ),
+    ] {
+        let error = judge(&after, debug, code, version).unwrap_err();
+        assert!(error.contains(says), "{says}: {error}");
+    }
+}
+
+#[test]
+fn hand_changes_before_an_update_keep_hotpatches_refused() {
+    let f = Fixture::buffbot();
+    write(
+        &f.game().join("override/other.itm"),
+        b"ITM V1   edited by hand",
+    );
+    let assessment = f.update_assess();
+    assert!(assessment.untrusted);
+    assert!(
+        assessment.notes.join(" ").contains("override/other.itm"),
+        "{:?}",
+        assessment.notes
+    );
+    f.update_apply();
+    let refusals = f.assess(f.baseline()).refusals.join(" ");
+    assert!(
+        refusals.contains("BuffBot 1.16.0 was installed while files"),
+        "{refusals}"
+    );
+    restore(&f.ctx(), &f.catalog, true).unwrap();
+    let refusals = f.assess(f.baseline()).refusals.join(" ");
+    assert!(refusals.contains("was installed while files"), "{refusals}");
+}
+
+#[test]
+fn mods_after_it_that_the_installer_did_not_put_there_are_refused() {
+    let f = Fixture::buffbot_with(
+        "~ROGUE/SETUP-ROGUE.TP2~ #0 #0 // Rogue, added by hand\r\n",
+        &[("rogue/setup-rogue.tp2", 0)],
+        &|_| {},
+    );
+    let refusals = f.update_assess().refusals.join(" ");
+    assert!(
+        refusals.contains("the installer did not put it there"),
+        "{refusals}"
+    );
+    assert!(refusals.contains("ROGUE/SETUP-ROGUE.TP2"), "{refusals}");
+}
+
+#[test]
+fn a_game_without_buffbot_is_offered_nothing() {
+    let f = Fixture::new();
+    let assessment = f.update_assess();
+    assert!(assessment.installed.is_none());
+    assert!(assessment.refusals.is_empty(), "{:?}", assessment.refusals);
+}
+
+#[test]
+fn an_undo_that_stopped_after_a_later_one_was_undone_blocks_play_until_restored() {
+    let f = Fixture::buffbot();
+    let update = f.update_apply();
+    f.apply();
+    restore(&f.ctx(), &f.catalog, true).unwrap();
+    // Undo of the update stopped right after its restoring record.
+    files::json_new(
+        &update.join("restoring.json"),
+        &serde_json::json!({
+            "prepared_sha256": files::hash(&update.join("prepared.json")).unwrap(),
+            "undo": true,
+        }),
+    )
+    .unwrap();
+    assert!(launch_guard(f.root()).is_err());
+    assert_eq!(f.history().unfinished().unwrap().dir, update);
+    assert!(restore(&f.ctx(), &f.catalog, true).is_err());
+    restore(&f.ctx(), &f.catalog, false).unwrap();
+    f.assert_original();
+    f.assert_preset_kept();
+    launch_guard(f.root()).unwrap();
+    assert!(f.history().undo_target().is_none());
 }

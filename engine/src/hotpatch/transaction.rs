@@ -10,6 +10,8 @@
 //!
 //! Files the game writes while running ([`super::catalog::RuntimeFiles`]) are never compared,
 //! written or removed. Transactions chain by digest; only the latest applied one can be undone.
+//! Whole-mod updates ([`super::update`]) are transactions of the same chain, marked by
+//! `Prepared::update`.
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, OpenOptions};
 use std::path::{Path, PathBuf};
@@ -36,7 +38,7 @@ use crate::weidu::log::{normalize_tp2_key, parse_active_entries};
 use crate::weidu::runner::{self, RunOutcome, RunnerRequest};
 use crate::weidu::verify::{reconcile, ExpectedRun, Reconciliation};
 
-const SCHEMA: u32 = 1;
+pub(super) const SCHEMA: u32 = 1;
 const RECORD_LIMIT: u64 = 512 * 1024 * 1024;
 const PAYLOAD_LIMIT: u64 = 64 * 1024 * 1024;
 const TOOL_LIMIT: u64 = 16 * 1024 * 1024;
@@ -77,6 +79,13 @@ pub(super) struct Prepared {
     /// `payload/`.
     pub payload: BTreeMap<String, String>,
     pub tool_sha256: String,
+    /// Set for a whole-mod update; `package` is then the new release.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub update: Option<super::update::UpdateRecord>,
+    /// The folder was not known to be as the installer and the earlier transactions left it.
+    /// Hotpatches stay refused afterwards, because this record would otherwise adopt hand changes.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub untrusted: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -109,8 +118,27 @@ pub(super) struct Entry {
     pub dir: PathBuf,
     pub state: State,
     pub hotpatch_id: String,
+    /// Set for a whole-mod update.
+    pub update: Option<super::update::UpdateRecord>,
+    pub untrusted: bool,
     /// Digest chaining the next transaction to this one's latest record.
     pub terminal: String,
+    /// The same digest of its applied record, which a later transaction chains to when this one
+    /// was undone after it.
+    pub applied_terminal: Option<String>,
+}
+
+impl Entry {
+    /// What the player reads for this change, such as "BuffBot 1.16.0".
+    pub fn title(&self, catalog: &Catalog) -> String {
+        match &self.update {
+            Some(update) => format!("{} {}", update.name, update.to_version),
+            None => catalog.hotpatch(&self.hotpatch_id).map_or_else(
+                || self.hotpatch_id.clone(),
+                |hotpatch| hotpatch.title.clone(),
+            ),
+        }
+    }
 }
 
 /// Every published transaction of one installation, oldest first.
@@ -118,7 +146,7 @@ pub(super) struct History {
     pub entries: Vec<Entry>,
 }
 
-fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, String> {
+pub(super) fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, String> {
     serde_json::from_slice(&files::read(path, RECORD_LIMIT)?).map_err(files::err)
 }
 
@@ -135,7 +163,7 @@ fn later_records(dir: &Path) -> bool {
     .any(|name| dir.join(name).exists())
 }
 
-fn load_prepared(root: &Path, install_id: &str, dir: &Path) -> Result<Prepared, String> {
+pub(super) fn load_prepared(root: &Path, install_id: &str, dir: &Path) -> Result<Prepared, String> {
     files::direct(dir)?;
     if dir.parent() != Some(root.join(super::STATE).as_path()) {
         return Err("Hotpatch record is outside this installation.".into());
@@ -198,16 +226,7 @@ impl History {
                 }
                 continue;
             }
-            if entries
-                .last()
-                .is_some_and(|last| matches!(last.state, State::Prepared | State::Restoring))
-            {
-                return Err("A hotpatch was recorded after an unfinished one.".into());
-            }
             let p = load_prepared(root, install_id, &dir)?;
-            if p.previous.as_deref() != entries.last().map(|last| last.terminal.as_str()) {
-                return Err("The hotpatch history chain changed.".into());
-            }
             let prepared_sha256 = files::hash(&dir.join("prepared.json"))?;
             let (state, record) = if dir.join("restored.json").exists() {
                 let digest: String = read_json(&dir.join("restored.json"))?;
@@ -231,14 +250,45 @@ impl History {
             } else {
                 (State::Prepared, "prepared.json")
             };
-            let terminal = sha256_bytes(
-                &serde_json::to_vec(&(&id, files::hash(&dir.join(record))?)).map_err(files::err)?,
-            );
+            let terminal_of = |record: &str| -> Result<String, String> {
+                Ok(sha256_bytes(
+                    &serde_json::to_vec(&(&id, files::hash(&dir.join(record))?))
+                        .map_err(files::err)?,
+                ))
+            };
+            let terminal = terminal_of(record)?;
+            let applied_terminal = if dir.join("applied.json").exists() {
+                Some(terminal_of("applied.json")?)
+            } else {
+                None
+            };
+            match entries.last() {
+                None if p.previous.is_some() => {
+                    return Err("The hotpatch history chain changed.".into());
+                }
+                None => {}
+                // Made after the one before it reached its latest record.
+                Some(last) if p.previous.as_deref() == Some(last.terminal.as_str()) => {
+                    if matches!(last.state, State::Prepared | State::Restoring) {
+                        return Err("A hotpatch was recorded after an unfinished one.".into());
+                    }
+                }
+                // Made while the one before it was applied, which was undone after this one.
+                Some(last)
+                    if p.previous.is_some()
+                        && p.previous == last.applied_terminal
+                        && state == State::Restored
+                        && matches!(last.state, State::Restoring | State::Restored) => {}
+                Some(_) => return Err("The hotpatch history chain changed.".into()),
+            }
             entries.push(Entry {
                 dir,
                 state,
                 hotpatch_id: p.hotpatch_id,
+                update: p.update,
+                untrusted: p.untrusted,
                 terminal,
+                applied_terminal,
             });
         }
         Ok(History { entries })
@@ -248,22 +298,40 @@ impl History {
         self.entries.last().map(|entry| entry.terminal.clone())
     }
 
+    /// The transaction that did not finish, if any: the latest one, or one whose Undo stopped
+    /// after the ones after it were undone.
     pub fn unfinished(&self) -> Option<&Entry> {
         self.entries
-            .last()
-            .filter(|entry| matches!(entry.state, State::Prepared | State::Restoring))
+            .iter()
+            .rev()
+            .find(|entry| matches!(entry.state, State::Prepared | State::Restoring))
     }
 
-    /// Hotpatches applied and not undone, oldest first.
+    /// Hotpatches applied and not undone, oldest first. Whole-mod updates are not hotpatches.
     pub fn applied_ids(&self) -> Vec<String> {
         self.entries
             .iter()
-            .filter(|entry| entry.state == State::Applied)
+            .filter(|entry| entry.state == State::Applied && entry.update.is_none())
             .map(|entry| entry.hotpatch_id.clone())
             .collect()
     }
 
-    /// The latest applied hotpatch, when everything after it was undone.
+    /// Whole-mod updates applied and not undone, oldest first.
+    pub fn applied_updates(&self) -> Vec<&super::update::UpdateRecord> {
+        self.entries
+            .iter()
+            .filter(|entry| entry.state == State::Applied)
+            .filter_map(|entry| entry.update.as_ref())
+            .collect()
+    }
+
+    /// The first transaction that started from a folder not known to be as the installer and the
+    /// transactions before it left it, if any.
+    pub fn untrusted(&self) -> Option<&Entry> {
+        self.entries.iter().find(|entry| entry.untrusted)
+    }
+
+    /// The latest applied transaction, when everything after it was undone.
     pub fn undo_target(&self) -> Option<&Entry> {
         let position = self
             .entries
@@ -275,18 +343,23 @@ impl History {
             .then(|| &self.entries[position])
     }
 
-    /// The game folder as the installer and the hotpatches since left it.
+    /// The game folder as the installer and the transactions since left it: what the latest
+    /// applied one left, or, when every one was undone, what the first one started from. Undo
+    /// goes back one transaction at a time, so this holds in whatever order they were undone.
     pub fn expected_state(&self, root: &Path) -> Result<GameFiles, String> {
-        match self.entries.last() {
-            None => game_files::read_completed(root),
-            Some(entry) => match entry.state {
-                State::Applied => Ok(read_json::<Applied>(&entry.dir.join("applied.json"))?.after),
-                State::Restored => {
-                    Ok(read_json::<Prepared>(&entry.dir.join("prepared.json"))?.before)
-                }
-                State::Prepared | State::Restoring => {
-                    Err("A hotpatch did not finish. Restore it first.".into())
-                }
+        if self.unfinished().is_some() {
+            return Err("A hotpatch did not finish. Restore it first.".into());
+        }
+        match self
+            .entries
+            .iter()
+            .rev()
+            .find(|entry| entry.state == State::Applied)
+        {
+            Some(entry) => Ok(read_json::<Applied>(&entry.dir.join("applied.json"))?.after),
+            None => match self.entries.first() {
+                Some(first) => Ok(read_json::<Prepared>(&first.dir.join("prepared.json"))?.before),
+                None => game_files::read_completed(root),
             },
         }
     }
@@ -308,7 +381,7 @@ pub fn launch_guard(root: &Path) -> Result<(), String> {
     Ok(())
 }
 
-fn install_id_of(receipt: &Path) -> Result<String, String> {
+pub(super) fn install_id_of(receipt: &Path) -> Result<String, String> {
     let value: serde_json::Value =
         serde_json::from_slice(&files::read(receipt, 64 * 1024 * 1024)?).map_err(files::err)?;
     value
@@ -321,8 +394,15 @@ fn install_id_of(receipt: &Path) -> Result<String, String> {
 /// The mod-list rows applied hotpatches added after the completed installation's, in order.
 /// The current `WeiDU.log` must be exactly the one the latest hotpatch record left.
 pub fn verified_log_suffix(root: &Path) -> Result<Vec<LogComponentReceipt>, String> {
+    Ok(verified_log(root)?.unwrap_or_default())
+}
+
+/// [`verified_log_suffix`], or `None` when no transaction is recorded. `Some` means the history
+/// checked the current `WeiDU.log` byte for byte against the latest record, which also covers
+/// whole-mod updates that change rows' versions without adding rows.
+pub fn verified_log(root: &Path) -> Result<Option<Vec<LogComponentReceipt>>, String> {
     if !root.join(".chriz/hotpatches").exists() {
-        return Ok(vec![]);
+        return Ok(None);
     }
     let install_id = install_id_of(&root.join(".chriz/install-receipt.json"))?;
     let history = History::load(root, &install_id)?;
@@ -335,24 +415,31 @@ pub fn verified_log_suffix(root: &Path) -> Result<Vec<LogComponentReceipt>, Stri
             suffix.extend(read_json::<Applied>(&entry.dir.join("applied.json"))?.suffix);
         }
     }
-    if !history.entries.is_empty() {
-        let expected = history.expected_state(root)?;
-        let log = root.join("game/WeiDU.log");
-        files::regular(&log)?;
-        let actual = files::hash(&log)?;
-        if expected
-            .files
-            .get("weidu.log")
-            .map(|identity| &identity.sha256)
-            != Some(&actual)
-        {
-            // Also after an Undo, so not "after the last hotpatch".
-            return Err(
-                "The mod list changed after the installer and its hotpatches left it.".into(),
-            );
-        }
+    if history.entries.is_empty() {
+        return Ok(None);
     }
-    Ok(suffix)
+    let expected = history.expected_state(root)?;
+    let log = root.join("game/WeiDU.log");
+    files::regular(&log)?;
+    let actual = files::hash(&log)?;
+    if expected
+        .files
+        .get("weidu.log")
+        .map(|identity| &identity.sha256)
+        != Some(&actual)
+    {
+        // Also after an Undo, so not "after the last hotpatch".
+        return Err("The mod list changed after the installer and its hotpatches left it.".into());
+    }
+    Ok(Some(suffix))
+}
+
+/// Whether `name` lies in what the transaction `p` may change.
+pub(super) fn area(name: &str, p: &Prepared) -> bool {
+    match &p.update {
+        Some(update) => super::update::writable(name, p, update),
+        None => writable(name, &p.package, &p.language),
+    }
 }
 
 /// Whether `name` lies in what a hotpatch for `package` may change.
@@ -411,7 +498,7 @@ fn requirements(artifact: &Artifact) -> ArchiveRequirements {
     }
 }
 
-fn unpack(ctx: &Context<'_>, artifact: &Artifact) -> Result<PathBuf, String> {
+pub(super) fn unpack(ctx: &Context<'_>, artifact: &Artifact) -> Result<PathBuf, String> {
     let cache = ArtifactCache::open(ctx.cache).map_err(files::err)?;
     let acquired = cache
         .acquire(
@@ -478,21 +565,31 @@ fn sources(
     {
         return Err("The package is missing its installer.".into());
     }
+    let (tool, tool_sha256) = weidu_tool(ctx, base, &hotpatch.installer.weidu_artifact_id)?;
+    Ok(Sources {
+        payload,
+        tool,
+        tool_sha256,
+    })
+}
+
+/// Download (or reuse) and check the WeiDU the installation's recipe names `artifact_id`.
+pub(super) fn weidu_tool(
+    ctx: &Context<'_>,
+    base: &crate::Manifest,
+    artifact_id: &str,
+) -> Result<(PathBuf, String), String> {
     let tool_artifact = base
         .artifacts
-        .get(&hotpatch.installer.weidu_artifact_id)
-        .ok_or("The installation's recipe has no WeiDU for this hotpatch.")?;
+        .get(artifact_id)
+        .ok_or("The installation's recipe has no WeiDU for this change.")?;
     let tool_spec = tool_artifact
         .tool
         .as_ref()
         .ok_or("The installation's WeiDU artifact is not a tool.")?;
     let tool = unpack(ctx, tool_artifact)?.join(&tool_spec.executable);
     VerifiedWeidu::verify(&tool, &tool_spec.sha256).map_err(files::err)?;
-    Ok(Sources {
-        payload,
-        tool,
-        tool_sha256: tool_spec.sha256.to_ascii_lowercase(),
-    })
+    Ok((tool, tool_spec.sha256.to_ascii_lowercase()))
 }
 
 pub fn apply(
@@ -650,7 +747,7 @@ pub fn apply_with_progress(
 }
 
 /// Root files that WeiDU writes, with their digests now.
-fn guarded(current: &GameFiles, language: &str) -> BTreeMap<String, String> {
+pub(super) fn guarded(current: &GameFiles, language: &str) -> BTreeMap<String, String> {
     root_files(language)
         .into_iter()
         .filter_map(|name| {
@@ -729,6 +826,9 @@ pub(super) fn prepare_record(
         saved,
         payload,
         tool_sha256: sources.tool_sha256.clone(),
+        update: None,
+        // The rule refuses a hotpatch for a folder that is not as the records left it.
+        untrusted: false,
     };
     files::json_new(&dir.join("prepared.json"), &prepared)?;
     Ok(prepared)
@@ -738,6 +838,23 @@ fn execute(ctx: &Context<'_>, catalog: &Catalog, dir: &Path, p: &Prepared) -> Re
     place_payload(ctx, dir, p)?;
     run_weidu(ctx, dir, p)?;
     record_applied(ctx, catalog, dir, p)
+}
+
+/// Run a transaction that failed after its preparation back to its recorded state.
+pub(super) fn fail_and_restore(
+    ctx: &Context<'_>,
+    catalog: &Catalog,
+    dir: &Path,
+    error: String,
+    what: &str,
+) -> String {
+    let _ = files::json_new(&dir.join("failure.json"), &error);
+    match restore_inner(ctx, catalog, dir, false) {
+        Ok(()) => format!("{what} could not be applied; your game files were put back. {error}"),
+        Err(recovery) => format!(
+            "{what} could not be applied and needs restoring before you play. {error} {recovery}"
+        ),
+    }
 }
 
 /// Copy the package from the record into the game folder.
@@ -766,6 +883,36 @@ pub(super) fn place_payload(ctx: &Context<'_>, dir: &Path, p: &Prepared) -> Resu
 }
 
 fn run_weidu(ctx: &Context<'_>, dir: &Path, p: &Prepared) -> Result<(), String> {
+    let evidence = invoke_weidu(ctx, dir, p, true)?;
+    finished_as_planned(
+        &files::read(&dir.join("affected/weidu.log"), 16 * 1024 * 1024)?,
+        &files::read(&ctx.game().join("WeiDU.log"), 16 * 1024 * 1024)?,
+        &evidence.debug,
+        &evidence.stdout,
+        &p.package,
+        evidence.exit_code,
+    )
+}
+
+/// What one WeiDU run left to judge it by.
+pub(super) struct WeiduEvidence {
+    pub exit_code: i32,
+    pub debug: Vec<u8>,
+    pub stdout: Vec<u8>,
+}
+
+/// Run the record's WeiDU copy in the game folder: `p.package`'s installer and components, in
+/// its language, unattended. Judging the result is the caller's.
+///
+/// `safe_exit` passes `--safe-exit`, as fresh installations do. WeiDU 249 then skips a component
+/// that is already installed, so a whole-mod update, which installs components again, runs
+/// without it (bg-modding `weidu-install-runs.md`, lab 2026-10-20).
+pub(super) fn invoke_weidu(
+    ctx: &Context<'_>,
+    dir: &Path,
+    p: &Prepared,
+    safe_exit: bool,
+) -> Result<WeiduEvidence, String> {
     let tool = dir.join("weidu.exe");
     VerifiedWeidu::verify(&tool, &p.tool_sha256).map_err(files::err)?;
     // Nobody may replace the executable while it runs.
@@ -795,16 +942,11 @@ fn run_weidu(ctx: &Context<'_>, dir: &Path, p: &Prepared) -> Result<(), String> 
             .iter()
             .map(|component| component.to_string().into()),
     );
-    args.extend(
-        [
-            "--no-exit-pause",
-            "--skip-at-view",
-            "--safe-exit",
-            "--noautoupdate",
-            "--log",
-        ]
-        .map(std::ffi::OsString::from),
-    );
+    args.extend(["--no-exit-pause", "--skip-at-view"].map(std::ffi::OsString::from));
+    if safe_exit {
+        args.push("--safe-exit".into());
+    }
+    args.extend(["--noautoupdate", "--log"].map(std::ffi::OsString::from));
     args.push(debug.clone().into());
     files::json_new(&dir.join("invocation.json"), &(&tool, &args))?;
     let invocation = Invocation {
@@ -838,14 +980,11 @@ fn run_weidu(ctx: &Context<'_>, dir: &Path, p: &Prepared) -> Result<(), String> 
             Ok(Vec::new())
         }
     };
-    finished_as_planned(
-        &files::read(&dir.join("affected/weidu.log"), 16 * 1024 * 1024)?,
-        &files::read(&ctx.game().join("WeiDU.log"), 16 * 1024 * 1024)?,
-        &evidence(&debug)?,
-        &evidence(&dir.join("output.log"))?,
-        &p.package,
-        code,
-    )
+    Ok(WeiduEvidence {
+        exit_code: code,
+        debug: evidence(&debug)?,
+        stdout: evidence(&dir.join("output.log"))?,
+    })
 }
 
 /// Judges WeiDU's run by its evidence, as a fresh installation does: exactly the hotpatch's
@@ -961,7 +1100,7 @@ pub(super) fn record_applied(
 /// Keep an earlier copy of every file that changed or went away and is not among the saved
 /// root files: WeiDU's own uninstall copies of overwritten files hold those bytes, found by
 /// their digest among the files the hotpatch created.
-fn keep_preimages(
+pub(super) fn keep_preimages(
     ctx: &Context<'_>,
     dir: &Path,
     p: &Prepared,
@@ -1074,14 +1213,12 @@ fn plan_restore(
         .differences(now, |name| catalog.runtime_files.matches(name));
     let outside = changed
         .iter()
-        .filter(|(name, _)| {
-            !writable(name, &p.package, &p.language) && !p.saved.contains_key(*name)
-        })
+        .filter(|(name, _)| !area(name, p) && !p.saved.contains_key(*name))
         .map(|(name, difference)| (name.clone(), *difference))
         .collect::<BTreeMap<_, _>>();
     if !outside.is_empty() {
         return Err(format!(
-            "Files outside the hotpatch changed, so automatic restoring needs a closer look: {}.",
+            "Files outside what this change may touch were changed, so automatic restoring needs a closer look: {}.",
             gate::summarize(&outside)
         ));
     }

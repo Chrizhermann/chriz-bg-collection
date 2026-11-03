@@ -247,6 +247,12 @@ pub(super) fn assess_with(
         }
         Err(error) => refusals.push(error),
     }
+    if let Some(entry) = history.untrusted() {
+        refusals.push(format!(
+            "{} was installed while files in the game folder differed from what the installer and its updates left. Hotpatches need the folder exactly as they left it.",
+            entry.title(catalog)
+        ));
+    }
     match history.expected_state(&ctx.record.managed_root) {
         Ok(expected) => match crate::game_files::capture(&ctx.game()) {
             Ok(now) => {

@@ -73,3 +73,15 @@ id = "iwd-0.1.5"
 label = "Chriz Easy IWD 0.1.5"
 recipe_version = "0.1.5"
 content_sha256 = "03620b43e93a779bc03d8375bbd6d2568e9a3224cf064d6ce7e4e8d5cfa2f365"
+
+# Mods the app updates in finished installations (docs/plans/2026-11-04-buffbot-updater.md): WeiDU
+# installs the mod's installed components again from the new release, recorded in the same history
+# as hotpatches, so later hotpatches stay possible and Undo takes back the latest change. The
+# release is the one GitHub marks as Latest when the player checks, checked against the length
+# and SHA-256 GitHub publishes for `asset` ({tag} is the release's tag).
+[[updates]]
+mod = "buffbot"
+title = "BuffBot"
+summary = "Brings BuffBot in this game to its newest release. Your saves, BuffBot settings and exported presets stay as they are."
+repository = "Chrizhermann/bg-eeex-buffbot"
+asset = "buffbot-{tag}.zip"

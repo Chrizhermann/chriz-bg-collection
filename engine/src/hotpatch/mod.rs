@@ -5,12 +5,15 @@
 //! collection as published, its game files exactly as the installer and earlier hotpatches left
 //! them, and choices close to the recommended setup. Base receipts and saves stay immutable.
 //! Every file a hotpatch changes keeps an earlier copy in its transaction record, so Undo puts
-//! the game folder back byte for byte; transactions follow [`transaction`].
+//! the game folder back byte for byte; transactions follow [`transaction`]. Whole-mod updates of
+//! an installed mod, such as BuffBot, are transactions of the same history ([`update`]).
 pub mod catalog;
 pub mod gate;
+mod github;
 #[cfg(all(test, windows))]
 mod tests;
 mod transaction;
+pub mod update;
 
 use crate::{
     digest::sha256_bytes,
@@ -24,7 +27,8 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 pub use transaction::{
-    apply, apply_with_progress, launch_guard, restore, restore_with_progress, verified_log_suffix,
+    apply, apply_with_progress, launch_guard, restore, restore_with_progress, verified_log,
+    verified_log_suffix,
 };
 
 /// Where transaction records live, below the managed root.
@@ -246,10 +250,8 @@ pub fn inspect(ctx: &Context<'_>, catalog: &catalog::Catalog) -> Result<Hotpatch
     }
     let assessment = gate::assess(ctx, catalog, &history);
     if let (Some(target), Some(current)) = (history.undo_target(), &assessment.current) {
-        preview.undo_title = Some(catalog.hotpatch(&target.hotpatch_id).map_or_else(
-            || target.hotpatch_id.clone(),
-            |hotpatch| hotpatch.title.clone(),
-        ));
+        // The latest change, which may be a whole-mod update.
+        preview.undo_title = Some(target.title(catalog));
         preview.can_undo = transaction::undoable(ctx, catalog, target, current).is_ok();
     }
     preview.notes = assessment.notes;
