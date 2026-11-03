@@ -125,7 +125,9 @@ const RUNS: &[(&str, &str, Phase, &[u32])] = &[
         "chriz-iwd-encounters-main",
         "chriz-iwd-encounters",
         Phase::Main,
-        &[100, 200],
+        &[
+            100, 200, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410,
+        ],
     ),
     (
         "hidden-gameplay-options-main",
@@ -177,7 +179,7 @@ const INSTALLERS: &[(&str, &str, &str)] = &[
     ),
     (
         "chriz-iwd-encounters",
-        "chriz-iwd-encounters-0.1.0",
+        "chriz-iwd-encounters-0.2.0",
         "chriz-iwd-encounters/setup-chriz-iwd-encounters.tp2",
     ),
     ("dendjelion", "dendjelion-2.1", "dendjelion/Dendjelion.tp2"),
@@ -322,14 +324,14 @@ const ARTIFACTS: &[Pin] = &[
         sha256: "117cd79cb5187640a5efd6c1d19181b43bcfa7381161df2f88db055d3af075f7",
     },
     Pin {
-        id: "chriz-iwd-encounters-0.1.0",
-        version: "0.1.0",
+        id: "chriz-iwd-encounters-0.2.0",
+        version: "0.2.0",
         kind: SourceKind::GithubRelease,
-        url: "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/download/v0.1.0/chriz-iwd-encounters-v0.1.0.zip",
-        reference: "v0.1.0",
-        filename: "chriz-iwd-encounters-v0.1.0.zip",
-        length: 41_681,
-        sha256: "29cb1c757503baf34c5f2880c63c8564fd02bacfa58316fdac87141cc7edd2e2",
+        url: "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/download/v0.2.0/chriz-iwd-encounters-v0.2.0.zip",
+        reference: "v0.2.0",
+        filename: "chriz-iwd-encounters-v0.2.0.zip",
+        length: 314_026,
+        sha256: "bb228245c7f26b8a92945fb9634ea9814031527bbd6ae4b65cc72524b398b76e",
     },
     Pin {
         id: "dendjelion-2.1",
@@ -704,7 +706,12 @@ const RECOMMENDED: &[(&str, &[u32])] = &[
             6040, 6100, 6510, 6540, 6550, 6700,
         ],
     ),
-    ("chriz-iwd-encounters-main", &[100, 200]),
+    (
+        "chriz-iwd-encounters-main",
+        &[
+            100, 200, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410,
+        ],
+    ),
     (
         "hidden-gameplay-options-main",
         &[
@@ -733,7 +740,7 @@ fn declares_a_standalone_iwdee_collection_with_its_own_data_folder() {
             .collect::<Vec<_>>(),
         [PRESET]
     );
-    assert_eq!(manifest.collection.features.len(), 304);
+    assert_eq!(manifest.collection.features.len(), 316);
     assert!(
         validate(&manifest).is_empty(),
         "authoring validation findings: {:?}",
@@ -956,7 +963,7 @@ fn resolves_the_exact_recommended_plan() {
         .iter()
         .map(|run| run.components.len())
         .sum::<usize>();
-    assert_eq!(components, 125);
+    assert_eq!(components, 137);
 }
 
 #[test]
@@ -1205,6 +1212,9 @@ fn buffbot_is_on_by_default_and_installs_its_luajit_support_first() {
     assert!(without.plan.components_for("buffbot-main").is_none());
 }
 
+/// The twelve boss fights of Chriz IWD Encounters 0.2.0.
+const ENCOUNTERS_FIGHTS: [u32; 12] = [300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410];
+
 #[test]
 fn chriz_iwd_encounters_is_on_by_default_and_each_part_needs_its_scs_ai() {
     // Christopher, 2026-10-28: his own mod, directly after SCS, both parts on by default.
@@ -1240,28 +1250,62 @@ fn chriz_iwd_encounters_is_on_by_default_and_each_part_needs_its_scs_ai() {
         ]
     );
     assert_eq!(priests.requires, ["feature:stratagems:component-6040"]);
+    let all: Vec<u32> = [100, 200].into_iter().chain(ENCOUNTERS_FIGHTS).collect();
     assert_eq!(
         evaluation.plan.components_for("chriz-iwd-encounters-main"),
-        Some(&[100, 200][..])
+        Some(&all[..])
     );
 
     let mut selection = Selection::defaults("windows");
     selection.set_feature("feature:chriz-iwd-encounters:component-200", false);
-    let repairs_only = evaluate(&manifest, &selection).unwrap();
+    let without_priests = evaluate(&manifest, &selection).unwrap();
+    let expected: Vec<u32> = [100].into_iter().chain(ENCOUNTERS_FIGHTS).collect();
     assert_eq!(
-        repairs_only
+        without_priests
             .plan
             .components_for("chriz-iwd-encounters-main"),
-        Some(&[100][..])
+        Some(&expected[..])
     );
 
+    // Without SCS only its two AI parts go: the fights work without it.
     let mut selection = Selection::defaults("windows");
     selection.set_feature("mod:stratagems", false);
     let without_scs = evaluate(&manifest, &selection).unwrap();
-    assert!(without_scs
+    assert_eq!(
+        without_scs.plan.components_for("chriz-iwd-encounters-main"),
+        Some(&ENCOUNTERS_FIGHTS[..])
+    );
+}
+
+#[test]
+fn chriz_iwd_encounters_fights_are_on_by_default_and_each_can_be_left_out() {
+    // Christopher, 2026-11-04: the twelve boss fights of 0.2.0 are on by default ("Alle an").
+    let manifest = recipe();
+    let evaluation = recommended(&manifest);
+    for component in ENCOUNTERS_FIGHTS {
+        let id = format!("feature:chriz-iwd-encounters:component-{component}");
+        let control = evaluation.view.control(&id).unwrap();
+        assert_eq!(control.decision, Decision::Default, "{id}");
+        assert!(control.selected, "{id}");
+        assert_eq!(
+            control.parent.as_deref(),
+            Some("mod:chriz-iwd-encounters"),
+            "{id}"
+        );
+        assert!(
+            control.requires.is_empty() && control.requires_any.is_empty(),
+            "{id}"
+        );
+    }
+
+    let mut selection = Selection::defaults("windows");
+    selection.set_feature("feature:chriz-iwd-encounters:component-300", false);
+    let without_belhifet = evaluate(&manifest, &selection).unwrap();
+    let plan = without_belhifet
         .plan
         .components_for("chriz-iwd-encounters-main")
-        .is_none());
+        .unwrap();
+    assert!(!plan.contains(&300) && plan.contains(&310) && plan.contains(&410));
 }
 
 #[test]
