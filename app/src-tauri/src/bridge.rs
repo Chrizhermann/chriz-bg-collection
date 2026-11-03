@@ -3691,3 +3691,153 @@ fn sort_candidates(candidates: &mut [GameCandidateResponse]) {
             .then_with(|| left.path.cmp(&right.path))
     });
 }
+
+#[cfg(test)]
+mod profile_folder_tests {
+    use super::*;
+    use bg_engine::stage::{
+        finalize_game_identity, read_engine_name, reserve_save_identity, stage_initial_games,
+        DocumentsLocator, ManagedLayout,
+    };
+
+    struct FixedDocuments(PathBuf);
+
+    impl DocumentsLocator for FixedDocuments {
+        fn documents_dir(&self) -> io::Result<PathBuf> {
+            Ok(self.0.clone())
+        }
+    }
+
+    /// Records the folders the bridge asks Windows to open; every other action is refused.
+    #[derive(Default)]
+    struct OpenedFolders(Mutex<Vec<PathBuf>>);
+
+    impl BridgeSystem for OpenedFolders {
+        fn launch(&self, _: &Path, _: &Path) -> Result<(), String> {
+            Err("not part of this test".to_owned())
+        }
+
+        fn launch_radar(&self, _: &Path, _: &Path) -> Result<RadarProcessOutcome, String> {
+            Err("not part of this test".to_owned())
+        }
+
+        fn open_folder(&self, path: &Path) -> Result<(), String> {
+            self.0.lock().unwrap().push(path.to_path_buf());
+            Ok(())
+        }
+
+        fn open_https(&self, _: &str) -> Result<(), String> {
+            Err("not part of this test".to_owned())
+        }
+
+        fn export_diagnostics(&self, _: &Path, _: &Path) -> Result<PathBuf, String> {
+            Err("not part of this test".to_owned())
+        }
+
+        fn current_exe(&self) -> Result<PathBuf, String> {
+            Err("not part of this test".to_owned())
+        }
+
+        fn create_desktop_shortcut(&self, _: ShortcutRequest) -> Result<PathBuf, String> {
+            Err("not part of this test".to_owned())
+        }
+    }
+
+    fn source_game(root: &Path, name: &str) -> PathBuf {
+        let source = root.join(name);
+        fs::create_dir_all(source.join("data/empty")).unwrap();
+        fs::write(source.join("data/base.bif"), b"base payload").unwrap();
+        fs::write(
+            source.join("engine.lua"),
+            b"engine_name = \"Store Game\"\r\nengine_mode = 1\r\n",
+        )
+        .unwrap();
+        source
+    }
+
+    #[test]
+    fn the_button_opens_the_profile_folder_the_game_uses_for_a_cleaned_installation_name() {
+        // Since PR #93 a typed name that Windows cannot use as a folder name is cleaned, not
+        // refused: forbidden characters become "-" and edge spaces go. The installer reserves
+        // the profile from that cleaned name with the engine's save identity code and records
+        // what it reserved; the button reuses that record instead of deriving a folder name.
+        let typed = "Chris: Run 2/3? <Stream>. ";
+        let display_name = bg_engine::registry::names::normalize_display_name(typed);
+        assert_eq!(display_name, "Chris- Run 2-3- -Stream-.");
+
+        let temp = tempfile::tempdir().unwrap();
+        let root = fs::canonicalize(temp.path()).unwrap();
+        let documents = root.join("Documents");
+        fs::create_dir(&documents).unwrap();
+        let layout = ManagedLayout::prepare(
+            root.join("managed"),
+            source_game(&root, "source-bg1"),
+            source_game(&root, "source-bg2"),
+        )
+        .unwrap();
+        let install_id = "cleaned-name";
+        let identity = reserve_save_identity(
+            &FixedDocuments(documents.clone()),
+            &layout,
+            &display_name,
+            install_id,
+        )
+        .unwrap();
+        stage_initial_games(&layout, &identity).unwrap();
+        fs::write(layout.game_root().join("WeiDU.log"), b"").unwrap();
+        finalize_game_identity(&layout, &identity).unwrap();
+
+        // The game keeps saves and portraits in the Documents child named by engine.lua's
+        // engine_name; its name has no character Windows refuses and no trailing dot or space.
+        let engine_name = read_engine_name(layout.game_root()).unwrap();
+        let game_folder = documents.join(&engine_name);
+        assert_eq!(identity.save_root, game_folder);
+        assert!(
+            !engine_name.contains(['<', '>', ':', '"', '/', '\\', '|', '?', '*']),
+            "{engine_name}"
+        );
+        assert!(!engine_name.ends_with(['.', ' ']), "{engine_name}");
+        assert!(
+            engine_name.starts_with("Chris- Run 2-3- -Stream - "),
+            "{engine_name}"
+        );
+
+        // Register the installation as the installer does, then press the button.
+        let receipt: &[u8] = b"fixture receipt";
+        fs::write(layout.state_root().join("install-receipt.json"), receipt).unwrap();
+        let launch = layout.game_root().join("InfinityLoader.exe");
+        fs::write(&launch, b"fixture launcher").unwrap();
+        let record = ManagedInstallRecord {
+            schema_version: bg_engine::registry::REGISTRY_SCHEMA_VERSION,
+            install_id: install_id.to_owned(),
+            display_name,
+            managed_root: layout.root().to_path_buf(),
+            recipe_version: "0.1.1".to_owned(),
+            recipe_sha256: "11".repeat(32),
+            engine_name,
+            managed_save_root: identity.save_root.clone(),
+            launch_path: launch,
+            receipt_sha256: sha256_bytes(receipt),
+            completed_at_millis: 1,
+        };
+        ManagedInstallRegistry::open_or_create(&root.join("app-data"))
+            .unwrap()
+            .publish(&record)
+            .unwrap();
+        let system = Arc::new(OpenedFolders::default());
+        let bridge = NativeBridge::with_configuration(
+            root.join("recipe"),
+            "recommended".to_owned(),
+            root.join("cache"),
+            Some(root.join("app-data")),
+            Arc::new(SystemBridgeEngine),
+            system.clone(),
+        );
+        bridge.open_profile_folder(install_id).unwrap();
+        assert_eq!(
+            system.0.lock().unwrap().as_slice(),
+            std::slice::from_ref(&game_folder)
+        );
+        assert!(game_folder.join("portraits").is_dir());
+    }
+}
