@@ -84,14 +84,15 @@ class ReleaseMetadataTests(unittest.TestCase):
             output = Path(temp) / "recipe"
             build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
             self.assertEqual(json.loads((output / "release.json").read_text())["version"],
-                             "0.1.0-alpha.22")
+                             "0.1.1")
             seen = set()
             previous = "0.1.0-alpha.13"
-            # Alpha.21 was an app-only release with the alpha.20 recipe, so alpha.22
-            # supersedes alpha.20 directly.
+            # Alpha.21 was an app-only release with the alpha.20 recipe, so 0.1.0
+            # supersedes alpha.20 directly; the release prepared as alpha.22 became 0.1.0.
             self.assertFalse((output / "releases/v0.1.0-alpha.21").exists())
-            for number in (14, 15, 16, 17, 18, 19, 20, 22):
-                version = f"0.1.0-alpha.{number}"
+            self.assertFalse((output / "releases/v0.1.0-alpha.22").exists())
+            versions = [f"0.1.0-alpha.{number}" for number in (14, 15, 16, 17, 18, 19, 20)]
+            for version in [*versions, "0.1.0", "0.1.1"]:
                 ledger = tomllib.loads((output / f"releases/v{version}/ledger.toml").read_text())
                 self.assertEqual(ledger["supersedes"], previous)
                 ids = {item["id"] for item in ledger["changes"]}

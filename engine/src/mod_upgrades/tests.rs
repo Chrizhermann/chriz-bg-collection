@@ -544,3 +544,119 @@ fn review_token_changes_for_owned_bytes_selection_recipe_and_history() {
         .insert("weidu.log".into(), "different".into());
     assert_ne!(token(&changed).unwrap(), expected);
 }
+
+/// A completed, registered copy in `managed` below the given folder names.
+fn completed_copy(parents: &[&str]) -> (tempfile::TempDir, ManagedInstallRecord) {
+    use crate::{
+        digest::plan_digest,
+        receipt::{
+            FinalReceiptState, InstallReceipt, ReceiptOutcome, ReceiptVersions,
+            RECEIPT_SCHEMA_VERSION,
+        },
+        recipe_view::NormalizedSelection,
+        resolve::InstallPlan,
+    };
+    let temp = tempfile::tempdir().unwrap();
+    let root = parents
+        .iter()
+        .fold(temp.path().to_path_buf(), |path, name| path.join(name))
+        .join("managed");
+    fs::create_dir_all(root.join("game")).unwrap();
+    let root = fs::canonicalize(root).unwrap();
+    let game = root.join("game");
+    write(&game.join("engine.lua"), b"engine_name = 'Upgrade test'\n");
+    let save_root = root.join("profile");
+    let plan = InstallPlan { runs: Vec::new() };
+    let receipt = InstallReceipt {
+        schema_version: RECEIPT_SCHEMA_VERSION,
+        install_id: "fixture".into(),
+        attempt_id: "attempt".into(),
+        evidence_attempt_id: "attempt".into(),
+        managed_root: root.clone(),
+        staged_bg1: root.join("bg1"),
+        staged_bg2: game.clone(),
+        started_at_millis: 1,
+        completed_at_millis: 2,
+        outcome: ReceiptOutcome::Succeeded,
+        versions: ReceiptVersions {
+            application: "0.1.0".into(),
+            engine: "0.1.0".into(),
+            manifest_schema: 2,
+            recipe: "fixture".into(),
+        },
+        source_games: Vec::new(),
+        recipe_payload_sha256: "33".repeat(32),
+        recipe_envelope_sha256: "44".repeat(32),
+        selection_sha256: "55".repeat(32),
+        normalized_selection: NormalizedSelection {
+            platform: "windows".into(),
+            features: BTreeMap::new(),
+            inputs: BTreeMap::new(),
+        },
+        plan_sha256: plan_digest(&plan).unwrap(),
+        plan,
+        artifacts: Vec::new(),
+        weidu_tools: Vec::new(),
+        runs: Vec::new(),
+        final_state: Some(FinalReceiptState {
+            logs: Vec::new(),
+            bg1_engine_name: "Upgrade test".into(),
+            bg2_engine_name: "Upgrade test".into(),
+            managed_save_root: save_root.clone(),
+            launch_path: game.join("Baldur.exe"),
+            verification_summary: "synthetic completed installation".into(),
+        }),
+        left_out: Vec::new(),
+        installed_plan: None,
+        decisions: Vec::new(),
+    };
+    let receipt = serde_json::to_vec_pretty(&receipt).unwrap();
+    write(&root.join(".chriz/install-receipt.json"), &receipt);
+    let record = ManagedInstallRecord {
+        schema_version: crate::registry::REGISTRY_SCHEMA_VERSION,
+        install_id: "fixture".into(),
+        display_name: "Test".into(),
+        managed_root: root,
+        recipe_version: "fixture".into(),
+        recipe_sha256: "33".repeat(32),
+        engine_name: "Upgrade test".into(),
+        managed_save_root: save_root,
+        launch_path: game.join("Baldur.exe"),
+        receipt_sha256: sha256_bytes(&receipt),
+        completed_at_millis: 2,
+    };
+    (temp, record)
+}
+
+#[test]
+fn a_registered_copy_below_steamapps_or_program_files_can_be_updated() {
+    for parents in [
+        &["steamapps", "common"][..],
+        &["Program Files"][..],
+        &["Program Files (x86)", "Games"][..],
+    ] {
+        let (temp, mut record) = completed_copy(parents);
+        let app = temp.path().join("app");
+        let cache = temp.path().join("cache");
+        let ctx = Context {
+            record: &record,
+            app_data: &app,
+            cache: &cache,
+            recipe: temp.path(),
+        };
+        validate_context(&ctx).unwrap_or_else(|error| panic!("{parents:?}: {error}"));
+
+        // The protection that remains: the root must be the registered copy its receipt names.
+        record.receipt_sha256 = "00".repeat(32);
+        let ctx = Context {
+            record: &record,
+            app_data: &app,
+            cache: &cache,
+            recipe: temp.path(),
+        };
+        assert_eq!(
+            validate_context(&ctx).unwrap_err(),
+            "Original installation receipt changed."
+        );
+    }
+}

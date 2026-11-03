@@ -79,6 +79,12 @@ approved_on = "2026-09-29"
 reason = "The mandatory compatibility helper is conditional on a classic UI provider; the recommended interface requires no adapter."
 user_facing_limitation = "Classic interface text compatibility is installed automatically only with Lefreut or Dragonspear UI++."
 
+[[omissions]]
+feature_id = "feature:chriz-bg-modpack:component-130"
+approved_by = "Christopher"
+approved_on = "2026-11-03"
+reason = "BG1 NPC Project left the defaults (Christopher, 2026-11-03). This guard protects only its Kivan quest dialogue from SCS, so it stays mandatory and installs automatically once BG1 NPC Project's banters and quests are ticked."
+user_facing_limitation = "The Kivan sea-elf quest guard is installed only when BG1 NPC Project's banters and quests are selected."
 
 [[omissions]]
 feature_id = "feature:bardicwonders:component-1006"

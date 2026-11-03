@@ -10,10 +10,15 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use thiserror::Error;
 
 use crate::digest::{plan_digest, selection_digest, sha256_bytes};
-use crate::games::{Eligibility, GameCandidate, GameRole};
+use crate::games::{GameCandidate, GameRole};
 use crate::resolve::InstallPlan;
 use crate::session::{CampaignCreated, FrozenIdentity, SessionReplay};
 
+/// Two reference folders on the collection creator's own PC that no development or test run may
+/// ever write into. They exist only in debug and test builds (and with the `creator-guards`
+/// feature): release player builds do not carry the owner's folder names, and there
+/// [`is_creator_protected_destination`] is always false.
+#[cfg(all(windows, any(debug_assertions, feature = "creator-guards")))]
 const CREATOR_PROTECTED_ROOTS: [&str; 2] = [
     r"C:\Games\Baldur's Gate II Enhanced Edition modded",
     r"C:\Games\Baldurs Gate 1 and 2 mods",
@@ -36,7 +41,12 @@ pub struct RequiredInput {
     pub obtainable: bool,
 }
 
-/// Byte accounting whose checked sum must fit on the destination volume.
+/// Byte accounting for the destination and cache volumes.
+///
+/// `staged_copies` (measured source bytes) and `downloads` (exact archive lengths) are needed for
+/// certain: an installation without that much free space would fill the disk, so preflight stops.
+/// `extraction` (the archives' declared maxima) and `safety_margin` only make the estimate an upper
+/// bound; free space below that bound is reported as a warning and the installation continues.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct SpaceRequirement {
     pub staged_copies: u64,
@@ -54,16 +64,30 @@ impl SpaceRequirement {
             .ok_or(PreflightError::SpaceRequirementOverflow)
     }
 
+    fn certain_total(self) -> Result<u64, PreflightError> {
+        self.staged_copies
+            .checked_add(self.downloads)
+            .ok_or(PreflightError::SpaceRequirementOverflow)
+    }
+
     fn destination_total(self) -> Result<u64, PreflightError> {
         self.staged_copies
             .checked_add(self.safety_margin)
             .ok_or(PreflightError::SpaceRequirementOverflow)
     }
 
+    fn destination_certain(self) -> u64 {
+        self.staged_copies
+    }
+
     fn cache_total(self) -> Result<u64, PreflightError> {
         self.downloads
             .checked_add(self.extraction)
             .ok_or(PreflightError::SpaceRequirementOverflow)
+    }
+
+    fn cache_certain(self) -> u64 {
+        self.downloads
     }
 }
 
@@ -88,10 +112,14 @@ pub struct InitialPreflight<'a> {
 }
 
 /// Successful disk evidence captured by initial preflight.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PreflightReport {
+    /// The full estimate, an upper bound.
     pub required_space: u64,
     pub available_space: u64,
+    /// Plain-English notes about conditions that did not stop the installation, such as free
+    /// space below the upper-bound estimate but above what is certainly needed.
+    pub warnings: Vec<String>,
 }
 
 /// Platform operations injected for deterministic orchestration tests.
@@ -116,6 +144,15 @@ pub struct SystemPreflight;
 
 impl PreflightHost for SystemPreflight {
     fn available_space(&self, path: &Path) -> io::Result<u64> {
+        // Test and debug builds only: tests that run the installer declare the free space, so
+        // that the space checks can be exercised without filling a real disk.
+        #[cfg(any(debug_assertions, feature = "test-hooks"))]
+        if let Some(declared) = std::env::var_os("CHRIZ_BG_COLLECTION_TEST_AVAILABLE_SPACE") {
+            return declared
+                .to_str()
+                .and_then(|value| value.parse().ok())
+                .ok_or_else(|| io::Error::other("declared test free space is not a number"));
+        }
         fs4::available_space(path)
     }
 
@@ -245,12 +282,8 @@ pub fn initial_preflight_with(
     if paths_equal(&bg1, &bg2) {
         return Err(PreflightError::DuplicateSource { path: bg1 });
     }
-    if request.bg1_source.build != request.bg2_source.build {
-        return Err(PreflightError::SourceNotFresh {
-            label: "source pair",
-            reason: "supported build identities differ".to_owned(),
-        });
-    }
+    // Games of different versions are allowed: the game check already warned about every
+    // version other than the tested one.
     validate_required_inputs(
         "artifact",
         request.required_artifacts,
@@ -317,22 +350,34 @@ pub fn initial_preflight_with(
             source,
         }
     })?;
+    // Only a disk that would certainly fill up stops here: the copied games and the exact
+    // downloads. The rest of the estimate is an upper bound, so falling short of it warns.
+    let mut warnings = Vec::new();
     let available_space = if destination_volume == cache_volume {
-        if destination_available < required_space {
+        let certain = request.space.certain_total()?;
+        if destination_available < certain {
             return Err(PreflightError::InsufficientSpace {
-                required: required_space,
+                required: certain,
                 available: destination_available,
             });
+        }
+        if destination_available < required_space {
+            warnings.push(space_warning(
+                "the installation and its downloads",
+                required_space,
+                destination_available,
+            ));
         }
         destination_available
     } else {
-        let destination_required = request.space.destination_total()?;
-        if destination_available < destination_required {
+        let destination_certain = request.space.destination_certain();
+        if destination_available < destination_certain {
             return Err(PreflightError::InsufficientSpace {
-                required: destination_required,
+                required: destination_certain,
                 available: destination_available,
             });
         }
+        let destination_required = request.space.destination_total()?;
         let cache_required = request.space.cache_total()?;
         let cache_available =
             host.available_space(&cache)
@@ -340,18 +385,55 @@ pub fn initial_preflight_with(
                     path: cache,
                     source,
                 })?;
-        if cache_available < cache_required {
+        let cache_certain = request.space.cache_certain();
+        if cache_available < cache_certain {
             return Err(PreflightError::InsufficientCacheSpace {
-                required: cache_required,
+                required: cache_certain,
                 available: cache_available,
             });
+        }
+        if destination_available < destination_required {
+            warnings.push(space_warning(
+                "the installation folder",
+                destination_required,
+                destination_available,
+            ));
+        }
+        if cache_available < cache_required {
+            warnings.push(space_warning(
+                "the download cache",
+                cache_required,
+                cache_available,
+            ));
         }
         destination_available.saturating_add(cache_available)
     };
     Ok(PreflightReport {
         required_space,
         available_space,
+        warnings,
     })
+}
+
+/// A warning for free space below the upper-bound estimate but above the certain need.
+fn space_warning(place: &str, estimate: u64, available: u64) -> String {
+    format!(
+        "Disk space is tight: {place} may need up to {} and {} is free. This estimate is an upper bound, so the installation continues.",
+        format_bytes(estimate),
+        format_bytes(available)
+    )
+}
+
+/// Decimal units, one decimal place, as the app shows sizes.
+fn format_bytes(bytes: u64) -> String {
+    const UNITS: [(u64, &str); 3] = [(1_000_000_000, "GB"), (1_000_000, "MB"), (1_000, "KB")];
+    for (size, unit) in UNITS {
+        if bytes >= size {
+            let tenths = (u128::from(bytes) * 10 + u128::from(size) / 2) / u128::from(size);
+            return format!("{}.{} {unit}", tenths / 10, tenths % 10);
+        }
+    }
+    format!("{bytes} bytes")
 }
 
 /// Repeats the target-process and TLK checks immediately before one mutating WeiDU run.
@@ -384,11 +466,12 @@ pub fn recheck_target_before_mutation_with(
         }
     }
     tlks.push(validate_tlk(&language_tlk, &target)?);
-    host.probe_exclusive_writable_files(&tlks)
-        .map_err(|error| PreflightError::TlkUnavailable {
+    probe_tlks_outlasting_brief_holds(host, &tlks).map_err(|error| {
+        PreflightError::TlkUnavailable {
             path: error.path,
             source: error.source,
-        })?;
+        }
+    })?;
     Ok(())
 }
 
@@ -461,9 +544,10 @@ pub(crate) fn check_cache_root_placement(
 /// True only for either protected creator reference root or one of its descendants.
 ///
 /// This is a lexical, case-insensitive Windows comparison and performs no filesystem IO,
-/// so a protected path is refused before preflight can touch it.
+/// so a protected path is refused before preflight can touch it. Release player builds carry no
+/// such roots and always answer false.
 pub fn is_creator_protected_destination(path: &Path) -> bool {
-    #[cfg(windows)]
+    #[cfg(all(windows, any(debug_assertions, feature = "creator-guards")))]
     {
         let candidate = windows_path_key(path);
         CREATOR_PROTECTED_ROOTS.iter().any(|protected| {
@@ -471,7 +555,7 @@ pub fn is_creator_protected_destination(path: &Path) -> bool {
             candidate == protected || candidate.starts_with(&(protected + "\\"))
         })
     }
-    #[cfg(not(windows))]
+    #[cfg(not(all(windows, any(debug_assertions, feature = "creator-guards"))))]
     {
         let _ = path;
         false
@@ -493,10 +577,21 @@ fn validate_source_candidate(
             ),
         });
     }
-    if candidate.eligibility != Eligibility::Eligible {
+    if !candidate.eligibility.is_usable() {
+        let reasons = candidate
+            .findings
+            .iter()
+            .filter(|finding| finding.kind.blocks_installation())
+            .map(|finding| finding.message.as_str())
+            .collect::<Vec<_>>()
+            .join(" ");
         return Err(PreflightError::SourceNotFresh {
             label,
-            reason: format!("eligibility is {:?}", candidate.eligibility),
+            reason: if reasons.is_empty() {
+                "it can no longer be used".to_owned()
+            } else {
+                reasons
+            },
         });
     }
     if candidate.fingerprint.as_deref() != Some(expected_fingerprint) {
@@ -746,11 +841,24 @@ fn probe_existing_tlks(
             Err(source) => return Err(PreflightError::TlkUnavailable { path: tlk, source }),
         }
     }
-    host.probe_exclusive_writable_files(&existing)
-        .map_err(|error| PreflightError::TlkUnavailable {
+    probe_tlks_outlasting_brief_holds(host, &existing).map_err(|error| {
+        PreflightError::TlkUnavailable {
             path: error.path,
             source: error.source,
-        })
+        }
+    })
+}
+
+/// Probes that `paths` are exclusively writable, trying again while another program, such as a
+/// virus scanner, briefly holds one of them. A lasting hold still fails after the retries.
+fn probe_tlks_outlasting_brief_holds(
+    host: &dyn PreflightHost,
+    paths: &[PathBuf],
+) -> Result<(), ExclusiveFileError> {
+    crate::fs_retry::retry_while_held(
+        || host.probe_exclusive_writable_files(paths),
+        |error| Some(&error.source),
+    )
 }
 
 /// Refuses while a program started from inside `folder` runs, such as the game, its loader or an
@@ -1291,6 +1399,22 @@ fn is_windows_reparse_point(metadata: &fs::Metadata) -> bool {
 #[cfg(not(windows))]
 fn is_windows_reparse_point(_metadata: &fs::Metadata) -> bool {
     false
+}
+
+#[cfg(test)]
+mod space_tests {
+    use super::*;
+
+    #[test]
+    fn space_warnings_use_the_apps_decimal_sizes() {
+        assert_eq!(format_bytes(999), "999 bytes");
+        assert_eq!(format_bytes(1_500), "1.5 KB");
+        assert_eq!(format_bytes(62_040_000_000), "62.0 GB");
+        assert_eq!(
+            space_warning("the download cache", 9_800_000_000, 7_250_000_000),
+            "Disk space is tight: the download cache may need up to 9.8 GB and 7.3 GB is free. This estimate is an upper bound, so the installation continues."
+        );
+    }
 }
 
 #[cfg(all(test, windows))]

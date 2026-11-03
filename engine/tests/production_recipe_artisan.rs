@@ -17,18 +17,24 @@ use bg_engine::Manifest;
 // and Bardic Wonders' Dancer: the Elementalist and the Invisible Blade call a new pass after
 // adding their kit, and the tweak TP2 adds 7205, the same pass for items and kits that later
 // mods add, between 7203 and 8204 (a default in the late run, Christopher, 2026-10-29).
-const ARTIFACT_ID: &str = "artisans-kitpack-4.81a-dev.85928f9-chriz.5";
-const ARTIFACT_SHA256: &str = "b5527feef6d641a61f90c8faddaa98d1b81cff43a0141cd4748d9c099a5412a6";
-const RELEASE_TAG: &str = "v4.81a-dev.85928f9-chriz.5";
+// chriz.6 (November 2 intake) gives the white and greater white werewolves' overhand swing
+// frames in all eight directions, which stops a crash near walls; the three TP2s change only
+// their VERSION, so components, order and this route are unchanged.
+const ARTIFACT_ID: &str = "artisans-kitpack-4.81a-dev.85928f9-chriz.6";
+const ARTIFACT_SHA256: &str = "9644f01cdeeebf56912723e53267e91feb4404fb5c8d7305e0b112189095777e";
+const RELEASE_TAG: &str = "v4.81a-dev.85928f9-chriz.6";
 
+// The main TP2's declaration order (issue 77): 10001 before 10002, and 1100 right after
+// 10004. WeiDU installs a batch in this order whatever order the run requests, and the
+// engine reconciles the log against the requested order, so the run must follow it.
 const MAIN_AUTHORED: &[u32] = &[
-    1, 2, 20000, 20001, 8001, 8101, 8002, 8004, 10002, 10001, 10003, 10004, 1003, 1006, 1004, 1005,
-    1007, 1000, 1001, 1008, 1009, 1100, 2000, 2010, 2011, 2012, 2002, 3000, 3010, 3003, 3011, 3004,
+    1, 2, 20000, 20001, 8001, 8101, 8002, 8004, 10001, 10002, 10003, 10004, 1100, 1003, 1006, 1004,
+    1005, 1007, 1000, 1001, 1008, 1009, 2000, 2010, 2011, 2012, 2002, 3000, 3010, 3003, 3011, 3004,
     3001, 3002, 3005, 5100, 5110, 5001, 5002, 7004, 7006, 7001, 7002, 7003, 7005, 9001,
 ];
 const MAIN_RECOMMENDED: &[u32] = &[
-    1, 2, 20000, 20001, 8001, 8002, 8004, 10002, 10001, 10003, 10004, 1003, 1006, 1004, 1005, 1007,
-    1000, 1001, 1008, 1009, 1100, 2000, 2010, 2011, 2012, 2002, 3000, 3010, 3003, 3011, 3004, 3001,
+    1, 2, 20000, 20001, 8001, 8002, 8004, 10001, 10002, 10003, 10004, 1100, 1003, 1006, 1004, 1005,
+    1007, 1000, 1001, 1008, 1009, 2000, 2010, 2011, 2012, 2002, 3000, 3010, 3003, 3011, 3004, 3001,
     3002, 3005, 5100, 5110, 5001, 5002, 7004, 7006, 7001, 7002, 7003, 7005, 9001,
 ];
 const NPC_EARLY_AUTHORED: &[u32] = &[
@@ -64,7 +70,7 @@ fn freezes_the_upstream_based_release_identity_for_all_three_installers() {
             "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/{RELEASE_TAG}/ArtisansKitpack-Chriz-Balance-Patch-{RELEASE_TAG}.zip"
         )
     );
-    assert_eq!(artifact.source.expected_length, Some(89_698_447));
+    assert_eq!(artifact.source.expected_length, Some(89_856_136));
     assert_eq!(artifact.source.sha256, ARTIFACT_SHA256);
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(

@@ -27,10 +27,12 @@ const SCS_RECOMMENDED: &[u32] = &[
     8080, 8085, 8100, 8110, 8120, 8130, 8140, 8150, 8160, 8170, 8180, 8190,
 ];
 
+// The v8.1.1 TP2 declares 1100 after 570 (found with issue 77); WeiDU installs a batch in
+// TP2 order, so the run requests it there.
 const RANDOMISER_AUTHORED: &[u32] = &[
-    500, 510, 530, 540, 560, 570, 9000, 10200, 10210, 10300, 1100,
+    500, 510, 530, 540, 560, 570, 1100, 9000, 10200, 10210, 10300,
 ];
-const RANDOMISER_RECOMMENDED: &[u32] = &[500, 530, 540, 560, 570, 9000, 10200, 10210, 1100];
+const RANDOMISER_RECOMMENDED: &[u32] = &[500, 530, 540, 560, 570, 1100, 9000, 10200, 10210];
 
 fn recipe_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../manifest")

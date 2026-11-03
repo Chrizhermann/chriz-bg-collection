@@ -19,7 +19,9 @@ mod folder_diagnostics;
 mod profile_settings;
 pub use documents::{DocumentsLocator, SystemDocuments, TEST_DOCUMENTS_VARIABLE};
 use folder_diagnostics::{context as folder_context, io_failure, with_cleanup_failure};
-pub use profile_settings::{repair_installed_profile_settings, verify_profile_settings};
+pub use profile_settings::{
+    prepare_installed_profile_folder, repair_installed_profile_settings, verify_profile_settings,
+};
 
 /// The fixed on-disk roots owned by one managed EET installation.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -30,6 +32,10 @@ pub struct ManagedLayout {
     bg1_root: PathBuf,
     game_root: PathBuf,
     state_root: PathBuf,
+    /// Root entry patterns of leftovers that the BGEE+SoD copy leaves out.
+    bg1_left_out: Vec<String>,
+    /// Root entry patterns of leftovers that the BG2EE copy leaves out.
+    bg2_left_out: Vec<String>,
 }
 
 impl ManagedLayout {
@@ -87,7 +93,28 @@ impl ManagedLayout {
             bg1_root,
             game_root,
             state_root,
+            bg1_left_out: Vec::new(),
+            bg2_left_out: Vec::new(),
         })
+    }
+
+    /// This layout with `patterns` naming the root entries of `role`'s source that its copy
+    /// leaves out: leftovers of earlier mod installs, such as `WeiDU.log` and `setup-*`
+    /// programs (see [`crate::games::left_out_root_patterns`]). Matching is case-insensitive
+    /// with `*` and `?` wildcards, on direct entries of the source root only.
+    pub fn leaving_out(mut self, role: GameRole, patterns: Vec<String>) -> Self {
+        match role {
+            GameRole::BgeeSod => self.bg1_left_out = patterns,
+            GameRole::Bg2ee => self.bg2_left_out = patterns,
+        }
+        self
+    }
+
+    fn left_out(&self, role: GameRole) -> &[String] {
+        match role {
+            GameRole::BgeeSod => &self.bg1_left_out,
+            GameRole::Bg2ee => &self.bg2_left_out,
+        }
     }
 
     /// Canonical managed root.
@@ -859,7 +886,8 @@ pub fn stage_game_copy_with_observer<O: StageObserver>(
     observer: &mut O,
 ) -> Result<StageReport> {
     let (source, target, scratch) = layout.paths_for(role);
-    let before = snapshot_tree(source)?;
+    let left_out = layout.left_out(role);
+    let before = snapshot_tree_without(source, left_out)?;
     create_directories(target)?;
     ensure_expected_destination_entries(target, &before)?;
     create_directories(&scratch)?;
@@ -877,26 +905,37 @@ pub fn stage_game_copy_with_observer<O: StageObserver>(
                 }
                 SnapshotKind::File { length, sha256 } => {
                     let source_file = source.join(&entry.relative);
-                    ensure_direct_file(&source_file)?;
-                    if hash_and_length(&source_file)? != (*length, sha256.clone()) {
-                        return Err(source_changed_error(
-                            source,
-                            &before.identity_fingerprint,
-                            None,
-                        ));
-                    }
-
-                    if reusable_destination(&source_file, &destination, *length, sha256)? {
+                    // A virus scanner or indexer that briefly holds a game file is outlasted:
+                    // the whole file step repeats, since it writes only a fresh temporary
+                    // before its publication.
+                    let copied = fs_retry::retry_while_held(
+                        || -> Result<bool> {
+                            ensure_direct_file(&source_file)?;
+                            if hash_and_length(&source_file)? != (*length, sha256.clone()) {
+                                return Err(source_changed_error(
+                                    source,
+                                    &before.identity_fingerprint,
+                                    None,
+                                ));
+                            }
+                            if reusable_destination(&source_file, &destination, *length, sha256)? {
+                                return Ok(false);
+                            }
+                            copy_regular_file(
+                                &source_file,
+                                &destination,
+                                &scratch,
+                                &entry.relative,
+                                *length,
+                                sha256,
+                            )?;
+                            Ok(true)
+                        },
+                        engine_io_error,
+                    )?;
+                    if !copied {
                         reused_files += 1;
                     } else {
-                        copy_regular_file(
-                            &source_file,
-                            &destination,
-                            &scratch,
-                            &entry.relative,
-                            *length,
-                            sha256,
-                        )?;
                         copied_files += 1;
                         observer.file_published(&entry.relative).map_err(|source| {
                             EngineError::Io {
@@ -909,7 +948,7 @@ pub fn stage_game_copy_with_observer<O: StageObserver>(
             }
         }
 
-        let after = snapshot_tree(source)?;
+        let after = snapshot_tree_without(source, left_out)?;
         if after != before {
             return Err(source_changed_error(
                 source,
@@ -923,7 +962,7 @@ pub fn stage_game_copy_with_observer<O: StageObserver>(
 
     if let Err(error) = copy_result {
         let already_source_changed = matches!(&error, EngineError::StagingSourceChanged { .. });
-        match snapshot_tree(source) {
+        match snapshot_tree_without(source, left_out) {
             Ok(after) if !already_source_changed && after == before => return Err(error),
             Ok(after) => {
                 discard_role_stage(layout, target, &scratch)?;
@@ -959,6 +998,14 @@ pub fn stage_game_copy_with_observer<O: StageObserver>(
     })
 }
 
+/// The I/O error an engine error carries, for the retry of briefly held files.
+fn engine_io_error(error: &EngineError) -> Option<&io::Error> {
+    match error {
+        EngineError::Io { source, .. } => Some(source),
+        _ => None,
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct TreeSnapshot {
     entries: Vec<SnapshotEntry>,
@@ -981,9 +1028,14 @@ enum SnapshotKind {
 }
 
 fn snapshot_tree(root: &Path) -> Result<TreeSnapshot> {
+    snapshot_tree_without(root, &[])
+}
+
+/// The snapshot of `root` without its direct entries that match one of `left_out`.
+fn snapshot_tree_without(root: &Path, left_out: &[String]) -> Result<TreeSnapshot> {
     ensure_direct_directory(root)?;
     let mut entries = Vec::new();
-    collect_snapshot_entries(root, root, &mut entries)?;
+    collect_snapshot_entries(root, root, &mut entries, left_out)?;
     entries.sort_by_key(|entry| path_sort_key(&entry.relative));
 
     let mut digest = Sha256::new();
@@ -1031,6 +1083,7 @@ fn collect_snapshot_entries(
     root: &Path,
     directory: &Path,
     entries: &mut Vec<SnapshotEntry>,
+    left_out: &[String],
 ) -> Result<()> {
     let mut children = fs::read_dir(directory)
         .map_err(|source| EngineError::Io {
@@ -1046,6 +1099,14 @@ fn collect_snapshot_entries(
 
     for child in children {
         let path = child.path();
+        let name = child.file_name();
+        if directory == root
+            && left_out.iter().any(|pattern| {
+                crate::games::probe::wildcard_match(pattern, &name.to_string_lossy())
+            })
+        {
+            continue;
+        }
         let metadata = direct_metadata(&path)?;
         let relative = path
             .strip_prefix(root)
@@ -1060,9 +1121,11 @@ fn collect_snapshot_entries(
                 kind: SnapshotKind::Directory,
                 metadata_identity: source_metadata_identity(&path, &metadata)?,
             });
-            collect_snapshot_entries(root, &path, entries)?;
+            collect_snapshot_entries(root, &path, entries, &[])?;
         } else if metadata.is_file() {
-            let (length, sha256) = hash_and_length(&path)?;
+            // Reading a file that a virus scanner briefly holds is tried again.
+            let (length, sha256) =
+                fs_retry::retry_while_held(|| hash_and_length(&path), engine_io_error)?;
             entries.push(SnapshotEntry {
                 relative,
                 kind: SnapshotKind::File { length, sha256 },
@@ -1857,4 +1920,61 @@ fn remove_direct_directory_if_present(path: &Path) -> Result<()> {
         path: path.to_path_buf(),
         source,
     })
+}
+
+#[cfg(all(test, windows))]
+mod held_file_tests {
+    use std::fs;
+    use std::os::windows::fs::OpenOptionsExt;
+
+    use super::{stage_game_copy, ManagedLayout};
+    use crate::fs_retry::test_hook::with_wait_hook;
+    use crate::games::GameRole;
+
+    fn source(root: &std::path::Path, name: &str) -> std::path::PathBuf {
+        let source = root.join(name);
+        fs::create_dir_all(source.join("data")).unwrap();
+        fs::write(source.join("data/base.bif"), b"base payload").unwrap();
+        fs::write(
+            source.join("engine.lua"),
+            b"engine_name = \"Store Game\"\r\n",
+        )
+        .unwrap();
+        source
+    }
+
+    /// A virus scanner that opens a game file without sharing it used to stop the copy at the
+    /// first error. Now the copy of that file is tried again and succeeds once it is let go.
+    #[test]
+    fn a_game_file_briefly_held_by_another_program_is_copied_once_it_is_let_go() {
+        let temp = tempfile::tempdir().unwrap();
+        let bg1 = source(temp.path(), "bg1");
+        let bg2 = source(temp.path(), "bg2");
+        let layout = ManagedLayout::prepare(temp.path().join("managed"), &bg1, &bg2).unwrap();
+        let mut holder = Some(
+            fs::OpenOptions::new()
+                .read(true)
+                .share_mode(0)
+                .open(bg1.join("data/base.bif"))
+                .unwrap(),
+        );
+        let waits = std::rc::Rc::new(std::cell::Cell::new(0));
+        let counted = std::rc::Rc::clone(&waits);
+
+        let report = with_wait_hook(
+            move |_| {
+                counted.set(counted.get() + 1);
+                drop(holder.take());
+            },
+            || stage_game_copy(&layout, GameRole::BgeeSod),
+        )
+        .unwrap();
+
+        assert!(waits.get() >= 1, "the held file made an attempt wait");
+        assert_eq!(report.copied_files, 2);
+        assert_eq!(
+            fs::read(layout.bg1_root().join("data/base.bif")).unwrap(),
+            b"base payload"
+        );
+    }
 }

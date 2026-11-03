@@ -12,9 +12,9 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use bg_engine::cli::{
     diagnostics_for_managed_install, discover_games as engine_discover_games, inspect_game,
-    install_campaign_reviewed, plan_recipe, resume_campaign_controlled_expected, review_install,
-    validate_recipe, CampaignReport, CliError, InstallCommandRequest, InstallReviewIdentity,
-    SelectionOverrides, ValidationProfile,
+    inspect_game_as, install_campaign_reviewed, plan_recipe, resume_campaign_controlled_expected,
+    review_install, validate_recipe, CampaignReport, CliError, InstallCommandRequest,
+    InstallReviewIdentity, SelectionOverrides, ValidationProfile,
 };
 use bg_engine::digest::{plan_digest, selection_digest, sha256_bytes};
 use bg_engine::events::{EngineEvent, EventSink};
@@ -105,6 +105,94 @@ pub trait BridgeEngine: Send + Sync {
     /// Brings a completed installation's isolated game profile up to date with the
     /// settings its installed components need. Returns whether the profile changed.
     fn repair_profile_settings(&self, record: &ManagedInstallRecord) -> Result<bool, String>;
+    /// Proves the installation's isolated game profile is still its own and adds the
+    /// portraits folder the game does not create. Returns the profile folder.
+    fn prepare_profile_folder(&self, record: &ManagedInstallRecord) -> Result<PathBuf, String>;
+    /// The question about a download that the installation at `managed_root` waits for.
+    fn inspect_decision(
+        &self,
+        managed_root: &Path,
+        expected_install_id: &str,
+    ) -> Result<Option<bg_engine::cli::DecisionStatus>, CliError> {
+        bg_engine::cli::inspect_decision(managed_root, expected_install_id)
+    }
+    /// Stores the player's answer to that question, under the installation's lock.
+    fn answer_decision(
+        &self,
+        managed_root: &Path,
+        expected_install_id: &str,
+        decision_id: &str,
+        token: &str,
+        answer: bg_engine::decision::Answer,
+    ) -> Result<(), CliError> {
+        bg_engine::cli::answer_decision(
+            managed_root,
+            expected_install_id,
+            decision_id,
+            token,
+            answer,
+        )
+    }
+}
+
+/// A question about a download that an installation waits for, as the app shows it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PendingDecisionResponse {
+    pub install_id: String,
+    pub step_id: String,
+    pub decision_id: String,
+    /// Binds the answer to exactly this question.
+    pub token: String,
+    pub kind: bg_engine::decision::QuestionKind,
+    pub artifact_id: String,
+    /// The question in English, with the mods that depend on the download.
+    pub message: String,
+    /// Further details, shown collapsed.
+    pub details: Vec<String>,
+    /// The answers offered, in order, with their button labels.
+    pub answers: Vec<PendingDecisionAnswer>,
+    /// The answer whose button has the initial focus.
+    pub focus: bg_engine::decision::Answer,
+    /// What the app says after "Stop the installation".
+    pub after_no: String,
+    /// The answer already stored and waiting for the resume, if any.
+    pub answered: Option<bg_engine::decision::Answer>,
+}
+
+/// One offered answer and its button label.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PendingDecisionAnswer {
+    pub answer: bg_engine::decision::Answer,
+    pub label: String,
+}
+
+impl From<bg_engine::cli::DecisionStatus> for PendingDecisionResponse {
+    fn from(status: bg_engine::cli::DecisionStatus) -> Self {
+        Self {
+            install_id: status.install_id,
+            step_id: status.step_id,
+            decision_id: status.decision_id,
+            token: status.token,
+            kind: status.question.kind,
+            artifact_id: status.question.artifact_id,
+            message: status.texts.message,
+            details: status.texts.details,
+            answers: status
+                .texts
+                .answers
+                .into_iter()
+                .map(|answer| PendingDecisionAnswer {
+                    answer: answer.answer,
+                    label: answer.label,
+                })
+                .collect(),
+            focus: status.texts.focus,
+            after_no: status.texts.after_no,
+            answered: status.answer,
+        }
+    }
 }
 
 /// Operating-system actions kept behind the native bridge's validated identity boundary.
@@ -207,7 +295,15 @@ impl BridgeEngine for SystemBridgeEngine {
         recipe: &Path,
         candidate: &GameCandidate,
     ) -> Result<GameCandidate, CliError> {
-        inspect_game(recipe, candidate.role, &candidate.root).map(|report| report.candidate)
+        // The store discovery or the first inspection named stays: a folder alone does not
+        // always show it, for example a GOG install without its `goggame-*.info` file.
+        inspect_game_as(
+            recipe,
+            candidate.role,
+            candidate.storefront,
+            &candidate.root,
+        )
+        .map(|report| report.candidate)
     }
 
     fn review(&self, request: &InstallCommandRequest) -> Result<InstallReviewIdentity, CliError> {
@@ -236,6 +332,16 @@ impl BridgeEngine for SystemBridgeEngine {
 
     fn repair_profile_settings(&self, record: &ManagedInstallRecord) -> Result<bool, String> {
         bg_engine::stage::repair_installed_profile_settings(
+            &record.managed_root,
+            &record.install_id,
+            &record.engine_name,
+            &record.managed_save_root,
+        )
+        .map_err(|error| error.to_string())
+    }
+
+    fn prepare_profile_folder(&self, record: &ManagedInstallRecord) -> Result<PathBuf, String> {
+        bg_engine::stage::prepare_installed_profile_folder(
             &record.managed_root,
             &record.install_id,
             &record.engine_name,
@@ -299,6 +405,10 @@ impl BridgeEngine for DiscovererBridgeEngine {
 
     fn repair_profile_settings(&self, record: &ManagedInstallRecord) -> Result<bool, String> {
         self.system.repair_profile_settings(record)
+    }
+
+    fn prepare_profile_folder(&self, record: &ManagedInstallRecord) -> Result<PathBuf, String> {
+        self.system.prepare_profile_folder(record)
     }
 }
 
@@ -438,6 +548,10 @@ pub struct DestinationEvaluationResponse {
     pub safe: bool,
     pub title: String,
     pub detail: String,
+    /// The part of `detail` the install screen shows even for a usable folder: CEBG installs
+    /// into a new folder inside the chosen one, or the folder may be changed by Steam or Windows.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
 }
 
 /// Player-editable defaults for a new installation. Computing these never writes to disk.
@@ -519,6 +633,8 @@ pub struct ManagedInstallationResponse {
     pub receipt_path: Option<String>,
     /// Display-only verified launcher path; actions still accept only the registry id.
     pub launch_path: Option<String>,
+    /// Display-only isolated game profile (saves, portraits); actions accept the registry id.
+    pub profile_path: Option<String>,
     /// Successful receipt completion time used only for launcher display and ordering.
     pub completed_at_millis: Option<u64>,
     pub available: bool,
@@ -603,8 +719,18 @@ pub enum CandidateFreshness {
     UnverifiedStorefront,
     /// Core hashes do not match a known clean variant.
     UnknownFingerprint,
-    /// The locale is not supported by the alpha.
+    /// The game is set to a language other than English.
     UnsupportedLocale,
+    /// Leftovers of earlier mod installs, which the copy leaves out.
+    LeftOut,
+    /// Siege of Dragonspear is already merged into the folder (Beamdog copies).
+    SodMerged,
+    /// Files every installation needs are missing.
+    MissingFiles,
+    /// Game files could not be read.
+    Unreadable,
+    /// A Microsoft Store folder that Windows protects.
+    ProtectedFolder,
 }
 
 /// UI-safe projection of an inspected source game.
@@ -623,8 +749,11 @@ pub struct GameCandidateResponse {
     pub build: Option<String>,
     /// Highest-priority freshness category.
     pub freshness: CandidateFreshness,
-    /// Whether this exact source can be used by the current alpha.
+    /// Whether an installation can use this exact source, tested or with warnings.
     pub eligible: bool,
+    /// Whether it is the tested setup (store, version, language and files); a usable source
+    /// that is not tested installs with the warnings in `findings`.
+    pub tested: bool,
     /// Every engine finding, without suppressing simultaneous problems.
     pub findings: Vec<String>,
 }
@@ -750,7 +879,7 @@ impl NativeBridge {
         }
         profiles.push(InstallProfileResponse {
             id: "public-alpha".to_owned(),
-            label: "Smaller downloadable alpha".to_owned(),
+            label: "Smaller downloadable setup".to_owned(),
             description: "Limited setup using automatically downloadable mods only.".to_owned(),
         });
         profiles
@@ -1124,8 +1253,13 @@ impl NativeBridge {
         bg2_candidate_id: &str,
     ) -> Result<DestinationEvaluationResponse, CommandError> {
         let (bg1, bg2) = self.registered_sources(bg1_candidate_id, bg2_candidate_id)?;
-        let mut response =
-            inspect_destination_path(destination, &bg1.root, &bg2.root, &self.cache)?;
+        let mut response = inspect_destination_path(
+            destination,
+            &bg1.root,
+            &bg2.root,
+            &self.cache,
+            &self.registered_install_roots()?,
+        )?;
         response.path = display_windows_path(Path::new(&response.path))?;
         Ok(response)
     }
@@ -1199,17 +1333,21 @@ impl NativeBridge {
             )
         })?;
         let destination = self.cache.join("manual").join(filename);
-        let published = bg_engine::acquire::publish_manual_archive(
+        // A newer or different file than the reviewed one is accepted as chosen, as a newer
+        // file under a mod's official link is; only its size is bounded here.
+        let published = bg_engine::acquire::publish_chosen_manual_archive(
             &selected,
             &destination,
             &artifact.source.sha256,
             expected_length,
+            bg_engine::acquire::served_length_limit(expected_length),
         )
+        .map(|chosen| chosen.archive)
         .map_err(|error| {
             CommandError::new(
                 "manual_archive_invalid",
-                "That file does not match the archive required by this recipe.",
-                "Choose the exact published archive named on the build screen.",
+                "That file cannot be used for this mod.",
+                "Choose the archive you downloaded from the mod's page named on the install screen.",
                 error.to_string(),
             )
         })?;
@@ -1347,6 +1485,23 @@ impl NativeBridge {
         })();
         trace.finish(&result);
         result
+    }
+
+    /// End-summary lines of one completed installation, in English: mods left out because their
+    /// downloads could not be used, and downloads or tools that differed from their reviewed
+    /// versions. Empty when the installation used exactly the reviewed files.
+    pub fn installation_summary(&self, install_id: &str) -> Result<Vec<String>, CommandError> {
+        let record = self.available_managed_install(install_id)?.record;
+        bg_engine::cli::report_managed_install(&record.managed_root)
+            .map(|report| report.notes)
+            .map_err(|error| {
+                CommandError::new(
+                    "installation_summary_unavailable",
+                    "The summary of this installation could not be read.",
+                    "The installation itself is complete. Export diagnostics from My installs if this keeps happening.",
+                    error.to_string(),
+                )
+            })
     }
 
     /// Launches the exact verified InfinityLoader path owned by one available registry id.
@@ -1514,6 +1669,31 @@ impl NativeBridge {
             })
     }
 
+    /// Opens only the isolated game profile of one available immutable registry id,
+    /// after proving it still belongs to that installation.
+    pub fn open_profile_folder(&self, install_id: &str) -> Result<(), CommandError> {
+        let record = self.available_managed_install(install_id)?.record;
+        let profile = self
+            .engine
+            .prepare_profile_folder(&record)
+            .map_err(|error| {
+                CommandError::new(
+                    "profile_folder_unavailable",
+                    "The saves & portraits folder could not be prepared.",
+                    "Export diagnostics and share them when you ask for help.",
+                    error,
+                )
+            })?;
+        self.system.open_folder(&profile).map_err(|error| {
+            CommandError::new(
+                "profile_folder_open_failed",
+                "The saves & portraits folder could not be opened.",
+                "Check that the folder in your Documents is still available, then try again.",
+                error,
+            )
+        })
+    }
+
     /// Creates a launcher shortcut only after reloading an available registry identity.
     pub fn create_desktop_shortcut(
         &self,
@@ -1649,7 +1829,13 @@ impl NativeBridge {
             self.registered_sources(bg1_candidate_id, bg2_candidate_id)?;
         let bg1 = self.reinspect_source(&registered_bg1, GameRole::BgeeSod)?;
         let bg2 = self.reinspect_source(&registered_bg2, GameRole::Bg2ee)?;
-        let destination = inspect_destination_path(destination, &bg1.root, &bg2.root, &self.cache)?;
+        let destination = inspect_destination_path(
+            destination,
+            &bg1.root,
+            &bg2.root,
+            &self.cache,
+            &self.registered_install_roots()?,
+        )?;
         let destination_path = PathBuf::from(&destination.path);
         bg_engine::acquire::ArtifactCache::open(&self.cache).map_err(|error| {
             CommandError::new(
@@ -1767,6 +1953,34 @@ impl NativeBridge {
                     error,
                 )
             })
+    }
+
+    /// The question about a download that a resumable installation waits for; `None` when it
+    /// waits for none.
+    pub fn get_pending_decision(
+        &self,
+        install_id: &str,
+    ) -> Result<Option<PendingDecisionResponse>, CommandError> {
+        let root = self.resumable_campaign(install_id)?;
+        self.engine
+            .inspect_decision(&root, install_id)
+            .map(|decision| decision.map(PendingDecisionResponse::from))
+            .map_err(CommandError::from_cli)
+    }
+
+    /// Stores the player's answer to the question `decision_id` of a resumable installation.
+    /// The app then resumes the installation, which applies it.
+    pub fn answer_decision(
+        &self,
+        install_id: &str,
+        decision_id: &str,
+        token: &str,
+        answer: bg_engine::decision::Answer,
+    ) -> Result<(), CommandError> {
+        let root = self.resumable_campaign(install_id)?;
+        self.engine
+            .answer_decision(&root, install_id, decision_id, token, answer)
+            .map_err(CommandError::from_cli)
     }
 
     pub fn accept_manual_checkpoint(
@@ -2085,6 +2299,23 @@ impl NativeBridge {
         self.registry()?.list_campaigns().map_err(registry_error)
     }
 
+    /// Display paths of every registered completed and incomplete installation; none when the
+    /// app has no application data folder.
+    fn registered_install_roots(&self) -> Result<Vec<PathBuf>, CommandError> {
+        if self.app_data.is_none() {
+            return Ok(Vec::new());
+        }
+        let registry = self.registry()?;
+        let completed = registry.list().map_err(registry_error)?;
+        let campaigns = registry.list_campaigns().map_err(registry_error)?;
+        completed
+            .into_iter()
+            .map(|card| card.record.managed_root)
+            .chain(campaigns.into_iter().map(|card| card.record.managed_root))
+            .map(|root| display_windows_path(&root).map(PathBuf::from))
+            .collect()
+    }
+
     fn registry(&self) -> Result<ManagedInstallRegistry, CommandError> {
         let app_data = self.app_data.as_ref().ok_or_else(|| {
             CommandError::new(
@@ -2231,11 +2462,11 @@ impl NativeBridge {
                 format!("registered {registered:?}; re-inspected {inspected:?}"),
             ));
         }
-        if inspected.eligibility != Eligibility::Eligible || inspected.fingerprint.is_none() {
+        if !inspected.eligibility.is_usable() || inspected.fingerprint.is_none() {
             return Err(CommandError::new(
                 "source_not_fresh",
-                "A selected source is not a verified clean supported game.",
-                "Repair or reinstall that game, then run detection again.",
+                "A selected game folder cannot be used for an installation.",
+                "Open the game's details on the install screen to see why, fix it, then check the games again.",
                 format!("candidate at {} is {inspected:?}", inspected.root.display()),
             ));
         }
@@ -2272,6 +2503,7 @@ impl NativeBridge {
             &bg1.root,
             &bg2.root,
             &review.request.cache,
+            &self.registered_install_roots()?,
         )?;
         let current_engine_identity = self
             .engine
@@ -2377,7 +2609,7 @@ impl NativeBridge {
                 "build_already_running",
                 "Another installer build is already running.",
                 "Wait for the current build to finish or cancel it first.",
-                "the private alpha permits one active WeiDU campaign per process",
+                "CEBG permits one active WeiDU campaign per process",
             ));
         }
         runtime.active_runs.insert(run_id.clone(), controls);
@@ -2443,7 +2675,11 @@ fn finish_worker(
             (Some(report), None)
         }
         Ok(Ok(report))
-            if matches!(report.status, bg_engine::cli::CampaignStatus::Paused { .. }) =>
+            if matches!(
+                report.status,
+                bg_engine::cli::CampaignStatus::Paused { .. }
+                    | bg_engine::cli::CampaignStatus::DecisionRequired { .. }
+            ) =>
         {
             (Some(report), None)
         }
@@ -2486,6 +2722,10 @@ fn finish_worker(
         if let Some(snapshot) = state.run_snapshots.get_mut(run_id) {
             snapshot.status = match report.as_ref().map(|report| &report.status) {
                 Some(bg_engine::cli::CampaignStatus::Paused { .. }) => "paused".to_owned(),
+                // Resumable, not a failure: the app shows the question.
+                Some(bg_engine::cli::CampaignStatus::DecisionRequired { .. }) => {
+                    "decision_required".to_owned()
+                }
                 _ if error.is_some() => "failed".to_owned(),
                 _ => "complete".to_owned(),
             };
@@ -2588,11 +2828,13 @@ fn canonical_candidate(mut candidate: GameCandidate) -> Result<GameCandidate, Co
     Ok(candidate)
 }
 
+/// `registered` holds the roots of CEBG's registered installations, as display paths.
 fn inspect_destination_path(
     destination: &Path,
     bg1: &Path,
     bg2: &Path,
     cache: &Path,
+    registered: &[PathBuf],
 ) -> Result<DestinationEvaluationResponse, CommandError> {
     if !destination.is_absolute()
         || destination
@@ -2628,18 +2870,22 @@ fn inspect_destination_path(
         )
     })?;
     let cache = normalize_prospective_path(cache)?;
-    for (label, protected) in [
-        ("BG1 source", &bg1),
-        ("BG2 source", &bg2),
-        ("cache", &cache),
-    ] {
-        if paths_overlap(&normalized, protected) {
-            return Err(unsafe_destination(
-                destination,
-                &format!("the destination overlaps the {label}"),
-            ));
+    let refuse_overlap = |candidate: &Path| -> Result<(), CommandError> {
+        for (label, protected) in [
+            ("BG1 source", &bg1),
+            ("BG2 source", &bg2),
+            ("cache", &cache),
+        ] {
+            if paths_overlap(candidate, protected) {
+                return Err(unsafe_destination(
+                    destination,
+                    &format!("the destination overlaps the {label}"),
+                ));
+            }
         }
-    }
+        Ok(())
+    };
+    refuse_overlap(&normalized)?;
     let destination_exists = normalized.try_exists().map_err(|error| {
         path_error(
             "destination_unavailable",
@@ -2648,6 +2894,9 @@ fn inspect_destination_path(
             error,
         )
     })?;
+    let mut target = normalized.clone();
+    let mut sentences = Vec::new();
+    let mut notes = Vec::new();
     if destination_exists {
         let metadata = fs::symlink_metadata(&normalized).map_err(|error| {
             path_error(
@@ -2684,23 +2933,86 @@ fn inspect_destination_path(
             })?
             .is_some()
         {
-            return Err(unsafe_destination(
-                destination,
-                "the destination already contains files and is not an empty new managed copy",
-            ));
+            // Never write into a folder that already has files: install into a new folder
+            // inside it. The new-root claim at installation start stays strict. Another CEBG
+            // installation's folder is never the parent of a new one.
+            let shown = PathBuf::from(display_windows_path(&normalized)?);
+            if registered.iter().any(|root| path_is_within(&shown, root)) {
+                return Err(unsafe_destination(
+                    destination,
+                    "the folder belongs to another CEBG installation",
+                ));
+            }
+            target = free_install_subfolder(&normalized, destination)?;
+            refuse_overlap(&target)?;
+            let note =
+                "This folder already has files, so CEBG installs into a new folder inside it.";
+            sentences.push(note);
+            notes.push(note);
+        } else {
+            sentences.push(
+                "CEBG will use this empty folder and repeat its safety checks when installation starts.",
+            );
         }
+    } else {
+        sentences.push(
+            "CEBG will create this folder when installation starts, then repeat its safety checks.",
+        );
+    }
+    if in_store_or_program_folder(&target) {
+        let note = "Steam or Windows may change files in this folder, so a folder elsewhere is safer. CEBG can still install here.";
+        sentences.push(note);
+        notes.push(note);
     }
     Ok(DestinationEvaluationResponse {
-        path: path_to_string(&normalized)?,
+        path: path_to_string(&target)?,
         safe: true,
         title: "Ready to install".to_owned(),
-        detail: if destination_exists {
-            "CEBG will use this empty folder and repeat its safety checks when installation starts."
-                .to_owned()
+        detail: sentences.join(" "),
+        note: (!notes.is_empty()).then(|| notes.join(" ")),
+    })
+}
+
+/// Name of the folder CEBG creates inside a chosen folder that already has files.
+const INSTALL_SUBFOLDER_NAME: &str = "Chriz Easy BG";
+
+/// The first of `Chriz Easy BG`, `Chriz Easy BG (2)`, `Chriz Easy BG (3)`, … that does not exist
+/// inside `folder`, as a file, folder or link.
+fn free_install_subfolder(folder: &Path, chosen: &Path) -> Result<PathBuf, CommandError> {
+    for number in 1..=999_u32 {
+        let name = if number == 1 {
+            INSTALL_SUBFOLDER_NAME.to_owned()
         } else {
-            "CEBG will create this folder when installation starts, then repeat its safety checks."
-                .to_owned()
-        },
+            format!("{INSTALL_SUBFOLDER_NAME} ({number})")
+        };
+        let candidate = folder.join(name);
+        match fs::symlink_metadata(&candidate) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(candidate),
+            Ok(_) => {}
+            Err(error) => {
+                return Err(path_error(
+                    "destination_unavailable",
+                    "The destination could not be inspected safely.",
+                    &candidate,
+                    error,
+                ))
+            }
+        }
+    }
+    Err(unsafe_destination(
+        chosen,
+        "the folder already holds every new CEBG folder name",
+    ))
+}
+
+/// Whether a path component is a Steam library or a Windows program folder, where Steam or
+/// Windows may change files. Only a warning: the folder stays usable.
+fn in_store_or_program_folder(path: &Path) -> bool {
+    path.components().any(|component| {
+        matches!(component, Component::Normal(name)
+            if ["steamapps", "program files", "program files (x86)"]
+                .iter()
+                .any(|known| name.to_string_lossy().eq_ignore_ascii_case(known)))
     })
 }
 
@@ -2998,7 +3310,7 @@ fn unsafe_destination(path: &Path, reason: &str) -> CommandError {
     CommandError::new(
         "destination_unsafe",
         "That folder cannot be used for a new isolated installation.",
-        "Choose a new empty local folder outside both source games and the installer cache.",
+        "Choose a local folder outside both source games and the installer cache.",
         format!("{}: {reason}", path.display()),
     )
 }
@@ -3054,33 +3366,39 @@ fn inspect_manual_cache_file(
             Some(format!("{filename} is not a regular cache file")),
         );
     }
-    if metadata.len() != expected_length {
-        return (
+    match bg_engine::acquire::inspect_manual_archive(path) {
+        Ok(chosen)
+            if chosen.length == expected_length
+                && chosen.sha256.eq_ignore_ascii_case(expected_sha256) =>
+        {
+            (true, None)
+        }
+        // A newer or different file is installed as chosen, like a newer file under a mod's
+        // official link; the installation records it under its own checksum.
+        Ok(chosen)
+            if chosen.length <= bg_engine::acquire::served_length_limit(expected_length) =>
+        {
+            (
+                true,
+                Some(format!(
+                    "The file you chose differs from the reviewed version, for example because it is newer. CEBG installs it as chosen and records it; if something does not work, please report it. ({} bytes, SHA-256 {})",
+                    chosen.length, chosen.sha256
+                )),
+            )
+        }
+        Ok(chosen) => (
             false,
             Some(format!(
-                "{filename} has length {}; expected {expected_length}",
-                metadata.len()
-            )),
-        );
-    }
-    match bg_engine::acquire::provide_manual_archive(path, expected_sha256) {
-        Ok(verified) if verified.length == expected_length => (true, None),
-        Ok(verified) => (
-            false,
-            Some(format!(
-                "{filename} has length {}; expected {expected_length}",
-                verified.length
+                "{filename} has {} bytes, more than a newer version of this archive may have",
+                chosen.length
             )),
         ),
-        Err(_) => (
+        Err(error) => (
             false,
-            Some(format!(
-                "{filename} does not match the exact archive required by this recipe"
-            )),
+            Some(format!("could not inspect {filename}: {error}")),
         ),
     }
 }
-
 fn changed_review(reason: &str) -> CommandError {
     CommandError::new(
         "review_changed",
@@ -3186,18 +3504,22 @@ fn project_candidate(candidate: GameCandidate) -> Result<GameCandidateResponse, 
         GameRole::BgeeSod => "BG:EE + SoD",
         GameRole::Bg2ee => "BGII:EE",
     };
-    let (storefront_id, storefront) = match candidate.storefront {
-        Storefront::Steam => ("steam", "Steam"),
-        Storefront::Gog => ("gog", "GOG"),
+    let storefront_id = match candidate.storefront {
+        Storefront::Steam => "steam",
+        Storefront::Gog => "gog",
+        Storefront::Beamdog => "beamdog",
+        Storefront::Microsoft => "microsoft",
+        Storefront::Other => "other",
     };
-    let status = match freshness {
-        CandidateFreshness::Fresh => "clean",
-        CandidateFreshness::Modified => "modified",
-        CandidateFreshness::UnsupportedVersion => "unsupported version",
-        CandidateFreshness::MissingSod => "SoD missing",
-        CandidateFreshness::UnverifiedStorefront => "verify storefront",
-        CandidateFreshness::UnknownFingerprint => "unknown files",
-        CandidateFreshness::UnsupportedLocale => "unsupported language",
+    let storefront = candidate.storefront.display_name();
+    let status = match (candidate.eligibility, freshness) {
+        (Eligibility::Eligible, CandidateFreshness::LeftOut) => "clean, leftovers left out",
+        (Eligibility::Eligible, _) => "clean",
+        (Eligibility::Experimental, _) => "less tested",
+        (Eligibility::Ineligible, CandidateFreshness::MissingSod) => "SoD missing",
+        (Eligibility::Ineligible, CandidateFreshness::ProtectedFolder) => "protected folder",
+        (Eligibility::Ineligible, CandidateFreshness::Unreadable) => "cannot be read",
+        (Eligibility::Ineligible, _) => "files missing",
     };
     let identity = format!(
         "{:?}\0{:?}\0{canonical_path}",
@@ -3210,7 +3532,8 @@ fn project_candidate(candidate: GameCandidate) -> Result<GameCandidateResponse, 
         storefront: storefront_id.to_owned(),
         build: candidate.build,
         freshness,
-        eligible: candidate.eligibility == Eligibility::Eligible,
+        eligible: candidate.eligibility.is_usable(),
+        tested: candidate.eligibility == Eligibility::Eligible,
         findings: candidate
             .findings
             .into_iter()
@@ -3241,6 +3564,7 @@ fn project_managed_install(
     let receipt = record.managed_root.join(".chriz/install-receipt.json");
     let receipt_path = display_windows_path(&receipt)?;
     let launch_path = display_windows_path(&record.launch_path)?;
+    let profile_path = display_windows_path(&record.managed_save_root)?;
     Ok(ManagedInstallationResponse {
         id: record.install_id,
         name: record.display_name,
@@ -3256,6 +3580,7 @@ fn project_managed_install(
         },
         receipt_path: Some(receipt_path),
         launch_path: Some(launch_path),
+        profile_path: Some(profile_path),
         completed_at_millis: Some(record.completed_at_millis),
         available,
         patch_recovery_needed,
@@ -3271,18 +3596,24 @@ fn project_managed_campaign(
     card: ManagedCampaignCard,
 ) -> Result<ManagedInstallationResponse, CommandError> {
     let path = display_windows_path(&card.record.managed_root)?;
-    let manual_pause = bg_engine::session::SessionStore::open(&card.record.managed_root)
+    let replay = bg_engine::session::SessionStore::open(&card.record.managed_root)
         .and_then(|store| store.replay_for_inspection())
-        .ok()
-        .is_some_and(|replay| {
-            replay
-                .unresolved_step()
-                .is_some_and(|step| step.starts_with("checkpoint:manual-"))
-        });
+        .ok();
+    let manual_pause = replay.as_ref().is_some_and(|replay| {
+        replay
+            .unresolved_step()
+            .is_some_and(|step| step.starts_with("checkpoint:manual-"))
+    });
+    // A question about a download waits for the player's answer.
+    let waiting_for_answer = replay
+        .as_ref()
+        .and_then(|replay| replay.pending_decision())
+        .is_some();
     let customized =
         bg_engine::manual_checkpoint::is_customized(&card.record.managed_root).unwrap_or(true);
     let (status, resumable) = match card.availability {
         CampaignAvailability::Resumable if manual_pause => ("Paused for your mods", true),
+        CampaignAvailability::Resumable if waiting_for_answer => ("Waiting for your answer", true),
         CampaignAvailability::Resumable => ("Build interrupted — ready to resume", true),
         CampaignAvailability::FreshCopyRequired => {
             ("Needs attention — automatic resume unavailable", false)
@@ -3296,6 +3627,7 @@ fn project_managed_campaign(
         status: status.to_owned(),
         receipt_path: None,
         launch_path: None,
+        profile_path: None,
         completed_at_millis: None,
         consistency: None,
         patch_recovery_needed: false,
@@ -3309,12 +3641,19 @@ fn project_managed_campaign(
 
 fn candidate_freshness(candidate: &GameCandidate) -> CandidateFreshness {
     for (kind, freshness) in [
+        // What stops an installation first, then the warnings by weight.
+        (
+            FindingKind::ProtectedFolder,
+            CandidateFreshness::ProtectedFolder,
+        ),
+        (FindingKind::Unreadable, CandidateFreshness::Unreadable),
+        (FindingKind::MissingFiles, CandidateFreshness::MissingFiles),
+        (FindingKind::MissingSod, CandidateFreshness::MissingSod),
         (FindingKind::Modified, CandidateFreshness::Modified),
         (
             FindingKind::UnsupportedVersion,
             CandidateFreshness::UnsupportedVersion,
         ),
-        (FindingKind::MissingSod, CandidateFreshness::MissingSod),
         (
             FindingKind::UnsupportedLocale,
             CandidateFreshness::UnsupportedLocale,
@@ -3327,6 +3666,8 @@ fn candidate_freshness(candidate: &GameCandidate) -> CandidateFreshness {
             FindingKind::UnverifiedStorefront,
             CandidateFreshness::UnverifiedStorefront,
         ),
+        (FindingKind::SodMerged, CandidateFreshness::SodMerged),
+        (FindingKind::LeftOut, CandidateFreshness::LeftOut),
     ] {
         if candidate
             .findings
@@ -3340,11 +3681,163 @@ fn candidate_freshness(candidate: &GameCandidate) -> CandidateFreshness {
 }
 
 fn sort_candidates(candidates: &mut [GameCandidateResponse]) {
+    // The tested setup first, then other usable copies, then those that cannot be used.
     candidates.sort_by(|left, right| {
         right
             .eligible
             .cmp(&left.eligible)
+            .then_with(|| right.tested.cmp(&left.tested))
             .then_with(|| left.label.cmp(&right.label))
             .then_with(|| left.path.cmp(&right.path))
     });
+}
+
+#[cfg(test)]
+mod profile_folder_tests {
+    use super::*;
+    use bg_engine::stage::{
+        finalize_game_identity, read_engine_name, reserve_save_identity, stage_initial_games,
+        DocumentsLocator, ManagedLayout,
+    };
+
+    struct FixedDocuments(PathBuf);
+
+    impl DocumentsLocator for FixedDocuments {
+        fn documents_dir(&self) -> io::Result<PathBuf> {
+            Ok(self.0.clone())
+        }
+    }
+
+    /// Records the folders the bridge asks Windows to open; every other action is refused.
+    #[derive(Default)]
+    struct OpenedFolders(Mutex<Vec<PathBuf>>);
+
+    impl BridgeSystem for OpenedFolders {
+        fn launch(&self, _: &Path, _: &Path) -> Result<(), String> {
+            Err("not part of this test".to_owned())
+        }
+
+        fn launch_radar(&self, _: &Path, _: &Path) -> Result<RadarProcessOutcome, String> {
+            Err("not part of this test".to_owned())
+        }
+
+        fn open_folder(&self, path: &Path) -> Result<(), String> {
+            self.0.lock().unwrap().push(path.to_path_buf());
+            Ok(())
+        }
+
+        fn open_https(&self, _: &str) -> Result<(), String> {
+            Err("not part of this test".to_owned())
+        }
+
+        fn export_diagnostics(&self, _: &Path, _: &Path) -> Result<PathBuf, String> {
+            Err("not part of this test".to_owned())
+        }
+
+        fn current_exe(&self) -> Result<PathBuf, String> {
+            Err("not part of this test".to_owned())
+        }
+
+        fn create_desktop_shortcut(&self, _: ShortcutRequest) -> Result<PathBuf, String> {
+            Err("not part of this test".to_owned())
+        }
+    }
+
+    fn source_game(root: &Path, name: &str) -> PathBuf {
+        let source = root.join(name);
+        fs::create_dir_all(source.join("data/empty")).unwrap();
+        fs::write(source.join("data/base.bif"), b"base payload").unwrap();
+        fs::write(
+            source.join("engine.lua"),
+            b"engine_name = \"Store Game\"\r\nengine_mode = 1\r\n",
+        )
+        .unwrap();
+        source
+    }
+
+    #[test]
+    fn the_button_opens_the_profile_folder_the_game_uses_for_a_cleaned_installation_name() {
+        // Since PR #93 a typed name that Windows cannot use as a folder name is cleaned, not
+        // refused: forbidden characters become "-" and edge spaces go. The installer reserves
+        // the profile from that cleaned name with the engine's save identity code and records
+        // what it reserved; the button reuses that record instead of deriving a folder name.
+        let typed = "Chris: Run 2/3? <Stream>. ";
+        let display_name = bg_engine::registry::names::normalize_display_name(typed);
+        assert_eq!(display_name, "Chris- Run 2-3- -Stream-.");
+
+        let temp = tempfile::tempdir().unwrap();
+        let root = fs::canonicalize(temp.path()).unwrap();
+        let documents = root.join("Documents");
+        fs::create_dir(&documents).unwrap();
+        let layout = ManagedLayout::prepare(
+            root.join("managed"),
+            source_game(&root, "source-bg1"),
+            source_game(&root, "source-bg2"),
+        )
+        .unwrap();
+        let install_id = "cleaned-name";
+        let identity = reserve_save_identity(
+            &FixedDocuments(documents.clone()),
+            &layout,
+            &display_name,
+            install_id,
+        )
+        .unwrap();
+        stage_initial_games(&layout, &identity).unwrap();
+        fs::write(layout.game_root().join("WeiDU.log"), b"").unwrap();
+        finalize_game_identity(&layout, &identity).unwrap();
+
+        // The game keeps saves and portraits in the Documents child named by engine.lua's
+        // engine_name; its name has no character Windows refuses and no trailing dot or space.
+        let engine_name = read_engine_name(layout.game_root()).unwrap();
+        let game_folder = documents.join(&engine_name);
+        assert_eq!(identity.save_root, game_folder);
+        assert!(
+            !engine_name.contains(['<', '>', ':', '"', '/', '\\', '|', '?', '*']),
+            "{engine_name}"
+        );
+        assert!(!engine_name.ends_with(['.', ' ']), "{engine_name}");
+        assert!(
+            engine_name.starts_with("Chris- Run 2-3- -Stream - "),
+            "{engine_name}"
+        );
+
+        // Register the installation as the installer does, then press the button.
+        let receipt: &[u8] = b"fixture receipt";
+        fs::write(layout.state_root().join("install-receipt.json"), receipt).unwrap();
+        let launch = layout.game_root().join("InfinityLoader.exe");
+        fs::write(&launch, b"fixture launcher").unwrap();
+        let record = ManagedInstallRecord {
+            schema_version: bg_engine::registry::REGISTRY_SCHEMA_VERSION,
+            install_id: install_id.to_owned(),
+            display_name,
+            managed_root: layout.root().to_path_buf(),
+            recipe_version: "0.1.1".to_owned(),
+            recipe_sha256: "11".repeat(32),
+            engine_name,
+            managed_save_root: identity.save_root.clone(),
+            launch_path: launch,
+            receipt_sha256: sha256_bytes(receipt),
+            completed_at_millis: 1,
+        };
+        ManagedInstallRegistry::open_or_create(&root.join("app-data"))
+            .unwrap()
+            .publish(&record)
+            .unwrap();
+        let system = Arc::new(OpenedFolders::default());
+        let bridge = NativeBridge::with_configuration(
+            root.join("recipe"),
+            "recommended".to_owned(),
+            root.join("cache"),
+            Some(root.join("app-data")),
+            Arc::new(SystemBridgeEngine),
+            system.clone(),
+        );
+        bridge.open_profile_folder(install_id).unwrap();
+        assert_eq!(
+            system.0.lock().unwrap().as_slice(),
+            std::slice::from_ref(&game_folder)
+        );
+        assert!(game_folder.join("portraits").is_dir());
+    }
 }

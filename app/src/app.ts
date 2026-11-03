@@ -19,7 +19,6 @@ import {
   initialState,
   installationReadiness,
   reduce,
-  validateInstallationName,
   type AppAction,
   type AppState,
 } from "./state";
@@ -31,8 +30,9 @@ import { operationFeedback } from "./components/operation-feedback";
 import { clearAppUpdate, completedAppUpdate, rememberAppUpdate, type OperationFeedback } from "./operation-feedback";
 import type { OperationProgress } from "./contracts";
 import type { InputValue } from "./contracts";
-import { installationNameError } from "./components/installation-name";
-import type { ManualBreakpoint, ManualCheckpointStatus } from "./contracts";
+import { installationNameNote, savedInstallationName, type NamedInstallation } from "./components/installation-name";
+import type { DecisionAnswer, ManualBreakpoint, ManualCheckpointStatus, PendingDecision } from "./contracts";
+import { downloadDecisionDialog, focusDownloadDecision } from "./components/download-decision";
 import type { GameLogStatus, LaunchInstallResult } from "./contracts";
 import type { GameLogView } from "./components/game-log";
 import { RadarLaunchPreferences } from "./radar-launch-preference";
@@ -43,6 +43,10 @@ export interface AppHandle {
 
 const LAST_INSTALL_STORAGE_KEY = "cebg.last-install-id";
 const LOG_RENDER_INTERVAL_MS = 100;
+/** The card state of an installation that waits for an answer about a download. */
+const WAITING_FOR_ANSWER = "Waiting for your answer";
+const ENGINE_REPORT_HINT = "If something does not work as expected, please report it so the collection can be fixed.";
+const APP_REPORT_HINT = "If something does not work as expected, please report it so the collection can be fixed; export diagnostics from My installs and attach them.";
 
 function readRememberedInstallId(): string | null {
   try {
@@ -123,6 +127,15 @@ class AppController implements AppHandle {
   #manualCheckpointBusy = false;
   #manualCheckpointError: string | undefined;
   #manualCheckpointRevision = 0;
+  // A question about a download that the installation waits for.
+  #decision: PendingDecision | null = null;
+  #decisionExpected = false;
+  #decisionBusy = false;
+  #decisionError: string | undefined;
+  #decisionRevision = 0;
+  #decisionDetailsOpen = false;
+  // After "Stop the installation", the resumed step fails on purpose; show it as the player's choice.
+  #stopAnswer: { readonly installId: string; readonly stepId: string; readonly afterNo: string } | null = null;
   #runId: string | null = null;
   #installId: string | null = null;
   #retryAvailable = false;
@@ -191,6 +204,10 @@ class AppController implements AppHandle {
         this.#showManualPause();
         this.#dispatch({ type: "navigate", route: "build", remember: false });
         await this.#loadManualCheckpoint(selected.id);
+      } else if (selected?.resumable && selected.status === WAITING_FOR_ANSWER && this.backend.getPendingDecision) {
+        this.#showDecisionWait();
+        this.#dispatch({ type: "navigate", route: "build", remember: false });
+        await this.#loadDecision(selected.id);
       }
     } else {
       await this.#prepareInstallFlow();
@@ -748,6 +765,7 @@ class AppController implements AppHandle {
           await this.#loadManualCheckpoint(installId);
           return;
         }
+        if (this.#decisionExpected && await this.#loadDecision(installId) !== "none") return;
         await this.#launchResume(installId);
       } finally {
         this.#resuming = false;
@@ -802,8 +820,10 @@ class AppController implements AppHandle {
     if (!this.#beginIdentityEdit()) return;
     this.#dispatch({ type: "set-installation-name", name });
     this.#dispatch({ type: "review-cleared" });
-    if (this.#state.destinationAutomatic && validateInstallationName(name) === null) {
-      await this.#inspectDestination(automaticInstallationPath(this.#defaultInstallationPath, name), true);
+    if (this.#state.destinationAutomatic) {
+      // The folder takes the name CEBG will save, which is always usable as a folder name.
+      const saved = savedInstallationName(name, this.#namedInstallations());
+      await this.#inspectDestination(automaticInstallationPath(this.#defaultInstallationPath, saved), true);
       return;
     }
     this.#render();
@@ -911,12 +931,10 @@ class AppController implements AppHandle {
 
   #canInstall(): boolean {
     if (this.#changingProfile) return false;
-    if (this.#newInstallationNameError() !== null) return false;
     const bg1 = this.#discovery?.bg1Candidates.find((candidate) => candidate.id === this.#state.selectedBg1Id);
     const bg2 = this.#discovery?.bg2Candidates.find((candidate) => candidate.id === this.#state.selectedBg2Id);
     return installationReadiness({
       starting: this.#starting,
-      name: this.#state.installationName,
       bg1,
       bg2,
       destination: this.#destination,
@@ -926,8 +944,8 @@ class AppController implements AppHandle {
     });
   }
 
-  #newInstallationNameError(): string | null {
-    return installationNameError(this.#state.installationName, this.#installations.map(copy => ({ installId: copy.id, name: copy.name })));
+  #namedInstallations(): readonly NamedInstallation[] {
+    return this.#installations.map(copy => ({ installId: copy.id, name: copy.name }));
   }
 
   async #renameInstallation(installId: string, name: string): Promise<void> {
@@ -1017,6 +1035,16 @@ class AppController implements AppHandle {
         this.#render();
         return;
       }
+      if (snapshot.status === "decision_required") {
+        // The run stopped for a question before the pause point: show the question.
+        if (snapshot.report !== null) this.#installId = snapshot.report.install_id;
+        if (this.#installId !== null) {
+          this.#showDecisionWait();
+          await this.#loadDecision(this.#installId);
+        }
+        this.#render();
+        return;
+      }
       if (snapshot.status === "failed" || snapshot.status === "complete") {
         await this.#refreshRetryAvailability(runId);
         return;
@@ -1059,7 +1087,7 @@ class AppController implements AppHandle {
   }
 
   #resumeBlocked(): boolean {
-    return this.#starting || this.#resuming || this.#manualCheckpointBusy || this.#modUpgradeBusy || this.#campaignRunning();
+    return this.#starting || this.#resuming || this.#manualCheckpointBusy || this.#decisionBusy || this.#modUpgradeBusy || this.#campaignRunning();
   }
 
   #runEventListener(): (event: RunEventEnvelope) => void {
@@ -1120,8 +1148,12 @@ class AppController implements AppHandle {
         this.#stepProgressFinished = false;
         this.#manualCheckpoint = null;
         this.#manualCheckpointExpected = false;
+        this.#decision = null;
+        this.#decisionExpected = false;
+        this.#decisionError = undefined;
+        if (this.#stopAnswer?.installId !== event.install_id) this.#stopAnswer = null;
         this.#installId = event.install_id;
-        next = { ...current, state: "running", headline: event.resumed ? "Resuming installation" : "Installation in progress", detail: "Setting up your selected mods…", progress: undefined, failureReason: undefined, commandError: undefined, recoveryAction: undefined, freshCopyRequired: undefined, logTail: log(`${envelope.sequenceAsString}: installation ${event.install_id} started`), manualArchiveName: null };
+        next = { ...current, state: "running", stoppedByAnswer: undefined, headline: event.resumed ? "Resuming installation" : "Installation in progress", detail: "Setting up your selected mods…", progress: undefined, failureReason: undefined, commandError: undefined, recoveryAction: undefined, freshCopyRequired: undefined, logTail: log(`${envelope.sequenceAsString}: installation ${event.install_id} started`), manualArchiveName: null };
         break;
       case "phase_started": {
         next = { ...current, phases: updateBuildPhase(current.phases, event.name), logTail: log(`${envelope.sequenceAsString}: ${event.name}`) };
@@ -1166,6 +1198,13 @@ class AppController implements AppHandle {
       case "manual_download_needed":
         next = { ...current, state: "waiting-manual", headline: "Manual archive needed", detail: `Download ${event.mod_id} from ${event.page}. Then choose the downloaded archive; the installer will verify it before resuming.`, manualArchiveName: event.mod_id, logTail: log(`Expected SHA-256: ${event.expected_sha256}`) };
         break;
+      case "artifact_left_out": {
+        const notInstalled = event.runs.length > 0 ? ` Not installed: ${event.runs.join(", ")}.` : "";
+        const fewerParts = event.changed_runs.length > 0 ? ` Installed with fewer parts: ${event.changed_runs.join(", ")}.` : "";
+        const why = event.failed_run === undefined ? "its download cannot be used" : "its installer stopped with an error, so the installation continues without the parts that failed";
+        next = { ...current, logTail: log(`Leaving out ${event.artifact_id}: ${why} (${event.reason}).${notInstalled}${fewerParts}`) };
+        break;
+      }
       case "error":
         if (event.step_id === null) {
           next = current.manualArchiveName !== null
@@ -1176,7 +1215,14 @@ class AppController implements AppHandle {
           next = { ...current, state: "running", headline: "Stopping installation", detail: event.message, logTail: log(event.message) };
         }
         break;
+      case "decision_required":
+        this.#installId = event.install_id;
+        this.#stopAnswer = null;
+        this.#activeStepId = null;
+        next = { ...current, logTail: log(`${envelope.sequenceAsString}: ${event.step_id} waits for your answer`) };
+        break;
       case "campaign_finished":
+        this.#stopAnswer = null;
         this.#installId = event.install_id;
         next = { ...current, state: "complete", headline: "Installation verified", detail: "The game folder and its installation record are complete.", phases: current.phases.map((phase) => ({ ...phase, state: "done" })), logTail: log(`${envelope.sequenceAsString}: installation complete`) };
         break;
@@ -1191,6 +1237,12 @@ class AppController implements AppHandle {
     if (event.type === "campaign_paused" && this.#manualCheckpointExpected) {
       this.#showManualPause();
       void this.#loadManualCheckpoint(event.install_id);
+    }
+    if (event.type === "decision_required") {
+      // A question instead of a failure: the run ends resumably and waits for the answer.
+      this.#showDecisionWait();
+      void this.#loadDecisionAfterRun(envelope.runId, event.install_id);
+      return;
     }
     if (event.type === "campaign_finished") {
       this.#render();
@@ -1225,10 +1277,11 @@ class AppController implements AppHandle {
       if (completed?.available === true) {
         const progress = this.#beginOperation("Finishing installation", completed.id);
         progress({ stage: "finishing" });
+        const summary = await this.#installationSummary(completed.id);
         await this.#installCompletionRadar(completed);
         if (this.#createDesktopShortcutAfterInstall) await this.#createDesktopShortcut(completed.id);
         const extrasFailed = this.#addonFeedback?.state === "failed" || this.#shortcutFeedback?.state === "failed";
-        this.#finishOperation("Installation complete", `${completed.name} is ready to play.${extrasFailed ? " An optional finishing step needs attention below." : ""}`, true, completed.id);
+        this.#finishOperation("Installation complete", `${completed.name} is ready to play.${summary}${extrasFailed ? " An optional finishing step needs attention below." : ""}`, true, completed.id);
       }
     } catch (error: unknown) {
       ++this.#operationRevision;
@@ -1243,6 +1296,22 @@ class AppController implements AppHandle {
         });
     }
     this.#render();
+  }
+
+  /**
+   * The end summary of a completed installation, as sentences to append to its completion
+   * message: mods left out because their downloads could not be used, and downloads that
+   * differed from their reviewed versions. Empty when there is nothing to report.
+   */
+  async #installationSummary(installId: string): Promise<string> {
+    if (!this.backend.installationSummary) return "";
+    try {
+      const notes = await this.backend.installationSummary(installId);
+      // The engine's closing hint, in the app's own words: it names where diagnostics come from.
+      return notes.map((note) => ` ${note === ENGINE_REPORT_HINT ? APP_REPORT_HINT : note}`).join("");
+    } catch {
+      return " Its summary of left-out mods and changed downloads could not be read; export diagnostics from My installs to see it.";
+    }
   }
 
   async #installCompletionRadar(installation: ManagedInstallation): Promise<void> {
@@ -1296,6 +1365,16 @@ class AppController implements AppHandle {
           logTail: diagnostic === null || current.logTail.includes(diagnostic)
             ? current.logTail
             : [...current.logTail, diagnostic].slice(-200),
+        } });
+      }
+      const stop = this.#stopAnswer;
+      if (stop !== null && snapshot.status === "failed" && !freshCopyRequired && this.#state.build !== null
+        && snapshot.report?.install_id === stop.installId && snapshot.report.status.step_id === stop.stepId) {
+        // The step stopped because the player chose "Stop the installation", not because it broke.
+        this.#stopAnswer = null;
+        this.#dispatch({ type: "build-updated", build: {
+          ...this.#state.build, state: "failed", headline: "You stopped the installation", detail: stop.afterNo,
+          commandError: undefined, recoveryAction: undefined, stoppedByAnswer: true,
         } });
       }
       this.#render();
@@ -1394,6 +1473,10 @@ class AppController implements AppHandle {
 
   async #openInstallFolder(installId: string): Promise<void> {
     await this.backend.openInstallFolder(installId);
+  }
+
+  async #openProfileFolder(installId: string): Promise<void> {
+    await this.backend.openProfileFolder(installId);
   }
 
   async #createDesktopShortcut(installId: string): Promise<void> {
@@ -1502,6 +1585,8 @@ class AppController implements AppHandle {
     this.#render();
     try {
       if (this.backend.getManualCheckpoint && await this.#loadManualCheckpoint(installId)) return;
+      // A waiting question is shown first; an answer already stored is applied by the resume.
+      if (this.backend.getPendingDecision && await this.#loadDecision(installId) !== "none") return;
       await this.#launchResume(installId);
     } finally {
       this.#resuming = false;
@@ -1552,6 +1637,167 @@ class AppController implements AppHandle {
   #checkpointError(error: unknown): string {
     return error instanceof BackendCommandError ? `${error.message} ${error.recoveryAction}`
       : error instanceof Error ? error.message : "The checkpoint could not be checked. Keep the installation paused and try again.";
+  }
+
+  #showDecisionWait(): void {
+    this.#decisionExpected = true;
+    this.#retryAvailable = false;
+    this.#dispatch({ type: "build-updated", build: {
+      ...(this.#state.build ?? this.#initialNativeBuild()), state: "decision", headline: WAITING_FOR_ANSWER,
+      detail: "Your progress is saved. The installation continues after you answer the question about a download.",
+      progress: undefined, failureReason: undefined, commandError: undefined, recoveryAction: undefined, stoppedByAnswer: undefined,
+    } });
+  }
+
+  /**
+   * Loads the question the installation waits for and shows it. "none" means no question is
+   * waiting, or its answer is already stored and the next resume applies it.
+   */
+  async #loadDecision(installId: string): Promise<"question" | "error" | "none"> {
+    if (!this.backend.getPendingDecision) return "none";
+    const revision = ++this.#decisionRevision;
+    this.#decisionBusy = true;
+    this.#decisionError = undefined;
+    this.#decision = null;
+    this.#render();
+    try {
+      const decision = await this.backend.getPendingDecision(installId);
+      if (revision !== this.#decisionRevision || installId !== this.#installId) return "error";
+      if (decision === null || decision.answered !== null) {
+        this.#decisionExpected = false;
+        if (this.#state.build?.state === "decision") {
+          this.#retryAvailable = true;
+          this.#dispatch({ type: "build-updated", build: {
+            ...this.#state.build, state: "paused", headline: "Ready to resume",
+            detail: decision === null
+              ? "Your progress is saved. Resume this installation to continue."
+              : "Your answer is saved. Resume this installation to continue.",
+          } });
+        }
+        return "none";
+      }
+      this.#decision = decision;
+      this.#decisionDetailsOpen = false;
+      this.#showDecisionWait();
+      return "question";
+    } catch (error) {
+      if (revision === this.#decisionRevision) {
+        this.#showDecisionWait();
+        this.#decisionError = this.#decisionErrorText(error, "The question could not be loaded. Your progress is saved; try again.");
+      }
+      return "error";
+    } finally {
+      if (revision === this.#decisionRevision) {
+        this.#decisionBusy = false;
+        this.#render();
+      }
+    }
+  }
+
+  /**
+   * The run announces its question while it still holds the installation's lock, which the
+   * question's reading needs. Wait until the run has ended, then load the question.
+   */
+  async #loadDecisionAfterRun(runId: string, installId: string): Promise<void> {
+    const revision = this.#runRevision;
+    this.#decisionBusy = true;
+    this.#render();
+    let status: string | null = null;
+    try {
+      for (;;) {
+        status = (await this.backend.getRunSnapshot(runId)).status;
+        if (runId !== this.#runId || revision !== this.#runRevision) return;
+        if (status !== "running" && status !== "pausing") break;
+        await new Promise(resolve => window.setTimeout(resolve, 100));
+      }
+    } catch {
+      // Without a snapshot the question is still loaded; a busy lock shows a retry.
+      status = null;
+    } finally {
+      this.#decisionBusy = false;
+    }
+    if (runId !== this.#runId || revision !== this.#runRevision) {
+      this.#render();
+      return;
+    }
+    if (status === null || status === "decision_required") {
+      await this.#loadDecision(installId);
+      return;
+    }
+    // The run ended otherwise; its terminal event reports that.
+    this.#render();
+  }
+
+  #decisionErrorText(error: unknown, fallback: string): string {
+    return error instanceof BackendCommandError ? `${error.message} ${error.recoveryAction}`
+      : error instanceof Error ? error.message : fallback;
+  }
+
+  /**
+   * Closes the question without an answer. The installation keeps waiting; its card in My
+   * installs offers "Answer the question" to open it again.
+   */
+  async #decideLater(): Promise<void> {
+    if (this.#decisionBusy || this.#decision === null) return;
+    const installId = this.#installId;
+    ++this.#decisionRevision;
+    this.#decision = null;
+    this.#decisionError = undefined;
+    try {
+      this.#installations = await this.backend.listManagedInstallations();
+    } catch {
+      // The card list is refreshed again on the next visit; the question stays stored.
+    }
+    if (installId !== null && this.#installations.some(installation => installation.id === installId)) {
+      this.#installId = installId;
+      rememberInstallId(installId);
+    }
+    this.#dispatch({ type: "navigate", route: "home", remember: false });
+    this.#render();
+  }
+
+  /** Stores the player's answer, then resumes the installation, which applies it. */
+  async #answerDecision(answer: DecisionAnswer): Promise<void> {
+    const installId = this.#installId;
+    const decision = this.#decision;
+    if (!installId || !decision || this.#resumeBlocked() || !this.backend.answerDecision) return;
+    if (!decision.answers.some(offered => offered.answer === answer)) return;
+    const revision = ++this.#decisionRevision;
+    this.#decisionBusy = true;
+    this.#decisionError = undefined;
+    this.#render();
+    try {
+      try {
+        await this.backend.answerDecision(installId, decision.decisionId, decision.token, answer);
+      } catch (error) {
+        if (revision === this.#decisionRevision) {
+          this.#decisionError = this.#decisionErrorText(error, "Your answer could not be saved. Try again.");
+        }
+        return;
+      }
+      const label = decision.answers.find(offered => offered.answer === answer)?.label ?? answer;
+      this.#decision = null;
+      this.#decisionExpected = false;
+      this.#stopAnswer = answer === "no" ? { installId, stepId: decision.stepId, afterNo: decision.afterNo } : null;
+      const build = this.#state.build;
+      if (build !== null) this.#dispatch({ type: "build-updated", build: {
+        ...build, logTail: [...build.logTail, `${decision.stepId}: you answered "${label}"`].slice(-200),
+      } });
+      try {
+        await this.#launchResume(installId);
+      } catch (error) {
+        // The answer is stored; a later resume applies it.
+        this.#retryAvailable = true;
+        this.#dispatch({ type: "build-updated", build: {
+          ...(this.#state.build ?? this.#initialNativeBuild()), state: "paused", headline: "Ready to resume",
+          detail: "Your answer is saved. Resume this installation to continue.",
+        } });
+        throw error;
+      }
+    } finally {
+      if (revision === this.#decisionRevision) this.#decisionBusy = false;
+      this.#render();
+    }
   }
 
   async #checkManualCheckpoint(expectUnchanged = false): Promise<void> {
@@ -1605,7 +1851,7 @@ class AppController implements AppHandle {
   }
 
   #installationActive(): boolean {
-    return this.#manualCheckpointBusy || this.#modUpgradeBusy || this.#starting || this.#resuming || (this.#state.build !== null && ["running", "attention", "waiting-manual", "pausing"].includes(this.#state.build.state));
+    return this.#manualCheckpointBusy || this.#decisionBusy || this.#modUpgradeBusy || this.#starting || this.#resuming || (this.#state.build !== null && ["running", "attention", "waiting-manual", "pausing"].includes(this.#state.build.state));
   }
 
   async #previewInstallationRemoval(installId: string): Promise<void> {
@@ -1704,6 +1950,9 @@ class AppController implements AppHandle {
     const sameRoute = previousRoute === this.#state.route;
     const scrollTop = sameRoute ? this.root.querySelector("main")?.scrollTop ?? 0 : 0;
     const liveLog = this.root.querySelector<HTMLDetailsElement>(".technical-log");
+    const previousDialog = this.root.querySelector(".decision-dialog");
+    const decisionFocusId = previousDialog !== null && previousDialog.contains(document.activeElement)
+      ? document.activeElement?.id || undefined : undefined;
     if (sameRoute && liveLog) this.#logState = { ...this.#logState, open: liveLog.open };
     const evaluation = this.#state.evaluation;
     const navigate = (route: Route): Promise<void> => this.navigate(route);
@@ -1716,6 +1965,7 @@ class AppController implements AppHandle {
         launch: (installId, startRadar) => safely(() => this.#launchInstall(installId, startRadar)),
         setStartRadar: (installId, enabled) => this.#radarLaunchPreferences.set(installId, enabled),
         openFolder: (installId) => safely(() => this.#openInstallFolder(installId)),
+        openProfileFolder: (installId) => safely(() => this.#openProfileFolder(installId)),
         resume: (installId) => safely(() => this.#resumeManagedInstall(installId)),
         select: (installId) => this.#selectManagedInstallation(installId),
         createShortcut: (installId) => this.#createDesktopShortcut(installId),
@@ -1789,7 +2039,7 @@ class AppController implements AppHandle {
           selectedBg1Id: this.#state.selectedBg1Id,
           selectedBg2Id: this.#state.selectedBg2Id,
           installationName: this.#state.installationName,
-          installationNameError: this.#newInstallationNameError(),
+          installationNameNote: installationNameNote(this.#state.installationName, this.#namedInstallations()),
           destination: this.#destination,
           evaluation,
           evaluationPending: this.#state.evaluationPending || this.#changingProfile,
@@ -1882,7 +2132,7 @@ class AppController implements AppHandle {
           diagnosticsAvailable: this.#installId !== null,
           fixture: this.#status.mode === "fixture",
           retryAvailable: this.#status.mode === "fixture" || this.#retryAvailable,
-          resuming: this.#resuming || this.#manualCheckpointBusy,
+          resuming: this.#resuming || this.#manualCheckpointBusy || this.#decisionBusy,
           logState: this.#logState,
           updateLogState: (state) => { this.#logState = state; },
           remove: this.#installId === null ? undefined : () => safely(() => this.#previewInstallationRemoval(this.#installId!)),
@@ -1894,6 +2144,13 @@ class AppController implements AppHandle {
             check: () => { void this.#checkManualCheckpoint(); },
             continueUnchanged: () => { void this.#checkManualCheckpoint(true); },
             accept: () => { void this.#acceptManualCheckpoint(); },
+          } : undefined,
+          decision: this.#state.build?.state === "decision" ? {
+            busy: this.#decisionBusy,
+            shown: this.#decision !== null,
+            // An answer's error shows in the dialog; a loading error here.
+            error: this.#decision === null ? this.#decisionError : undefined,
+            reload: () => { if (this.#installId) void this.#loadDecision(this.#installId); },
           } : undefined,
         });
         break;
@@ -1964,6 +2221,18 @@ class AppController implements AppHandle {
         () => { void this.#confirmInstallationRemoval(); },
         () => { this.#removalPreview = null; this.#removalError = null; this.#render("remove-installation"); }));
       this.root.querySelector<HTMLButtonElement>('[data-action="cancel-removal"]')?.focus({ preventScroll: true });
+    } else if (this.#decision !== null && this.#state.route === "build" && this.#state.build?.state === "decision") {
+      // The installation waits for this answer: the question is modal.
+      this.root.querySelector<HTMLElement>(".app-shell")!.inert = true;
+      const model = { decision: this.#decision, busy: this.#decisionBusy, error: this.#decisionError };
+      this.root.append(downloadDecisionDialog({
+        ...model,
+        detailsOpen: this.#decisionDetailsOpen,
+        onDetailsOpen: (open) => { this.#decisionDetailsOpen = open; },
+        answer: (answer) => this.#safely(() => this.#answerDecision(answer)),
+        later: () => this.#safely(() => this.#decideLater()),
+      }));
+      focusDownloadDecision(this.root, model, decisionFocusId);
     }
   }
 }

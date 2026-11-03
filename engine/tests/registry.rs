@@ -528,8 +528,8 @@ fn name_defaults_include_failed_missing_and_completed_entries() {
 }
 
 #[test]
-fn name_validation_trims_compares_case_insensitively_and_rejects_invalid_input() {
-    use bg_engine::registry::names::normalize_display_name;
+fn name_validation_trims_compares_case_insensitively_and_sanitizes_instead_of_refusing() {
+    use bg_engine::registry::names::{normalize_display_name, sanitize_display_name};
     let (temp, _app_data, _managed, registry) = setup();
     let campaign = create_named_campaign(temp.path(), "custom", "My adventure");
     registry
@@ -542,8 +542,12 @@ fn name_validation_trims_compares_case_insensitively_and_rejects_invalid_input()
             .unwrap(),
         "Different"
     );
-    assert!(
-        matches!(registry.validate_display_name(" MY ADVENTURE ", None), Err(RegistryError::DuplicateName { install_id, .. }) if install_id == "custom")
+    // A name another copy has gets the first free number.
+    assert_eq!(
+        registry
+            .validate_display_name(" MY ADVENTURE ", None)
+            .unwrap(),
+        "MY ADVENTURE (2)"
     );
     assert_eq!(
         registry
@@ -551,37 +555,58 @@ fn name_validation_trims_compares_case_insensitively_and_rejects_invalid_input()
             .unwrap(),
         "MY ADVENTURE"
     );
-    for invalid in [
-        "",
-        "   ",
-        ".",
-        "..",
-        "line\nbreak",
-        "Bad/name",
-        "Bad\\name",
-        "Name?",
-        "Name:",
-        "<name>",
+    for (typed, saved) in [
+        ("line\nbreak", "linebreak"),
+        ("\u{1}\u{7f}Name\t", "Name"),
+        ("Bad/name", "Bad-name"),
+        ("Bad\\name", "Bad-name"),
+        ("Name?", "Name-"),
+        ("Name:", "Name-"),
+        ("<name>", "-name-"),
+        ("  a|b*c  ", "a-b-c"),
     ] {
-        assert!(
-            matches!(
-                normalize_display_name(invalid),
-                Err(RegistryError::InvalidName(_))
-            ),
-            "{invalid:?}"
+        assert_eq!(
+            sanitize_display_name(typed).as_deref(),
+            Some(saved),
+            "{typed:?}"
         );
+        assert_eq!(normalize_display_name(typed), saved, "{typed:?}");
     }
-    assert!(normalize_display_name(&"a".repeat(81)).is_err());
+    for empty in ["", "   ", ".", "..", "....", "  ...  ", "\u{1}"] {
+        assert_eq!(sanitize_display_name(empty), None, "{empty:?}");
+        assert_eq!(normalize_display_name(empty), "Chriz Easy BG", "{empty:?}");
+    }
+    assert_eq!(normalize_display_name(&"a".repeat(81)), "a".repeat(80));
     assert_eq!(
-        normalize_display_name(&"界".repeat(80))
-            .unwrap()
-            .chars()
-            .count(),
-        80
+        normalize_display_name(&format!("{} trailing", "b".repeat(79))),
+        "b".repeat(79)
     );
+    assert_eq!(normalize_display_name(&"界".repeat(80)).chars().count(), 80);
     assert!(registry
         .validate_display_name("Name", Some("unknown"))
         .is_err());
+}
+
+#[test]
+fn blank_and_long_names_are_numbered_within_eighty_characters() {
+    let (temp, _app_data, _managed, registry) = setup();
+    let default = create_named_campaign(temp.path(), "default", "Chriz Easy BG");
+    registry
+        .publish_campaign_named(&default, "Chriz Easy BG")
+        .unwrap();
+    // A blank name becomes the default name, numbered like the suggested names.
+    let blank = create_named_campaign(temp.path(), "blank", "");
+    registry.publish_campaign_named(&blank, "  ").unwrap();
+    assert_eq!(registry.display_name("blank").unwrap(), "Chriz Easy BG (2)");
+
+    let long = "L".repeat(80);
+    let first = create_named_campaign(temp.path(), "long-first", &long);
+    registry.publish_campaign_named(&first, &long).unwrap();
+    let second = create_named_campaign(temp.path(), "long-second", &long);
+    registry.publish_campaign_named(&second, &long).unwrap();
+    let numbered = registry.display_name("long-second").unwrap();
+    assert_eq!(numbered, format!("{} (2)", "L".repeat(76)));
+    assert_eq!(numbered.chars().count(), 80);
 }
 
 #[test]
@@ -591,10 +616,12 @@ fn name_comparison_handles_non_ascii_case() {
     registry
         .publish_campaign_named(&campaign, "Älven adventure")
         .unwrap();
-    assert!(matches!(
-        registry.validate_display_name("älven ADVENTURE", None),
-        Err(RegistryError::DuplicateName { .. })
-    ));
+    assert_eq!(
+        registry
+            .validate_display_name("älven ADVENTURE", None)
+            .unwrap(),
+        "älven ADVENTURE (2)"
+    );
 }
 
 #[test]
@@ -676,14 +703,40 @@ fn legacy_campaign_names_are_read_from_frozen_payload_without_a_migration() {
         "Legacy chosen name"
     );
     assert!(!app_data.join("managed-install-names").exists());
-    assert!(matches!(
-        registry.validate_display_name("LEGACY CHOSEN NAME", None),
-        Err(RegistryError::DuplicateName { .. })
-    ));
+    assert_eq!(
+        registry
+            .validate_display_name("LEGACY CHOSEN NAME", None)
+            .unwrap(),
+        "LEGACY CHOSEN NAME (2)"
+    );
 }
 
 #[test]
-fn legacy_duplicate_names_remain_readable_but_new_duplicates_are_rejected() {
+fn names_saved_before_sanitizing_stay_readable() {
+    let (temp, app_data, _managed, registry) = setup();
+    // Only "." and ".." were refused before; "..." was a valid name and stays one.
+    let campaign = create_named_campaign(temp.path(), "dots", "...");
+    registry.publish_campaign(&campaign).unwrap();
+    let names = app_data.join("managed-install-names");
+    std::fs::create_dir_all(&names).unwrap();
+    std::fs::write(
+        names.join("dots.json"),
+        serde_json::to_vec(&serde_json::json!({
+            "schema_version": 1,
+            "install_id": "dots",
+            "managed_root": campaign.managed_root,
+            "display_name": "...",
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(registry.display_name("dots").unwrap(), "...");
+    registry.publish_campaign_named(&campaign, "...").unwrap();
+    assert_eq!(registry.display_name("dots").unwrap(), "...");
+}
+
+#[test]
+fn legacy_duplicate_names_remain_readable_and_new_duplicates_are_numbered() {
     let (temp, _app_data, _managed, registry) = setup();
     let first = create_named_campaign(temp.path(), "duplicate-first", "Repeated");
     let second = create_named_campaign(temp.path(), "duplicate-second", "Repeated");
@@ -700,14 +753,19 @@ fn legacy_duplicate_names_remain_readable_but_new_duplicates_are_rejected() {
     // Legacy resume does not force a rename or break the campaign.
     registry.publish_campaign_named(&first, "Repeated").unwrap();
     let third = create_named_campaign(temp.path(), "duplicate-third", "Repeated");
-    assert!(matches!(
-        registry.publish_campaign_named(&third, "Repeated"),
-        Err(RegistryError::DuplicateName { .. })
-    ));
-    assert!(matches!(
-        registry.rename_display_name(&first.install_id, "repeated"),
-        Err(RegistryError::DuplicateName { .. })
-    ));
+    registry.publish_campaign_named(&third, "Repeated").unwrap();
+    assert_eq!(
+        registry.display_name(&third.install_id).unwrap(),
+        "Repeated (2)"
+    );
+    // Renaming to a name the other legacy copy has numbers it; the copy's own name does not
+    // count against it.
+    assert_eq!(
+        registry
+            .rename_display_name(&first.install_id, "repeated")
+            .unwrap(),
+        "repeated (3)"
+    );
     registry
         .rename_display_name(&first.install_id, "Unique now")
         .unwrap();
@@ -748,7 +806,7 @@ fn unavailable_name_persists_and_forgetting_releases_it_without_deleting_other_m
 }
 
 #[test]
-fn competing_campaign_names_have_exactly_one_winner() {
+fn competing_campaign_names_both_publish_and_exactly_one_is_numbered() {
     use std::sync::{Arc, Barrier};
     let (temp, _app_data, _managed, registry) = setup();
     let first = create_named_campaign(temp.path(), "race-first", "Same name");
@@ -765,20 +823,22 @@ fn competing_campaign_names_have_exactly_one_winner() {
             })
         })
         .collect();
-    let results: Vec<_> = jobs.into_iter().map(|job| job.join().unwrap()).collect();
-    assert_eq!(results.iter().filter(|result| result.is_ok()).count(), 1);
-    assert_eq!(
-        results
-            .iter()
-            .filter(|result| matches!(result, Err(RegistryError::DuplicateName { .. })))
-            .count(),
-        1
-    );
-    assert_eq!(registry.list_campaigns().unwrap().len(), 1);
+    for job in jobs {
+        job.join()
+            .unwrap()
+            .expect("a taken name is numbered, not refused");
+    }
+    assert_eq!(registry.list_campaigns().unwrap().len(), 2);
+    let mut names: Vec<_> = ["race-first", "race-second"]
+        .into_iter()
+        .map(|id| registry.display_name(id).unwrap().to_lowercase())
+        .collect();
+    names.sort();
+    assert_eq!(names, ["same name", "same name (2)"]);
 }
 
 #[test]
-fn competing_renames_preserve_the_loser_and_have_exactly_one_winner() {
+fn competing_renames_both_succeed_and_exactly_one_is_numbered() {
     use std::sync::{Arc, Barrier};
     let (temp, _app_data, _managed, registry) = setup();
     for (id, name) in [("rename-first", "First"), ("rename-second", "Second")] {
@@ -797,33 +857,22 @@ fn competing_renames_preserve_the_loser_and_have_exactly_one_winner() {
             })
         })
         .collect();
-    let results: Vec<_> = jobs.into_iter().map(|job| job.join().unwrap()).collect();
-    assert_eq!(results.iter().filter(|result| result.is_ok()).count(), 1);
-    assert_eq!(
-        results
-            .iter()
-            .filter(|result| matches!(result, Err(RegistryError::DuplicateName { .. })))
-            .count(),
-        1
-    );
-    let names: Vec<_> = ["rename-first", "rename-second"]
+    let mut saved: Vec<_> = jobs
+        .into_iter()
+        .map(|job| {
+            job.join()
+                .unwrap()
+                .expect("a taken name is numbered, not refused")
+        })
+        .collect();
+    saved.sort();
+    assert_eq!(saved, ["New shared name", "New shared name (2)"]);
+    let mut names: Vec<_> = ["rename-first", "rename-second"]
         .into_iter()
         .map(|id| registry.display_name(id).unwrap())
         .collect();
-    assert_eq!(
-        names
-            .iter()
-            .filter(|name| *name == "New shared name")
-            .count(),
-        1
-    );
-    assert_eq!(
-        names
-            .iter()
-            .filter(|name| matches!(name.as_str(), "First" | "Second"))
-            .count(),
-        1
-    );
+    names.sort();
+    assert_eq!(names, saved);
 }
 
 #[test]

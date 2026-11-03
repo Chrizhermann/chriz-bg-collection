@@ -192,14 +192,15 @@
     ]
   },
   {
-    "version": "0.1.0-alpha.22",
+    "version": "0.1.0",
     "from_commit": "e0b5116",
-    "to_commit": "e9d90e3",
+    "to_commit": "9bb496a",
     "subjects": [
       "artifact:ac-quest-7.0",
       "artifact:artisans-kitpack-4.81a-dev.85928f9-chriz.3",
       "artifact:artisans-kitpack-4.81a-dev.85928f9-chriz.4",
       "artifact:artisans-kitpack-4.81a-dev.85928f9-chriz.5",
+      "artifact:artisans-kitpack-4.81a-dev.85928f9-chriz.6",
       "artifact:bardicwonders-v2.9c-balance.7",
       "artifact:bardicwonders-v2.9c-balance.8",
       "artifact:blackhearts-2.05",
@@ -216,6 +217,7 @@
       "artifact:chriz-bg-rebalance-0.8.6",
       "artifact:chriz-bg-rebalance-0.8.7",
       "artifact:chriz-bg-rebalance-0.8.8",
+      "artifact:chriz-bg-rebalance-0.8.9",
       "artifact:chriz-sod-remix-0.6.15",
       "artifact:chriz-sod-remix-0.6.16",
       "artifact:eeex-1.3.1",
@@ -427,6 +429,17 @@
       "run:voicepack-viconia-bg2-bg2",
       "run:voicepack-yeslick-bg2",
       "run:zg-iwd-voices-bg2"
+    ]
+  },
+  {
+    "version": "0.1.1",
+    "from_commit": "9bb496a",
+    "to_commit": "fa0edd6",
+    "subjects": [
+      "artifact:chriz-bg-modpack-0.2.0-alpha.15",
+      "feature:feature:chriz-bg-modpack:component-670",
+      "feature:mod:bg1npc",
+      "run:chriz-bg-modpack-bg2"
     ]
   }
 ]
