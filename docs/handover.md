@@ -13,12 +13,14 @@ KST):
 
 Details: [Publication](package-acceptance-0.1.1-2026-11-03.md#publication).
 
-- **BuffBot v1.15.0 is held for 0.1.2** (Christopher, 2026-11-04), recorded in
-  `manifest/own-mods.toml`. 0.1.1 ships the tested v1.12.6.
+- **BuffBot waits for 0.1.2** (Christopher, 2026-11-04): first v1.15.0, then v1.16.0
+  (released 2026-11-03 21:02 UTC), which the hold in `manifest/own-mods.toml` names since
+  2026-11-04. 0.1.1 ships the tested v1.12.6.
 - **Known issue:** without Spell Revisions, a new installation stops at BG Rebalance
-  `302`. BG Rebalance v0.8.10 fixes it, for 0.1.2.
+  `302`. BG Rebalance v0.8.10 fixes it, for 0.1.2; its pin is
+  [PR #103](https://github.com/Chrizhermann/chriz-bg-collection/pull/103).
 - **Next:**
-  - pin BG Rebalance v0.8.10 and BuffBot v1.15.0 for 0.1.2;
+  - pin BG Rebalance v0.8.10 (PR #103) and the newest BuffBot (v1.16.0) for 0.1.2;
   - the release line goes back into `main`, which Christopher decides.
 
 ### The candidate
