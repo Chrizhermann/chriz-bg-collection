@@ -722,6 +722,9 @@ Cross-repository status. Component detail stays in the sections below and in the
   is fine. Optional quest mods that need such travel must say that they don't work with
   Challenge Mode. Reasons: fewer bugs, and no exploits through shops or stashed items. The
   exact area list is defined together with Christopher later.
+- Low priority: make cloud creatures able to squeeze through doors. (Christopher told a
+  Codex chat on 2026-11-01; it was only written into a stale copy of this list and moved
+  here on 2026-11-04.)
 
 **Ideas for later (Christopher, 2026-11-04)**
 
