@@ -141,10 +141,13 @@ Cross-repository status. Component detail stays in the sections below and in the
     Christopher OK'd its release on 2026-11-04; it goes into 0.1.2. Only Chriz Easy BG
     ships it. The
     script-engine session's lab without Spell Revisions and with `302` off installed
-    cleanly (450 components, 2026-11-03), so nothing else stops there.
-  - **BuffBot v1.15.0** in both installers. It is held for 0.1.1 in
-    `manifest/own-mods.toml` (Christopher, 2026-11-04). The pin PR removes the hold, and
-    Chriz Easy IWD needs its own version bump for it.
+    cleanly (450 components, 2026-11-03), so nothing else stops there. Pinned in both BG
+    recipes by [PR #103](https://github.com/Chrizhermann/chriz-bg-collection/pull/103)
+    (evidence in `manifest/evidence/release-intake-20261103-chriz-bg-rebalance-chriz-easy-bg.toml`).
+  - **BuffBot's newest release in both installers**: v1.16.0 since 2026-11-03 (after
+    v1.15.0). Both wait for 0.1.2 (Christopher, 2026-11-04); the hold in
+    `manifest/own-mods.toml` names v1.16.0 since 2026-11-04. The pin PR removes the hold,
+    and Chriz Easy IWD needs its own version bump for it.
   - **Christopher's open questions** (asked 2026-11-03):
     - When a single component fails, should CEBG leave only that one out, carry on and
       name it at the end?

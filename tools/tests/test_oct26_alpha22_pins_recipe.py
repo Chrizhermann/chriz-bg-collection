@@ -70,6 +70,9 @@ LATER_ROWS["ARTISANSKITPACK_TWEAK"] = {7205}
 SUCCESSORS.update({mod_id: "artisans-kitpack-4.81a-dev.85928f9-chriz.6"
                    for mod_id in ("artisanskitpack", "artisanskitpack-npc", "artisanskitpack-tweak")})
 SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.9"
+# The November 3 Rebalance intake (test_nov03_rebalance_0810_pin_recipe) replaces v0.8.9 with
+# v0.8.10, which changes only Flail of the Ages 302 and no component or the order.
+SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.10"
 # The November 3 intake (test_nov03_modpack_alpha15_marek_dagger_recipe) replaces Modpack
 # alpha.14 with alpha.15, which declares Marek's Boomerang Dagger 670 between 660 and 650.
 SUCCESSORS["chriz-bg-modpack"] = "chriz-bg-modpack-0.2.0-alpha.15"

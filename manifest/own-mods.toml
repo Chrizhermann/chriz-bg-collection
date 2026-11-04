@@ -97,6 +97,6 @@ decided = "2026-10-25"
 
 [[holds]]
 mod = "buffbot"
-release = "v1.15.0"
-reason = "Chriz Easy BG 0.1.1 ships v1.12.6, the version Christopher tested it with; v1.15.0 goes into both installers for 0.1.2."
+release = "v1.16.0"
+reason = "Chriz Easy BG 0.1.1 ships v1.12.6, the version Christopher tested it with; newer BuffBot releases go into both installers for 0.1.2."
 decided = "2026-11-04"
