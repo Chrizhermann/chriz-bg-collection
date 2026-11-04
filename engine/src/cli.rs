@@ -88,7 +88,9 @@ use crate::Manifest;
 mod installed_update;
 mod recovery;
 pub use installed_update::inspect_installed_update;
-pub(crate) use installed_update::verify_installed_baseline;
+pub(crate) use installed_update::{
+    verify_installed_baseline, PlayerMods, VerifiedInstalledBaseline,
+};
 pub use recovery::{
     accept_supervised_recovery, inspect_supervised_recovery, SupervisedRecoveryRequest,
 };
@@ -551,6 +553,11 @@ impl CliError {
             report: None,
             events: Box::default(),
         }
+    }
+
+    /// An invalid combination of command-line arguments.
+    pub fn invalid_arguments(message: impl Into<String>) -> Self {
+        Self::new("invalid_arguments", message)
     }
 
     /// Convert a non-success campaign result into a stable CLI failure.
@@ -2672,6 +2679,139 @@ pub fn diagnostics_for_managed_install(
         redact_roots,
     })
     .map_err(|error| CliError::new("diagnostics_failed", error.to_string()))
+}
+
+/// What the `hotpatch` command does to one registered installation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HotpatchAction {
+    /// Show what Updates shows; never writes the game.
+    Check,
+    /// Apply the next hotpatch that a check offered with `review_token`.
+    Apply {
+        review_token: String,
+        full_backup: bool,
+        save_backup: bool,
+    },
+    /// Undo the latest applied hotpatch or mod update.
+    Undo,
+    /// Finish restoring a hotpatch or mod update that did not finish.
+    Restore,
+}
+
+/// Run `action` on the registered installation at `managed_root` with the hotpatch catalog
+/// folder `catalog`. The registry is this user's; downloads go to `cache`.
+pub fn hotpatch_managed_install(
+    managed_root: &Path,
+    catalog: &Path,
+    cache: &Path,
+    action: &HotpatchAction,
+) -> Result<crate::hotpatch::HotpatchPreview, CliError> {
+    let failed = |error: String| CliError::new("hotpatch_failed", error);
+    let catalog = crate::hotpatch::catalog::load(catalog)
+        .map_err(|error| CliError::new("hotpatch_catalog_invalid", error))?;
+    let (record, app_data) = registered_install(managed_root)?;
+    let ctx = crate::hotpatch::Context {
+        record: &record,
+        app_data: &app_data,
+        cache,
+    };
+    match action {
+        HotpatchAction::Check => {
+            let _lock =
+                crate::lock::TargetLock::try_acquire(app_data.join("locks"), &record.managed_root)
+                    .map_err(|error| failed(error.to_string()))?;
+            crate::hotpatch::inspect(&ctx, &catalog)
+        }
+        HotpatchAction::Apply {
+            review_token,
+            full_backup,
+            save_backup,
+        } => crate::hotpatch::apply(&ctx, &catalog, review_token, *full_backup, *save_backup),
+        HotpatchAction::Undo => crate::hotpatch::restore(&ctx, &catalog, true),
+        HotpatchAction::Restore => crate::hotpatch::restore(&ctx, &catalog, false),
+    }
+    .map_err(failed)
+}
+
+/// What the `hotpatch update-check` and `update-apply` commands do for one mod.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ModUpdateAction {
+    /// Show what Updates shows; never writes the game.
+    Check,
+    /// Apply the update that a check offered with `review_token`.
+    Apply {
+        review_token: String,
+        full_backup: bool,
+        save_backup: bool,
+    },
+}
+
+/// Run `action` for the mod `mod_id` on the registered installation at `managed_root`, as the
+/// app's Updates screen does. Undo and Restore are the hotpatch ones: one history holds both.
+pub fn mod_update_managed_install(
+    managed_root: &Path,
+    catalog: &Path,
+    cache: &Path,
+    mod_id: &str,
+    action: &ModUpdateAction,
+) -> Result<crate::hotpatch::update::ModUpdatePreview, CliError> {
+    let failed = |error: String| CliError::new("mod_update_failed", error);
+    let catalog = crate::hotpatch::catalog::load(catalog)
+        .map_err(|error| CliError::new("hotpatch_catalog_invalid", error))?;
+    let (record, app_data) = registered_install(managed_root)?;
+    let ctx = crate::hotpatch::Context {
+        record: &record,
+        app_data: &app_data,
+        cache,
+    };
+    match action {
+        ModUpdateAction::Check => {
+            let _lock =
+                crate::lock::TargetLock::try_acquire(app_data.join("locks"), &record.managed_root)
+                    .map_err(|error| failed(error.to_string()))?;
+            crate::hotpatch::update::inspect(&ctx, &catalog, mod_id)
+        }
+        ModUpdateAction::Apply {
+            review_token,
+            full_backup,
+            save_backup,
+        } => crate::hotpatch::update::apply(
+            &ctx,
+            &catalog,
+            mod_id,
+            review_token,
+            *full_backup,
+            *save_backup,
+        ),
+    }
+    .map_err(failed)
+}
+
+/// The completed installation at `managed_root` in this user's registry, with the application
+/// data folder.
+fn registered_install(
+    managed_root: &Path,
+) -> Result<(crate::registry::ManagedInstallRecord, PathBuf), CliError> {
+    let app_data = application_data_root()?;
+    let root = fs::canonicalize(managed_root).map_err(|error| {
+        CliError::new(
+            "managed_install_unavailable",
+            format!("{}: {error}", managed_root.display()),
+        )
+    })?;
+    let record = ManagedInstallRegistry::open_or_create(&app_data)
+        .and_then(|registry| registry.list())
+        .map_err(|error| CliError::new("registry_unavailable", error.to_string()))?
+        .into_iter()
+        .map(|card| card.record)
+        .find(|record| record.managed_root == root)
+        .ok_or_else(|| {
+            CliError::new(
+                "managed_install_unavailable",
+                format!("{} is not a completed installation", root.display()),
+            )
+        })?;
+    Ok((record, app_data))
 }
 
 impl FrozenSource {
@@ -6465,7 +6605,7 @@ fn log_component_receipt(entry: &LogEntry) -> LogComponentReceipt {
     }
 }
 
-fn select_terminal_evidence<'a>(debug: &'a [u8], stdout: &'a [u8]) -> &'a [u8] {
+pub(crate) fn select_terminal_evidence<'a>(debug: &'a [u8], stdout: &'a [u8]) -> &'a [u8] {
     // Setup-name WeiDU can redirect its detailed log to SETUP-<MOD>.DEBUG beside the
     // executable even when --log names our attempt path. In that case the requested
     // debug file contains only a header, while the runner's synchronized per-attempt

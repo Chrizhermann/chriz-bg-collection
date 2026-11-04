@@ -627,7 +627,7 @@ fn recorded_buffbot_update_compares_effective_version_without_rewriting_base_cho
     assert_eq!(before.runs[0].state, InstalledRunState::Unassessed);
 
     fixture.record_synthetic_buffbot_upgrade(true);
-    let baseline = verify_installed_baseline(&fixture.record).unwrap();
+    let baseline = verify_installed_baseline(&fixture.record, PlayerMods::Refused).unwrap();
     assert!(baseline.upgraded);
     assert_eq!(baseline.receipt.normalized_selection, original_selection);
     assert_eq!(baseline.receipt.versions.recipe, "0.1.0");
@@ -693,7 +693,7 @@ fn a_changed_download_is_compared_as_the_file_that_was_installed() {
     assert_eq!(reviewed.runs[0].state, InstalledRunState::Unassessed);
     record_changed_buffbot_download(&mut fixture, &served);
 
-    let baseline = verify_installed_baseline(&fixture.record).unwrap();
+    let baseline = verify_installed_baseline(&fixture.record, PlayerMods::Refused).unwrap();
     assert!(!baseline.recovered, "a changed download is not a repair");
     let installed = &baseline.replacements["buffbot-bg2"];
     assert_eq!(installed.id, "buffbot");
@@ -748,7 +748,7 @@ fn an_installation_that_left_out_a_mod_is_verified_but_offered_no_game_update() 
     fixture.rewrite_receipt();
 
     // The records verify, so work that follows the installed mods can rely on them.
-    let baseline = verify_installed_baseline(&fixture.record).unwrap();
+    let baseline = verify_installed_baseline(&fixture.record, PlayerMods::Refused).unwrap();
     assert!(baseline.receipt.effective_plan().runs.is_empty());
     assert_eq!(baseline.receipt.plan.runs.len(), 1, "the frozen plan stays");
     // A game update reasons about the frozen plan run by run, so it is not offered.
@@ -764,7 +764,7 @@ fn an_installation_that_left_out_a_mod_is_verified_but_offered_no_game_update() 
 fn interrupted_buffbot_upgrade_blocks_baseline_and_comparison_without_writes() {
     let fixture = Fixture::with_buffbot(true);
     fixture.record_synthetic_buffbot_upgrade(false);
-    assert!(verify_installed_baseline(&fixture.record).is_err());
+    assert!(verify_installed_baseline(&fixture.record, PlayerMods::Refused).is_err());
     let error = fixture.compare_without_writes().unwrap_err();
     assert!(error.to_string().contains("did not finish"));
 }
@@ -779,7 +779,7 @@ fn unknown_mod_update_history_cannot_be_ignored_by_comparison() {
             .join(".chriz/mod-upgrades/future-format"),
     )
     .unwrap();
-    assert!(verify_installed_baseline(&fixture.record).is_err());
+    assert!(verify_installed_baseline(&fixture.record, PlayerMods::Refused).is_err());
     let error = fixture.compare_without_writes().unwrap_err();
     assert!(error.to_string().contains("Unsupported mod-update history"));
 }
