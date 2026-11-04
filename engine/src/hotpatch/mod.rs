@@ -245,7 +245,7 @@ pub fn inspect(ctx: &Context<'_>, catalog: &catalog::Catalog) -> Result<Hotpatch
     };
     if let Some(unfinished) = history.unfinished() {
         preview.state = "needs-recovery".into();
-        preview.detail = "A hotpatch did not finish. Restore the game files before playing. Your saves and the original installation record are untouched.".into();
+        preview.detail = "A game update did not finish. Restore the game files before playing. Your saves and the original installation record are untouched.".into();
         preview.can_restore = transaction::restorable(ctx, catalog, unfinished).is_ok();
         return Ok(preview);
     }

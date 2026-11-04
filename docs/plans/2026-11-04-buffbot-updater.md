@@ -1,8 +1,8 @@
 # BuffBot updater for existing games (Chriz Easy IWD first, then Chriz Easy BG)
 
-Status: built for Chriz Easy IWD, 2026-11-04. Christopher asked for it on 2026-11-04: update
-BuffBot in an existing game to the newest release from either installer, without breaking later
-hotpatches.
+Status: built for Chriz Easy IWD, 2026-11-04, lab check 2026-11-05. Christopher asked for it on
+2026-11-04: update BuffBot in an existing game to the newest release from either installer, without
+breaking later hotpatches.
 
 ## Why the existing paths do not fit
 
@@ -65,8 +65,10 @@ BuffBot updates are transactions in the same history as hotpatches
 - The hotpatch rule takes the game folder as the last transaction left it, so a recorded
   BuffBot update is a known state and later hotpatches stay possible.
 - Hotpatch lists ("applied", "next") count hotpatch transactions only.
-- What a player changed by hand stays through an update and its Undo, and does not stop either:
-  as for hotpatches since 2026-11-04, the record holds the folder as it was right before.
+- What a player changed by hand before an update stays through it and its Undo, and does not
+  stop either: as for hotpatches since 2026-11-04, the record holds the folder as it was right
+  before. Files changed after an update stop its Undo, as for hotpatches, because the folder could
+  no longer be put back byte for byte. The message names them.
 
 ## Mods after BuffBot
 
@@ -90,8 +92,11 @@ must not undo another mod's work. No mod we know of builds on BuffBot's files.
 - Any installed BuffBot version, components 0 and 1 in either order, or only one of them.
 - Any BuffBot language and game language (`weidu.conf`); a female `dialogF.tlk`.
 - Any mods after BuffBot, from the installer, a hotpatch or the player.
-- BuffBot not installed: nothing is offered ("This update does not add BuffBot").
-- Already newest: "BuffBot is up to date".
+- BuffBot not installed: nothing is offered ("This update does not add it").
+- Already newest: "That is the newest release".
+- Installations with mods added at an installation pause keep the rule the app promises for them:
+  hotpatches and mod update checks are off, so the card is not shown. The engine does not need
+  this rule for the update.
 
 ## Where the update comes from
 
@@ -107,37 +112,45 @@ starts at the first update; hotpatches do not exist there. The 1.8.3 → 1.8.4 r
 Needs the hotpatch history and `game_files.rs` on `main` first. Comes after Chriz Easy IWD, for
 CEBG 0.1.2.
 
+## Lab check (2026-11-05)
+
+The final version, on the lab installation of 2026-11-04 (Chriz Easy IWD 0.1.5 from the Steam
+IWD:EE 2.7.3.0, in its own application data folder), put back to its installed state. Behind
+BuffBot 1.12.6 stood the EEex Remote Console and a small WeiDU mod added by hand, its name holding
+a Latin-1 byte. Driven through `chriz-bg-install hotpatch`. A separate script compared the game
+folder (42,840 files, 4.6 GB) after every step; a file in `override/bfbot_presets/` stood in for a
+player's exported preset.
+
+- **Before the update:** the update check offered 1.12.6 → 1.16.0 (GitHub's Latest), the hotpatch
+  check the twelve boss fights. Neither refused anything.
+- **Update (40 seconds):** WeiDU took off and installed only BuffBot. Changed: BuffBot's folder, 19
+  of its `override/` files (one new), its uninstall list and `WeiDU.log`, nothing else. In
+  `WeiDU.log` only BuffBot's two rows changed; every other line stayed byte for byte, the Latin-1
+  byte too.
+- **Real hotpatch after the update (37 seconds):** the twelve boss fights went in after everything.
+  Undo of the fights (24 seconds), then of the update (22 seconds), each gave the folder back byte
+  for byte.
+- **The other order:** the fights first, then the update with them behind BuffBot (29 seconds). The
+  folder equals the first order's, byte for byte.
+- **Game start with both** (quiet lab runner, two minutes, main menu, no save): the EEex Remote
+  Console answered `BfBot.VERSION=1.16.0` with BuffBot's UI, Persist, Exec and Innate modules
+  loaded. Afterwards only the Remote Console's handshake file differed, neither check refused
+  anything and Undo of the update was offered. Undo of the update (20 seconds) and of the fights
+  (36 seconds) then gave back the folder from before, apart from that file.
+- **Another language:** BuffBot installed again by hand in German. The update ran in German, its
+  rows stayed `#3`, and `override/bfbot_l10n.tra` is the new release's German file. Undo gave the
+  folder back byte for byte. The update left the profile folder unchanged.
+- **Stopped hard:** the update and WeiDU were killed while WeiDU ran, with the mod list ending at
+  BuffBot. Both checks then said a game update did not finish and offered Restore. Restore gave the
+  folder back byte for byte, the whole mod list included.
+- Not covered: playing a save with BuffBot updated through the app (Christopher's stream game
+  plays 1.16.0, put in by the one-off script), and Chriz Easy BG.
+
 ## Lab check of the first version (2026-11-04)
 
-This lab ran the first version, in which WeiDU took the mods after BuffBot off and put them back.
-The version that leaves them out of the list still needs its own lab run.
-
-A fresh installation of Chriz Easy IWD 0.1.5 (the recommended setup plus the EEex Remote Console,
-so BuffBot 1.12.6 is followed by one more mod), from the Steam IWD:EE 2.7.3.0, in its own
-application data folder; driven through `chriz-bg-install hotpatch`. The game folder (42,820
-files, 4.6 GB) was compared by a separate script after every step. A file in
-`override/bfbot_presets/` stood in for a player's exported preset.
-
-- Freshly installed, the hotpatch check offered nothing and refused nothing ("Allowed difference
-  … EEex Remote Console added"). The update check offered 1.12.6 → 1.16.0 (GitHub's Latest), with
-  the Remote Console to be taken off and put back.
-- The first apply (with the whole-folder backup) was refused by the result check, which put the
-  game back byte for byte: WeiDU had worked, but it notes the old installation of every
-  component it installs again as `// Recently Uninstalled:` lines, which the first version of the
-  check took for a component left uninstalled. Such lines are now accepted for components that
-  are active again.
-- The second apply took 30 seconds. Changed: BuffBot's folder, 19 of its `override/` files (one new),
-  its uninstall list and `WeiDU.log`, nothing else. The Remote Console came back byte for byte.
-  The downloaded ZIP has the SHA-256 GitHub publishes; all 214 BuffBot files in `override/` equal
-  the release's. `WeiDU.log` has the same rows in the same order, BuffBot's now naming v1.16.0.
-  The exported preset and the profile stayed unchanged.
-- After the update the hotpatch check still refused nothing, and offered Undo of "BuffBot 1.16.0".
-- Undo took 18 seconds and gave the installed folder back byte for byte; the update was offered
-  again. Applying it again gave exactly the first result.
-- Started through the quiet lab runner for two minutes (main menu, no save): the EEex Remote
-  Console answered `BfBot.VERSION=1.16.0`, with BuffBot's UI, Persist, Exec and Innate modules
-  loaded. Afterwards only runtime files had changed (BuffBot's panel backgrounds and innate
-  helpers, the loader's caches); the hotpatch check still refused nothing, and Undo of the update
-  was still offered.
-- Not covered: playing a save with the updated BuffBot, a real hotpatch after an update (the
-  synthetic tests cover the records), another BuffBot language, and Chriz Easy BG.
+The first version let WeiDU take the mods after BuffBot off and put them back, on the same
+installation without a mod added by hand. Its update took 30 seconds, its Undo 18. One lesson stayed
+in the code: WeiDU notes the old installation of every component it installs again as
+`// Recently Uninstalled:` lines, which the first check took for a component left uninstalled; the
+first apply was refused and the game put back byte for byte. Such lines are now accepted for
+components that are active again.

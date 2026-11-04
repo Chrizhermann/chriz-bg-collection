@@ -336,7 +336,7 @@ impl History {
     /// goes back one transaction at a time, so this holds in whatever order they were undone.
     pub fn expected_state(&self, root: &Path) -> Result<GameFiles, String> {
         if self.unfinished().is_some() {
-            return Err("A hotpatch did not finish. Restore it first.".into());
+            return Err("A game update did not finish. Restore it first.".into());
         }
         match self
             .entries
@@ -362,7 +362,7 @@ pub fn launch_guard(root: &Path) -> Result<(), String> {
     let install_id = install_id_of(&receipt)?;
     if History::load(root, &install_id)?.unfinished().is_some() {
         return Err(
-            "A hotpatch did not finish. Open Updates and restore the game files before playing."
+            "A game update did not finish. Open Updates and restore the game files before playing."
                 .into(),
         );
     }
@@ -389,7 +389,7 @@ pub fn verified_log_suffix(root: &Path) -> Result<Vec<LogComponentReceipt>, Stri
     let install_id = install_id_of(&root.join(".chriz/install-receipt.json"))?;
     let history = History::load(root, &install_id)?;
     if history.unfinished().is_some() {
-        return Err("A hotpatch did not finish. Restore it first.".into());
+        return Err("A game update did not finish. Restore it first.".into());
     }
     let mut suffix = Vec::new();
     for entry in &history.entries {
@@ -620,7 +620,7 @@ pub fn apply_with_progress(
     super::validate_context(ctx)?;
     let history = History::load(root, &ctx.record.install_id)?;
     if history.unfinished().is_some() {
-        return Err("A hotpatch did not finish. Restore it before applying another.".into());
+        return Err("A game update did not finish. Restore it before applying another.".into());
     }
     let assessment = gate::assess(ctx, catalog, &history);
     if !assessment.refusals.is_empty() {
@@ -1162,7 +1162,7 @@ pub(super) fn restorable(
     plan_restore(ctx, catalog, &entry.dir, &p, &now).map(|_| ())
 }
 
-/// Whether the latest applied hotpatch can be undone: nothing but runtime files changed since.
+/// Whether the latest applied change can be undone: nothing but runtime files changed since.
 pub(super) fn undoable(
     ctx: &Context<'_>,
     catalog: &Catalog,
@@ -1176,7 +1176,8 @@ pub(super) fn undoable(
         .differences(now, |name| catalog.runtime_files.matches(name));
     if !drift.is_empty() {
         return Err(format!(
-            "Files changed after the hotpatch, so it cannot be undone automatically: {}.",
+            "Files changed after {}, so it cannot be undone automatically: {}.",
+            entry.title(catalog),
             gate::summarize(&drift)
         ));
     }
@@ -1297,7 +1298,7 @@ pub fn restore_with_progress(
     let history = History::load(root, &ctx.record.install_id)?;
     let entry = if undo {
         if history.unfinished().is_some() {
-            return Err("A hotpatch did not finish. Restore it first.".into());
+            return Err("A game update did not finish. Restore it first.".into());
         }
         history
             .undo_target()
