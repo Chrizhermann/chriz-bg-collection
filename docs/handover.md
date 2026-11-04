@@ -12,9 +12,13 @@ everything else.
 "Automatically Skipping [X] because of error", installs the components after it and exits
 with 2 (checked with WeiDU 249; `engine/tests/fixtures/weidu/debug-went-past.log` is its
 transcript, and the r5 failure of `docs/curated-full-acceptance-2026-09-05.md` was this case).
-Until now that non-prefix result sealed the installation as needing a fresh copy. So a failed
-component comes in two shapes, and both now stop with a `failed_component` question, as for
-the questions of PR 80. It names the component by its feature title and its mod.
+It goes through them in TP2 order, whatever the order of the list: `tools/check_native_component_order.py`
+holds recipe runs to that order, and a list in another order stays a fresh-copy case. The
+ignored test `weidu_goes_on_after_a_failed_component_and_the_evidence_says_so` runs this
+through the real runner and verdict. Until now that non-prefix result sealed the installation
+as needing a fresh copy. So a failed component comes in two shapes, and both now stop with a
+`failed_component` question, as for the questions of PR 80. It names the component by its
+feature title and its mod.
 
 - **Nothing was installed after it** (the `Retry` verdict, after the one automatic retry for a
   failure behind other components, as before): **Leave it out and continue**, **Try again**,

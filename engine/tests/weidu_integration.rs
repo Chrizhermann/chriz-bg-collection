@@ -369,6 +369,54 @@ fn failed_component_rolls_back_while_successful_prefix_reconciles() {
     harness.assert_override_publications(&["tmcopy.ids"]);
 }
 
+/// WeiDU does not stop at a failed component: it installs the next one and reports both. The
+/// evidence says exactly that, so the installation can ask instead of needing a fresh copy.
+#[test]
+#[ignore = "requires CHRIZ_WEIDU_EXE pointing to the pinned WeiDU 249 Windows binary"]
+fn weidu_goes_on_after_a_failed_component_and_the_evidence_says_so() {
+    let harness = Harness::new();
+    let components = [0, 30, 60];
+    let invocation = harness.invocation(
+        "goes-on",
+        InvocationMode::SetupName,
+        &components,
+        Vec::new(),
+    );
+    let evidence = harness.run_sync(invocation, "goes-on");
+    let exit_code = match evidence.outcome {
+        RunOutcome::Exited { code } => code,
+        other => panic!("real WeiDU did not exit normally: {other:?}"),
+    };
+
+    assert_eq!(
+        reconcile(
+            &evidence.before_log,
+            &evidence.after_log,
+            &evidence.output,
+            &expected_run(&components, exit_code),
+        ),
+        Reconciliation::FailedAmong {
+            failed: vec![30],
+            installed_after: vec![60],
+        },
+        "before:\n{}\nafter:\n{}\noutput:\n{}\ndebug:\n{}",
+        evidence.before_log,
+        evidence.after_log,
+        evidence.output,
+        evidence.debug
+    );
+    assert_eq!(
+        bg_engine::weidu::log::failure_message(&evidence.output).as_deref(),
+        Some("Failure(\"TESTMOD_CONTROLLED_FAILURE\")")
+    );
+    assert!(
+        !harness.game.override_dir().join("tmfail.txt").exists(),
+        "the failing component's file survived WeiDU rollback"
+    );
+    harness.assert_protected_unchanged();
+    harness.assert_override_publications(&["tmcopy.ids", "tmbare.txt"]);
+}
+
 #[test]
 #[ignore = "requires CHRIZ_WEIDU_EXE pointing to the pinned WeiDU 249 Windows binary"]
 fn unexpected_prompt_requires_attention_and_remains_alive_until_cancelled() {
