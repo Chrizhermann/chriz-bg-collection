@@ -344,7 +344,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // November 3: BG1 NPC Project is optional and unselected (Christopher, 2026-11-03),
     // which removes its 8 defaults and the Kivan quest guard 130 from both plans.
     // Its Modpack alpha.15 pin adds default Marek's Boomerang Dagger 670 to both plans.
-    // This 371-component base plan is distinct from the 468-component curated plan.
+    // This 371-component base plan is distinct from the 466-component curated plan.
     assert_eq!(
         evaluation
             .plan

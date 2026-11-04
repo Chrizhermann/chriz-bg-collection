@@ -3,7 +3,7 @@
 schema = 1
 expected_rows = 1352
 expected_choice_groups = 88
-expected_optional_none_groups = 31
+expected_optional_none_groups = 33
 expected_fixed_groups = 12
 
 parents = [
@@ -3749,7 +3749,7 @@ id = "choice:cdtweaks:higher-hp-on-level-up"
 catalog = "CDTWEAKS"
 subgroup = "Higher HP on Level Up"
 options = ["CDTWEAKS:3000", "CDTWEAKS:3001", "CDTWEAKS:3002"]
-default = "CDTWEAKS:3000"
+default = "none"
 
 [[choice_groups]]
 id = "choice:cdtweaks:increase-ammo-stack-size"
@@ -3798,7 +3798,7 @@ id = "choice:cdtweaks:maximum-hp-creatures-the-bigg"
 catalog = "CDTWEAKS"
 subgroup = "Maximum HP Creatures [the bigg]"
 options = ["CDTWEAKS:3010", "CDTWEAKS:3011", "CDTWEAKS:3012"]
-default = "CDTWEAKS:3010"
+default = "none"
 
 [[choice_groups]]
 id = "choice:cdtweaks:multiple-strongholds-sabre-baldurdash-weimer"

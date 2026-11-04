@@ -87,7 +87,11 @@ class PublicComponentCreditsTests(unittest.TestCase):
         # November 3: the Modpack alpha.15 pin adds default Marek's Boomerang Dagger 670 after
         # Degrodel 660.
         self.assertEqual(actual["chriz-bg-modpack-bg2"][-2:], [660, 670])
-        self.assertEqual(self.result["componentCount"], 468)
+        # November 4: Tweaks 3000 (maximum HP on level-up) and 3010 (Maximum HP Creatures)
+        # leave the defaults; 2999 (Max HP at Level One) stays.
+        self.assertTrue({3000, 3010}.isdisjoint(actual["cdtweaks-bg2"]))
+        self.assertIn(2999, actual["cdtweaks-bg2"])
+        self.assertEqual(self.result["componentCount"], 466)
         self.assertEqual(len(actual), 69)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:

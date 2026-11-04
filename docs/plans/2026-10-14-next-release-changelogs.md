@@ -29,6 +29,10 @@ is described in [`docs/release-notes-0.1.1.md`](../release-notes-0.1.1.md).
   the Haste and Improved Haste spells, with and without Spell Revisions. It still gives Free
   Action and immunity to Slow, Hold, Web and Entangle, and the Slow saves of all four flails
   are unchanged. (Rebalance v0.8.10)
+- **Hit points on level-up are rolled again in Chris's Recommended.** Higher HP on Level Up
+  (Maximum) and Maximum HP Creatures (For all creatures in game) are now **Optional** (were
+  **Default**), unchecked in Chris's Recommended. Both stay available under Customize. Max HP
+  at Level One stays **Default**. (Tweaks Anthology)
 
 These changes apply to new installations; existing games and saves are unchanged.
 
@@ -46,6 +50,10 @@ These changes apply to new installations; existing games and saves are unchanged
   overhauls of the flail (its release notes). The 0.1.1 known issue ends with this pin, so
   0.1.2's release notes drop it, and the 0.1.2 update ledger needs an entry that covers
   `artifact:chriz-bg-rebalance-0.8.10`.
+- **Rolled HP in Recommended** (Christopher, 2026-11-04): Tweaks Anthology `3000` and `3010`
+  are unchecked options. The Recommended plan loses both components (468 to 466), and its 69
+  runs and their order stay. The 0.1.2 update ledger needs an entry that covers
+  `feature:feature:cdtweaks:component-3000` and `feature:feature:cdtweaks:component-3010`.
 
 ## Installer changelog
 

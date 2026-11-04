@@ -429,7 +429,11 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # 2026-11-03); without its feature, run component and preset entry the BG1 NPC
                 # Project digest 53944ad6b3baa0eb92482b4ff17f8f6247ac2226f9b6d53556db73459ff1562a
                 # returns.
-                "e43f6d204b3b98c491e290050d065173287082b3717972346e44535528a7fb2d",
+                # November 4: Tweaks 3000 (maximum HP on level-up) and 3010 (Maximum HP
+                # Creatures) become optional and off, for 0.1.2 (Christopher, 2026-11-04);
+                # with both back on, the alpha.15 pin digest
+                # e43f6d204b3b98c491e290050d065173287082b3717972346e44535528a7fb2d returns.
+                "d5086af1d90ea7199bc4da012f9d745608f6e32fb6cb1637d3481742ebca68f3",
             )
 
             legacy_bg1npc_groups = {
