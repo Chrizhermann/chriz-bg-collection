@@ -2,8 +2,9 @@ import type { ManagedCopyUpdate, UpdateSummary } from "../contracts";
 import { actionButton, element, screenIntro } from "../components/app-shell";
 import { installPatchesSection, type InstallPatchActions } from "../components/install-patches";
 import { installedUpdateSection, type InstalledUpdateActions } from "../components/installed-update-plan";
+import { MOD_UPDATES, modUpdateSection, type ModUpdateActions } from "../components/mod-update";
 
-export interface UpdateActions extends InstallPatchActions, InstalledUpdateActions {
+export interface UpdateActions extends InstallPatchActions, InstalledUpdateActions, ModUpdateActions {
   readonly customized?: boolean;
   readonly checkAgain: () => void | Promise<void>;
   readonly installApplication: (version: string) => void | Promise<void>;
@@ -101,7 +102,7 @@ function versionRow(
 }
 
 export function updatesScreen(updates: UpdateSummary, actions: UpdateActions, checking = false, installing = false): HTMLElement {
-  const operationBusy = installing || actions.patchBusy === true || actions.installedUpdateBusy === true || actions.modUpgradeBusy === true;
+  const operationBusy = installing || actions.patchBusy === true || actions.installedUpdateBusy === true || actions.modUpgradeBusy === true || actions.modUpdateBusy === true;
   const page = element("div", "screen-stack updates-screen");
   const heading = element("div", "updates-heading");
   const check = actionButton(checking ? "Checking…" : "Check for updates", actions.checkAgain, "quiet");
@@ -111,17 +112,23 @@ export function updatesScreen(updates: UpdateSummary, actions: UpdateActions, ch
   const selected = selectedUpdateCopy(updates.managedCopies, actions.installedUpdateInstallId ?? actions.patchInstallId ?? actions.installedUpdatePlan?.installId ?? actions.patches?.installId);
   // Comparing is read-only and may be superseded; mutations and patch operations
   // keep the selector locked until their result has been recorded.
-  page.append(installationSelection(updates.managedCopies, selected, actions, installing || actions.patchBusy === true || actions.modUpgradeBusy === true));
+  page.append(installationSelection(updates.managedCopies, selected, actions, installing || actions.patchBusy === true || actions.modUpgradeBusy === true || actions.modUpdateBusy === true));
   const gameSections = element("div", "update-game-sections");
   const selectedCopies = selected ? [selected] : [];
   if (selected && actions.customized) {
     gameSections.append(element("p", "manual-mod-warning", "Customized — manual mods added. Game hotpatches and whole-mod updates are disabled for this installation. CEBG app updates and new installations remain available."));
   }
+  // Whole-mod updates wait for every other game operation, and those wait for them.
+  if (selected && !actions.customized && actions.onCheckModUpdate !== undefined) {
+    for (const offer of MOD_UPDATES) {
+      gameSections.append(modUpdateSection(selected, offer, actions, installing || actions.installedUpdateBusy === true || actions.patchBusy === true || actions.modUpgradeBusy === true));
+    }
+  }
   if (selected && !actions.customized && actions.onCheckInstalledUpdate !== undefined) {
-    gameSections.append(installedUpdateSection(selectedCopies, actions, installing || actions.patchBusy === true, true));
+    gameSections.append(installedUpdateSection(selectedCopies, actions, installing || actions.patchBusy === true || actions.modUpdateBusy === true, true));
   }
   if (selected && !actions.customized && actions.onCheckPatches !== undefined) {
-    gameSections.append(installPatchesSection(selectedCopies, actions, installing || actions.installedUpdateBusy === true || actions.modUpgradeBusy === true, true));
+    gameSections.append(installPatchesSection(selectedCopies, actions, installing || actions.installedUpdateBusy === true || actions.modUpgradeBusy === true || actions.modUpdateBusy === true, true));
   }
 
   const versions = element("section", "update-versions");

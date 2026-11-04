@@ -42,7 +42,8 @@
       "../../manifest/presets/": "manifest/presets/",
       "../../manifest/game-builds/": "manifest/game-builds/",
       "../../manifest/releases/": "manifest/releases/",
-      "../../recipes/curated-full-current/": "recipes/curated-full-current/"
+      "../../recipes/curated-full-current/": "recipes/curated-full-current/",
+      "../../hotpatches/bg/": "hotpatches/bg/"
     },
     "windows": {
       "nsis": {

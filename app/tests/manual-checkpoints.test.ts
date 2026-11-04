@@ -303,10 +303,10 @@ describe("manual checkpoint contracts", () => {
     const appUpdate = vi.fn();
     const screen = updatesScreen({ ...updates, application: { ...updates.application, state: "available", availableVersion: "next" },
       managedCopies: [{ installId: "custom", name: "Custom", path: "D:\\Custom", installedRecipeVersion: "old", state: "up-to-date", detail: "" }] }, {
-      customized: true, checkAgain: () => {}, installApplication: appUpdate, buildUpdatedCopy: () => {}, onCheckInstalledUpdate: vi.fn(), onCheckPatches: vi.fn(),
+      customized: true, checkAgain: () => {}, installApplication: appUpdate, buildUpdatedCopy: () => {}, onCheckInstalledUpdate: vi.fn(), onCheckPatches: vi.fn(), onCheckModUpdate: vi.fn(),
     });
     expect(screen.textContent).toContain("Game hotpatches and whole-mod updates are disabled");
-    expect(queryByRole(screen, "button", { name: /Check installed mods|Check available fixes/ })).toBeNull();
+    expect(queryByRole(screen, "button", { name: /Check installed mods|Check available fixes|Check for a BuffBot update/ })).toBeNull();
     getByRole(screen, "button", { name: "Update CEBG app" }).click();
     expect(appUpdate).toHaveBeenCalledWith("next");
   });

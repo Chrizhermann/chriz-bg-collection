@@ -69,6 +69,7 @@ const APPLICATION_DATA_DIRECTORY: &str = "Chriz BG Collection";
 include!("patch_bridge.rs");
 include!("installed_update_bridge.rs");
 include!("mod_upgrade_bridge.rs");
+include!("mod_update_bridge.rs");
 include!("install_names.rs");
 
 /// Engine services used by the native bridge. The test-only seam exercises the same stateful
