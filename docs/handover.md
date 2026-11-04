@@ -33,9 +33,9 @@ feature title and its mod.
   evidence of the attempt that ran (`FailedPart::evidence_attempt`).
 
 Leaving out goes by the same closure as unticking the feature, so one question covers what
-needs it. Whatever WeiDU installed stays, even when the recipe says it needs the failed part:
-the installer never uninstalls. A preset `retry` is refused, because it could repeat without
-end.
+needs it. Whatever WeiDU installed stays, even when the recipe says it needs the failed part,
+and that goes for whole runs that are in the game already: the installer never uninstalls. A
+preset `retry` is refused, because it could repeat without end.
 
 **The mandatory line is the recipe's own:** a feature with `decision = "mandatory"` and only
 mandatory parents is a fixed part (`LeaveOutError::Required`). In `curated-full-current` these
@@ -43,8 +43,9 @@ are DLC Merger, the EE Fixpack core, EET core import, EET finalization and Modpa
 mandatory feature under an optional parent can leave, with that parent. The question for a
 fixed part offers only to try again or to stop, and says why. When later components were
 installed there is nothing to offer, so that copy needs a fresh start, as before, and the
-reason says so in plain words. The same holds when leaving out would change a run that is
-installed already.
+reason says so in plain words. On the recommended setup that leaves 7 of 466 planned components
+fixed (454 without Spell Revisions), and all others can leave at the point where they fail;
+`every_planned_component_can_leave_where_it_fails_or_is_a_fixed_part` holds the recipe to it.
 
 A run without an answer, or with a preset that does not fit, ends with status
 `decision_required` and the question open; `--answer failed-component=leave-out` or `=no`

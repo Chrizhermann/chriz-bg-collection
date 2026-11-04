@@ -3035,6 +3035,75 @@ fn the_question_names_what_leaves_with_the_failed_component() {
     );
 }
 
+/// A run that is in the game stays in the plan, even when it needs the failed component of a
+/// later run: the installer never uninstalls, so that is no reason to give up on the copy.
+#[cfg(windows)]
+#[test]
+fn an_installed_run_that_needs_the_failed_component_stays_installed() {
+    let fixture = executable_fixture();
+    let collection = fixture.recipe.join("collection.toml");
+    let text = fs::read_to_string(&collection)
+        .unwrap()
+        .replace("\r\n", "\n");
+    let bg1_feature = r#"components = [
+  { run_id = "eefixpack-bg1", component = 0 },
+  { run_id = "eefixpack-bg1", component = 2 },
+]
+"#;
+    let bg2_feature = "components = [{ run_id = \"eefixpack-bg2\", component = 0 }]\n";
+    assert!(text.contains(bg1_feature) && text.contains(bg2_feature));
+    fs::write(
+        collection,
+        text.replace("components = [0, 2]\n", "components = [0]\n")
+            .replace(
+                "phase = \"bg2-preparation\"\ncomponents = [0]\n",
+                "phase = \"bg2-preparation\"\ncomponents = [2]\n",
+            )
+            .replace(
+                bg1_feature,
+                "components = [{ run_id = \"eefixpack-bg1\", component = 0 }]\nrequires = [\"eefix-bg2\"]\n",
+            )
+            .replace(
+                bg2_feature,
+                "components = [{ run_id = \"eefixpack-bg2\", component = 2 }]\n",
+            ),
+    )
+    .unwrap();
+
+    let (code, response) = run_installer_with(
+        &fixture,
+        None,
+        &[(
+            "CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT",
+            std::ffi::OsStr::new("2"),
+        )],
+        &install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ),
+    );
+
+    waiting_for(code, &response, "install:eefixpack-bg2");
+    let decision = check_decision(&fixture, response["install_id"].as_str().unwrap());
+    assert_eq!(
+        decision["texts"]["message"],
+        "BG2 fixes (EE Fixpack) could not be installed. Leave it out and continue?"
+    );
+    decide(&fixture, &decision, "leave-out");
+    let resumed = resume_with_failing_component(&fixture, "2");
+
+    assert_eq!(resumed["status"]["status"], "complete", "{resumed:#}");
+    let receipt = read_install_receipt(&fixture);
+    let installed = receipt.installed_plan.as_ref().unwrap();
+    assert_eq!(installed.components_for("eefixpack-bg1"), Some(&[0][..]));
+    assert!(installed.components_for("eefixpack-bg2").is_none());
+    let log = fs::read_to_string(fixture.managed.join("bg1/WeiDU.log")).unwrap();
+    assert!(log.contains("Synthetic component 0"), "{log}");
+}
+
 /// "Try again" runs the component again, and what the player fixed meanwhile can succeed.
 #[cfg(windows)]
 #[test]

@@ -1494,25 +1494,28 @@ impl Progress {
     }
 }
 
-/// `reduced` with every run in `installed` exactly as `previous` has it: those runs are in the
-/// game already, so leaving out a later failed part never changes them.
+/// `reduced` with every run in `installed` exactly as `previous` has it, even one it left out:
+/// those runs are in the game already, so leaving out a later failed part never changes them.
 fn adopt_installed_runs(
     previous: &InstallPlan,
-    mut reduced: InstallPlan,
+    reduced: InstallPlan,
     installed: &BTreeSet<String>,
 ) -> InstallPlan {
-    for run in &mut reduced.runs {
-        if installed.contains(&run.run_id) {
-            if let Some(before) = previous
+    let runs = previous
+        .runs
+        .iter()
+        .filter_map(|before| {
+            if installed.contains(&before.run_id) {
+                return Some(before.clone());
+            }
+            reduced
                 .runs
                 .iter()
-                .find(|before| before.run_id == run.run_id)
-            {
-                *run = before.clone();
-            }
-        }
-    }
-    reduced
+                .find(|run| run.run_id == before.run_id)
+                .cloned()
+        })
+        .collect();
+    InstallPlan { runs }
 }
 
 /// `plan`, the plan after leaving out the failed part of `run`, with what WeiDU installed of
@@ -1585,6 +1588,31 @@ fn keep_installed_part(
         runs.insert(position, merged);
     }
     (InstallPlan { runs }, continues)
+}
+
+/// `reduced`, the plan without the failed part of `run`, keeping all that is in the game: the
+/// runs in `installed` and what WeiDU installed of `run`. Also returns the components that `run`
+/// goes on with, as [`keep_installed_part`] does, and fails when the plan is not part of
+/// `previous` or does not keep what is in the game.
+fn plan_keeping_installed(
+    previous: &InstallPlan,
+    reduced: InstallPlan,
+    installed: &BTreeSet<String>,
+    left_out: &[String],
+    run: &PlannedRun,
+    not_installed: &[u32],
+    goes_on: bool,
+) -> Result<(InstallPlan, Vec<u32>), String> {
+    let (plan, continues) = keep_installed_part(
+        adopt_installed_runs(previous, reduced, installed),
+        previous,
+        run,
+        not_installed,
+        goes_on,
+    );
+    validate_reduced_plan(previous, &plan, left_out).map_err(|error| error.to_string())?;
+    check_failed_run_plan(previous, &plan, installed, run, not_installed, &continues)?;
+    Ok((plan, continues))
 }
 
 /// Fails unless `plan`, the plan after leaving out the failed part of `run`, keeps what is in
@@ -2345,18 +2373,15 @@ where
             .dependencies
             .plan_without_parts(&self.request.plan, &ids, &parts)
             .map_err(StepFailure::into_message)?;
-        let previous = &self.progress.effective_plan;
-        let installed = self.progress.installed_runs(&self.schedule);
-        let (plan, continues) = keep_installed_part(
-            adopt_installed_runs(previous, reduced, &installed),
-            previous,
+        plan_keeping_installed(
+            &self.progress.effective_plan,
+            reduced,
+            &self.progress.installed_runs(&self.schedule),
+            &ids,
             run,
             not_installed,
             goes_on,
-        );
-        validate_reduced_plan(previous, &plan, &ids).map_err(|error| error.to_string())?;
-        check_failed_run_plan(previous, &plan, &installed, run, not_installed, &continues)?;
-        Ok((plan, continues))
+        )
     }
 
     /// Ends this attempt of an install step whose next attempt follows at once, because the
@@ -3845,5 +3870,84 @@ fn friendly_phase(phase: Phase) -> &'static str {
         Phase::Main => "Install the curated collection",
         Phase::EetFinalization => "Finalize EET",
         Phase::PostEetEnd => "Apply reviewed final compatibility fixes",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::manifest::ComponentRef;
+    use crate::recipe_view::{evaluate, plan_without_parts, recipe_run_id, LeaveOutError};
+    use crate::resolve::Selection;
+    use crate::Manifest;
+
+    /// Whichever component of the recommended setup fails, the question has an answer at the
+    /// point where it fails, whether WeiDU went on or stopped there: the component leaves with
+    /// what needs it, or it is one of the fixed parts. Nothing else may come of it, with or
+    /// without Spell Revisions.
+    #[test]
+    fn every_planned_component_can_leave_where_it_fails_or_is_a_fixed_part() {
+        let recipe = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../recipes/curated-full-current");
+        let manifest = Manifest::load(&recipe).unwrap();
+        for spell_revisions in [true, false] {
+            let mut selection = Selection {
+                platform: "windows".to_owned(),
+                choices: manifest.presets["chris-recommended"].selections.clone(),
+            };
+            selection.set_feature("mod:spell-rev", spell_revisions);
+            let evaluation = evaluate(&manifest, &selection).unwrap();
+            let plan = &evaluation.plan;
+            let mut fixed = BTreeSet::new();
+            let mut installed = BTreeSet::new();
+            for run in &plan.runs {
+                for (index, component) in run.components.iter().enumerate() {
+                    let failed = ComponentRef {
+                        run_id: recipe_run_id(&manifest, &run.run_id).unwrap(),
+                        component: *component,
+                    };
+                    let reduced = match plan_without_parts(
+                        &manifest,
+                        &evaluation.normalized_selection,
+                        plan,
+                        &BTreeSet::new(),
+                        &BTreeSet::from([failed.clone()]),
+                    ) {
+                        Ok(reduced) => reduced,
+                        Err(LeaveOutError::Required { title, .. }) => {
+                            fixed.insert(title);
+                            continue;
+                        }
+                        Err(error) => panic!("{failed:?}: {error}"),
+                    };
+                    let last = index + 1 == run.components.len();
+                    for (not_installed, goes_on) in [
+                        (std::slice::from_ref(component), last),
+                        (&run.components[index..], true),
+                    ] {
+                        plan_keeping_installed(
+                            plan,
+                            reduced.clone(),
+                            &installed,
+                            &[],
+                            run,
+                            not_installed,
+                            goes_on,
+                        )
+                        .unwrap_or_else(|error| panic!("{failed:?}: {error}"));
+                    }
+                }
+                installed.insert(run.run_id.clone());
+            }
+            assert_eq!(
+                fixed.iter().map(String::as_str).collect::<Vec<_>>(),
+                [
+                    "Core fixes and Game Text Update",
+                    "EET core import",
+                    "Merge Siege of Dragonspear DLC",
+                    "Standard EET finalization"
+                ]
+            );
+        }
     }
 }
