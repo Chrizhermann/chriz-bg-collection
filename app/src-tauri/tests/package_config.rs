@@ -265,6 +265,88 @@ fn each_app_updates_itself_from_its_own_signed_feed() {
     assert_ne!(updater_public_key(&bg), updater_public_key(&iwd));
 }
 
+/// Tauri's installer never removes files an older version shipped when it updates in place, so
+/// the preinstall hook empties each folder an app bundles before the new files are written. Its
+/// list for each app must name exactly the folders of that app's `bundle.resources`, and the
+/// hooks never use `RMDir /r`, which follows junctions out of a folder.
+/// `tools/check-nsis-update-cleanup.ps1` runs a real update install in CI.
+#[test]
+fn the_installer_empties_exactly_the_folders_each_app_bundles() {
+    use chriz_bg_app_lib::flavor::IWD;
+
+    let crate_root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let bg = configuration(None);
+    let iwd = configuration(Some("tauri.iwd.conf.json"));
+    for config in [&bg, &iwd] {
+        assert_eq!(
+            config["bundle"]["windows"]["nsis"]["installerHooks"],
+            "windows/hooks.nsh"
+        );
+    }
+    let hooks = fs::read_to_string(crate_root.join("windows/hooks.nsh"))
+        .expect("read NSIS installer hooks");
+    let code = hooks
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with(';'));
+    for line in code.clone() {
+        let mut words = line.split_whitespace();
+        let command = words.next().unwrap_or_default();
+        assert!(
+            !(command.eq_ignore_ascii_case("RMDir")
+                && words
+                    .next()
+                    .is_some_and(|flag| flag.eq_ignore_ascii_case("/r"))),
+            "the hooks must not follow junctions: {line}"
+        );
+    }
+
+    let mut lists = [Vec::new(), Vec::new()];
+    let mut current = None;
+    let mut inside = false;
+    for line in code {
+        match line {
+            "!macro NSIS_HOOK_PREINSTALL" => inside = true,
+            "!macroend" => inside = false,
+            _ if !inside => {}
+            "!else" => current = Some(0),
+            "!endif" => current = None,
+            _ if line.starts_with("!if ") => {
+                assert_eq!(
+                    line,
+                    format!("!if \"${{BUNDLEID}}\" == \"{}\"", IWD.identifier)
+                );
+                current = Some(1);
+            }
+            _ => {
+                if let Some(folder) = line.strip_prefix("!insertmacro CebgClearBundledFolder ") {
+                    let index = current.expect("each folder belongs to one app's list");
+                    lists[index].push(folder.trim_matches('"').replace('\\', "/"));
+                }
+            }
+        }
+    }
+    let bundled = |config: &Value| {
+        let mut folders = config["bundle"]["resources"]
+            .as_object()
+            .expect("bundle resources")
+            .values()
+            .filter_map(Value::as_str)
+            .filter_map(|target| target.strip_suffix('/'))
+            .map(str::to_owned)
+            .collect::<Vec<_>>();
+        folders.sort();
+        folders
+    };
+    for list in &mut lists {
+        list.sort();
+    }
+    let [bg_list, iwd_list] = lists;
+    assert_eq!(bg_list, bundled(&bg));
+    assert_eq!(iwd_list, bundled(&iwd));
+    assert!(!bg_list.is_empty() && !iwd_list.is_empty());
+}
+
 #[test]
 #[ignore = "requires CEBG_SIGNED_SETUP from a freshly built local release"]
 fn built_update_signature_matches_the_bundled_public_key() {
