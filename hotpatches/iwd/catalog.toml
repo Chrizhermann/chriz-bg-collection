@@ -6,8 +6,9 @@ schema = 1
 game = "iwdee"
 
 # What the game, its loader, installed mods and the app's own add-ons write into the game folder
-# after installation. These never block a hotpatch, and a hotpatch neither writes nor restores
-# them. Lowercase names; `folder/**` is a folder and everything in it, `*` matches within a name.
+# after installation. These never count as the player's own changes or block Undo, and a hotpatch
+# neither writes nor restores them. Mods and files players add themselves never block a hotpatch
+# either. Lowercase names; `folder/**` is a folder and everything in it, `*` matches within a name.
 runtime_files = [
     # InfinityLoader: its settings (it writes cached addresses on every start, the app writes
     # the game log switch), its logs and crash dumps.

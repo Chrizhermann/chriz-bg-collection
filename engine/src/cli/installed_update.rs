@@ -19,7 +19,7 @@ pub fn inspect_installed_update(
     record: &ManagedInstallRecord,
     target_recipe: &Path,
 ) -> Result<InstalledUpdatePlan, CliError> {
-    let baseline = verify_installed_baseline(record)?;
+    let baseline = verify_installed_baseline(record, PlayerMods::Refused)?;
     let target = load_recipe(target_recipe)?;
     let target_version = recipe_release_version(target_recipe)?
         .ok_or_else(|| problem("The target collection has no recorded release version."))?;
@@ -68,8 +68,22 @@ pub(crate) struct VerifiedInstalledBaseline {
     pub upgraded: bool,
 }
 
+/// How [`verify_installed_baseline`] treats mod-list rows that neither the installer nor its
+/// recorded updates wrote.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum PlayerMods {
+    /// The mod list must be exactly what the installer and its recorded updates left: game and
+    /// whole-mod updates reinstall mods in place and cannot follow anything else.
+    Refused,
+    /// Rows the player added (voice packs, other mods) may stand anywhere, while every row of the
+    /// installer and its recorded updates is still there in order. Hotpatches install after
+    /// everything (Christopher, 2026-11-04).
+    Allowed,
+}
+
 pub(crate) fn verify_installed_baseline(
     record: &ManagedInstallRecord,
+    player_mods: PlayerMods,
 ) -> Result<VerifiedInstalledBaseline, CliError> {
     let root = canonical_direct_directory(&record.managed_root, "managed installation")?;
     if metadata_is_reparse(&fs::symlink_metadata(&record.managed_root).map_err(problem)?) {
@@ -158,8 +172,15 @@ pub(crate) fn verify_installed_baseline(
         }
     }
     let suffix = crate::patches::verified_log_suffix(&root).map_err(problem)?;
-    // Each hotpatch checked the whole mod list it left; the latest one's must be the current one.
+    // The rows applied hotpatches added. The exact check also needs the mod list byte for byte as
+    // the latest hotpatch left it.
     let hotpatches = crate::hotpatch::verified_log_suffix(&root).map_err(problem)?;
+    let hotpatched_log = match player_mods {
+        PlayerMods::Refused if !hotpatches.is_empty() => {
+            crate::hotpatch::recorded_log_sha256(&root).map_err(problem)?
+        }
+        _ => None,
+    };
     let upgrade = crate::mod_upgrades::active_upgrade(&root).map_err(problem)?;
     if let Some(u) = &upgrade {
         let source = base.plan.runs.iter().find(|r| r.run_id == u.run_id);
@@ -196,21 +217,45 @@ pub(crate) fn verify_installed_baseline(
             expected.extend(suffix.clone());
             expected.extend(hotpatches.clone());
         }
-        if active.len() != expected.len()
-            || active.iter().zip(&expected).any(|(actual, expected)| {
-                normalize_tp2_key(&actual.tp2) != normalize_tp2_key(&expected.tp2)
-                    || actual.language != expected.language
-                    || actual.component != expected.component
-            })
-            || ((final_log.target == GameRoot::Bg1 || (suffix.is_empty() && hotpatches.is_empty()))
-                && !sha256_bytes(&bytes).eq_ignore_ascii_case(
-                    upgrade
-                        .as_ref()
-                        .filter(|_| final_log.target == GameRoot::Bg2)
-                        .map_or(&final_log.sha256, |u| &u.log_sha256),
-                ))
-        {
-            return Err(problem("The installed mod list changed outside CEBG's recorded work. Automatic game updates are unavailable for this copy; app updates still work."));
+        let same = |actual: &crate::weidu::log::LogEntry, expected: &LogComponentReceipt| {
+            normalize_tp2_key(&actual.tp2) == normalize_tp2_key(&expected.tp2)
+                && actual.language == expected.language
+                && actual.component == expected.component
+        };
+        match player_mods {
+            PlayerMods::Refused => {
+                if active.len() != expected.len()
+                    || active
+                        .iter()
+                        .zip(&expected)
+                        .any(|(actual, expected)| !same(actual, expected))
+                    || ((final_log.target == GameRoot::Bg1
+                        || (suffix.is_empty() && hotpatches.is_empty()))
+                        && !sha256_bytes(&bytes).eq_ignore_ascii_case(
+                            upgrade
+                                .as_ref()
+                                .filter(|_| final_log.target == GameRoot::Bg2)
+                                .map_or(&final_log.sha256, |u| &u.log_sha256),
+                        ))
+                    || (final_log.target == GameRoot::Bg2
+                        && !hotpatches.is_empty()
+                        && hotpatched_log
+                            .as_deref()
+                            .is_none_or(|sha| !sha256_bytes(&bytes).eq_ignore_ascii_case(sha)))
+                {
+                    return Err(problem("The installed mod list changed outside CEBG's recorded work. Automatic game updates are unavailable for this copy; app updates still work."));
+                }
+            }
+            PlayerMods::Allowed => {
+                // Each recorded row after the one before it; the player's rows may stand between.
+                let mut rows = active.iter();
+                if !expected
+                    .iter()
+                    .all(|expected| rows.any(|actual| same(actual, expected)))
+                {
+                    return Err(problem("A mod the installer put in was removed or moved since. Hotpatches need the installer's own mods in place."));
+                }
+            }
         }
     }
     if seen != frozen.targets().into_iter().collect::<BTreeSet<_>>() {

@@ -126,7 +126,8 @@ fn validate_context(ctx: &Context<'_>) -> Result<(), String> {
 /// Also used before downloads: an independent supported subset must not inherit
 /// newly selected features merely because unrelated parts of the recipe changed.
 fn selected_version(ctx: &Context<'_>) -> Result<Option<String>, String> {
-    let b = crate::cli::verify_installed_baseline(ctx.record).map_err(err)?;
+    let b = crate::cli::verify_installed_baseline(ctx.record, crate::cli::PlayerMods::Refused)
+        .map_err(err)?;
     let Some(run) = b
         .receipt
         .plan

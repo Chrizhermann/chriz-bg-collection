@@ -33,11 +33,13 @@ A hotpatch is offered only when **all** of these hold. Every reason found is sho
 2. No manual mods were added at an installation pause.
 3. No earlier game fix or whole-mod update is recorded (those are BG features; they cannot be
    combined).
-4. The mod list (`WeiDU.log`) is exactly what the installer and earlier hotpatches left.
-5. **No file in the game folder changed by hand.** The installer now records every game file
-   (length and SHA-256) when it finishes; a hotpatch compares the folder with that record (or
-   with what the last hotpatch left). Files the game, its loader, BuffBot and Radar write while
-   playing are listed in the catalog and ignored.
+4. ~~The mod list (`WeiDU.log`) is exactly what the installer and earlier hotpatches left.~~
+5. ~~**No file in the game folder changed by hand.**~~ Dropped on 2026-11-04 (see below): what
+   players add after installing (voice packs, portraits, other mods, with or without WeiDU)
+   never blocks a hotpatch. The installer still records every game file (length and SHA-256)
+   when it finishes; the check compares the folder with that record (or with what the last
+   hotpatch left) only to name the player's own changes. Files the game, its loader, BuffBot and
+   Radar write while playing are listed in the catalog and not named.
 6. The choices are close to the recommended setup:
    - Sword Coast Stratagems must be installed.
    - At most **2** other mods may be added, left out or set differently.
@@ -64,7 +66,8 @@ lengths, digests), copies of the root files WeiDU writes, and the package. Only 
 game file change. After WeiDU, every file that was replaced also gets an exact copy in the
 record (taken from WeiDU's own backup of it). So:
 
-- **Undo** of the latest hotpatch puts the game folder back byte for byte and checks it.
+- **Undo** of the latest hotpatch puts the game folder back byte for byte, as it was right
+  before the hotpatch (the player's own additions included), and checks it.
   It is offered only while nothing but the game's own runtime files changed since.
 - **Interrupted** (crash, power loss): the game cannot be started from the app until
   **Restore game files** has run. Restoring needs no extra backup.
@@ -178,3 +181,32 @@ that adds a string to `dialog.tlk` and a file to `override/`.
 1. Package format: WeiDU components at the end, not exact override files.
 2. Threshold: at most 2 other mods; free: Tweaks Anthology, interface, EEex; SCS required.
 3. Full-folder backup on by default.
+
+### Change (Christopher, 2026-11-04)
+
+The first real hotpatch (Chriz IWD Encounters 0.2.0, twelve boss fights) refused Christopher's
+own stream game: he had installed three voice packs (chriz_voices, Rondak, The Hound) after the
+installer finished, about 7,170 new files and their `WeiDU.log` rows. Told that the rule only
+admits installations still as the installer left them, he answered: "Das ist viel zu streng...
+Das sind voice packs... Das geht so nicht für unsere community."
+
+Rules 4 and 5 are gone. Mods and files players add after installing never block a hotpatch:
+
+- The check names them in a note ("Your own changes since installing do not stop hotpatches;
+  the hotpatch is installed after them: …") instead of refusing.
+- The installation's verified mod list (the same check game updates use, which still needs the
+  exact list) accepts the player's rows anywhere, while every row of the installer, its fixes
+  and its hotpatches is still there in order. A removed or moved installer mod is still refused:
+  the setup comparison and the hotpatch's own needs are read from the installer's record, which
+  would then no longer describe the game.
+- Applying records the folder as it is then, additions included; the hotpatch's rows follow the
+  player's in `WeiDU.log`, and its changes must still stay inside its area.
+- Undo puts back exactly that folder. Mods added after a hotpatch still make its Undo refuse
+  (it would take back their changes); the whole-folder backup covers that case.
+- The launcher's mod check lists such rows as extra ("Present but not recorded"), also after a
+  hotpatch, instead of reporting that the mod list could not be checked.
+
+Unchanged: the collection as published, choices close to the recommended setup (the threshold
+above counts only the installer's own choices, never the player's additions), no earlier BG game
+fix or whole-mod update, the hotpatch's own needs, and mods added during installation pauses
+(still "Customized — manual mods added", which keeps hotpatches off).
