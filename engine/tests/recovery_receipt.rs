@@ -44,6 +44,7 @@ fn artifact(identity: &FrozenIdentity) -> ArtifactReceipt {
         length: identity.length,
         sha256: identity.sha256.clone(),
         cache_outcome: ArtifactCacheOutcome::Hit,
+        served_difference: None,
     }
 }
 
@@ -177,6 +178,8 @@ fn fixture() -> Fixture {
         weidu_tools: Vec::new(),
         runs: Vec::new(),
         final_state: None,
+        left_out: Vec::new(),
+        installed_plan: None,
     };
     let base_bytes = write_base(&root, &base);
 

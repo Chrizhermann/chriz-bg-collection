@@ -3,7 +3,11 @@
 //!
 //! A hotpatch is offered only to an installation the strict rule in [`gate`] accepts: the
 //! collection as published, its game files exactly as the installer and earlier hotpatches left
-//! them, and choices close to the recommended setup. Base receipts and saves stay immutable.
+//! them, and choices close to the recommended setup. A download that differed from its pin, and
+//! that the installer therefore took as its official link served it, does not count against
+//! the rule; a mod the installer left out because its download could not be used counts like
+//! one the player left out. A hotpatch runs with the WeiDU the installation was made with.
+//! Base receipts and saves stay immutable.
 //! Every file a hotpatch changes keeps an earlier copy in its transaction record, so Undo puts
 //! the game folder back byte for byte; transactions follow [`transaction`].
 pub mod catalog;
@@ -24,7 +28,8 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 pub use transaction::{
-    apply, apply_with_progress, launch_guard, restore, restore_with_progress, verified_log_suffix,
+    apply, apply_with_progress, installed_tool, launch_guard, restore, restore_with_progress,
+    verified_log_suffix, InstalledTool,
 };
 
 /// Where transaction records live, below the managed root.

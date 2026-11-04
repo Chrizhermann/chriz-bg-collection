@@ -230,8 +230,15 @@ pub(super) fn assess_with(
                 &baseline.manifest,
                 &baseline.receipt.normalized_selection.to_selection(),
             ) {
-                Ok(installed) => {
-                    match compare_setup(&baseline.manifest, &installed.plan, &catalog.gate) {
+                Ok(evaluated) => {
+                    // A mod the installer left out because its download could not be used is
+                    // missing like one the player left out, and counts the same.
+                    let installed = baseline
+                        .receipt
+                        .installed_plan
+                        .as_ref()
+                        .unwrap_or(&evaluated.plan);
+                    match compare_setup(&baseline.manifest, installed, &catalog.gate) {
                         Ok(comparison) => {
                             refusals.extend(comparison.refusals);
                             notes.extend(comparison.notes);
@@ -284,7 +291,7 @@ pub(super) fn assess_with(
                 }
             }
             for requirement in &next.requires_components {
-                let present = baseline.receipt.plan.runs.iter().any(|run| {
+                let present = baseline.receipt.effective_plan().runs.iter().any(|run| {
                     run.mod_id == requirement.mod_id
                         && run
                             .components

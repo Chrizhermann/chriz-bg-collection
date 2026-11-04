@@ -541,6 +541,19 @@ pub async fn list_managed_installations(
 }
 
 #[tauri::command]
+pub async fn installation_summary(
+    state: State<'_, BridgeState>,
+    install_id: String,
+) -> Result<Vec<String>, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .clone();
+    background(move || bridge.installation_summary(&install_id)).await
+}
+
+#[tauri::command]
 pub async fn preview_installation_removal(
     state: State<'_, BridgeState>,
     install_id: String,

@@ -81,6 +81,8 @@ export interface Backend {
   retryBuild(): Promise<BuildSnapshot>;
   exportDiagnostics(installId: string): Promise<{ readonly path: string } | null>;
   listManagedInstallations(): Promise<ManagedInstallation[]>;
+  /** End-summary lines of a completed installation: mods left out and changed downloads. */
+  installationSummary?(installId: string): Promise<readonly string[]>;
   renameInstallation?(installId: string, name: string): Promise<{ readonly name: string }>;
   previewInstallationRemoval(installId: string): Promise<InstallationRemovalPreview>;
   removeInstallation(installId: string, confirmationToken: string): Promise<void>;
@@ -657,6 +659,10 @@ export class NativeBackend implements Backend {
         components: consistency.components,
       },
     }));
+  }
+
+  installationSummary(installId: string): Promise<readonly string[]> {
+    return this.#command("installation_summary", { installId });
   }
 
   launchInstall(installId: string, startRadar: boolean): Promise<LaunchInstallResult> {

@@ -2,6 +2,11 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 1 — download drift fixes (PR 70)
+
+Campaigns started with a build of PR 70 from before 8a0380b are unsupported: those builds
+were never merged or released, so no player has one.
+
 ## October 14 — app alpha.21 and its website published (installer fixes)
 
 **App alpha.21 is public** as a prerelease and on the alpha updater channel; the

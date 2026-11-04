@@ -657,6 +657,91 @@ fn receipt_summary(receipt: &serde_json::Value) -> String {
     if let Some(timestamp) = receipt["completed_at_millis"].as_u64() {
         let _ = writeln!(summary, "Receipt time (Unix milliseconds): {timestamp}");
     }
+    let names = |value: &serde_json::Value| {
+        value
+            .as_array()
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(serde_json::Value::as_str)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            })
+            .unwrap_or_default()
+    };
+    if let Some(left_out) = receipt["left_out"]
+        .as_array()
+        .filter(|items| !items.is_empty())
+    {
+        summary.push_str("\nMods left out because their downloads could not be used\n");
+        for item in left_out {
+            let _ = writeln!(
+                summary,
+                "- {}: {}\n  Runs not installed: {}",
+                text(&item["artifact_id"]),
+                text(&item["reason"]),
+                names(&item["runs"])
+            );
+            let changed = names(&item["changed_runs"]);
+            if !changed.is_empty() {
+                let _ = writeln!(summary, "  Runs installed with fewer components: {changed}");
+            }
+        }
+    }
+    let describe = |identity: &serde_json::Value| {
+        format!(
+            "{} ({} bytes, SHA-256 {})",
+            identity["filename"].as_str().unwrap_or("unnamed file"),
+            identity["length"]
+                .as_u64()
+                .map_or_else(|| "unknown".to_owned(), |length| length.to_string()),
+            text(&identity["sha256"])
+        )
+    };
+    let changed_downloads = receipt["artifacts"]
+        .as_array()
+        .map(|artifacts| {
+            artifacts
+                .iter()
+                .filter(|artifact| artifact["served_difference"].is_object())
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    if !changed_downloads.is_empty() {
+        summary.push_str(
+            "\nDownloads that differ from their reviewed versions (installed as served)\n",
+        );
+        for artifact in changed_downloads {
+            let difference = &artifact["served_difference"];
+            let _ = writeln!(
+                summary,
+                "- {}: reviewed {}; served {}; final URL {}",
+                text(&artifact["id"]),
+                describe(&difference["reviewed"]),
+                describe(&difference["served"]),
+                text(&artifact["final_url"])
+            );
+            let hosts = names(&difference["unreviewed_hosts"]);
+            if !hosts.is_empty() {
+                let _ = writeln!(summary, "  Redirected through unreviewed hosts: {hosts}");
+            }
+        }
+    }
+    if let Some(tools) = receipt["weidu_tools"].as_array() {
+        for tool in tools.iter().filter(|tool| tool["reviewed"].is_object()) {
+            let _ = writeln!(
+                summary,
+                "- Tool {}: reviewed WeiDU {} ({} bytes, SHA-256 {}); used WeiDU {} ({} bytes, SHA-256 {})",
+                text(&tool["id"]),
+                text(&tool["reviewed"]["version"]),
+                tool["reviewed"]["length"].as_u64().unwrap_or_default(),
+                text(&tool["reviewed"]["sha256"]),
+                text(&tool["version"]),
+                tool["length"].as_u64().unwrap_or_default(),
+                text(&tool["sha256"])
+            );
+        }
+    }
     summary.push_str("\nPlanned mod runs in installation order\n");
     if let Some(runs) = receipt["runs"].as_array() {
         for run in runs {
@@ -692,7 +777,7 @@ fn receipt_summary(receipt: &serde_json::Value) -> String {
 This is a snapshot of the selected terminal receipt, not a live progress screen. Later resumes may have newer progress in ledger/.\n\
 An empty attempts list does not prove that the process never started: it can also mean a failure or interruption before a finalized run record was written. Check the stopped step and raw evidence.\n\
 A zero exit code or copied mod folder alone does not prove installation or in-game activation.\n\
-receipt/attempt-receipt.json contains the full outcome, versions, selected options, plan, downloads/cache identities and per-run records.\n\
+receipt/attempt-receipt.json contains the full outcome, versions, selected options, plan, downloads/cache identities and per-run records. Its left_out, installed_plan and served_difference fields, when present, record mods left out and downloads installed as served instead of the reviewed file.\n\
 ledger/ retains durable step transitions. logs/steps/ contains invocation.json, process-result.json, captured output and before/after WeiDU logs where available. Missing files may identify the point where evidence stopped; they do not establish the operating-system cause.\n\
 receipt/install-receipt.json is included when present. An older failure receipt may coexist with a later successful installation; inspect the attempt IDs and timestamps.\n\
 patches/cebg-v1/ contains optional existing-install patch records and captured logs. The base receipt is unchanged by a patch; check these records separately. Backup contents, mod payloads, executables and saves are not included.\n\
