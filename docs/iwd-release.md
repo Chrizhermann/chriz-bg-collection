@@ -34,6 +34,14 @@ version if a release needs another look. The app offers only versions newer than
 pointing the channel back stops a rollout but does not downgrade anyone who already
 updated, which takes a newer fixed version.
 
+The updater runs the new setup in update mode, where Tauri's installer writes the new files
+over the old ones and removes nothing. The preinstall hook in `app/src-tauri/windows/hooks.nsh`
+therefore empties the folders the app bundles (`recipes/iwd-current`, `hotpatches/iwd`) first:
+an older recipe file left next to its successor stops the app ("artifacts … disagree about one
+byte-source URL", seen when 0.1.6 was installed silently over 0.1.3). CI installs each setup,
+adds such leftovers and checks that an update install removes them
+(`tools/check-nsis-update-cleanup.ps1`).
+
 ## Signing key
 
 Chriz Easy IWD has its own minisign key; CEBG's key is not used. A setup signed for one app is
@@ -167,8 +175,9 @@ The example version is `0.1.7`; use the real one throughout.
 
 ## The first version with the updater
 
-Players on 0.1.1 to 0.1.6 have no updater, so they install this version by hand once. Its
-release notes say so, for example:
+Players on 0.1.1 to 0.1.6 have no updater, so they install this version by hand once; its setup
+also removes recipe files that earlier upgrades left behind. The release notes tell them, for
+example:
 
 > **Updates itself from now on.** This is the last version you download by hand: install it
 > over your current one; your installations and saves stay unchanged. From then on, open
