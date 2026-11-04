@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, getByRole, queryByRole, queryByText, waitFor } from "@testing-library/dom";
+import { fireEvent, getByRole, queryByRole, waitFor } from "@testing-library/dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ManagedInstallation, ManualCheckpointStatus, UpdateSummary } from "../src/contracts";
@@ -95,7 +95,7 @@ function installation(overrides: Partial<ManagedInstallation> = {}): ManagedInst
   };
 }
 
-/** An update summary that offers every extra; the IWD build shows only the overlay's. */
+/** An update summary that offers every extra; the IWD build shows its own app update and the overlay's. */
 function updatesWithBgExtras(): UpdateSummary {
   return {
     checkedAt: null,
@@ -132,7 +132,7 @@ describe("Chriz Easy IWD build flavor", () => {
     expect(flavor.productName).toBe("Chriz Easy IWD");
     expect(flavor.sources).toEqual([{ slot: "bg2", role: "iwdee", label: "Icewind Dale: Enhanced Edition", name: "Icewind Dale: Enhanced Edition", reviewLabel: "Game source" }]);
     expect(sourceSlots).toEqual(["bg2"]);
-    expect(flavor.features).toEqual({ radar: true, installPatches: false, modUpgrades: false, hotpatches: true, manualPauses: true, appUpdates: false, buffBotTip: true, radarTip: true });
+    expect(flavor.features).toEqual({ radar: true, installPatches: false, modUpgrades: false, hotpatches: true, manualPauses: true, appUpdates: true, buffBotTip: true, radarTip: true });
   });
 
   it("shows exactly one source card and installs with an empty bg1 candidate", async () => {
@@ -188,7 +188,7 @@ describe("Chriz Easy IWD build flavor", () => {
     expect(saved.draft?.sourcePaths).toEqual({ bg1: null, bg2: "C:\\Fixture\\IWDEE" });
   });
 
-  it("offers Radar and the BuffBot tip, but no game fixes, mod upgrades or app updates", async () => {
+  it("offers Radar, the BuffBot tip and app updates, but no game fixes or mod upgrades", async () => {
     const { mountApp, FixtureBackend } = await iwd();
     const backend = new FixtureBackend({ managedInstallations: [installation()] });
     vi.spyOn(backend, "getUpdates").mockResolvedValue(updatesWithBgExtras());
@@ -212,13 +212,46 @@ describe("Chriz Easy IWD build flavor", () => {
     await app.navigate("updates");
     expect(root.querySelector(".install-patches:not(.installed-update-plan)")).toBeNull();
     expect(queryByRole(root, "button", { name: "Check this installation" })).toBeNull();
-    expect(queryByRole(root, "button", { name: /app$/ })).toBeNull();
+    expect(getByRole(root, "button", { name: "Update Chriz Easy IWD app" })).toBeTruthy();
     fireEvent.click(getByRole(root, "button", { name: "Check installed mods" }));
     await waitFor(() => expect((getByRole(root, "button", { name: "Check installed mods" }) as HTMLButtonElement).disabled).toBe(false));
     expect(upgrade).not.toHaveBeenCalled();
     expect(patches).not.toHaveBeenCalled();
     fireEvent.click(getByRole(root, "button", { name: "Update overlay" }));
     await waitFor(() => expect(radar).toHaveBeenCalledWith("iwd-install"));
+  });
+
+  it("offers its own app update under Updates and installs it", async () => {
+    const { mountApp, FixtureBackend } = await iwd();
+    const backend = new FixtureBackend({ managedInstallations: [installation()] });
+    vi.spyOn(backend, "getUpdates").mockResolvedValue({
+      ...updatesWithBgExtras(),
+      checkedAt: "2026-11-04T12:00:00Z",
+      networkState: "online",
+      application: {
+        state: "available", currentVersion: "0.1.7", availableVersion: "0.1.8",
+        detail: "A newer Chriz Easy IWD version is available.", releaseNotes: "Chriz Easy IWD 0.1.8: new fights.",
+      },
+      radar: undefined,
+    });
+    const install = vi.spyOn(backend, "installAppUpdate");
+    const root = rootElement();
+    const app = await mountApp(root, backend);
+    await app.navigate("updates");
+    expect(root.querySelector(".update-tooltip")?.textContent).toBe("New Chriz Easy IWD app update available.");
+    expect(root.querySelector(".update-badge")).not.toBeNull();
+    const row = [...root.querySelectorAll(".update-row")].find(item => item.querySelector("h2")?.textContent === "Chriz Easy IWD app");
+    expect(row?.querySelector(".update-installed")?.textContent).toBe("Chriz Easy IWD appInstalled: 0.1.7Updates the installer and launcher, not your game files.");
+    expect(row?.querySelector(".update-state")?.textContent).toBe("Update available");
+    fireEvent.click(getByRole(root, "button", { name: "Chriz Easy IWD app 0.1.8 changelog" }));
+    expect(row?.querySelector<HTMLElement>(".update-changelog")?.hidden).toBe(false);
+    expect(row?.querySelector(".update-changelog")?.textContent).toBe("What's newChriz Easy IWD 0.1.8: new fights.");
+    fireEvent.click(getByRole(root, "button", { name: "Update Chriz Easy IWD app" }));
+    await waitFor(() => expect(install).toHaveBeenCalledTimes(1));
+    expect(install.mock.calls[0][0]).toBe("0.1.8");
+    await waitFor(() => expect(root.textContent).toContain("Restart Chriz Easy IWD to finish"));
+    expect(root.textContent).toContain("Close and reopen Chriz Easy IWD to use the downloaded version.");
+    expectNoBgWords(root, "app update");
   });
 
   it("offers a hotpatch under Updates, applies it and undoes it", async () => {
@@ -294,14 +327,14 @@ describe("Chriz Easy IWD build flavor", () => {
     expectNoBgWords(panel, "manual pause panel");
   });
 
-  it("explains a customized installation without promising app updates", async () => {
+  it("explains a customized installation and keeps app updates", async () => {
     const m = await iwd();
     const backend = new m.FixtureBackend({ managedInstallations: [installation({ customized: true })] });
     const root = rootElement();
     const app = await m.mountApp(root, backend);
-    expect(root.querySelector(".launcher-card .manual-mod-warning")?.textContent).toBe("Customized — manual mods added. Hotpatches and mod update checks are off for this installation.");
+    expect(root.querySelector(".launcher-card .manual-mod-warning")?.textContent).toBe("Customized — manual mods added. Hotpatches and mod update checks are off for this installation; Chriz Easy IWD app updates still work.");
     await app.navigate("updates");
-    expect(root.querySelector(".update-game-sections .manual-mod-warning")?.textContent).toBe("Customized — manual mods added. Hotpatches and mod update checks are off for this installation. New installations remain available.");
+    expect(root.querySelector(".update-game-sections .manual-mod-warning")?.textContent).toBe("Customized — manual mods added. Hotpatches and mod update checks are off for this installation. Chriz Easy IWD app updates and new installations remain available.");
     expect(queryByRole(root, "button", { name: "Check installed mods" })).toBeNull();
   });
 
@@ -383,14 +416,13 @@ describe("Chriz Easy IWD build flavor", () => {
     expect(review.querySelector(".ledger li strong")?.textContent).toBe("Copy your game");
   });
 
-  it("promises no app updates on the Updates screen before the first installation", async () => {
+  it("keeps app updates on the Updates screen before the first installation", async () => {
     const m = await iwd();
     const root = rootElement();
     const app = await m.mountApp(root, new m.FixtureBackend());
     await app.navigate("updates");
     const status = root.querySelector(".update-selection-status");
-    expect(status?.textContent).toBe("No game installation yet.");
-    expect(queryByText(root, /App updates are still available/)).toBeNull();
+    expect(status?.textContent).toBe("No game installation yet. App updates are still available below.");
   });
 });
 
