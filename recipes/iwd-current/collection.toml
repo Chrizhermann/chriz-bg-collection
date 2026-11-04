@@ -292,11 +292,12 @@ args = []
 # Christopher's own mod, added 2026-10-28: directly after SCS, because it reads what SCS built
 # (its caster scripts and its record of melee scripts). It repairs SCS caster AI that misses
 # some IWD:EE casters (#100) and lets enemy priests prepare when they first see the party (#200).
+# Since 0.2.0 (2026-11-04) also twelve boss fights, #300 to #410, on by default (Christopher).
 [[runs]]
 run_id = "chriz-iwd-encounters-main"
 mod_id = "chriz-iwd-encounters"
 phase = "main"
-components = [100, 200]
+components = [100, 200, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410]
 args = []
 
 # HGO readme: after Tweaks Anthology and any interface mods.
@@ -849,7 +850,7 @@ requires_any = ["feature:stratagems:component-5900"]
 [[features]]
 id = "mod:chriz-iwd-encounters"
 title = "Chriz IWD Encounters"
-description = "Enemy casters fight as Sword Coast Stratagems intends, and enemy priests are prepared when a fight starts."
+description = "Enemy casters fight as Sword Coast Stratagems intends, enemy priests are prepared when a fight starts, and twelve boss fights get new tactics."
 category = "combat"
 source_label = "Chriz IWD Encounters"
 decision = "default"
@@ -878,6 +879,140 @@ readiness = "ready"
 parent = "mod:chriz-iwd-encounters"
 components = [{ run_id = "chriz-iwd-encounters-main", component = 200 }]
 requires = ["feature:stratagems:component-6040"]
+
+# The twelve boss fights of 0.2.0: on by default (Christopher, 2026-11-04). Each works with and
+# without Sword Coast Stratagems, so none requires it.
+[[features]]
+id = "feature:chriz-iwd-encounters:component-300"
+title = "Belhifet's final fight: no blanket spell immunity, more hit points by difficulty, his cornugons as a second wave"
+description = "Belhifet is immune to spell levels 1-3 only, +2 weapons hit him, he is fire immune as in the base game, has more hit points from Core Rules up, appears under Improved Invisibility and is hasted for 30 seconds out of every 42. His cornugons come as a second wave (a third on Insane), and Poquelin's transformation no longer dispels the party."
+category = "combat"
+source_label = "Chriz IWD Encounters"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-iwd-encounters"
+components = [{ run_id = "chriz-iwd-encounters-main", component = 300 }]
+
+[[features]]
+id = "feature:chriz-iwd-encounters:component-310"
+title = "Yxunomei's temple: her mages come when the fight starts, her champions join her, yuan-ti elites on Hard and Insane"
+description = "Yxunomei's three mages come when the fight with her starts and walk to the party (as in the base game only on Hard and Insane), her two champions leave the torture chamber for her side if they still live, two yuan-ti elites come into her room on Hard (three on Insane), and the pentagram's traps go off only for the party."
+category = "combat"
+source_label = "Chriz IWD Encounters"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-iwd-encounters"
+components = [{ run_id = "chriz-iwd-encounters-main", component = 310 }]
+
+[[features]]
+id = "feature:chriz-iwd-encounters:component-320"
+title = "The orog raid on Kuldahar: the raid moves as one and hunts the party, its leaders charge after a war horn"
+description = "Once one group wakes, all the orogs wake and come for the party; the three leaders charge after a war horn, a bit stronger (70 hit points, two attacks, THAC0 10). The orogs fight back against the town's defenders, and the town alarm no longer brings out a second, living Arundel."
+category = "combat"
+source_label = "Chriz IWD Encounters"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-iwd-encounters"
+components = [{ run_id = "chriz-iwd-encounters-main", component = 320 }]
+
+[[features]]
+id = "feature:chriz-iwd-encounters:component-330"
+title = "Joril's throne room: more hit points for Joril, Berserker rage and Hold Person for his court, Gorg's pack defends him"
+description = "Joril has 185 hit points; he, his bodyguards and his guards use their Berserker rage, and the bodyguards cast Hold Person. Gorg's wolves come to him when he turns hostile, and the peaceful handover of Joril's badge no longer pays its experience twice."
+category = "combat"
+source_label = "Chriz IWD Encounters"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-iwd-encounters"
+components = [{ run_id = "chriz-iwd-encounters-main", component = 330 }]
+
+[[features]]
+id = "feature:chriz-iwd-encounters:component-340"
+title = "Maiden Ilmadia's forge: her Blackguard abilities, more hit points, her giants gather at her side"
+description = "Maiden Ilmadia has 135 hit points and uses her Blackguard abilities (Aura of Despair, Poison Weapon, Absorb Health); her fire giants gather at her side and her drow bless them. The forge no longer turns hostile before her dialogue."
+category = "combat"
+source_label = "Chriz IWD Encounters"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-iwd-encounters"
+components = [{ run_id = "chriz-iwd-encounters-main", component = 340 }]
+
+[[features]]
+id = "feature:chriz-iwd-encounters:component-350"
+title = "The Idol: one spell per round on cooldowns and only where it works, more hit points, its undead come when it is attacked"
+description = "The Idol casts one spell per round, each on a cooldown and only at targets it can affect, and no Power Word: Kill; it has 225 hit points and stays on its plinth. Its greater mummies and zombie lords come when it is attacked, the zombie lords' aura works again, and the badge counter can no longer lock the way to Poquelin."
+category = "combat"
+source_label = "Chriz IWD Encounters"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-iwd-encounters"
+components = [{ run_id = "chriz-iwd-encounters-main", component = 350 }]
+
+[[features]]
+id = "feature:chriz-iwd-encounters:component-360"
+title = "Poquelin in the Ascension Cave: more hit points, a jump with Fire Storm and the next wave at three quarters, no outright death"
+description = "Poquelin has 420 hit points; below three quarters he jumps away, calls Fire Storm and the next wave comes at once. No instant death or removal skips his escape, and the escape cutscenes find him."
+category = "combat"
+source_label = "Chriz IWD Encounters"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-iwd-encounters"
+components = [{ run_id = "chriz-iwd-encounters-main", component = 360 }]
+
+[[features]]
+id = "feature:chriz-iwd-encounters:component-370"
+title = "Cryshal-Tirith: Pomab's images look like him and hide him again after every hit, his sentries guard him"
+description = "Pomab's images carry his name, and after every hit on him they all jump and hide again what a revealing spell showed. His sentries go for whoever attacked him and for enemies close to him, with 240 hit points; every hit on him counts, and downed sentries always stand up again."
+category = "combat"
+source_label = "Chriz IWD Encounters"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-iwd-encounters"
+components = [{ run_id = "chriz-iwd-encounters-main", component = 370 }]
+
+[[features]]
+id = "feature:chriz-iwd-encounters:component-380"
+title = "Mebdinga's barrow: her wails come on time, an honour guard of wights and drowned dead, a Lament below half on Hard and Insane"
+description = "Mebdinga's wails come on time and she no longer runs every time she is hit; the nearest barrow wights and drowned dead come to her as an honour guard, hasted by War Cry, and on Hard and Insane she lets out a telegraphed Undying Lament below half her hit points. The barrow's difficulty gates work again."
+category = "combat"
+source_label = "Chriz IWD Encounters"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-iwd-encounters"
+components = [{ run_id = "chriz-iwd-encounters-main", component = 380 }]
+
+[[features]]
+id = "feature:chriz-iwd-encounters:component-390"
+title = "Icasaracht's lair: more hit points for her and her soul gem, no second gem, the second underpriestess repaired"
+description = "Icasaracht has 650 hit points and her soul gem 250; no second gem appears if she dies without her last cutscene, and Sword Coast Stratagems' second underpriestess is repaired."
+category = "combat"
+source_label = "Chriz IWD Encounters"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-iwd-encounters"
+components = [{ run_id = "chriz-iwd-encounters-main", component = 390 }]
+
+[[features]]
+id = "feature:chriz-iwd-encounters:component-400"
+title = "Lord Maluradek: his banishment rooms fill with animated plates that fight, more hit points, all rooms awake below half"
+description = "Lord Maluradek's banishment rooms wake their animated plates, which now fight; he has 350 hit points, and below half all rooms wake. The dancing beholder holds still again, and he wears his immunity gloves."
+category = "combat"
+source_label = "Chriz IWD Encounters"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-iwd-encounters"
+components = [{ run_id = "chriz-iwd-encounters-main", component = 400 }]
+
+[[features]]
+id = "feature:chriz-iwd-encounters:component-410"
+title = "The Luremaster: he opens with Improved Invisibility, hops away when an enemy reaches him, his Dispel Magic works"
+description = "The Luremaster opens with Improved Invisibility, hops away by Dimension Door when an enemy reaches him, and his Dispel Magic works; fallen spectral heroes are replaced again."
+category = "combat"
+source_label = "Chriz IWD Encounters"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-iwd-encounters"
+components = [{ run_id = "chriz-iwd-encounters-main", component = 410 }]
 
 [[features]]
 id = "mod:cdtweaks"
