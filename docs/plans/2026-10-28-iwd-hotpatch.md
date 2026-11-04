@@ -205,6 +205,10 @@ Rules 4 and 5 are gone. Mods and files players add after installing never block 
   (it would take back their changes); the whole-folder backup covers that case.
 - The launcher's mod check lists such rows as extra ("Present but not recorded"), also after a
   hotpatch, instead of reporting that the mod list could not be checked.
+- A player can also install the hotpatch's own components outside the app (Christopher did, with
+  the mod's setup, the same afternoon). The check then refuses with "Everything this hotpatch
+  installs is already in your game; it was installed outside the app." (or names the components
+  for a partial overlap) instead of offering a hotpatch whose Apply would stop at once.
 
 Unchanged: the collection as published, choices close to the recommended setup (the threshold
 above counts only the installer's own choices, never the player's additions), no earlier BG game

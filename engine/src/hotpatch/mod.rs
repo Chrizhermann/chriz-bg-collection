@@ -292,7 +292,11 @@ pub fn inspect(ctx: &Context<'_>, catalog: &catalog::Catalog) -> Result<Hotpatch
     });
     if !assessment.refusals.is_empty() {
         preview.refusals = assessment.refusals;
-        preview.detail = "This hotpatch is not offered for this installation, because it differs too much from the recommended setup. Your game has not been changed.".into();
+        // The reasons follow in `refusals`: a setup too far from the recommended one, or the
+        // hotpatch's components already installed by other means.
+        preview.detail =
+            "This hotpatch is not offered for this installation. Your game has not been changed."
+                .into();
         return Ok(preview);
     }
     let current = assessment

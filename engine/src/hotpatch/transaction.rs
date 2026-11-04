@@ -357,6 +357,24 @@ pub fn recorded_log_sha256(root: &Path) -> Result<Option<String>, String> {
         .map(|identity| identity.sha256.clone()))
 }
 
+/// Components of the hotpatch's mod that the game's mod list has now, however they came there.
+pub(super) fn installed_components(
+    game: &Path,
+    hotpatch: &Hotpatch,
+) -> Result<BTreeSet<u32>, String> {
+    let installed = parse_active_entries(&String::from_utf8_lossy(&files::read(
+        &game.join("WeiDU.log"),
+        16 * 1024 * 1024,
+    )?))
+    .map_err(files::err)?;
+    let tp2_key = normalize_tp2_key(&hotpatch.installer.tp2);
+    Ok(installed
+        .iter()
+        .filter(|entry| entry.tp2_key == tp2_key)
+        .map(|entry| entry.component)
+        .collect())
+}
+
 /// Whether `name` lies in what a hotpatch for `package` may change.
 fn writable(name: &str, package: &Package, language: &str) -> bool {
     let below = |folder: &str| name == folder || name.starts_with(&format!("{folder}/"));
@@ -544,17 +562,7 @@ pub fn apply_with_progress(
         );
     }
     let language = super::language_folder(&ctx.game())?;
-    let installed = parse_active_entries(&String::from_utf8_lossy(&files::read(
-        &ctx.game().join("WeiDU.log"),
-        16 * 1024 * 1024,
-    )?))
-    .map_err(files::err)?;
-    let tp2_key = normalize_tp2_key(&hotpatch.installer.tp2);
-    let present = installed
-        .iter()
-        .filter(|entry| entry.tp2_key == tp2_key)
-        .map(|entry| entry.component)
-        .collect::<BTreeSet<_>>();
+    let present = installed_components(&ctx.game(), &hotpatch)?;
     if hotpatch
         .components
         .iter()
