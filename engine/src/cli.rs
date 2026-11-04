@@ -1580,24 +1580,50 @@ fn left_out_runs(replay: &SessionReplay) -> BTreeSet<String> {
         .collect()
 }
 /// The title the player knows component `component` of planned run `run_id` by: the title of the
-/// feature that installs it, or else its number.
+/// feature that installs it, or else its number. An option of a choice is named with its choice,
+/// because its title alone, such as "Maximum", says little.
 fn component_title(frozen: &FrozenCliRecipe, run_id: &str, component: u32) -> String {
     let recipe_run = crate::recipe_view::recipe_run_in(&frozen.collection, run_id)
         .map_or(run_id, |run| run.run_id.as_str());
+    let feature = frozen.collection.features.iter().find(|feature| {
+        feature
+            .components
+            .iter()
+            .any(|part| part.run_id == recipe_run && part.component == component)
+    });
+    match feature {
+        Some(feature) => match (&feature.choice_group, &feature.group_label) {
+            (Some(_), Some(group)) => format!("{group}: {}", feature.title),
+            _ => feature.title.clone(),
+        },
+        None => format!("Component {component}"),
+    }
+}
+
+/// The name the player knows the mod `mod_id` by: the source name its features show, or else
+/// the name of its installer.
+fn mod_display_name(frozen: &FrozenCliRecipe, mod_id: &str) -> String {
     frozen
         .collection
         .features
         .iter()
         .find(|feature| {
-            feature
-                .components
-                .iter()
-                .any(|part| part.run_id == recipe_run && part.component == component)
+            feature.components.iter().any(|part| {
+                frozen
+                    .collection
+                    .runs
+                    .iter()
+                    .any(|run| run.run_id == part.run_id && run.mod_id == mod_id)
+            })
         })
-        .map_or_else(
-            || format!("Component {component}"),
-            |feature| feature.title.clone(),
-        )
+        .and_then(|feature| feature.source_label.clone())
+        .or_else(|| {
+            frozen
+                .mods
+                .get(mod_id)
+                .map(|installer| installer.name.clone())
+        })
+        .unwrap_or_else(|| mod_id.to_owned())
 }
 
 /// The name of the mod that planned run `run_id` installs from `artifact_id`.
@@ -1607,10 +1633,9 @@ fn run_mod_name(frozen: &FrozenCliRecipe, run_id: &str, artifact_id: &str) -> St
         .runs
         .iter()
         .find(|run| run.run_id == run_id)
-        .and_then(|run| frozen.mods.get(&run.mod_id))
         .map_or_else(
             || frozen_artifact_name(frozen, artifact_id),
-            |installer| installer.name.clone(),
+            |run| mod_display_name(frozen, &run.mod_id),
         )
 }
 
@@ -1725,12 +1750,7 @@ fn affected_mods(
     changed: &[String],
     remaining: &BTreeSet<String>,
 ) -> (Vec<String>, Vec<String>) {
-    let name = |mod_id: &str| {
-        frozen
-            .mods
-            .get(mod_id)
-            .map_or_else(|| mod_id.to_owned(), |installer| installer.name.clone())
-    };
+    let name = |mod_id: &str| mod_display_name(frozen, mod_id);
     let (mut left_out, mut reduced) = (Vec::<String>::new(), Vec::<String>::new());
     for run in frozen
         .plan
@@ -7579,6 +7599,60 @@ mod tests {
             assert_eq!(texts.message, expected);
             assert_eq!(texts.focus, Answer::Yes);
         }
+    }
+
+    /// The question uses the names the player knows from the app: the source name of the mod
+    /// and the feature's title, with its choice for an option of a choice.
+    #[test]
+    fn a_failed_component_is_named_as_the_app_names_it() {
+        let mut frozen = frozen_recipe_fixture();
+        let feature = |id: &str, title: &str, component: u32, choice: bool| {
+            let mut feature = serde_json::json!({
+                "id": id,
+                "title": title,
+                "description": "",
+                "category": "rules",
+                "source_label": "The Tweaks Anthology",
+                "group_label": "Higher HP on Level Up",
+                "decision": "default",
+                "readiness": "ready",
+                "components": [{ "run_id": "cdtweaks-bg2", "component": component }],
+            });
+            if choice {
+                feature["choice_group"] = serde_json::json!("hp-on-level-up");
+            }
+            serde_json::from_value::<crate::manifest::Feature>(feature).unwrap()
+        };
+        frozen.collection.features = vec![
+            feature("tweaks-hp", "Maximum", 3000, true),
+            feature("tweaks-fog", "Disable Fog", 1000, false),
+        ];
+        frozen.collection.runs = vec![serde_json::from_value(serde_json::json!({
+            "run_id": "cdtweaks-bg2",
+            "mod_id": "cdtweaks",
+            "phase": "main",
+            "components": [3000, 1000],
+            "args": [],
+        }))
+        .unwrap()];
+
+        assert_eq!(
+            crate::cli::component_title(&frozen, "cdtweaks-bg2", 3000),
+            "Higher HP on Level Up: Maximum"
+        );
+        assert_eq!(
+            crate::cli::component_title(&frozen, "cdtweaks-bg2--manual-1", 1000),
+            "Disable Fog"
+        );
+        assert_eq!(
+            crate::cli::component_title(&frozen, "cdtweaks-bg2", 7),
+            "Component 7"
+        );
+        assert_eq!(
+            crate::cli::mod_display_name(&frozen, "cdtweaks"),
+            "The Tweaks Anthology"
+        );
+        assert_eq!(crate::cli::mod_display_name(&frozen, "unknown"), "unknown");
     }
 
     /// A component that fails before a later component's prompt leaves that prompt unanswered,
