@@ -4592,6 +4592,15 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         )
     }
 
+    /// The record of attempt `attempt` of run `run_id`, when one was published.
+    fn published_run_attempt(
+        &self,
+        run_id: &str,
+        attempt: u32,
+    ) -> Result<Option<RunAttemptReceipt>, StepFailure> {
+        read_optional_json(&self.run_attempt_path(run_id, attempt)?)
+    }
+
     fn load_run_receipt(&self, run: &PlannedRun) -> Result<RunReceipt, StepFailure> {
         let Some(directory) = self.run_evidence_directory(&run.run_id, false)? else {
             return Ok(RunReceipt {
@@ -5878,9 +5887,15 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
             InstallReconciliation::FreshCopyRequired { .. }
         ) {
             let recovered_process = if process.is_none() && !statuses.is_empty() {
+                // Reconciling an attempt again reads the same evidence and must publish the
+                // same record, so the end time of its first recovery stands.
+                let published = self.published_run_attempt(&run.run_id, attempt.attempt)?;
                 Some(ProcessEvidence {
                     started_at_millis: prepared.prepared_at_millis,
-                    completed_at_millis: unix_millis()?,
+                    completed_at_millis: match published {
+                        Some(published) => published.timing.completed_at_millis,
+                        None => unix_millis()?,
+                    },
                     exit_code: observed_result.map_or(-1, |result| result.exit_code),
                     // This in-memory value supplies conservative timing/unknown-exit receipt
                     // evidence only; it is never persisted as process-result.json.
@@ -6184,6 +6199,14 @@ impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
         crate::weidu::log::failure_message(&String::from_utf8_lossy(select_terminal_evidence(
             &debug, &stdout,
         )))
+    }
+
+    fn attempt_left_evidence(&mut self, attempt: &StepAttempt) -> Result<bool, StepFailure> {
+        match fs::symlink_metadata(&attempt.evidence_root) {
+            Ok(_) => Ok(true),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
+            Err(error) => Err(step_error(error)),
+        }
     }
 
     fn verify_final(&mut self, plan: &InstallPlan) -> Result<(), StepFailure> {

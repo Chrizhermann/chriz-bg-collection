@@ -641,6 +641,13 @@ pub trait InstallLogVerifier {
         None
     }
 
+    /// Whether `attempt` left evidence of its own. An attempt that runs an installer writes its
+    /// evidence before anything else; an attempt that only asks writes none.
+    fn attempt_left_evidence(&mut self, attempt: &StepAttempt) -> Result<bool, StepFailure> {
+        let _ = attempt;
+        Ok(true)
+    }
+
     /// Verify the complete final active stack against the plan being installed: the exact
     /// frozen run plan, minus the runs of left-out payloads.
     fn verify_final(&mut self, plan: &InstallPlan) -> Result<(), StepFailure>;
@@ -2348,6 +2355,38 @@ where
         self.ask(step, attempt, question)
     }
 
+    /// The question that `attempt` was about to ask again after a stop, when a crash came
+    /// before it was recorded: `attempt` left no evidence, so it ran nothing, and the attempt
+    /// that ran the installer still shows that it went past a failure. Gives that attempt's
+    /// number, what it did not install and what it installed after the failure.
+    fn question_left_unasked(
+        &mut self,
+        step: &PipelineStep,
+        attempt: &StepAttempt,
+        run: &PlannedRun,
+    ) -> Result<Option<(u32, Vec<u32>, Vec<u32>)>, StepFailure> {
+        let Some(failed) = self.progress.last_failed.get(&step.id).copied() else {
+            return Ok(None);
+        };
+        if self.dependencies.attempt_left_evidence(attempt)? {
+            return Ok(None);
+        }
+        let ran = self
+            .progress
+            .evidence_attempts
+            .get(&step.id)
+            .copied()
+            .unwrap_or(failed);
+        let evidence = self.attempt(step, ran);
+        Ok(match self.dependencies.recover(run, &evidence)? {
+            InstallReconciliation::FailedAmong {
+                failed,
+                installed_after,
+            } => Some((ran, failed, installed_after)),
+            _ => None,
+        })
+    }
+
     /// The plan that remains without the failed part of `run`, and the components of
     /// `not_installed` that the run then still installs. When the run `goes_on`, the first of
     /// `not_installed` failed and the others wait; otherwise all of them failed. Gives the
@@ -3009,6 +3048,23 @@ where
             }
             let attempt = self.attempt(step, *attempt);
             emit_started(self.sink, &step.id, &format!("Resume {}", step.label));
+            match self.question_left_unasked(step, &attempt, &run) {
+                Ok(Some((ran, failed, installed_after))) => {
+                    return self.ask_failed_component(
+                        step,
+                        &attempt,
+                        &run,
+                        &failed,
+                        &installed_after,
+                        Some(ran),
+                    );
+                }
+                Ok(None) => {}
+                Err(failure) => {
+                    let reason = format!("could not reconcile interrupted evidence: {failure}");
+                    return self.seal_fresh_copy(step, &attempt, reason).map(Some);
+                }
+            }
             match self.dependencies.recover(&run, &attempt) {
                 Ok(InstallReconciliation::ProvenDone) => {
                     if let Some(outcome) = self.postcondition_failure(step, &run, &attempt)? {
@@ -3049,6 +3105,9 @@ where
                 }
             }
         } else if let Some(attempt) = self.progress.last_failed.get(&step.id).copied() {
+            // The ledger can only seal the attempt that failed last, even when that one only
+            // asked and the evidence is another attempt's.
+            let failed_attempt = self.attempt(step, attempt);
             let attempt = self
                 .progress
                 .evidence_attempts
@@ -3059,7 +3118,7 @@ where
             match self.dependencies.recover(&run, &evidence_attempt) {
                 Ok(InstallReconciliation::ProvenDone) => {
                     if let Some(outcome) =
-                        self.postcondition_failure(step, &run, &evidence_attempt)?
+                        self.postcondition_failure(step, &run, &failed_attempt)?
                     {
                         return Ok(Some(outcome));
                     }
@@ -3090,13 +3149,13 @@ where
                 }
                 Ok(InstallReconciliation::FreshCopyRequired { reason }) => {
                     return self
-                        .seal_fresh_copy(step, &evidence_attempt, reason)
+                        .seal_fresh_copy(step, &failed_attempt, reason)
                         .map(Some);
                 }
                 Err(failure) => {
                     let reason = format!("could not reconcile failed attempt evidence: {failure}");
                     return self
-                        .seal_fresh_copy(step, &evidence_attempt, reason)
+                        .seal_fresh_copy(step, &failed_attempt, reason)
                         .map(Some);
                 }
             }
@@ -3880,6 +3939,53 @@ mod tests {
     use crate::recipe_view::{evaluate, plan_without_parts, recipe_run_id, LeaveOutError};
     use crate::resolve::Selection;
     use crate::Manifest;
+
+    /// SCS's last component fails after the rest of SCS was installed: what needs SCS stays,
+    /// such as BG Rebalance's repairs of the spells SCS installed.
+    #[test]
+    fn the_repairs_of_an_installed_mod_stay_when_its_last_component_fails() {
+        let recipe = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../recipes/curated-full-current");
+        let manifest = Manifest::load(&recipe).unwrap();
+        let mut selection = Selection {
+            platform: "windows".to_owned(),
+            choices: manifest.presets["chris-recommended"].selections.clone(),
+        };
+        selection.set_feature("mod:spell-rev", true);
+        let evaluation = evaluate(&manifest, &selection).unwrap();
+        let plan = &evaluation.plan;
+        let position = plan
+            .runs
+            .iter()
+            .position(|run| run.run_id == "stratagems-bg2")
+            .unwrap();
+        let run = &plan.runs[position];
+        assert_eq!(run.components.last(), Some(&8190));
+        let reduced = plan_without_parts(
+            &manifest,
+            &evaluation.normalized_selection,
+            plan,
+            &BTreeSet::new(),
+            &BTreeSet::from([ComponentRef {
+                run_id: run.run_id.clone(),
+                component: 8190,
+            }]),
+        )
+        .unwrap();
+        let installed = plan.runs[..position]
+            .iter()
+            .map(|run| run.run_id.clone())
+            .collect();
+
+        let (kept, _) =
+            plan_keeping_installed(plan, reduced, &installed, &[], run, &[8190], true).unwrap();
+
+        let repairs = kept.components_for("chriz-bg-rebalance-bg2").unwrap();
+        assert!(
+            repairs.contains(&100) && repairs.contains(&120),
+            "{repairs:?}"
+        );
+    }
 
     /// Whichever component of the recommended setup fails, the question has an answer at the
     /// point where it fails, whether WeiDU went on or stopped there: the component leaves with
