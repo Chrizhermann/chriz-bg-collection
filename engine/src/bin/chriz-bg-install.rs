@@ -6,7 +6,7 @@ use bg_engine::cli::{
     diagnostics_for_managed_install, discover_games, human_plan_lines, inspect_game,
     install_campaign_controlled, install_interrupt_handler, plan_recipe, report_managed_install,
     resume_campaign_controlled, validate_recipe, CampaignStatus, CliError, HotpatchAction,
-    InstallCommandRequest, SelectionOverrides, ValidationProfile,
+    InstallCommandRequest, ModUpdateAction, SelectionOverrides, ValidationProfile,
 };
 use bg_engine::events::{ConsoleSink, EngineEvent, EventSink};
 use bg_engine::games::GameRole;
@@ -101,10 +101,32 @@ enum HotpatchCommand {
         #[arg(long)]
         save_backup: bool,
     },
-    /// Undo the latest applied hotpatch.
+    /// Undo the latest applied hotpatch or mod update.
     Undo { managed_root: PathBuf },
-    /// Finish restoring a hotpatch that did not finish.
+    /// Finish restoring a hotpatch or mod update that did not finish.
     Restore { managed_root: PathBuf },
+    /// Show whether an update of one installed mod, such as BuffBot, is offered, and why not.
+    /// Never changes the game.
+    UpdateCheck {
+        managed_root: PathBuf,
+        /// The mod's id in the recipe, such as `buffbot`.
+        #[arg(long = "mod")]
+        mod_id: String,
+    },
+    /// Apply the mod update that a check offered.
+    UpdateApply {
+        managed_root: PathBuf,
+        #[arg(long = "mod")]
+        mod_id: String,
+        #[arg(long)]
+        review_token: String,
+        /// Also copy the whole game folder first.
+        #[arg(long)]
+        full_backup: bool,
+        /// Also copy the saves first.
+        #[arg(long)]
+        save_backup: bool,
+    },
 }
 
 #[derive(Debug, Args)]
@@ -270,6 +292,41 @@ fn execute(cli: &Cli) -> Result<(), CliError> {
                 ));
             };
             let (managed_root, action) = match &args.command {
+                HotpatchCommand::UpdateCheck {
+                    managed_root,
+                    mod_id,
+                } => {
+                    let preview = bg_engine::cli::mod_update_managed_install(
+                        managed_root,
+                        catalog,
+                        cache,
+                        mod_id,
+                        &ModUpdateAction::Check,
+                    )?;
+                    print_json(&json!({ "command": "hotpatch", "ok": true, "update": preview }));
+                    return Ok(());
+                }
+                HotpatchCommand::UpdateApply {
+                    managed_root,
+                    mod_id,
+                    review_token,
+                    full_backup,
+                    save_backup,
+                } => {
+                    let preview = bg_engine::cli::mod_update_managed_install(
+                        managed_root,
+                        catalog,
+                        cache,
+                        mod_id,
+                        &ModUpdateAction::Apply {
+                            review_token: review_token.clone(),
+                            full_backup: *full_backup,
+                            save_backup: *save_backup,
+                        },
+                    )?;
+                    print_json(&json!({ "command": "hotpatch", "ok": true, "update": preview }));
+                    return Ok(());
+                }
                 HotpatchCommand::Check { managed_root } => (managed_root, HotpatchAction::Check),
                 HotpatchCommand::Apply {
                     managed_root,

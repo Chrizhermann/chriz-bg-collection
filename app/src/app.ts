@@ -1,7 +1,7 @@
 import { BackendCommandError, type Backend } from "./backend";
 import { createAppShell } from "./components/app-shell";
 import type { TechnicalLogState } from "./components/technical-log";
-import type { BackendStatus, BuildSnapshot, DestinationEvaluation, GameCandidate, GameDiscovery, InstallationRemovalPreview, InstalledUpdatePlan, ManagedInstallation, ManualDownloadRequirement, ModUpgradePreview, Route, RunEventEnvelope, UpdateSummary, PatchPreview, HotpatchPreview } from "./contracts";
+import type { BackendStatus, BuildSnapshot, DestinationEvaluation, GameCandidate, GameDiscovery, InstallationRemovalPreview, InstalledUpdatePlan, ManagedInstallation, ManualDownloadRequirement, ModUpgradePreview, Route, RunEventEnvelope, UpdateSummary, PatchPreview, HotpatchPreview, ModUpdatePreview } from "./contracts";
 import { buildScreen } from "./screens/build";
 import { updateBuildPhase } from "./build-progress";
 import { destinationScreen } from "./screens/destination";
@@ -160,6 +160,13 @@ class AppController implements AppHandle {
   #hotpatchInstallId = "";
   #hotpatchBusy = false;
   #hotpatchError: string | undefined;
+  // Whole-mod updates (flavor.modUpdates) share the hotpatch history: results of explicit checks
+  // by mod id, all for #modUpdateInstallId.
+  #modUpdates: Readonly<Record<string, ModUpdatePreview | undefined>> = {};
+  #modUpdateErrors: Readonly<Record<string, string | undefined>> = {};
+  #modUpdateInstallId = "";
+  /** The mod whose update operation runs. */
+  #modUpdateBusyId: string | null = null;
   #installedUpdatePlan: InstalledUpdatePlan | null = null;
   #installedUpdateInstallId = "";
   #installedUpdateBusy = false;
@@ -425,7 +432,7 @@ class AppController implements AppHandle {
   }
 
   #selectInstalledUpdate(installId: string): void {
-    if (this.#modUpgradeBusy || this.#patchBusy || this.#hotpatchBusy || this.#installingUpdate) return;
+    if (this.#modUpgradeBusy || this.#patchBusy || this.#hotpatchBusy || this.#modUpdateBusy || this.#installingUpdate) return;
     if (!this.#updates.managedCopies.some(copy => copy.installId === installId)) return;
     ++this.#installedUpdateRevision;
     this.#installedUpdateInstallId = installId;
@@ -442,11 +449,14 @@ class AppController implements AppHandle {
     this.#hotpatchInstallId = installId;
     this.#hotpatch = null;
     this.#hotpatchError = undefined;
+    this.#modUpdateInstallId = installId;
+    this.#modUpdates = {};
+    this.#modUpdateErrors = {};
     this.#render("updates-installation");
   }
 
   async #checkInstalledUpdate(installId: string): Promise<void> {
-    if (this.#installedUpdateBusy || this.#modUpgradeBusy || this.#patchBusy || this.#hotpatchBusy || this.#installingUpdate || !this.backend.inspectInstalledUpdate) return;
+    if (this.#installedUpdateBusy || this.#modUpgradeBusy || this.#patchBusy || this.#hotpatchBusy || this.#modUpdateBusy || this.#installingUpdate || !this.backend.inspectInstalledUpdate) return;
     if (!this.#updates.managedCopies.some(copy => copy.installId === installId && copy.state !== "stale")) return;
     const revision = ++this.#installedUpdateRevision;
     this.#installedUpdateInstallId = installId;
@@ -515,7 +525,7 @@ class AppController implements AppHandle {
 
   async #modUpgradeOperation(kind: "apply" | "undo" | "restore", fullBackup = true, backupSaves = false): Promise<void> {
     if (!flavor.features.modUpgrades) return;
-    if (this.#modUpgradeBusy || this.#installedUpdateBusy || this.#patchBusy || this.#hotpatchBusy || this.#installingUpdate || this.#installationActive()) return;
+    if (this.#modUpgradeBusy || this.#installedUpdateBusy || this.#patchBusy || this.#hotpatchBusy || this.#modUpdateBusy || this.#installingUpdate || this.#installationActive()) return;
     const preview = this.#modUpgrade;
     const installId = this.#installedUpdateInstallId;
     if (this.#installations.some(copy => copy.id === installId && copy.customized)) return;
@@ -581,7 +591,7 @@ class AppController implements AppHandle {
   async #patchOperation(kind: "check" | "apply" | "undo" | "restore", installId = this.#patchInstallId, fullBackup = true, saveBackup = false): Promise<void> {
     if (!flavor.features.installPatches) return;
     if (this.#installations.some(copy => copy.id === installId && copy.customized)) return;
-    if (this.#patchBusy || this.#hotpatchBusy || this.#installingUpdate || this.#installedUpdateBusy || this.#modUpgradeBusy) return;
+    if (this.#patchBusy || this.#hotpatchBusy || this.#modUpdateBusy || this.#installingUpdate || this.#installedUpdateBusy || this.#modUpgradeBusy) return;
     if (kind !== "check") {
       this.#installedUpdatePlan = null;
       this.#modUpgrade = null;
@@ -624,12 +634,16 @@ class AppController implements AppHandle {
   async #hotpatchOperation(kind: "check" | "apply" | "undo" | "restore", installId = this.#hotpatchInstallId, fullBackup = true, saveBackup = false): Promise<void> {
     if (!flavor.features.hotpatches || !this.backend.inspectHotpatch) return;
     if (this.#installations.some(copy => copy.id === installId && copy.customized)) return;
-    if (this.#hotpatchBusy || this.#patchBusy || this.#installingUpdate || this.#installedUpdateBusy || this.#modUpgradeBusy || this.#installationActive()) return;
+    if (this.#hotpatchBusy || this.#modUpdateBusy || this.#patchBusy || this.#installingUpdate || this.#installedUpdateBusy || this.#modUpgradeBusy || this.#installationActive()) return;
     const preview = this.#hotpatch?.installId === installId ? this.#hotpatch : null;
     if (kind === "apply" && (preview?.state !== "available" || !preview.reviewToken || !this.backend.applyHotpatch)) return;
     if (kind === "undo" && (!preview?.canUndo || !this.backend.restoreHotpatch)) return;
     if (kind === "restore" && (preview?.state !== "needs-recovery" || !preview.canRestore || !this.backend.restoreHotpatch)) return;
-    if (kind !== "check") this.#installedUpdatePlan = null;
+    if (kind !== "check") {
+      this.#installedUpdatePlan = null;
+      // One history: a hotpatch change makes every checked mod update (and its Undo) stale.
+      this.#modUpdates = {};
+    }
     this.#hotpatchInstallId = installId;
     this.#hotpatchBusy = true;
     this.#hotpatchError = undefined;
@@ -657,6 +671,67 @@ class AppController implements AppHandle {
       }
     } finally {
       this.#hotpatchBusy = false;
+      this.#render();
+    }
+  }
+
+  get #modUpdateBusy(): boolean {
+    return this.#modUpdateBusyId !== null;
+  }
+
+  async #modUpdateOperation(kind: "check" | "apply" | "undo" | "restore", modId: string, installId = this.#modUpdateInstallId, fullBackup = true, saveBackup = false): Promise<void> {
+    const offer = flavor.modUpdates.find(entry => entry.modId === modId);
+    if (offer === undefined || !this.backend.inspectModUpdate) return;
+    if (this.#installations.some(copy => copy.id === installId && copy.customized)) return;
+    // Hotpatches and mod updates share one history: neither starts while the other runs.
+    if (this.#modUpdateBusy || this.#hotpatchBusy || this.#patchBusy || this.#installingUpdate || this.#installedUpdateBusy || this.#modUpgradeBusy || this.#installationActive()) return;
+    const checked = this.#modUpdateInstallId === installId ? this.#modUpdates[modId] : undefined;
+    const preview = checked?.installId === installId && checked.modId === modId ? checked : null;
+    if (kind === "apply" && (preview?.state !== "available" || !preview.reviewToken || !this.backend.applyModUpdate)) return;
+    if (kind === "undo" && (!preview?.canUndo || !this.backend.restoreModUpdate)) return;
+    if (kind === "restore" && (preview?.state !== "needs-recovery" || !preview.canRestore || !this.backend.restoreModUpdate)) return;
+    if (this.#modUpdateInstallId !== installId) {
+      this.#modUpdates = {};
+      this.#modUpdateErrors = {};
+    }
+    if (kind !== "check") {
+      this.#installedUpdatePlan = null;
+      // One history: a change makes every other checked result stale, the hotpatch's Undo included.
+      this.#hotpatch = null;
+      this.#modUpdates = {};
+    }
+    this.#modUpdateInstallId = installId;
+    this.#modUpdateBusyId = modId;
+    this.#modUpdateErrors = { ...this.#modUpdateErrors, [modId]: undefined };
+    const progress = kind === "check" ? undefined
+      : this.#beginOperation(kind === "apply" ? `Updating ${offer.title}` : kind === "undo" ? `Undoing ${offer.title} update` : "Restoring game files", installId);
+    this.#render();
+    const store = (result: ModUpdatePreview | undefined): void => { this.#modUpdates = { ...this.#modUpdates, [modId]: result }; };
+    try {
+      const result = kind === "check" ? await this.backend.inspectModUpdate(installId, modId)
+        : kind === "apply" ? await this.backend.applyModUpdate!(installId, modId, preview!.reviewToken!, fullBackup, saveBackup, progress)
+        : await this.backend.restoreModUpdate!(installId, modId, kind === "undo", progress);
+      if (result.installId !== installId || result.modId !== modId) throw new Error(`The ${offer.title} result belongs to another installation.`);
+      store(result);
+      if (kind !== "check") {
+        const complete = result.state !== "needs-recovery";
+        this.#finishOperation(complete ? kind === "apply" ? `${offer.title} updated` : kind === "undo" ? `${offer.title} update undone` : "Game files restored" : "Update needs attention",
+          complete ? "Finished. Your saves were not edited." : "Keep the game closed. Review the restore option below.", complete, installId);
+      }
+      try { this.#installations = await this.backend.listManagedInstallations(); } catch { /* The verified result remains visible. */ }
+    } catch (error) {
+      this.#modUpdateErrors = { ...this.#modUpdateErrors, [modId]: error instanceof BackendCommandError ? `${error.message} ${error.technicalDetail}` : String(error) };
+      if (kind !== "check") this.#finishOperation("Update could not finish", "Keep the game closed and check the error below before trying again.", false, installId);
+      // A failed update may need restoring. Never leave its old Update button active.
+      store(undefined);
+      if (kind !== "check") {
+        try {
+          const result = await this.backend.inspectModUpdate(installId, modId);
+          if (result.installId === installId && result.modId === modId) store(result);
+        } catch { /* Keep the diagnostic and the explicit Check action. */ }
+      }
+    } finally {
+      this.#modUpdateBusyId = null;
       this.#render();
     }
   }
@@ -998,7 +1073,7 @@ class AppController implements AppHandle {
   }
 
   async #renameInstallation(installId: string, name: string): Promise<void> {
-    if (!this.backend.renameInstallation || this.#installationActive() || this.#installingUpdate || this.#patchBusy || this.#hotpatchBusy || this.#modUpgradeBusy || this.#removalBusy) {
+    if (!this.backend.renameInstallation || this.#installationActive() || this.#installingUpdate || this.#patchBusy || this.#hotpatchBusy || this.#modUpdateBusy || this.#modUpgradeBusy || this.#removalBusy) {
       throw new Error("Wait for the current operation to finish before renaming.");
     }
     const result = await this.backend.renameInstallation(installId, name);
@@ -1453,7 +1528,7 @@ class AppController implements AppHandle {
         ? "Finish patch recovery in Updates before changing the game log."
         : this.#launchPending.has(installation.id)
           ? "Wait until the game has started."
-          : this.#removalBusy || this.#installationActive() || this.#installingUpdate || this.#patchBusy || this.#hotpatchBusy
+          : this.#removalBusy || this.#installationActive() || this.#installingUpdate || this.#patchBusy || this.#hotpatchBusy || this.#modUpdateBusy
             ? "Wait until the current installation task has finished."
             : null,
     };
@@ -1497,7 +1572,7 @@ class AppController implements AppHandle {
 
   async #installRadar(installId: string): Promise<void> {
     const installation = this.#installations.find((item) => item.id === installId && item.available);
-    if (!flavor.features.radar || installation === undefined || this.#installingUpdate || this.#modUpgradeBusy || this.#patchBusy || this.#hotpatchBusy || this.#installedUpdateBusy) return;
+    if (!flavor.features.radar || installation === undefined || this.#installingUpdate || this.#modUpgradeBusy || this.#patchBusy || this.#hotpatchBusy || this.#modUpdateBusy || this.#installedUpdateBusy) return;
     this.#installingUpdate = true;
     this.#beginOperation("Updating BG Radar Overlay", installId);
     this.#render();
@@ -1790,7 +1865,7 @@ class AppController implements AppHandle {
         diagnostics: (installId) => safely(() => this.#exportDiagnostics(installId)),
         remove: (installId) => safely(() => this.#previewInstallationRemoval(installId)),
         rename: this.backend.renameInstallation ? (installId, name) => this.#renameInstallation(installId, name) : undefined,
-        removalDisabled: this.#removalBusy || this.#installationActive() || this.#installingUpdate || this.#patchBusy || this.#hotpatchBusy,
+        removalDisabled: this.#removalBusy || this.#installationActive() || this.#installingUpdate || this.#patchBusy || this.#hotpatchBusy || this.#modUpdateBusy,
         gameLog: {
           toggle: (installId, open) => this.#toggleTroubleshooting(installId, open),
           set: (installId, enabled) => this.#gameLogOperation(installId, enabled),
@@ -1844,6 +1919,14 @@ class AppController implements AppHandle {
           onApplyHotpatch: flavor.features.hotpatches && this.backend.applyHotpatch ? (full, saves) => this.#hotpatchOperation("apply", this.#hotpatchInstallId, full, saves) : undefined,
           onUndoHotpatch: flavor.features.hotpatches && this.backend.restoreHotpatch ? () => this.#hotpatchOperation("undo") : undefined,
           onRestoreHotpatch: flavor.features.hotpatches && this.backend.restoreHotpatch ? () => this.#hotpatchOperation("restore") : undefined,
+          modUpdates: this.#modUpdateInstallId === selected?.installId ? this.#modUpdates : {},
+          modUpdateErrors: this.#modUpdateInstallId === selected?.installId ? this.#modUpdateErrors : {},
+          modUpdateBusy: this.#modUpdateBusy,
+          modUpdateBusyId: this.#modUpdateBusyId ?? undefined,
+          onCheckModUpdate: flavor.modUpdates.length > 0 && this.backend.inspectModUpdate ? (id, modId) => this.#modUpdateOperation("check", modId, id) : undefined,
+          onApplyModUpdate: flavor.modUpdates.length > 0 && this.backend.applyModUpdate ? (modId, full, saves) => this.#modUpdateOperation("apply", modId, this.#modUpdateInstallId, full, saves) : undefined,
+          onUndoModUpdate: flavor.modUpdates.length > 0 && this.backend.restoreModUpdate ? (modId) => this.#modUpdateOperation("undo", modId) : undefined,
+          onRestoreModUpdate: flavor.modUpdates.length > 0 && this.backend.restoreModUpdate ? (modId) => this.#modUpdateOperation("restore", modId) : undefined,
           checkAgain: () => safely(() => this.#checkUpdates()),
           installApplication: (version) => safely(() => this.#installAppUpdate(version)),
           buildUpdatedCopy: (version) => safely(() => this.#buildUpdatedCopy(version)),

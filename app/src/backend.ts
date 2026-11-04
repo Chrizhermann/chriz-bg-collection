@@ -30,6 +30,7 @@ import type {
   ManualCheckpointOption,
   ManualCheckpointStatus,
   ManagedInstallation,
+  ModUpdatePreview,
   ModUpgradePreview,
   OperationProgress,
   NormalizedSelection,
@@ -107,6 +108,11 @@ export interface Backend {
   applyHotpatch?(installId: string, reviewToken: string, fullBackup: boolean, saveBackup: boolean, onProgress?: (progress: OperationProgress) => void): Promise<HotpatchPreview>;
   /** Undo the latest hotpatch (`undo`), or finish restoring one that did not finish. */
   restoreHotpatch?(installId: string, undo: boolean, onProgress?: (progress: OperationProgress) => void): Promise<HotpatchPreview>;
+  /** Check one whole-mod update, such as BuffBot, for an installation. Never changes the game. */
+  inspectModUpdate?(installId: string, modId: string): Promise<ModUpdatePreview>;
+  applyModUpdate?(installId: string, modId: string, reviewToken: string, fullBackup: boolean, saveBackup: boolean, onProgress?: (progress: OperationProgress) => void): Promise<ModUpdatePreview>;
+  /** Undo the latest change when it is this mod's update (`undo`), or finish restoring a change that did not finish. */
+  restoreModUpdate?(installId: string, modId: string, undo: boolean, onProgress?: (progress: OperationProgress) => void): Promise<ModUpdatePreview>;
 }
 
 export type InvokeCommand = (
@@ -800,6 +806,18 @@ export class NativeBackend implements Backend {
     return this.#commandWithProgress("restore_hotpatch", { installId, undo }, onProgress);
   }
 
+  inspectModUpdate(installId: string, modId: string): Promise<ModUpdatePreview> {
+    return this.#command("inspect_mod_update", { installId, modId });
+  }
+
+  applyModUpdate(installId: string, modId: string, reviewToken: string, fullBackup: boolean, saveBackup: boolean, onProgress?: (progress: OperationProgress) => void): Promise<ModUpdatePreview> {
+    return this.#commandWithProgress("apply_mod_update", { installId, modId, reviewToken, fullBackup, saveBackup }, onProgress);
+  }
+
+  restoreModUpdate(installId: string, modId: string, undo: boolean, onProgress?: (progress: OperationProgress) => void): Promise<ModUpdatePreview> {
+    return this.#commandWithProgress("restore_mod_update", { installId, modId, undo }, onProgress);
+  }
+
   async #commandWithProgress<T>(command: string, args: Record<string, unknown>, onProgress?: (progress: OperationProgress) => void): Promise<T> {
     if (!onProgress) return this.#command(command, args);
     let active = true;
@@ -880,6 +898,8 @@ function wait(milliseconds: number): Promise<void> {
 export class FixtureBackend implements Backend {
   readonly #patches = new Map<string, PatchPreview>();
   readonly #hotpatches = new Map<string, HotpatchPreview>();
+  /** Whole-mod update results by installation and mod. */
+  readonly #modUpdates = new Map<string, ModUpdatePreview>();
   readonly #modUpgrades = new Map<string, ModUpgradePreview>();
   /** Installations whose game log is on. */
   readonly #gameLogs = new Set<string>();
@@ -1318,6 +1338,43 @@ export class FixtureBackend implements Backend {
     if (!undo || !preview?.canUndo) throw new Error("No fixture hotpatch can be undone or restored.");
     this.#hotpatches.delete(installId);
     return this.inspectHotpatch(installId);
+  }
+
+  async inspectModUpdate(installId: string, modId: string): Promise<ModUpdatePreview> {
+    const current = this.#modUpdates.get(`${installId}/${modId}`);
+    if (current) return current;
+    const copy = (await this.getUpdates()).managedCopies.find(entry => entry.installId === installId);
+    if (!copy) throw new Error("Unknown fixture installation.");
+    if (modId !== "buffbot") throw new Error("This app offers no update for that mod.");
+    const preview: ModUpdatePreview = {
+      installId, modId, title: "BuffBot", state: "available",
+      detail: "Preview only: brings BuffBot in this game to its newest release.",
+      installedVersion: "1.12.6", targetVersion: "1.16.0", releaseTitle: "BuffBot 1.16.0", releaseUrl: null,
+      refusals: [],
+      reviewToken: `fixture-mod-update-${installId}-${modId}`, canUndo: false, undoTitle: null, canRestore: false,
+      fullBackupBytes: "4294967296", saveBackupBytes: "52428800", availableBytes: "107374182400",
+      backupPath: "C:\\Fixture\\Hotpatch-Backups",
+    };
+    this.#modUpdates.set(`${installId}/${modId}`, preview);
+    return preview;
+  }
+
+  async applyModUpdate(installId: string, modId: string, reviewToken: string, _fullBackup: boolean, _saveBackup: boolean): Promise<ModUpdatePreview> {
+    const preview = this.#modUpdates.get(`${installId}/${modId}`);
+    if (!preview || preview.state !== "available" || preview.reviewToken !== reviewToken) throw new Error("Check this fixture installation again before updating.");
+    const updated: ModUpdatePreview = {
+      ...preview, state: "up-to-date", detail: `${preview.title} ${preview.targetVersion} is installed. That is the newest release.`,
+      installedVersion: preview.targetVersion, reviewToken: null, canUndo: true, undoTitle: `${preview.title} ${preview.targetVersion}`,
+    };
+    this.#modUpdates.set(`${installId}/${modId}`, updated);
+    return updated;
+  }
+
+  async restoreModUpdate(installId: string, modId: string, undo: boolean): Promise<ModUpdatePreview> {
+    const preview = this.#modUpdates.get(`${installId}/${modId}`);
+    if (!undo || !preview?.canUndo) throw new Error("No fixture update can be undone or restored.");
+    this.#modUpdates.delete(`${installId}/${modId}`);
+    return this.inspectModUpdate(installId, modId);
   }
 
   #snapshot(): BuildSnapshot {

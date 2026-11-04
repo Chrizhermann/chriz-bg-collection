@@ -242,7 +242,7 @@ fn is_loopback_http(url: &Url) -> bool {
         && matches!(url.host(), Some(Host::Ipv4(address)) if address.is_loopback())
 }
 
-fn release_agent(loopback: bool) -> Agent {
+pub(crate) fn release_agent(loopback: bool) -> Agent {
     Agent::config_builder()
         .http_status_as_error(false)
         .max_redirects(0)

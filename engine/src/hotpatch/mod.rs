@@ -6,12 +6,15 @@
 //! since (voice packs, other mods) stays and never blocks it. Base receipts and saves stay
 //! immutable. Every file a hotpatch changes keeps an earlier copy in its transaction record, so
 //! Undo puts the game folder back byte for byte as it was right before the hotpatch;
-//! transactions follow [`transaction`].
+//! transactions follow [`transaction`]. Whole-mod updates of an installed mod, such as BuffBot,
+//! are transactions of the same history ([`update`]).
 pub mod catalog;
 pub mod gate;
+mod github;
 #[cfg(all(test, windows))]
 mod tests;
 mod transaction;
+pub mod update;
 
 use crate::{
     digest::sha256_bytes,
@@ -242,16 +245,14 @@ pub fn inspect(ctx: &Context<'_>, catalog: &catalog::Catalog) -> Result<Hotpatch
     };
     if let Some(unfinished) = history.unfinished() {
         preview.state = "needs-recovery".into();
-        preview.detail = "A hotpatch did not finish. Restore the game files before playing. Your saves and the original installation record are untouched.".into();
+        preview.detail = "A game update did not finish. Restore the game files before playing. Your saves and the original installation record are untouched.".into();
         preview.can_restore = transaction::restorable(ctx, catalog, unfinished).is_ok();
         return Ok(preview);
     }
     let assessment = gate::assess(ctx, catalog, &history);
     if let (Some(target), Some(current)) = (history.undo_target(), &assessment.current) {
-        preview.undo_title = Some(catalog.hotpatch(&target.hotpatch_id).map_or_else(
-            || target.hotpatch_id.clone(),
-            |hotpatch| hotpatch.title.clone(),
-        ));
+        // The latest change, which may be a whole-mod update.
+        preview.undo_title = Some(target.title(catalog));
         preview.can_undo = transaction::undoable(ctx, catalog, target, current).is_ok();
     }
     preview.notes = assessment.notes;

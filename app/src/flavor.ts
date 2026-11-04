@@ -1,7 +1,7 @@
 import type { BackendStatus } from "./contracts";
 import { FLAVORS, type Flavor, type SourceDefinition, type SourceSlot } from "./flavors";
 
-export type { Flavor, FlavorFeatures, FlavorId, SourceDefinition, SourceSlot } from "./flavors";
+export type { Flavor, FlavorFeatures, FlavorId, ModUpdateOffer, SourceDefinition, SourceSlot } from "./flavors";
 
 /** The build's flavor: `vite --mode iwd` builds Chriz Easy IWD, every other mode Chriz Easy BG. */
 export const flavor: Flavor = FLAVORS[import.meta.env.MODE === "iwd" ? "iwd" : "bg"];

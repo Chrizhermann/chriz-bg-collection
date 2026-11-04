@@ -164,3 +164,16 @@ title = "The Luremaster"
 summary = "He opens with Improved Invisibility, hops away when an enemy reaches him, his Dispel Magic works."
 save_applicability = "before-area-visit"
 condition_note = "Your game gets it if you have not reached the Luremaster's hall yet."
+
+# Mods the app updates in finished installations (docs/plans/2026-11-04-buffbot-updater.md): WeiDU
+# installs the mod's installed components again from the new release, seeing it as the last mod,
+# so mods after it are left alone. Recorded in the same history as hotpatches: later hotpatches
+# stay possible and Undo takes back the latest change. The release is the one GitHub marks as
+# Latest when the player checks (Christopher, 2026-11-04), checked against the length and SHA-256
+# GitHub publishes for `asset` ({tag} is the release's tag).
+[[updates]]
+mod = "buffbot"
+title = "BuffBot"
+summary = "Brings BuffBot in this game to its newest release. Your saves, BuffBot settings and exported presets stay as they are, and so do mods you added."
+repository = "Chrizhermann/bg-eeex-buffbot"
+asset = "buffbot-{tag}.zip"

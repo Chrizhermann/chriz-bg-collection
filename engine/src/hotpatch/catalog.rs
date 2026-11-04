@@ -78,6 +78,26 @@ struct CatalogFile {
     bases: Vec<Base>,
     #[serde(default)]
     hotpatches: Vec<HotpatchEntry>,
+    #[serde(default)]
+    updates: Vec<UpdateEntry>,
+}
+
+/// A mod the app can update in finished installations. Its release comes either from
+/// `repository`'s Latest release on GitHub, with the ZIP `asset` (`{tag}` stands for the tag), or
+/// from the pinned `artifact` below `artifacts/`.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct UpdateEntry {
+    #[serde(rename = "mod")]
+    mod_id: String,
+    title: String,
+    summary: String,
+    #[serde(default)]
+    repository: Option<String>,
+    #[serde(default)]
+    asset: Option<String>,
+    #[serde(default)]
+    artifact: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -123,6 +143,26 @@ impl Hotpatch {
     }
 }
 
+/// Where an update's release comes from.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub enum UpdateSource {
+    /// The release GitHub marks as Latest when the player checks; `asset` names its ZIP, with
+    /// `{tag}` for the release's tag. GitHub's published length and SHA-256 are checked.
+    LatestRelease { repository: String, asset: String },
+    /// One pinned release, in the recipe's artifact format.
+    Pinned(Box<Artifact>),
+}
+
+/// A mod the app can update in finished installations (see [`super::update`]).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ModUpdate {
+    /// The mod's id in the installation's recipe.
+    pub mod_id: String,
+    pub title: String,
+    pub summary: String,
+    pub source: UpdateSource,
+}
+
 /// Paths the game, its loader or installed mods write while the game runs. They never count as
 /// the player's changes or block Undo, and a hotpatch may not write them.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -144,6 +184,7 @@ pub struct Catalog {
     pub bases: Vec<Base>,
     /// In the order they apply.
     pub hotpatches: Vec<Hotpatch>,
+    pub updates: Vec<ModUpdate>,
     /// Digest of every catalog file read, so a review token never outlives a catalog change.
     pub digest: String,
 }
@@ -154,6 +195,9 @@ impl Catalog {
     }
     pub fn hotpatch(&self, id: &str) -> Option<&Hotpatch> {
         self.hotpatches.iter().find(|hotpatch| hotpatch.id == id)
+    }
+    pub fn update(&self, mod_id: &str) -> Option<&ModUpdate> {
+        self.updates.iter().find(|update| update.mod_id == mod_id)
     }
 }
 
@@ -248,14 +292,92 @@ pub fn load(dir: &Path) -> Result<Catalog, String> {
         validate_package(&hotpatch, &entry.artifact, &entry.mod_id)?;
         hotpatches.push(hotpatch);
     }
+    let mut updates: Vec<ModUpdate> = Vec::new();
+    for entry in file.updates {
+        identifier(&entry.mod_id)?;
+        if updates.iter().any(|earlier| earlier.mod_id == entry.mod_id) {
+            return Err(format!("The update of {:?} is listed twice.", entry.mod_id));
+        }
+        if entry.title.trim().is_empty() || entry.summary.trim().is_empty() {
+            return Err(format!(
+                "The update of {:?} needs a title and a summary.",
+                entry.mod_id
+            ));
+        }
+        let source = match (entry.repository, entry.asset, entry.artifact) {
+            (Some(repository), Some(asset), None) => {
+                validate_release_names(&repository, &asset)
+                    .map_err(|what| format!("The update of {:?}: {what}", entry.mod_id))?;
+                UpdateSource::LatestRelease { repository, asset }
+            }
+            (None, None, Some(id)) => {
+                identifier(&id)?;
+                let artifact: Artifact = toml::from_str(&read(&format!("artifacts/{id}.toml"))?)
+                    .map_err(|error| format!("artifacts/{id}.toml: {error}"))?;
+                validate_release_artifact(&artifact, &id)
+                    .map_err(|what| format!("The update of {:?}: {what}", entry.mod_id))?;
+                UpdateSource::Pinned(Box::new(artifact))
+            }
+            _ => {
+                return Err(format!(
+                    "The update of {:?} needs either a repository and an asset, or an artifact.",
+                    entry.mod_id
+                ))
+            }
+        };
+        updates.push(ModUpdate {
+            mod_id: entry.mod_id,
+            title: entry.title,
+            summary: entry.summary,
+            source,
+        });
+    }
     Ok(Catalog {
         game: file.game,
         runtime_files: RuntimeFiles(runtime),
         gate: file.gate,
         bases: file.bases,
         hotpatches,
+        updates,
         digest: sha256_bytes(&digest_input),
     })
+}
+
+/// A GitHub repository as `owner/name`, and a ZIP asset name with `{tag}` in it.
+fn validate_release_names(repository: &str, asset: &str) -> Result<(), String> {
+    let plain = |part: &str| {
+        !part.is_empty()
+            && !part.starts_with('.')
+            && part
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b"-_.".contains(&b))
+    };
+    let parts = repository.split('/').collect::<Vec<_>>();
+    if parts.len() != 2 || !parts.iter().all(|part| plain(part)) {
+        return Err(format!("{repository:?} is not a GitHub repository."));
+    }
+    let named = asset.replace("{tag}", "v1");
+    if !asset.contains("{tag}") || !named.to_ascii_lowercase().ends_with(".zip") || !plain(&named) {
+        return Err(format!("{asset:?} does not name a ZIP with {{tag}}."));
+    }
+    Ok(())
+}
+
+/// A pinned release ZIP of one mod folder, as a hotpatch package is.
+fn validate_release_artifact(artifact: &Artifact, id: &str) -> Result<(), String> {
+    if artifact.id != id
+        || artifact.acquisition != AcquisitionPolicy::FetchOnly
+        || artifact.source.kind != SourceKind::GithubRelease
+        || !artifact.source.url.starts_with("https://")
+        || artifact.source.expected_length.is_none()
+        || !hex64(&artifact.source.sha256)
+        || artifact.archive.kind != ArchiveKind::Zip
+        || artifact.tool.is_some()
+        || artifact.archive.publish_roots.len() != 1
+    {
+        return Err("its release must be a pinned GitHub release ZIP of one mod folder.".into());
+    }
+    Ok(())
 }
 
 fn validate_rules(rules: &GateRules) -> Result<(), String> {
@@ -411,6 +533,7 @@ mod tests {
             .free_mods
             .iter()
             .chain(&catalog.gate.required_mods)
+            .chain(catalog.updates.iter().map(|update| &update.mod_id))
         {
             assert!(recipe.mods.contains_key(id), "unknown mod {id:?}");
         }

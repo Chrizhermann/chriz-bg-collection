@@ -1809,6 +1809,98 @@ pub fn hotpatch_managed_install(
     let failed = |error: String| CliError::new("hotpatch_failed", error);
     let catalog = crate::hotpatch::catalog::load(catalog)
         .map_err(|error| CliError::new("hotpatch_catalog_invalid", error))?;
+    let (record, app_data, locks) = registered_install(managed_root)?;
+    let ctx = crate::hotpatch::Context {
+        record: &record,
+        app_data: &app_data,
+        locks: &locks,
+        cache,
+    };
+    match action {
+        HotpatchAction::Check => {
+            let _lock = locks
+                .try_acquire(&record.managed_root)
+                .map_err(|error| failed(error.to_string()))?;
+            crate::hotpatch::inspect(&ctx, &catalog)
+        }
+        HotpatchAction::Apply {
+            review_token,
+            full_backup,
+            save_backup,
+        } => crate::hotpatch::apply(&ctx, &catalog, review_token, *full_backup, *save_backup),
+        HotpatchAction::Undo => crate::hotpatch::restore(&ctx, &catalog, true),
+        HotpatchAction::Restore => crate::hotpatch::restore(&ctx, &catalog, false),
+    }
+    .map_err(failed)
+}
+
+/// What the `hotpatch update-check` and `update-apply` commands do for one mod.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ModUpdateAction {
+    /// Show what Updates shows; never writes the game.
+    Check,
+    /// Apply the update that a check offered with `review_token`.
+    Apply {
+        review_token: String,
+        full_backup: bool,
+        save_backup: bool,
+    },
+}
+
+/// Run `action` for the mod `mod_id` on the registered installation at `managed_root`, as the
+/// app's Updates screen does. Undo and Restore are the hotpatch ones: one history holds both.
+pub fn mod_update_managed_install(
+    managed_root: &Path,
+    catalog: &Path,
+    cache: &Path,
+    mod_id: &str,
+    action: &ModUpdateAction,
+) -> Result<crate::hotpatch::update::ModUpdatePreview, CliError> {
+    let failed = |error: String| CliError::new("mod_update_failed", error);
+    let catalog = crate::hotpatch::catalog::load(catalog)
+        .map_err(|error| CliError::new("hotpatch_catalog_invalid", error))?;
+    let (record, app_data, locks) = registered_install(managed_root)?;
+    let ctx = crate::hotpatch::Context {
+        record: &record,
+        app_data: &app_data,
+        locks: &locks,
+        cache,
+    };
+    match action {
+        ModUpdateAction::Check => {
+            let _lock = locks
+                .try_acquire(&record.managed_root)
+                .map_err(|error| failed(error.to_string()))?;
+            crate::hotpatch::update::inspect(&ctx, &catalog, mod_id)
+        }
+        ModUpdateAction::Apply {
+            review_token,
+            full_backup,
+            save_backup,
+        } => crate::hotpatch::update::apply(
+            &ctx,
+            &catalog,
+            mod_id,
+            review_token,
+            *full_backup,
+            *save_backup,
+        ),
+    }
+    .map_err(failed)
+}
+
+/// The completed installation at `managed_root` in this process's registry, with the
+/// application data folder and the installation locks.
+fn registered_install(
+    managed_root: &Path,
+) -> Result<
+    (
+        crate::registry::ManagedInstallRecord,
+        PathBuf,
+        crate::lock::TargetLockNamespace,
+    ),
+    CliError,
+> {
     let local = local_application_data()?;
     let app_data = local.join(application_data_directory());
     let root = fs::canonicalize(managed_root).map_err(|error| {
@@ -1835,28 +1927,7 @@ pub fn hotpatch_managed_install(
         })?;
     let locks = crate::lock::TargetLockNamespace::in_local_application_data(local)
         .map_err(|error| CliError::new("application_data_unavailable", error.to_string()))?;
-    let ctx = crate::hotpatch::Context {
-        record: &record,
-        app_data: &app_data,
-        locks: &locks,
-        cache,
-    };
-    match action {
-        HotpatchAction::Check => {
-            let _lock = locks
-                .try_acquire(&record.managed_root)
-                .map_err(|error| failed(error.to_string()))?;
-            crate::hotpatch::inspect(&ctx, &catalog)
-        }
-        HotpatchAction::Apply {
-            review_token,
-            full_backup,
-            save_backup,
-        } => crate::hotpatch::apply(&ctx, &catalog, review_token, *full_backup, *save_backup),
-        HotpatchAction::Undo => crate::hotpatch::restore(&ctx, &catalog, true),
-        HotpatchAction::Restore => crate::hotpatch::restore(&ctx, &catalog, false),
-    }
-    .map_err(failed)
+    Ok((record, app_data, locks))
 }
 
 impl FrozenSource {

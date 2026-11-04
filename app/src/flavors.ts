@@ -63,6 +63,13 @@ export interface FlavorText {
   readonly customizedUpdatesNote: string;
 }
 
+/** A whole installed mod the app can bring to its newest release in a finished installation. */
+export interface ModUpdateOffer {
+  /** The mod's id in the recipe and in the app's update catalog. */
+  readonly modId: string;
+  readonly title: string;
+}
+
 export interface Flavor {
   readonly id: FlavorId;
   /** Full product name, e.g. in titles and on the Play button. */
@@ -73,6 +80,8 @@ export interface Flavor {
   readonly gameName: string;
   readonly sources: readonly SourceDefinition[];
   readonly features: FlavorFeatures;
+  /** Whole-mod updates offered under Updates, one card each, below the hotpatch section. */
+  readonly modUpdates: readonly ModUpdateOffer[];
   readonly text: FlavorText;
 }
 
@@ -96,6 +105,7 @@ export const FLAVORS: Readonly<Record<FlavorId, Flavor>> = {
       buffBotTip: true,
       radarTip: true,
     },
+    modUpdates: [],
     text: {
       lookingForGames: "Looking for your Baldur's Gate games…",
       preparingSetupDetail: "Checking your game folders and mod choices. Your original games stay unchanged.",
@@ -136,6 +146,7 @@ export const FLAVORS: Readonly<Record<FlavorId, Flavor>> = {
       buffBotTip: true,
       radarTip: true,
     },
+    modUpdates: [{ modId: "buffbot", title: "BuffBot" }],
     text: {
       lookingForGames: "Looking for your Icewind Dale game…",
       preparingSetupDetail: "Checking your game folder and mod choices. Your original game stays unchanged.",

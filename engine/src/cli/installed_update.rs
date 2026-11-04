@@ -79,6 +79,9 @@ pub(crate) enum PlayerMods {
     /// installer and its recorded updates is still there in order. Hotpatches install after
     /// everything (Christopher, 2026-11-04).
     Allowed,
+    /// The mod list is not compared at all: a whole-mod update touches one mod's own rows, which
+    /// it reads itself, and leaves every other row alone.
+    Unchecked,
 }
 
 pub(crate) fn verify_installed_baseline(
@@ -173,14 +176,13 @@ pub(crate) fn verify_installed_baseline(
     }
     let suffix = crate::patches::verified_log_suffix(&root).map_err(problem)?;
     // The rows applied hotpatches added. The exact check also needs the mod list byte for byte as
-    // the latest hotpatch left it.
+    // the latest hotpatch or whole-mod update left it.
     let hotpatches = crate::hotpatch::verified_log_suffix(&root).map_err(problem)?;
-    let hotpatched_log = match player_mods {
-        PlayerMods::Refused if !hotpatches.is_empty() => {
-            crate::hotpatch::recorded_log_sha256(&root).map_err(problem)?
-        }
-        _ => None,
+    let recorded_log = match player_mods {
+        PlayerMods::Refused => crate::hotpatch::recorded_log_sha256(&root).map_err(problem)?,
+        PlayerMods::Allowed | PlayerMods::Unchecked => None,
     };
+    let updates = crate::hotpatch::update::applied(&root).map_err(problem)?;
     let upgrade = crate::mod_upgrades::active_upgrade(&root).map_err(problem)?;
     if let Some(u) = &upgrade {
         let source = base.plan.runs.iter().find(|r| r.run_id == u.run_id);
@@ -216,6 +218,14 @@ pub(crate) fn verify_installed_baseline(
         if final_log.target == GameRoot::Bg2 {
             expected.extend(suffix.clone());
             expected.extend(hotpatches.clone());
+            // An update keeps its mod's rows; a new release may number its language differently.
+            for update in &updates {
+                for row in &mut expected {
+                    if normalize_tp2_key(&row.tp2) == update.tp2 {
+                        row.language = update.language;
+                    }
+                }
+            }
         }
         let same = |actual: &crate::weidu::log::LogEntry, expected: &LogComponentReceipt| {
             normalize_tp2_key(&actual.tp2) == normalize_tp2_key(&expected.tp2)
@@ -230,7 +240,7 @@ pub(crate) fn verify_installed_baseline(
                         .zip(&expected)
                         .any(|(actual, expected)| !same(actual, expected))
                     || ((final_log.target == GameRoot::Bg1
-                        || (suffix.is_empty() && hotpatches.is_empty()))
+                        || (suffix.is_empty() && recorded_log.is_none()))
                         && !sha256_bytes(&bytes).eq_ignore_ascii_case(
                             upgrade
                                 .as_ref()
@@ -238,10 +248,9 @@ pub(crate) fn verify_installed_baseline(
                                 .map_or(&final_log.sha256, |u| &u.log_sha256),
                         ))
                     || (final_log.target == GameRoot::Bg2
-                        && !hotpatches.is_empty()
-                        && hotpatched_log
+                        && recorded_log
                             .as_deref()
-                            .is_none_or(|sha| !sha256_bytes(&bytes).eq_ignore_ascii_case(sha)))
+                            .is_some_and(|sha| !sha256_bytes(&bytes).eq_ignore_ascii_case(sha)))
                 {
                     return Err(problem("The installed mod list changed outside CEBG's recorded work. Automatic game updates are unavailable for this copy; app updates still work."));
                 }
@@ -256,6 +265,7 @@ pub(crate) fn verify_installed_baseline(
                     return Err(problem("A mod the installer put in was removed or moved since. Hotpatches need the installer's own mods in place."));
                 }
             }
+            PlayerMods::Unchecked => {}
         }
     }
     if seen != frozen.targets().into_iter().collect::<BTreeSet<_>>() {
@@ -280,6 +290,25 @@ pub(crate) fn verify_installed_baseline(
                 length: 4_241_150,
             },
         );
+    }
+    // A whole-mod update replaced its mod's release in every run of that mod.
+    for update in &updates {
+        for run in base
+            .plan
+            .runs
+            .iter()
+            .filter(|run| run.mod_id == update.mod_id)
+        {
+            replacements.insert(
+                run.run_id.clone(),
+                crate::session::FrozenIdentity {
+                    id: format!("{}-{}", update.mod_id, update.to_version),
+                    version: update.to_version.clone(),
+                    sha256: update.release.sha256.clone(),
+                    length: update.release.length,
+                },
+            );
+        }
     }
     Ok(VerifiedInstalledBaseline {
         manifest: old,
