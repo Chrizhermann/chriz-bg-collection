@@ -237,8 +237,12 @@ read-only repository permissions and does not receive production signing keys.
 
 The workflow installs the locked frontend dependencies, runs the frontend check, Rust
 format/tests/Clippy, Python tooling tests and locked-notice verification, then builds an unsigned NSIS package
-using the local updater-artifact override. It does not launch the setup or the app, run a
-game installation, publish a release, or edit the live updater feed. These are configured
+using the local updater-artifact override. On the disposable runner it installs the setup,
+leaves files there that an older version could have shipped plus a junction, installs again in
+update mode as the in-app updater does, and checks that the bundled folders hold exactly the
+new version's files (`tools/check-nsis-update-cleanup.ps1`; the preinstall hook in
+`app/src-tauri/windows/hooks.nsh` does the emptying). It does not launch the app, run a game
+installation, publish a release, or edit the live updater feed. These are configured
 checks; consult the actual [Actions run](https://github.com/Chrizhermann/chriz-bg-collection/actions/workflows/ci.yml)
 for a passed or failed result.
 

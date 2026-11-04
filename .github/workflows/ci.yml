@@ -168,6 +168,15 @@ jobs:
           git diff --exit-code
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # The in-app updater runs the setup in update mode, where Tauri's installer keeps files an
+      # older version shipped; the preinstall hook in app/src-tauri/windows/hooks.nsh removes them.
+      # The runner is disposable, so this step installs the setup for real.
+      - name: Check that an update install replaces the bundled data
+        run: |
+          $cebgSetups = @(Get-ChildItem -LiteralPath target/x86_64-pc-windows-msvc/release/bundle/nsis -Filter 'Chriz Easy BG_*_x64-setup.exe' -File)
+          if ($cebgSetups.Count -ne 1) { throw 'Expected exactly one Chriz Easy BG setup.' }
+          ./tools/check-nsis-update-cleanup.ps1 -SetupPath $cebgSetups[0].FullName -TauriConfiguration app/src-tauri/tauri.conf.json -WorkDirectory (Join-Path $env:RUNNER_TEMP 'cebg-update-check') 2>&1 | Tee-Object -FilePath target/ci-evidence/update-install-bg.log
+
       - name: Retain source-check evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
