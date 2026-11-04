@@ -319,7 +319,8 @@ fn install_id_of(receipt: &Path) -> Result<String, String> {
 }
 
 /// The mod-list rows applied hotpatches added after the completed installation's, in order.
-/// The current `WeiDU.log` must be exactly the one the latest hotpatch record left.
+/// Mods the player installs before or after a hotpatch add their own rows; callers compare the
+/// current `WeiDU.log` with these rows and name such rows as extra.
 pub fn verified_log_suffix(root: &Path) -> Result<Vec<LogComponentReceipt>, String> {
     if !root.join(".chriz/hotpatches").exists() {
         return Ok(vec![]);
@@ -335,24 +336,25 @@ pub fn verified_log_suffix(root: &Path) -> Result<Vec<LogComponentReceipt>, Stri
             suffix.extend(read_json::<Applied>(&entry.dir.join("applied.json"))?.suffix);
         }
     }
-    if !history.entries.is_empty() {
-        let expected = history.expected_state(root)?;
-        let log = root.join("game/WeiDU.log");
-        files::regular(&log)?;
-        let actual = files::hash(&log)?;
-        if expected
-            .files
-            .get("weidu.log")
-            .map(|identity| &identity.sha256)
-            != Some(&actual)
-        {
-            // Also after an Undo, so not "after the last hotpatch".
-            return Err(
-                "The mod list changed after the installer and its hotpatches left it.".into(),
-            );
-        }
-    }
     Ok(suffix)
+}
+
+/// SHA-256 of `WeiDU.log` as the latest hotpatch record left it (or its Undo put it back), for
+/// checks that need the exact mod list; `None` before any hotpatch.
+pub fn recorded_log_sha256(root: &Path) -> Result<Option<String>, String> {
+    if !root.join(".chriz/hotpatches").exists() {
+        return Ok(None);
+    }
+    let install_id = install_id_of(&root.join(".chriz/install-receipt.json"))?;
+    let history = History::load(root, &install_id)?;
+    if history.entries.is_empty() {
+        return Ok(None);
+    }
+    let expected = history.expected_state(root)?;
+    Ok(expected
+        .files
+        .get("weidu.log")
+        .map(|identity| identity.sha256.clone()))
 }
 
 /// Whether `name` lies in what a hotpatch for `package` may change.

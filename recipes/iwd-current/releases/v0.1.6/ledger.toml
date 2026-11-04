@@ -29,3 +29,11 @@ covers = [
   "feature:feature:chriz-iwd-encounters:component-410",
   "run:chriz-iwd-encounters-main",
 ]
+
+[[changes]]
+id = "hotpatches-with-own-additions"
+title = "Hotpatches also reach games with your own additions"
+summary = "Voice packs, portraits and other mods you add after installing no longer stop a hotpatch. It is installed after them, and Undo puts the game back as it was right before the hotpatch, your additions included."
+save_applicability = "current-save"
+urgency = "informational"
+covers = ["release:hotpatch-own-additions"]

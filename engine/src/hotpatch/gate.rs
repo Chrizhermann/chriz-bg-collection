@@ -1,6 +1,11 @@
 //! Christopher's strict rule: a hotpatch is offered only to an installation that is the
 //! recommended setup or differs from it in small ways. Everything else is refused, because a
 //! patch tested on the recommended setup is not known to work on it.
+//!
+//! What players add after installing (voice packs, portraits, other mods) never counts against
+//! it: the hotpatch installs after their additions, and Undo puts back the folder as it was right
+//! before the hotpatch, additions included. Christopher, 2026-11-04, on refusing every
+//! installation whose files changed since the installer: far too strict for the community.
 use std::collections::{BTreeMap, BTreeSet};
 
 use serde::Serialize;
@@ -8,7 +13,7 @@ use serde::Serialize;
 use super::catalog::{Base, Catalog, GateRules, Hotpatch};
 use super::transaction::History;
 use super::Context;
-use crate::cli::VerifiedInstalledBaseline;
+use crate::cli::{PlayerMods, VerifiedInstalledBaseline};
 use crate::game_files::{Difference, GameFiles};
 use crate::recipe_view::{evaluate, evaluate_preset};
 use crate::resolve::{InstallPlan, PlannedRun};
@@ -163,8 +168,9 @@ pub(super) struct Assessment {
 
 /// The rule's verdict, cheapest checks first; every reason found is reported together.
 pub(super) fn assess(ctx: &Context<'_>, catalog: &Catalog, history: &History) -> Assessment {
-    let baseline =
-        crate::cli::verify_installed_baseline(ctx.record).map_err(|error| error.to_string());
+    // Mods the player added keep the baseline; removed or moved installer mods do not.
+    let baseline = crate::cli::verify_installed_baseline(ctx.record, PlayerMods::Allowed)
+        .map_err(|error| error.to_string());
     assess_with(ctx, catalog, history, baseline)
 }
 
@@ -250,11 +256,13 @@ pub(super) fn assess_with(
     match history.expected_state(&ctx.record.managed_root) {
         Ok(expected) => match crate::game_files::capture(&ctx.game()) {
             Ok(now) => {
+                // The player's own changes are named, never refused: the transaction records the
+                // folder as it is now, so Undo gives back exactly this.
                 let changed =
                     expected.differences(&now, |name| catalog.runtime_files.matches(name));
                 if !changed.is_empty() {
-                    refusals.push(format!(
-                        "Files in the game folder changed since the installer and its hotpatches left it: {}.",
+                    notes.push(format!(
+                        "Your own changes since installing do not stop hotpatches; the hotpatch is installed after them: {}.",
                         summarize(&changed)
                     ));
                 }

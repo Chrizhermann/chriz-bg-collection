@@ -123,8 +123,8 @@ impl Hotpatch {
     }
 }
 
-/// Paths the game, its loader or installed mods write while the game runs. They neither block a
-/// hotpatch nor may a hotpatch write them.
+/// Paths the game, its loader or installed mods write while the game runs. They never count as
+/// the player's changes or block Undo, and a hotpatch may not write them.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct RuntimeFiles(Vec<String>);
 
@@ -458,8 +458,8 @@ mod tests {
     }
 
     /// What played IWD installations wrote into the game folder (Christopher's own one, and the
-    /// 0.1.1 release lab, 2026-10-29) must not make them look edited by hand; the files mods and
-    /// hotpatches install must stay checked.
+    /// 0.1.1 release lab, 2026-10-29) must not count as the player's changes or block Undo; the
+    /// files mods and hotpatches install must stay checked.
     #[test]
     fn the_bundled_iwd_catalog_ignores_what_a_played_game_writes() {
         let catalog = load(&repository().join("hotpatches/iwd")).unwrap();

@@ -2,10 +2,11 @@
 //! installed after everything else, so that running games get them too.
 //!
 //! A hotpatch is offered only to an installation the strict rule in [`gate`] accepts: the
-//! collection as published, its game files exactly as the installer and earlier hotpatches left
-//! them, and choices close to the recommended setup. Base receipts and saves stay immutable.
-//! Every file a hotpatch changes keeps an earlier copy in its transaction record, so Undo puts
-//! the game folder back byte for byte; transactions follow [`transaction`].
+//! collection as published and choices close to the recommended setup. What the player added
+//! since (voice packs, other mods) stays and never blocks it. Base receipts and saves stay
+//! immutable. Every file a hotpatch changes keeps an earlier copy in its transaction record, so
+//! Undo puts the game folder back byte for byte as it was right before the hotpatch;
+//! transactions follow [`transaction`].
 pub mod catalog;
 pub mod gate;
 #[cfg(all(test, windows))]
@@ -24,7 +25,8 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 pub use transaction::{
-    apply, apply_with_progress, launch_guard, restore, restore_with_progress, verified_log_suffix,
+    apply, apply_with_progress, launch_guard, recorded_log_sha256, restore, restore_with_progress,
+    verified_log_suffix,
 };
 
 /// Where transaction records live, below the managed root.

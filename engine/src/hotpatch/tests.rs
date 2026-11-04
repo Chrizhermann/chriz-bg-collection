@@ -24,6 +24,7 @@ const BASE_LOG: &[u8] =
     b"// Synthetic mod list\r\n~STRATAGEMS/SETUP-STRATAGEMS.TP2~ #0 #1000 // Fixture: v1\r\n";
 const ROW: &[u8] =
     b"~CHRIZ_IWD_ENCOUNTERS/SETUP-CHRIZ_IWD_ENCOUNTERS.TP2~ #0 #10 // Belhifet: v0.2.0\r\n";
+const VOICE_ROW: &[u8] = b"~VOICEPACK/VOICEPACK.TP2~ #0 #0 // Voice pack: 1.0\r\n";
 const SAVE: &str = "save/000000001-Quick-Save/ICEWIND.gam";
 const OLD_CREATURE: &[u8] = b"CRE V9.0 synthetic Belhifet before the hotpatch";
 const NEW_CREATURE: &[u8] = b"CRE V9.0 synthetic Belhifet after the hotpatch";
@@ -380,6 +381,28 @@ impl Fixture {
         dir
     }
 
+    /// What a player's voice pack writes after the installer finished: its folder and WeiDU
+    /// backup, its sounds, one more string and its row in the mod list.
+    fn add_voice_pack(&self) {
+        let game = self.game();
+        write(
+            &game.join("voicepack/voicepack.tp2"),
+            b"BACKUP ~weidu_external/voicepack/backup~\r\nBEGIN ~Voice pack~\r\n",
+        );
+        write(
+            &game.join("weidu_external/voicepack/backup/0/UNINSTALL.0"),
+            b"lang/en_us/sounds/VOICE01.wav\r\n",
+        );
+        write(&game.join("lang/en_US/sounds/VOICE01.wav"), b"RIFF voice");
+        write(&game.join("override/VOICE01.wav"), b"RIFF voice copy");
+        let strings = fs::read(game.join("lang/en_US/dialog.tlk")).unwrap();
+        let entries = u32::from_le_bytes(strings[10..14].try_into().unwrap());
+        write(&game.join("lang/en_US/dialog.tlk"), &tlk(entries + 1));
+        let mut log = fs::read(game.join("WeiDU.log")).unwrap();
+        log.extend_from_slice(VOICE_ROW);
+        write(&game.join("WeiDU.log"), &log);
+    }
+
     fn now(&self) -> game_files::GameFiles {
         game_files::capture(&self.game()).unwrap()
     }
@@ -670,14 +693,73 @@ fn weidu_is_judged_by_its_result_lines_as_in_a_fresh_installation() {
 }
 
 #[test]
-fn a_mod_list_edited_after_the_hotpatch_is_not_accepted() {
+fn a_mod_added_after_the_hotpatch_keeps_its_rows_and_blocks_only_its_undo() {
     let f = Fixture::new();
     f.apply();
-    let mut log = fs::read(f.game().join("WeiDU.log")).unwrap();
-    log.extend_from_slice(b"// edited by hand\r\n");
-    write(&f.game().join("WeiDU.log"), &log);
-    let error = verified_log_suffix(f.root()).unwrap_err();
-    assert!(error.contains("mod list changed"), "{error}");
+    let hotpatched = sha256_bytes(&fs::read(f.game().join("WeiDU.log")).unwrap());
+    assert_eq!(
+        recorded_log_sha256(f.root()).unwrap().as_deref(),
+        Some(hotpatched.as_str())
+    );
+    f.add_voice_pack();
+    // The hotpatch's rows stay verified; the launcher names the voice pack's row as extra.
+    assert_eq!(verified_log_suffix(f.root()).unwrap(), [row()]);
+    // Game updates, which need the exact list, still see the mod list as the hotpatch left it.
+    assert_eq!(
+        recorded_log_sha256(f.root()).unwrap().as_deref(),
+        Some(hotpatched.as_str())
+    );
+    assert_ne!(
+        sha256_bytes(&fs::read(f.game().join("WeiDU.log")).unwrap()),
+        hotpatched
+    );
+    launch_guard(f.root()).unwrap();
+    let assessment = f.assess(f.baseline());
+    assert!(assessment.refusals.is_empty(), "{:?}", assessment.refusals);
+    assert!(
+        assessment
+            .notes
+            .join(" ")
+            .contains("do not stop hotpatches"),
+        "{:?}",
+        assessment.notes
+    );
+    // Undo would take back what the voice pack changed, so it refuses without writing.
+    let before = f.now();
+    let error = restore(&f.ctx(), &f.catalog, true).unwrap_err();
+    assert!(error.contains("cannot be undone automatically"), "{error}");
+    assert_eq!(f.now(), before);
+    assert_eq!(f.history().entries[0].state, State::Applied);
+}
+
+#[test]
+fn a_voice_pack_added_after_installing_stays_through_apply_and_undo() {
+    let f = Fixture::new();
+    f.add_voice_pack();
+    let with_voices = f.now();
+    let assessment = f.assess(f.baseline());
+    assert!(assessment.refusals.is_empty(), "{:?}", assessment.refusals);
+    assert_eq!(assessment.next.unwrap().id, "belhifet-1");
+    assert_eq!(assessment.current.unwrap(), with_voices);
+
+    f.apply();
+    // The hotpatch is installed after the voice pack.
+    let log = fs::read(f.game().join("WeiDU.log")).unwrap();
+    assert!(log.ends_with(&[VOICE_ROW, ROW].concat()));
+    assert_eq!(verified_log_suffix(f.root()).unwrap(), [row()]);
+    let history = f.history();
+    assert_eq!(history.expected_state(f.root()).unwrap(), f.now());
+    assert!(history.undo_target().is_some());
+
+    // Undo gives back the folder with the voice pack, byte for byte, not the installer's.
+    restore(&f.ctx(), &f.catalog, true).unwrap();
+    let left = with_voices.differences(&f.now(), |name| f.catalog.runtime_files.matches(name));
+    assert!(left.is_empty(), "{left:?}");
+    assert_eq!(
+        fs::read(f.game().join("lang/en_US/dialog.tlk")).unwrap(),
+        tlk(3)
+    );
+    f.assert_untouched();
 }
 
 #[test]
@@ -726,8 +808,10 @@ fn the_rule_offers_the_recommended_setup_its_next_hotpatch() {
     assert!(assessment.next.is_none(), "every hotpatch is applied");
 }
 
+/// Christopher, 2026-11-04: refusing every installation whose files changed since the installer
+/// was far too strict; players add voice packs and other mods.
 #[test]
-fn the_rule_refuses_files_changed_by_hand() {
+fn the_rule_names_the_players_own_changes_but_never_refuses_them() {
     let f = Fixture::new();
     write(
         &f.game().join("override/other.itm"),
@@ -739,20 +823,31 @@ fn the_rule_refuses_files_changed_by_hand() {
         b"ITM V1   added by hand",
     );
     let assessment = f.assess(f.baseline());
-    let refusals = assessment.refusals.join(" ");
-    assert!(
-        refusals.contains("changed since the installer"),
-        "{refusals}"
-    );
+    assert!(assessment.refusals.is_empty(), "{:?}", assessment.refusals);
+    assert_eq!(assessment.next.unwrap().id, "belhifet-1");
+    let notes = assessment.notes.join(" ");
+    assert!(notes.contains("do not stop hotpatches"), "{notes}");
     for name in [
         "override/other.itm (changed)",
         "data/area.bif (removed)",
         "override/mine.itm (added)",
     ] {
-        assert!(refusals.contains(name), "{refusals}");
+        assert!(notes.contains(name), "{notes}");
     }
-    // The player still sees what is withheld.
-    assert_eq!(assessment.next.unwrap().id, "belhifet-1");
+
+    // A voice pack installed with WeiDU after the installer is no different.
+    let f = Fixture::new();
+    f.add_voice_pack();
+    let assessment = f.assess(f.baseline());
+    assert!(assessment.refusals.is_empty(), "{:?}", assessment.refusals);
+    let notes = assessment.notes.join(" ");
+    for name in [
+        "lang/en_us/dialog.tlk (changed)",
+        "voicepack (added)",
+        "more.",
+    ] {
+        assert!(notes.contains(name), "{notes}");
+    }
 }
 
 #[test]
@@ -802,11 +897,11 @@ fn the_rule_refuses_a_changed_collection_and_far_away_choices() {
         &f.ctx(),
         &f.catalog,
         &f.history(),
-        Err("The installed mod list changed outside CEBG's recorded work.".into()),
+        Err("A mod the installer put in was removed or moved since.".into()),
     )
     .refusals
     .join(" ");
-    assert!(refusals.contains("mod list changed outside"), "{refusals}");
+    assert!(refusals.contains("installer put in"), "{refusals}");
 }
 
 #[test]
