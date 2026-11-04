@@ -22,8 +22,9 @@ Cross-repository status. Component detail stays in the sections below and in the
 - CEBG alpha.22, the next release (Christopher's plan of 2026-10-25), in this order. On
   2026-11-01 Christopher decided that it is released as app and collection **0.1.0**,
   without a pre-release suffix and with the same content. **Published on 2026-11-02**
-  (step 4); still open: merging the next-release branch back into `main`, which
-  Christopher decides.
+  (step 4). The next-release branch went back into `main` on 2026-11-04
+  ([PR #101](https://github.com/Chrizhermann/chriz-bg-collection/pull/101)); since then all work happens on `main` (Christopher,
+  2026-11-04).
   1. One pin batch: Modpack alpha.14 (released on 2026-10-26, see below), BG Rebalance
      v0.8.5, Spell Revisions fork v4.21-chriz.7, BuffBot v1.11.0, the Artisan's Kitpack
      fork `v4.81a-dev.85928f9-chriz.3` (sorcerer and kit weapon fixes, below), EEex `9`
@@ -134,7 +135,7 @@ Cross-repository status. Component detail stays in the sections below and in the
   copies, the download questions, the saves & portraits button, BG1 NPC Project as an
   option and Marek's Boomerang Dagger. Package, lab and publication:
   `docs/package-acceptance-0.1.1-2026-11-03.md`.
-  Open for **0.1.2** on the next-release branch:
+  Open for **0.1.2**, on `main`:
   - **BG Rebalance v0.8.10** fixes 0.1.1's known issue: without Spell Revisions, `302`
     (Flail of the Ages balance) stops the installation on SCS's own Slow and Haste spells
     ([chriz-bg-rebalance#26](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/26)).
@@ -142,7 +143,7 @@ Cross-repository status. Component detail stays in the sections below and in the
     ships it. The
     script-engine session's lab without Spell Revisions and with `302` off installed
     cleanly (450 components, 2026-11-03), so nothing else stops there. Pinned in both BG
-    recipes by [PR #103](https://github.com/Chrizhermann/chriz-bg-collection/pull/103)
+    recipes by [PR #103](https://github.com/Chrizhermann/chriz-bg-collection/pull/103), merged on 2026-11-04
     (evidence in `manifest/evidence/release-intake-20261103-chriz-bg-rebalance-chriz-easy-bg.toml`).
   - **BuffBot's newest release in both installers**: v1.16.0 since 2026-11-03 (after
     v1.15.0). Both wait for 0.1.2 (Christopher, 2026-11-04); the hold in
@@ -154,7 +155,6 @@ Cross-repository status. Component detail stays in the sections below and in the
     - Recommended still installs maximum HP on level-up (Tweaks Anthology `3000`) and
       Maximum HP Creatures (`3010`). Should 0.1.2's Recommended use rolled HP and drop
       Maximum HP Creatures, as the fight-AI labs do?
-  - Merging the release line back into `main`: Christopher decides.
 - Installers keep going when a mod's official link serves a newer file (Christopher,
   2026-10-30: as few blockers as possible; a newer version under the same link is
   installed and logged, and players report problems afterwards).
@@ -172,8 +172,8 @@ Cross-repository status. Component detail stays in the sections below and in the
   the renames that exist only on the next-release branch.
   - PR #40 also fixes a regression from #35: a damaged manual archive in the download
     cache that another program had marked read-only could no longer be replaced; the
-    repair failed after about 5 s of retries. `main` keeps that regression until the
-    next-release branch is merged back into it.
+    repair failed after about 5 s of retries. `main` has the fix since the next-release
+    branch was merged back into it on 2026-11-04 (#101).
 - Engine test isolation (found on 2026-10-28): some engine test runs write CEBG's install
   marker `.chriz-managed-install.json` into the real Documents folder. About 30 empty
   profile folders came from them; some markers name a temporary test folder as their
@@ -656,9 +656,9 @@ Cross-repository status. Component detail stays in the sections below and in the
   Also: manual downloads (Evandra) accept a newer version, as #69 does for links. GOG,
   other game versions and non-English games install with a warning instead of stopping
   (Christopher, 2026-10-30).
-  Chriz Easy BG, for 0.1.1 (2026-11-03): all of it is in a stack of five PRs from the
-  `claude/fewer-blockers-*` branches into the next-release branch, awaiting Christopher's
-  review and merge OK (sources, retries, optional runs, manual downloads, environment).
+  Chriz Easy BG, for 0.1.1 (2026-11-03): all of it came in a stack of five PRs from the
+  `claude/fewer-blockers-*` branches (#89–#93: sources, retries, optional runs, manual
+  downloads, environment), merged into the next-release branch and shipped in 0.1.1.
   On Christopher's request of 2026-11-03 the game check also finds GOG (registry records
   and default folders) and Beamdog client copies and installs from them with a "less
   tested" warning, and names a Microsoft Store folder as protected. Steam 2.7.3.0 in

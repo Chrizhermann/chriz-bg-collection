@@ -2,6 +2,19 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 4 — everything on `main`
+
+Christopher retired the release line on 2026-11-04: [PR #101](https://github.com/Chrizhermann/chriz-bg-collection/pull/101)
+merged `claude/cebg-installer-fixes-20261014` into `main`, and all work goes to `main` from
+now on. The repository variable `CEBG_NEXT_RELEASE_BRANCH` is `main`, so the daily pin job
+prepares its pull requests there. Chriz Easy IWD stays on `claude/iwdee-app` for now.
+
+Open for 0.1.2:
+- BG Rebalance v0.8.10 is pinned ([PR #103](https://github.com/Chrizhermann/chriz-bg-collection/pull/103), merged).
+- BuffBot v1.16.0 waits for 0.1.2 under the hold in `manifest/own-mods.toml`; the daily
+  job's drafts are [#106](https://github.com/Chrizhermann/chriz-bg-collection/pull/106) (Chriz Easy BG) and
+  [#107](https://github.com/Chrizhermann/chriz-bg-collection/pull/107) (Chriz Easy IWD).
+
 ## November 3 — 0.1.1 published
 
 **Published** on 2026-11-03 at 18:29:55 UTC, with Christopher's OK of 2026-11-04 (03:12
@@ -17,11 +30,8 @@ Details: [Publication](package-acceptance-0.1.1-2026-11-03.md#publication).
   (released 2026-11-03 21:02 UTC), which the hold in `manifest/own-mods.toml` names since
   2026-11-04. 0.1.1 ships the tested v1.12.6.
 - **Known issue:** without Spell Revisions, a new installation stops at BG Rebalance
-  `302`. BG Rebalance v0.8.10 fixes it, for 0.1.2; its pin is
-  [PR #103](https://github.com/Chrizhermann/chriz-bg-collection/pull/103).
-- **Next:**
-  - pin BG Rebalance v0.8.10 (PR #103) and the newest BuffBot (v1.16.0) for 0.1.2;
-  - the release line goes back into `main`, which Christopher decides.
+  `302`. BG Rebalance v0.8.10 fixes it, for 0.1.2; its pin
+  [PR #103](https://github.com/Chrizhermann/chriz-bg-collection/pull/103) is merged (2026-11-04).
 
 ### The candidate
 
@@ -127,7 +137,7 @@ earlier that day (`1101253f…`,
 
 Not in 0.1.0: the open PRs against the next-release branch, #69 (install what a mod's
 official link serves when it differs from the pin) and #53 (own-mod pin check). The
-next-release branch has not been merged back into `main` yet; Christopher decides when.
+next-release branch went back into `main` on 2026-11-04 (#101).
 
 ## November 1 — download drift fixes (PR 69)
 

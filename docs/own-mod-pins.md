@@ -23,8 +23,8 @@ a recipe installs anything from his account that the list does not name.
 
 | Installer | Recipes it ships | Where |
 |---|---|---|
-| Chriz Easy BG | `manifest/` and `recipes/curated-full-current/` | the next-release branch |
-| Chriz Easy IWD | `recipes/iwd-current/` | `claude/iwdee-app`, until it joins the next-release branch after CEBG alpha.22 |
+| Chriz Easy BG | `manifest/` and `recipes/curated-full-current/` | `main` |
+| Chriz Easy IWD | `recipes/iwd-current/` | `claude/iwdee-app`, until it joins `main` |
 
 `recipes/creator-full-current/` is a historical replay that the app refuses to install.
 Its old pins stay as they are.
@@ -88,7 +88,7 @@ Its old pins stay as they are.
 
 ```powershell
 git fetch origin claude/iwdee-app
-$env:GH_TOKEN = (gh auth token --user Chrizhermann); python -I tools/own_mod_pins.py check --base origin/claude/cebg-installer-fixes-20261014
+$env:GH_TOKEN = (gh auth token --user Chrizhermann); python -I tools/own_mod_pins.py check --base origin/main
 ```
 
 It prints one row per mod: each installer's pin, the newest release and the state. It
@@ -160,8 +160,8 @@ closes or approves anything.
 
 - **Where it runs:** `.github/workflows/own-mod-pin-job.yml` on `main`, because GitHub
   runs scheduled workflows only from the default branch. It checks out the branch that the
-  repository variable `CEBG_NEXT_RELEASE_BRANCH` names and runs `tools/own_mod_pin_job.py`
-  from there. When a new next-release branch starts, set that variable to it.
+  repository variable `CEBG_NEXT_RELEASE_BRANCH` names (`main` since 2026-11-04) and runs
+  `tools/own_mod_pin_job.py` from there.
 - **What it does:** for each of our mods whose newest release an installer lacks, it runs
   `tools/prepare_own_mod_pin.py` in a fresh worktree of each installer's branch. It pushes
   `own-mod-pin/<installers>/<mod>-<release>`, opens a draft pull request against that
