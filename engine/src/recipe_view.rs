@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{EngineError, Result};
 use crate::manifest::{
-    ComponentRef, Decision, Feature, FeatureGroup, FeatureGroupVariant, InputSpec, InputValue,
-    PromptAnswer, Readiness,
+    Collection, ComponentRef, Decision, Feature, FeatureGroup, FeatureGroupVariant, InputSpec,
+    InputValue, PromptAnswer, Readiness, Run,
 };
 use crate::resolve::{InstallPlan, PlannedRun, Selection};
 use crate::Manifest;
@@ -1227,19 +1227,22 @@ pub fn plan_without_artifacts(
 /// The recipe run a planned run comes from: the run of that id, or the run that a manual pause
 /// split into `<run>--manual-…` parts.
 pub fn recipe_run_id(manifest: &Manifest, planned_run_id: &str) -> Option<String> {
-    manifest
-        .collection
+    recipe_run_in(&manifest.collection, planned_run_id).map(|run| run.run_id.clone())
+}
+
+/// [`recipe_run_id`], for a collection without its manifest: the run itself.
+pub fn recipe_run_in<'a>(collection: &'a Collection, planned_run_id: &str) -> Option<&'a Run> {
+    collection
         .runs
         .iter()
         .find(|candidate| candidate.run_id == planned_run_id)
         .or_else(|| {
-            manifest.collection.runs.iter().find(|candidate| {
+            collection.runs.iter().find(|candidate| {
                 planned_run_id
                     .strip_prefix(candidate.run_id.as_str())
                     .is_some_and(|rest| rest.starts_with("--manual-"))
             })
         })
-        .map(|run| run.run_id.clone())
 }
 
 /// [`plan_without_artifacts`], leaving out also the `failed` components, which an installer

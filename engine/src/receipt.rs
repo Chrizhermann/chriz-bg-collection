@@ -12,7 +12,8 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::decision::{
-    Answer, AnswerSource, AnsweredDecision, DecisionOutcome, QuestionKind, UnusableReason,
+    Answer, AnswerSource, AnsweredDecision, DecisionOutcome, FailedPart, QuestionKind,
+    UnusableReason,
 };
 use crate::games::{GameRole, Storefront};
 use crate::manifest::GameRoot;
@@ -223,7 +224,7 @@ pub struct LeftOutReceipt {
     pub failed_run: Option<String>,
 }
 
-/// One answer to a question about a download ([`crate::decision`]).
+/// One answer to a question ([`crate::decision`]).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DecisionReceipt {
@@ -259,6 +260,9 @@ pub struct DecisionReceipt {
     /// Runs installed with fewer parts because the answer left the mod out.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub changed_runs: Vec<String>,
+    /// What failed, for a failed component.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failed: Option<FailedPart>,
     /// What became of the answer: applied, withdrawn because the situation it answered no
     /// longer held, failed, or still pending. Only an applied answer took effect.
     pub outcome: DecisionOutcome,
@@ -304,6 +308,7 @@ impl From<&AnsweredDecision> for DecisionReceipt {
                         .collect()
                 })
                 .unwrap_or_default(),
+            failed: question.failed.clone(),
             outcome: decision.outcome,
         }
     }
@@ -893,6 +898,7 @@ impl ManagedReceiptWriter {
             validate_run_attempt_sequence(
                 evidence,
                 planned.expect("matching planned run was established above"),
+                &draft.plan,
                 require_complete,
             )
             .map_err(ManagedReceiptError::Evidence)?;
@@ -901,11 +907,21 @@ impl ManagedReceiptWriter {
     }
 }
 
+/// Checks that the attempts of a run add up to `planned`, as installed. A run that lost
+/// components after its attempts began keeps those in their attempts: `frozen` says which
+/// components the attempts may name beyond what `planned` still installs.
 pub(crate) fn validate_run_attempt_sequence(
     evidence: &RunReceipt,
     planned: &crate::resolve::PlannedRun,
+    frozen: &InstallPlan,
     require_complete: bool,
 ) -> Result<(), String> {
+    let left_out = frozen
+        .components_for(&evidence.run_id)
+        .unwrap_or_default()
+        .iter()
+        .filter(|component| !planned.components.contains(component))
+        .collect::<BTreeSet<_>>();
     let mut completed = 0_usize;
     let mut previous_attempt = 0_u32;
     for attempt in &evidence.attempts {
@@ -917,7 +933,13 @@ pub(crate) fn validate_run_attempt_sequence(
         }
         previous_attempt = attempt.attempt;
         let expected_suffix = &planned.components[completed..];
-        if attempt.components != expected_suffix {
+        let requested = attempt
+            .components
+            .iter()
+            .filter(|component| !left_out.contains(component))
+            .copied()
+            .collect::<Vec<_>>();
+        if requested != expected_suffix {
             return Err(format!(
                 "run {:?} attempt {} does not target the exact remaining suffix",
                 evidence.run_id, attempt.attempt
@@ -945,7 +967,7 @@ pub(crate) fn validate_run_attempt_sequence(
                 ));
             }
         }
-        if attempt.log_diff.added.len() == expected_suffix.len()
+        if attempt.log_diff.added.len() == attempt.components.len()
             && attempt.prompts.iter().any(|prompt| !prompt.matched)
         {
             return Err(format!(
@@ -1173,6 +1195,7 @@ impl ReceiptStore {
             validate_run_attempt_sequence(
                 evidence,
                 planned.expect("matching planned run was established above"),
+                &receipt.plan,
                 require_complete,
             )
             .map_err(ReceiptError::InvalidReceipt)?;

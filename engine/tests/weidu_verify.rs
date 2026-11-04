@@ -154,3 +154,43 @@ fn terminal_markers_ignore_unrelated_debug_noise() {
 
     assert_eq!(statuses, vec![DebugStatus::SuccessfullyInstalled]);
 }
+
+/// The player sees the installer's own last error before the failed component, not the noise
+/// of an earlier one, of what follows it, or WeiDU's rollback line.
+#[test]
+fn the_failure_message_is_the_last_error_before_the_failed_component() {
+    let debug = "\
+ERROR: an earlier error the installer recovered from
+SUCCESSFULLY INSTALLED Core
+Copying 3 files ...
+ERROR: cannot convert variable to an integer
+Stopping installation because of error.
+ERROR Installing [Balance], rolling back to previous state
+ERROR: Failure(\"cannot convert variable to an integer\")
+PLEASE email the file SETUP.DEBUG to the author
+NOT INSTALLED DUE TO ERRORS Balance
+SKIPPING: Later component
+ERROR: noise after the component
+";
+    assert_eq!(
+        bg_engine::weidu::log::failure_message(debug).as_deref(),
+        Some("Failure(\"cannot convert variable to an integer\")")
+    );
+
+    assert_eq!(
+        bg_engine::weidu::log::failure_message("NOT INSTALLED DUE TO ERRORS Balance\n"),
+        None
+    );
+    assert_eq!(
+        bg_engine::weidu::log::failure_message("ERROR: no failed component here\n"),
+        None
+    );
+
+    let long = format!(
+        "ERROR: {}\nNOT INSTALLED DUE TO ERRORS Balance\n",
+        "x".repeat(400)
+    );
+    let message = bg_engine::weidu::log::failure_message(&long).unwrap();
+    assert_eq!(message.chars().count(), 301);
+    assert!(message.ends_with('…'));
+}

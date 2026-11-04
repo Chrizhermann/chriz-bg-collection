@@ -127,10 +127,12 @@ pub enum SessionEvent {
         detail: String,
     },
     /// An acquisition or placing step ended because the mod's current download cannot be
-    /// used. The campaign continues without that mod and without everything that depends on
-    /// it.
+    /// used, or an install step because a component's installer failed. The campaign continues
+    /// without that mod or component and without everything that depends on it.
     ///
-    /// Like [`SessionEvent::StepCompleted`], this ends the step and advances the campaign.
+    /// Like [`SessionEvent::StepCompleted`], this ends the step and advances the campaign,
+    /// except for a run that goes on ([`FailedRun::continues_with`]): its step starts a new
+    /// attempt with exactly the components the record names.
     ArtifactLeftOut {
         /// Stable acquisition or placing step id of the payload.
         step_id: String,
@@ -154,8 +156,8 @@ pub enum SessionEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         failed_run: Option<FailedRun>,
     },
-    /// An acquisition or placing step asks the player a question ([`crate::decision`]) and
-    /// stops until it is answered. The step stays unresolved, as at a manual checkpoint.
+    /// A step asks the player a question ([`crate::decision`]) and stops until it is answered.
+    /// The step stays unresolved, as at a manual checkpoint.
     DecisionRequired {
         /// Unresolved step that asks.
         step_id: String,
@@ -203,6 +205,15 @@ pub struct FailedRun {
     /// Its components that WeiDU did not install, in run order. Components before them that
     /// it did install stay installed.
     pub components: Vec<u32>,
+    /// The component that failed and that the player chose to leave out, the first of
+    /// [`Self::components`]. Absent in records of earlier versions, which left out all of
+    /// [`Self::components`] without asking; those stay byte-identical.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub left_out: Option<u32>,
+    /// Those of [`Self::components`] that the run still installs, in run order: the step goes
+    /// on with exactly these. Empty when the step ends here.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub continues_with: Vec<u32>,
 }
 
 /// One immutable JSON record in the campaign hash chain.
@@ -931,6 +942,21 @@ fn validate_progress_event(event: &SessionEvent, path: &Path) -> Result<()> {
                             "a run left out after its installer failed must end its own install step and name the components it did not install",
                         ));
                     }
+                    let named_first = failed
+                        .left_out
+                        .is_none_or(|component| failed.components.first() == Some(&component));
+                    let goes_on_after_it = (failed.left_out.is_some()
+                        || failed.continues_with.is_empty())
+                        && crate::decision::continues_after_failure(
+                            &failed.components,
+                            &failed.continues_with,
+                        );
+                    if !named_first || !goes_on_after_it {
+                        return Err(ledger_error(
+                            path,
+                            "a failed run must leave out the first component it did not install and go on only with components after it",
+                        ));
+                    }
                 }
             }
             let mut runs = BTreeSet::new();
@@ -970,10 +996,14 @@ fn validate_progress_event(event: &SessionEvent, path: &Path) -> Result<()> {
                 .validate()
                 .map_err(|message| ledger_error(path, &message))?;
             validate_artifact_identifier(&question.artifact_id, "questioned artifact", path)?;
-            if !own_step_of(step_id, &question.artifact_id) {
+            let asked_by_own_step = match &question.failed {
+                Some(failed) => step_id.strip_prefix("install:") == Some(failed.run_id.as_str()),
+                None => own_step_of(step_id, &question.artifact_id),
+            };
+            if !asked_by_own_step {
                 return Err(ledger_error(
                     path,
-                    "a question must be asked by the acquisition or placing step of its artifact, or by the staging step of its source game",
+                    "a question must be asked by the acquisition or placing step of its artifact, by the staging step of its source game, or by the install step of the run that failed",
                 ));
             }
             if question.decision_id(step_id, *attempt) != *decision_id {
@@ -1110,7 +1140,7 @@ fn decision_transition(
             } else {
                 Err(ledger_error(
                     path,
-                    "a step must end as its answered question says: stopped after No, completed after installing, left out with the recorded closure after leaving out",
+                    "a step must end as its answered question says: stopped after No or to try again, completed after installing, left out with the recorded closure after leaving out",
                 ))
             }
         }
@@ -1119,7 +1149,7 @@ fn decision_transition(
 
 /// Whether `next`, the end of a step whose standing question was answered with `answer`, is
 /// what that answer leads to. Any answer may end in a failed attempt, for example when the
-/// accepted file is gone and the link changed again.
+/// accepted file is gone and the link changed again, and "try again" always does.
 fn answered_outcome_fits(question: &Question, answer: Answer, next: &SessionEvent) -> bool {
     match next {
         SessionEvent::StepFailed { .. } => true,
@@ -1129,9 +1159,21 @@ fn answered_outcome_fits(question: &Question, answer: Answer, next: &SessionEven
             plan_sha256,
             removed_runs,
             changed_runs,
+            failed_run,
             ..
         } => {
+            let same_part = match (&question.failed, failed_run) {
+                (Some(part), Some(run)) => {
+                    run.run_id == part.run_id
+                        && run.components == part.components
+                        && run.left_out == part.components.first().copied()
+                        && run.continues_with == part.continues_with
+                }
+                (None, None) => true,
+                _ => false,
+            };
             question.leaves_out(answer)
+                && same_part
                 && question.leave_out.as_ref().is_some_and(|closure| {
                     *artifact_id == question.artifact_id
                         && *plan_sha256 == closure.plan_sha256

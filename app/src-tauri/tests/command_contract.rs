@@ -662,6 +662,7 @@ fn unreviewed_tool_question() -> bg_engine::decision::Question {
         }),
         reason: None,
         leave_out: None,
+        failed: None,
     }
 }
 
@@ -3406,6 +3407,14 @@ fn a_waiting_question_is_listed_shown_and_answered_through_the_bridge() {
     assert_eq!(
         serde_json::from_value::<bg_engine::decision::Answer>(json!("leave_out")).unwrap(),
         bg_engine::decision::Answer::LeaveOut
+    );
+    assert_eq!(
+        serde_json::from_value::<bg_engine::decision::Answer>(json!("retry")).unwrap(),
+        bg_engine::decision::Answer::Retry
+    );
+    assert_eq!(
+        json!(bg_engine::decision::QuestionKind::FailedComponent),
+        json!("failed_component")
     );
 
     let unknown = bridge.get_pending_decision("install-unknown");

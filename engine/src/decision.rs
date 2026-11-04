@@ -1,6 +1,6 @@
-//! Questions the installer asks the player about a download, and their answers.
+//! Questions the installer asks the player, and their answers.
 //!
-//! Three situations stop an installation with a question instead of deciding silently:
+//! These situations stop an installation with a question instead of deciding silently:
 //!
 //! - **changed download**: the official link of a mod or tool serves a file other than the
 //!   reviewed one, and that file passed every check.
@@ -10,6 +10,10 @@
 //!   recipe did not review, and the download folder holds no reviewed copy to use instead.
 //! - **modded source**: a source game looks modded already, so installing on top of it may
 //!   fail later. It is asked once at that game's staging step, before anything is copied.
+//! - **failed component**: a component's installer stopped with an error, and the evidence
+//!   proves that the attempt left nothing of it behind. The player decides whether the
+//!   installation goes on without that component and without what needs it. It is asked at the
+//!   run's install step.
 //!
 //! The campaign worker records the question in the ledger ([`crate::session::SessionEvent`])
 //! and stops. An answer reaches it as a create-once answer file, written under the target lock
@@ -37,15 +41,18 @@ pub enum QuestionKind {
     UnreviewedTool,
     /// A source game looks modded already: install on top of it anyway?
     ModdedSource,
+    /// A component's installer stopped with an error: continue without it?
+    FailedComponent,
 }
 
 impl QuestionKind {
     /// Every kind, in a stable order.
-    pub const ALL: [Self; 4] = [
+    pub const ALL: [Self; 5] = [
         Self::ChangedDownload,
         Self::UnusableDownload,
         Self::UnreviewedTool,
         Self::ModdedSource,
+        Self::FailedComponent,
     ];
 
     /// Stable ledger and JSON spelling.
@@ -55,6 +62,7 @@ impl QuestionKind {
             Self::UnusableDownload => "unusable_download",
             Self::UnreviewedTool => "unreviewed_tool",
             Self::ModdedSource => "modded_source",
+            Self::FailedComponent => "failed_component",
         }
     }
 
@@ -65,6 +73,7 @@ impl QuestionKind {
             Self::UnusableDownload => "unusable-download",
             Self::UnreviewedTool => "unreviewed-tool",
             Self::ModdedSource => "modded-source",
+            Self::FailedComponent => "failed-component",
         }
     }
 }
@@ -78,17 +87,22 @@ pub enum Answer {
     /// Stop the installation; a resume asks the link again.
     No,
     /// Leave an optional mod out and continue, with everything that needs it. Offered for a
-    /// changed download only when the recipe can do without the mod.
+    /// changed download only when the recipe can do without the mod, and for a failed component
+    /// only when the recipe can do without that component.
     LeaveOut,
+    /// Run the failed component's installer again. Offered only for a failed component, whose
+    /// evidence proves that the failed attempt left nothing of it behind.
+    Retry,
 }
 
 impl Answer {
-    /// Spelling on the command line: `yes`, `no` or `leave-out`.
+    /// Spelling on the command line: `yes`, `no`, `leave-out` or `retry`.
     pub const fn flag_value(self) -> &'static str {
         match self {
             Self::Yes => "yes",
             Self::No => "no",
             Self::LeaveOut => "leave-out",
+            Self::Retry => "retry",
         }
     }
 
@@ -98,8 +112,9 @@ impl Answer {
             "yes" => Ok(Self::Yes),
             "no" => Ok(Self::No),
             "leave-out" => Ok(Self::LeaveOut),
+            "retry" => Ok(Self::Retry),
             other => Err(format!(
-                "unknown answer {other:?}; use yes, no or leave-out"
+                "unknown answer {other:?}; use yes, no, leave-out or retry"
             )),
         }
     }
@@ -243,6 +258,37 @@ pub struct LeaveOutClosure {
     pub plan_sha256: String,
 }
 
+/// What failed at an install step, for a [`QuestionKind::FailedComponent`] question.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FailedPart {
+    /// The planned run whose installer stopped; its step is `install:<run_id>`.
+    pub run_id: String,
+    /// Its components that WeiDU did not install, in run order. The first one failed; the
+    /// installer never reached the others.
+    pub components: Vec<u32>,
+    /// Those of [`Self::components`] that the run still installs once the failed one is left
+    /// out, in run order. The others need the failed one and leave with it.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub continues_with: Vec<u32>,
+    /// Why the installation cannot go on without the failed component. Set exactly when the
+    /// question offers no leaving out.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub required: Option<String>,
+    /// The installer's own error line, when it printed one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+/// Whether `continues` lists components of `failed` after its first one, in the same order:
+/// what a failed run may still install after leaving out the component that failed.
+pub fn continues_after_failure(failed: &[u32], continues: &[u32]) -> bool {
+    let mut later = failed.iter().skip(1);
+    continues
+        .iter()
+        .all(|component| later.any(|candidate| candidate == component))
+}
+
 /// One question, exactly as the ledger keeps it.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -262,9 +308,12 @@ pub struct Question {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<UnusableReason>,
     /// What leaving the mod out would remove: always for an unusable download, and for a
-    /// changed download of a mod that the recipe can do without.
+    /// changed download of a mod or a failed component that the recipe can do without.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub leave_out: Option<LeaveOutClosure>,
+    /// What failed: for a failed component.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failed: Option<FailedPart>,
 }
 
 impl Question {
@@ -296,6 +345,8 @@ impl Question {
     /// Whether `answer` is one of the answers this question offers.
     pub fn offers(&self, answer: Answer) -> bool {
         match (self.kind, answer) {
+            (QuestionKind::FailedComponent, Answer::Retry | Answer::No) => true,
+            (QuestionKind::FailedComponent, Answer::Yes) | (_, Answer::Retry) => false,
             (_, Answer::Yes | Answer::No) => true,
             (QuestionKind::UnusableDownload | QuestionKind::ModdedSource, Answer::LeaveOut) => {
                 false
@@ -308,9 +359,9 @@ impl Question {
     pub fn leaves_out(&self, answer: Answer) -> bool {
         match self.kind {
             QuestionKind::UnusableDownload => answer == Answer::Yes,
-            QuestionKind::ChangedDownload | QuestionKind::UnreviewedTool => {
-                answer == Answer::LeaveOut
-            }
+            QuestionKind::ChangedDownload
+            | QuestionKind::UnreviewedTool
+            | QuestionKind::FailedComponent => answer == Answer::LeaveOut,
             QuestionKind::ModdedSource => false,
         }
     }
@@ -320,27 +371,43 @@ impl Question {
         if self.artifact_id != self.reviewed.id {
             return Err("a question names another artifact than its reviewed identity".to_owned());
         }
-        let shape_ok = match self.kind {
-            QuestionKind::ChangedDownload => self.served.is_some() && self.reason.is_none(),
-            QuestionKind::UnusableDownload => {
-                self.served.is_none()
-                    && self.reason.is_some()
-                    && self.leave_out.is_some()
-                    && self.artifact_kind == ArtifactKind::Payload
-            }
-            QuestionKind::UnreviewedTool => {
-                self.served.is_some()
-                    && self.reason.is_none()
-                    && self.artifact_kind == ArtifactKind::Tool
-            }
-            // About a source game: only its identity, as `reviewed` names it.
-            QuestionKind::ModdedSource => {
-                self.served.is_none()
-                    && self.reason.is_none()
-                    && self.leave_out.is_none()
-                    && is_source_subject(&self.artifact_id)
-            }
-        };
+        let wants_failed_part = self.kind == QuestionKind::FailedComponent;
+        let shape_ok = self.failed.is_some() == wants_failed_part
+            && match self.kind {
+                QuestionKind::ChangedDownload => self.served.is_some() && self.reason.is_none(),
+                QuestionKind::UnusableDownload => {
+                    self.served.is_none()
+                        && self.reason.is_some()
+                        && self.leave_out.is_some()
+                        && self.artifact_kind == ArtifactKind::Payload
+                }
+                QuestionKind::UnreviewedTool => {
+                    self.served.is_some()
+                        && self.reason.is_none()
+                        && self.artifact_kind == ArtifactKind::Tool
+                }
+                // About a source game: only its identity, as `reviewed` names it.
+                QuestionKind::ModdedSource => {
+                    self.served.is_none()
+                        && self.reason.is_none()
+                        && self.leave_out.is_none()
+                        && is_source_subject(&self.artifact_id)
+                }
+                // About one mod's installer: the question offers leaving it out, or says why not.
+                QuestionKind::FailedComponent => {
+                    self.served.is_none()
+                        && self.reason.is_none()
+                        && self.artifact_kind == ArtifactKind::Payload
+                        && self.failed.as_ref().is_some_and(|failed| {
+                            !failed.components.is_empty()
+                                && continues_after_failure(
+                                    &failed.components,
+                                    &failed.continues_with,
+                                )
+                                && failed.required.is_some() != self.leave_out.is_some()
+                        })
+                }
+            };
         if !shape_ok {
             return Err(format!(
                 "a {} question lacks a part it needs or has one it may not have",
@@ -400,7 +467,8 @@ impl PresetAnswers {
     }
 
     /// Parses `<kind>=<answer>` values. A kind may be given once; `leave-out` is no answer to
-    /// an unusable download, whose `yes` already leaves the mod out.
+    /// an unusable download, whose `yes` already leaves the mod out. A failed component takes
+    /// `leave-out` or `no`: a preset `retry` would run the same failure again without end.
     pub fn parse(values: &[String]) -> Result<Self, String> {
         let mut answers = BTreeMap::new();
         for value in values {
@@ -412,7 +480,7 @@ impl PresetAnswers {
                 .find(|candidate| candidate.flag_name() == kind)
                 .ok_or_else(|| {
                     format!(
-                        "unknown question {kind:?}; use changed-download, unusable-download, unreviewed-tool or modded-source"
+                        "unknown question {kind:?}; use changed-download, unusable-download, unreviewed-tool, modded-source or failed-component"
                     )
                 })?;
             let answer = Answer::parse(answer)?;
@@ -420,6 +488,14 @@ impl PresetAnswers {
                 return Err(
                     "unusable-download is answered with yes (continue without it) or no".to_owned(),
                 );
+            }
+            if kind == QuestionKind::FailedComponent
+                && !matches!(answer, Answer::LeaveOut | Answer::No)
+            {
+                return Err("failed-component is answered with leave-out or no".to_owned());
+            }
+            if answer == Answer::Retry && kind != QuestionKind::FailedComponent {
+                return Err(format!("{} is not answered with retry", kind.flag_name()));
             }
             if answers.insert(kind, answer).is_some() {
                 return Err(format!("{} is answered more than once", kind.flag_name()));
@@ -534,8 +610,9 @@ pub fn pending_decision(records: &[LedgerRecord]) -> Option<PendingDecision> {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DecisionOutcome {
-    /// The answer took effect: its step stopped after "No", completed with exactly the file
-    /// asked about, or left the mod out with the recorded closure.
+    /// The answer took effect: its step stopped after "No", ended its attempt to try again,
+    /// completed with exactly the file asked about, or left the mod out with the recorded
+    /// closure.
     Applied,
     /// The question was withdrawn after the answer, because the situation it asked about no
     /// longer held; the answer had no effect.
@@ -622,11 +699,12 @@ pub fn answered_decisions(records: &[LedgerRecord]) -> Vec<AnsweredDecision> {
                 if let Some(index) =
                     open.filter(|index| ended(&answered[*index], step_id, *attempt))
                 {
-                    answered[index].outcome = if answered[index].answer.answer == Answer::No {
-                        DecisionOutcome::Applied
-                    } else {
-                        DecisionOutcome::Failed
-                    };
+                    answered[index].outcome =
+                        if matches!(answered[index].answer.answer, Answer::No | Answer::Retry) {
+                            DecisionOutcome::Applied
+                        } else {
+                            DecisionOutcome::Failed
+                        };
                     open = None;
                 }
             }
@@ -686,6 +764,27 @@ mod tests {
             }),
             reason: None,
             leave_out: None,
+            failed: None,
+        }
+    }
+
+    fn failed_component(leave_out: bool) -> Question {
+        Question {
+            kind: QuestionKind::FailedComponent,
+            served: None,
+            leave_out: leave_out.then(|| LeaveOutClosure {
+                removed_runs: Vec::new(),
+                changed_runs: Vec::new(),
+                plan_sha256: "44".repeat(32),
+            }),
+            failed: Some(FailedPart {
+                run_id: "snowytoes-bg2".to_owned(),
+                components: vec![10, 20, 30],
+                continues_with: if leave_out { vec![30] } else { Vec::new() },
+                required: (!leave_out).then(|| "a fixed part".to_owned()),
+                error: None,
+            }),
+            ..changed("22")
         }
     }
 
@@ -754,6 +853,53 @@ mod tests {
     }
 
     #[test]
+    fn a_failed_component_offers_leaving_out_only_when_the_recipe_can_do_without_it() {
+        let optional = failed_component(true);
+        optional.validate().unwrap();
+        assert!(optional.offers(Answer::LeaveOut));
+        assert!(optional.offers(Answer::Retry));
+        assert!(optional.offers(Answer::No));
+        assert!(!optional.offers(Answer::Yes));
+        assert!(optional.leaves_out(Answer::LeaveOut));
+        assert!(!optional.leaves_out(Answer::Retry));
+
+        let fixed = failed_component(false);
+        fixed.validate().unwrap();
+        assert!(!fixed.offers(Answer::LeaveOut));
+        assert!(fixed.offers(Answer::Retry));
+        assert!(fixed.offers(Answer::No));
+
+        // Only this question takes "try again".
+        assert!(!changed("22").offers(Answer::Retry));
+    }
+
+    #[test]
+    fn a_failed_component_question_must_describe_what_failed() {
+        let mut lost = failed_component(true);
+        lost.failed = None;
+        assert!(lost.validate().is_err());
+
+        let mut foreign = changed("22");
+        foreign.failed = failed_component(true).failed;
+        assert!(foreign.validate().is_err());
+
+        let mut contradictory = failed_component(true);
+        contradictory.failed.as_mut().unwrap().required = Some("a fixed part".to_owned());
+        assert!(contradictory.validate().is_err());
+
+        let mut unplanned = failed_component(true);
+        unplanned.failed.as_mut().unwrap().continues_with = vec![10];
+        assert!(unplanned.validate().is_err());
+        unplanned.failed.as_mut().unwrap().continues_with = vec![30, 20];
+        assert!(unplanned.validate().is_err());
+
+        let mut empty = failed_component(true);
+        empty.failed.as_mut().unwrap().components.clear();
+        empty.failed.as_mut().unwrap().continues_with.clear();
+        assert!(empty.validate().is_err());
+    }
+
+    #[test]
     fn preset_answers_parse_each_question_once() {
         let answers = PresetAnswers::parse(&[
             "changed-download=leave-out".to_owned(),
@@ -769,11 +915,22 @@ mod tests {
             Some(Answer::Yes)
         );
         assert_eq!(answers.get(QuestionKind::UnreviewedTool), None);
+        for answer in ["leave-out", "no"] {
+            let answers = PresetAnswers::parse(&[format!("failed-component={answer}")]).unwrap();
+            assert_eq!(
+                answers.get(QuestionKind::FailedComponent),
+                Some(Answer::parse(answer).unwrap())
+            );
+        }
         for invalid in [
             vec!["changed-download".to_owned()],
             vec!["changed=yes".to_owned()],
             vec!["changed-download=maybe".to_owned()],
             vec!["unusable-download=leave-out".to_owned()],
+            vec!["failed-component=yes".to_owned()],
+            // A preset "try again" would repeat the same failure without end.
+            vec!["failed-component=retry".to_owned()],
+            vec!["changed-download=retry".to_owned()],
             vec![
                 "changed-download=yes".to_owned(),
                 "changed-download=no".to_owned(),

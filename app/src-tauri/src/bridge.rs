@@ -108,7 +108,7 @@ pub trait BridgeEngine: Send + Sync {
     /// Proves the installation's isolated game profile is still its own and adds the
     /// portraits folder the game does not create. Returns the profile folder.
     fn prepare_profile_folder(&self, record: &ManagedInstallRecord) -> Result<PathBuf, String>;
-    /// The question about a download that the installation at `managed_root` waits for.
+    /// The question that the installation at `managed_root` waits for.
     fn inspect_decision(
         &self,
         managed_root: &Path,
@@ -135,7 +135,7 @@ pub trait BridgeEngine: Send + Sync {
     }
 }
 
-/// A question about a download that an installation waits for, as the app shows it.
+/// A question that an installation waits for, as the app shows it.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PendingDecisionResponse {
@@ -1955,7 +1955,7 @@ impl NativeBridge {
             })
     }
 
-    /// The question about a download that a resumable installation waits for; `None` when it
+    /// The question that a resumable installation waits for; `None` when it
     /// waits for none.
     pub fn get_pending_decision(
         &self,
@@ -3604,7 +3604,7 @@ fn project_managed_campaign(
             .unresolved_step()
             .is_some_and(|step| step.starts_with("checkpoint:manual-"))
     });
-    // A question about a download waits for the player's answer.
+    // A question waits for the player's answer.
     let waiting_for_answer = replay
         .as_ref()
         .and_then(|replay| replay.pending_decision())

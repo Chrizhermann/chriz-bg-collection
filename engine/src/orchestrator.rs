@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::decision::{
-    answered_decisions, Answer, AnswerSource, AnsweredDecision, LeaveOutClosure, PendingDecision,
-    Question, QuestionKind, RecordedAnswer, ServedDownload, UnusableReason,
+    answered_decisions, Answer, AnswerSource, AnsweredDecision, FailedPart, LeaveOutClosure,
+    PendingDecision, Question, QuestionKind, RecordedAnswer, ServedDownload, UnusableReason,
 };
 use crate::digest::{plan_digest, sha256_bytes};
 use crate::error::EngineError;
@@ -356,9 +356,8 @@ pub enum CampaignOutcome {
         /// Durable evidence summary.
         reason: String,
     },
-    /// A step asked the player a question about a download and waits for the answer. Nothing
-    /// is recorded for the download; the step stays unresolved, and a resume continues once
-    /// an answer is there.
+    /// A step asked the player a question and waits for the answer. Nothing is decided yet;
+    /// the step stays unresolved, and a resume continues once an answer is there.
     DecisionRequired {
         /// The step that asks.
         step_id: String,
@@ -447,7 +446,7 @@ pub trait ArtifactAcquirer {
     /// installs one of them.
     ///
     /// Called only when a run's installer failed without a durable change. The ledger records
-    /// the result, as for [`Self::plan_without`].
+    /// the result with the question that offers it, as for [`Self::plan_without`].
     fn plan_without_parts(
         &mut self,
         plan: &InstallPlan,
@@ -470,6 +469,9 @@ pub trait ArtifactAcquirer {
     fn describe_question(&self, question: &Question) -> String {
         let name = self.artifact_name(&question.artifact_id);
         match (&question.kind, &question.reason) {
+            (QuestionKind::FailedComponent, _) => {
+                format!("a part of {name} could not be installed.")
+            }
             (QuestionKind::UnusableDownload, Some(reason)) => {
                 format!("{name} can't be installed ({}).", reason.short())
             }
@@ -623,6 +625,13 @@ pub trait InstallLogVerifier {
         attempt: &StepAttempt,
         result: ProcessResult,
     ) -> Result<InstallReconciliation, StepFailure>;
+
+    /// The installer's own error line of a finished attempt that failed, for the question to
+    /// the player. Reading it is a courtesy: `None` when there is none or it cannot be read.
+    fn failure_message(&mut self, attempt: &StepAttempt) -> Option<String> {
+        let _ = attempt;
+        None
+    }
 
     /// Verify the complete final active stack against the plan being installed: the exact
     /// frozen run plan, minus the runs of left-out payloads.
@@ -1016,6 +1025,9 @@ struct Progress {
     effective_plan: InstallPlan,
     /// The question that the unresolved step asked and that was not withdrawn.
     pending: Option<PendingDecision>,
+    /// The install step that left a failed component out and goes on, with the components its
+    /// next attempt installs. Later attempts prove their own remaining components.
+    continuing: Option<(String, Vec<u32>)>,
 }
 
 impl Progress {
@@ -1038,6 +1050,7 @@ impl Progress {
             failed_parts: Vec::new(),
             effective_plan: frozen_plan.clone(),
             pending: None,
+            continuing: None,
         };
 
         for record in replay.records.iter().skip(1) {
@@ -1073,11 +1086,15 @@ impl Progress {
                             question.kind == QuestionKind::ModdedSource
                                 && question.artifact_id == crate::decision::source_subject(*role)
                         }
+                        PipelineKind::Install(run) => {
+                            question.kind == QuestionKind::FailedComponent
+                                && question.artifact_id == run.artifact_id
+                        }
                         _ => false,
                     };
                     if !asks_own_artifact {
                         return Err(OrchestratorError::InvalidCampaign(format!(
-                            "question {decision_id} at step {step_id:?} is not about what that step acquires or places"
+                            "question {decision_id} at step {step_id:?} is not about what that step acquires, places or installs"
                         )));
                     }
                     progress.pending = Some(PendingDecision {
@@ -1148,6 +1165,7 @@ impl Progress {
                     }
                     progress.attempts.insert(step_id.clone(), *attempt);
                     progress.unresolved = Some((step_id.clone(), *attempt));
+                    progress.continuing = None;
                 }
                 SessionEvent::StepCompleted { step_id, attempt } => {
                     if progress.unresolved.as_ref() != Some(&(step_id.clone(), *attempt)) {
@@ -1210,6 +1228,7 @@ impl Progress {
                             &progress.installed_runs(schedule),
                             &run,
                             &failed.components,
+                            &failed.continues_with,
                         )
                         .map_err(OrchestratorError::InvalidCampaign)?;
                         if plan_digest(&plan)? != *plan_sha256 {
@@ -1218,16 +1237,12 @@ impl Progress {
                                 run.run_id
                             )));
                         }
-                        progress.record_failed_run(
-                            schedule,
-                            &run,
-                            detail,
-                            failed.components.clone(),
-                            plan,
-                        );
-                        progress.completed_prefix += 1;
-                        progress.unresolved = None;
-                        progress.last_failed.remove(step_id);
+                        // A record of an earlier version left out everything it did not install.
+                        let left_out = failed
+                            .left_out
+                            .map_or_else(|| failed.components.clone(), |component| vec![component]);
+                        progress.record_failed_run(schedule, &run, detail, left_out, plan);
+                        progress.finish_failed_run(step_id, &failed.continues_with);
                         continue;
                     }
                     let step = &schedule[progress.completed_prefix];
@@ -1406,7 +1421,7 @@ impl Progress {
 
     /// Records that the `failed` components of `run`, whose install step is at
     /// `completed_prefix`, are left out, with `plan` what remains, and drops the later steps
-    /// that `plan` no longer needs.
+    /// that `plan` no longer needs. The step itself now installs the run as `plan` has it.
     fn record_failed_run(
         &mut self,
         schedule: &mut Vec<PipelineStep>,
@@ -1415,6 +1430,12 @@ impl Progress {
         failed: Vec<u32>,
         plan: InstallPlan,
     ) -> &LeftOutArtifact {
+        if let (PipelineKind::Install(current), Some(kept)) = (
+            &mut schedule[self.completed_prefix].kind,
+            plan.runs.iter().find(|kept| kept.run_id == run.run_id),
+        ) {
+            **current = kept.clone();
+        }
         self.record_left_out(schedule, &run.artifact_id, reason, plan);
         self.failed_parts.push((run.run_id.clone(), failed));
         let left_out = self
@@ -1423,6 +1444,19 @@ impl Progress {
             .expect("left-out part was just recorded");
         left_out.failed_run = Some(run.run_id.clone());
         left_out
+    }
+
+    /// Ends the attempt of `step_id` that left a failed component out. The step is over unless
+    /// its run goes on with `continues_with`.
+    fn finish_failed_run(&mut self, step_id: &str, continues_with: &[u32]) {
+        self.unresolved = None;
+        self.pending = None;
+        self.last_failed.remove(step_id);
+        if continues_with.is_empty() {
+            self.completed_prefix += 1;
+        } else {
+            self.continuing = Some((step_id.to_owned(), continues_with.to_vec()));
+        }
     }
 
     fn next_attempt(&self, step_id: &str) -> Result<u32, OrchestratorError> {
@@ -1460,20 +1494,88 @@ fn adopt_installed_runs(
     reduced
 }
 
-/// Fails unless `plan`, the plan after leaving out the `failed` components of `run`, keeps what
-/// is in the game already: every run in `installed` exactly as `previous` has it, and of `run`
-/// exactly the components before `failed`, which WeiDU installed (or nothing of it, when it
-/// installed none). Otherwise the game would hold parts the plan no longer has.
+/// `plan`, the plan after leaving out `remaining[0]`, the failed component of `run`, with what
+/// WeiDU installed of `run` restored: its components before `remaining`, which are in the game
+/// whatever else left with the failed one, with their prompt answers. Also returns the
+/// components of `remaining` that the run still installs. Nothing else of `plan` changes.
+fn keep_installed_part(
+    plan: InstallPlan,
+    previous: &InstallPlan,
+    run: &PlannedRun,
+    remaining: &[u32],
+) -> (InstallPlan, Vec<u32>) {
+    let done = &run.components[..run.components.len() - remaining.len()];
+    let kept = plan.runs.iter().find(|kept| kept.run_id == run.run_id);
+    let continues = kept.map_or_else(Vec::new, |kept| {
+        remaining[1..]
+            .iter()
+            .copied()
+            .filter(|component| kept.components.contains(component))
+            .collect::<Vec<_>>()
+    });
+    let mut merged = run.clone();
+    merged.components = done.iter().chain(&continues).copied().collect();
+    merged.postconditions.clear();
+    merged.prompt_scripts = merged
+        .components
+        .iter()
+        .filter_map(|component| {
+            let source = if done.contains(component) {
+                Some(run)
+            } else {
+                kept
+            };
+            source?
+                .prompt_scripts
+                .iter()
+                .find(|script| script.component.component == *component)
+                .cloned()
+        })
+        .collect();
+    let mut position = 0;
+    let mut runs = Vec::with_capacity(plan.runs.len() + 1);
+    let order = previous
+        .runs
+        .iter()
+        .map(|before| before.run_id.as_str())
+        .collect::<Vec<_>>();
+    let rank = |run_id: &str| order.iter().position(|id| *id == run_id);
+    for kept in plan.runs {
+        if kept.run_id != run.run_id {
+            if rank(&kept.run_id) < rank(&run.run_id) {
+                position += 1;
+            }
+            runs.push(kept);
+        }
+    }
+    if !merged.components.is_empty() {
+        runs.insert(position, merged);
+    }
+    (InstallPlan { runs }, continues)
+}
+
+/// Fails unless `plan`, the plan after leaving out the failed part of `run`, keeps what is in
+/// the game already: every run in `installed` exactly as `previous` has it, and of `run` exactly
+/// the components before `failed`, which WeiDU installed, followed by `continues`, those of
+/// `failed` that it still installs (or nothing of it, when it has neither). Otherwise the game
+/// would hold parts the plan no longer has.
 fn check_failed_run_plan(
     previous: &InstallPlan,
     plan: &InstallPlan,
     installed: &BTreeSet<String>,
     run: &PlannedRun,
     failed: &[u32],
+    continues: &[u32],
 ) -> Result<(), String> {
     if failed.is_empty() || !run.components.ends_with(failed) {
         return Err(format!(
             "components {failed:?} are not the uninstalled end of run {:?}",
+            run.run_id
+        ));
+    }
+    if !crate::decision::continues_after_failure(failed, continues) {
+        return Err(format!(
+            "components {continues:?} do not follow the failed one in run {:?}",
             run.run_id
         ));
     }
@@ -1490,11 +1592,12 @@ fn check_failed_run_plan(
         }
     }
     let done = &run.components[..run.components.len() - failed.len()];
+    let expected = done.iter().chain(continues).copied().collect::<Vec<_>>();
     match plan.runs.iter().find(|kept| kept.run_id == run.run_id) {
-        None if done.is_empty() => Ok(()),
-        Some(kept) if !done.is_empty() && kept.components == done => Ok(()),
+        None if expected.is_empty() => Ok(()),
+        Some(kept) if !expected.is_empty() && kept.components == expected => Ok(()),
         _ => Err(format!(
-            "run {:?} would keep other components than the {done:?} it installed",
+            "run {:?} would keep other components than the {done:?} it installed and the {continues:?} it goes on with",
             run.run_id
         )),
     }
@@ -1959,6 +2062,7 @@ where
             served: None,
             reason: Some(reason),
             leave_out: Some(leave_out),
+            failed: None,
         })))
     }
 
@@ -1974,7 +2078,9 @@ where
         let fits = match question_kind {
             QuestionKind::ChangedDownload => true,
             QuestionKind::UnreviewedTool => kind == ArtifactKind::Tool,
-            QuestionKind::UnusableDownload | QuestionKind::ModdedSource => false,
+            QuestionKind::UnusableDownload
+            | QuestionKind::ModdedSource
+            | QuestionKind::FailedComponent => false,
         };
         if !fits {
             return Err(StepFailure::new(format!(
@@ -2002,6 +2108,7 @@ where
             served: Some(served),
             reason: None,
             leave_out,
+            failed: None,
         })))
     }
 
@@ -2096,7 +2203,203 @@ where
             served: None,
             reason: Some(reason),
             leave_out: Some(leave_out),
+            failed: None,
         }))
+    }
+
+    /// Asks the player about `run`, whose installer stopped in this attempt without installing
+    /// `remaining`: whether to go on without the failed component and everything that needs it,
+    /// when the recipe can do without it, and whether to try again.
+    fn ask_failed_component(
+        &mut self,
+        step: &PipelineStep,
+        attempt: &StepAttempt,
+        run: &PlannedRun,
+        remaining: &[u32],
+    ) -> Result<Option<CampaignOutcome>, OrchestratorError> {
+        let reviewed = self
+            .request
+            .created
+            .artifact_identities
+            .iter()
+            .find(|identity| identity.id == run.artifact_id)
+            .cloned()
+            .ok_or_else(|| {
+                OrchestratorError::InvalidCampaign(format!(
+                    "run {:?} installs {:?}, which has no frozen identity",
+                    run.run_id, run.artifact_id
+                ))
+            })?;
+        let (leave_out, continues_with, required) = match self.plan_without_failed(run, remaining) {
+            Ok((plan, continues)) => {
+                let closure =
+                    self.closure(&plan, &self.progress.left_out_ids())
+                        .map_err(|failure| {
+                            OrchestratorError::InvalidCampaign(failure.into_message())
+                        })?;
+                (Some(closure), continues, None)
+            }
+            Err(why_not) => (None, Vec::new(), Some(why_not)),
+        };
+        let question = Question {
+            kind: QuestionKind::FailedComponent,
+            artifact_id: run.artifact_id.clone(),
+            artifact_kind: ArtifactKind::Payload,
+            reviewed,
+            served: None,
+            reason: None,
+            leave_out,
+            failed: Some(FailedPart {
+                run_id: run.run_id.clone(),
+                components: remaining.to_vec(),
+                continues_with,
+                required,
+                error: self.dependencies.failure_message(attempt),
+            }),
+        };
+        self.ask(step, attempt, question)
+    }
+
+    /// The plan that remains without `remaining[0]`, the failed component of `run`, and the
+    /// components of `remaining` that the run then still installs. Gives the reason instead
+    /// when the collection cannot do without it, or when that would change what is installed.
+    fn plan_without_failed(
+        &mut self,
+        run: &PlannedRun,
+        remaining: &[u32],
+    ) -> Result<(InstallPlan, Vec<u32>), String> {
+        let ids = self.progress.left_out_ids();
+        let mut parts = self.progress.failed_parts.clone();
+        parts.push((run.run_id.clone(), vec![remaining[0]]));
+        let reduced = self
+            .dependencies
+            .plan_without_parts(&self.request.plan, &ids, &parts)
+            .map_err(StepFailure::into_message)?;
+        let previous = &self.progress.effective_plan;
+        let installed = self.progress.installed_runs(&self.schedule);
+        let (plan, continues) = keep_installed_part(
+            adopt_installed_runs(previous, reduced, &installed),
+            previous,
+            run,
+            remaining,
+        );
+        validate_reduced_plan(previous, &plan, &ids).map_err(|error| error.to_string())?;
+        check_failed_run_plan(previous, &plan, &installed, run, remaining, &continues)?;
+        Ok((plan, continues))
+    }
+
+    /// Ends this attempt of an install step whose next attempt follows at once, because the
+    /// attempt's evidence proves what it may run. The ledger records it as a failed attempt;
+    /// the installation is not stopping, so the player sees no failure.
+    fn next_attempt_follows(
+        &mut self,
+        step: &PipelineStep,
+        attempt: &StepAttempt,
+        detail: &str,
+    ) -> Result<(), OrchestratorError> {
+        self.store.append(SessionEvent::StepFailed {
+            step_id: step.id.clone(),
+            attempt: attempt.attempt,
+            detail: detail.to_owned(),
+        })?;
+        self.progress.unresolved = None;
+        self.progress.pending = None;
+        self.progress
+            .last_failed
+            .insert(step.id.clone(), attempt.attempt);
+        self.log(step, format!("{}: {detail}", step.label));
+        Ok(())
+    }
+
+    /// Leaves the failed component of an answered question out with exactly the closure
+    /// recorded when it was asked; nothing derives it again. Its step ends, unless its run has
+    /// components left that do not need the failed one: then the step goes on with those.
+    fn leave_out_failed_component(
+        &mut self,
+        step: &PipelineStep,
+        attempt: &StepAttempt,
+        run: &PlannedRun,
+        pending: &PendingDecision,
+    ) -> Result<(), OrchestratorError> {
+        let question = &pending.question;
+        let invalid = |what: &str| {
+            OrchestratorError::InvalidCampaign(format!(
+                "question {} has no {what} to leave its component out with",
+                pending.decision_id
+            ))
+        };
+        let closure = question
+            .leave_out
+            .as_ref()
+            .ok_or_else(|| invalid("closure"))?;
+        let part = question
+            .failed
+            .as_ref()
+            .ok_or_else(|| invalid("failed part"))?;
+        let failed = *part
+            .components
+            .first()
+            .ok_or_else(|| invalid("failed component"))?;
+        let plan = apply_plan_change(
+            &self.progress.effective_plan,
+            &closure.removed_runs,
+            &closure.changed_runs,
+        )
+        .map_err(|detail| {
+            OrchestratorError::InvalidCampaign(format!(
+                "the closure recorded with question {} does not fit the plan: {detail}",
+                pending.decision_id
+            ))
+        })?;
+        if plan_digest(&plan)? != closure.plan_sha256 {
+            return Err(OrchestratorError::InvalidCampaign(format!(
+                "the plan without component {failed} of {:?} differs from the one recorded with question {}",
+                run.run_id, pending.decision_id
+            )));
+        }
+        let detail = format!(
+            "its installer stopped with an error at component {failed} of run {}, and you chose to leave that component out",
+            run.run_id
+        );
+        self.store.append(SessionEvent::ArtifactLeftOut {
+            step_id: step.id.clone(),
+            attempt: attempt.attempt,
+            artifact_id: run.artifact_id.clone(),
+            detail: detail.clone(),
+            plan_sha256: closure.plan_sha256.clone(),
+            removed_runs: closure.removed_runs.clone(),
+            changed_runs: closure.changed_runs.clone(),
+            failed_run: Some(crate::session::FailedRun {
+                run_id: run.run_id.clone(),
+                components: part.components.clone(),
+                left_out: Some(failed),
+                continues_with: part.continues_with.clone(),
+            }),
+        })?;
+        let left_out = self
+            .progress
+            .record_failed_run(&mut self.schedule, run, &detail, vec![failed], plan)
+            .clone();
+        self.progress
+            .finish_failed_run(&step.id, &part.continues_with);
+        self.log(
+            step,
+            format!(
+                "The installation continues without it and without what needs it: {}",
+                self.dependencies.describe_question(question)
+            ),
+        );
+        self.sink.emit(EngineEvent::ArtifactLeftOut {
+            artifact_id: left_out.artifact_id,
+            reason: left_out.reason,
+            runs: left_out.runs,
+            changed_runs: left_out.changed_runs,
+            failed_run: left_out.failed_run,
+        });
+        if part.continues_with.is_empty() {
+            emit_finished(self.sink, &step.id, StepOutcome::Skipped);
+        }
+        Ok(())
     }
 
     /// Records `question` for this step, then goes on as its answer allows: at once with a
@@ -2231,6 +2534,21 @@ where
                 self.dependencies.describe_question(&pending.question)
             );
             return self.failed(step, attempt, reason);
+        }
+        if pending.question.kind == QuestionKind::FailedComponent {
+            let PipelineKind::Install(run) = &step.kind else {
+                return Err(OrchestratorError::InvalidCampaign(format!(
+                    "question {} about a failed component stands at step {:?}, which installs nothing",
+                    pending.decision_id, step.id
+                )));
+            };
+            return if answer == Answer::Retry {
+                self.next_attempt_follows(step, attempt, "you chose to try again")
+                    .map(|()| None)
+            } else {
+                self.leave_out_failed_component(step, attempt, run, &pending)
+                    .map(|()| None)
+            };
         }
         if pending.question.kind == QuestionKind::ModdedSource {
             let PipelineKind::Stage(role) = step.kind else {
@@ -2568,7 +2886,24 @@ where
             self.active_phase = Some(run.phase);
         }
 
-        let mut components = run.components.clone();
+        // A standing question comes first: the run's evidence was reconciled before it was
+        // asked, and nothing runs until it is answered.
+        if let Some(pending) = self.progress.pending.clone() {
+            if pending.step_id != step.id {
+                return Err(OrchestratorError::InvalidCampaign(format!(
+                    "question {} belongs to {:?}, not to the next step {:?}",
+                    pending.decision_id, pending.step_id, step.id
+                )));
+            }
+            let attempt = self.attempt(step, pending.attempt);
+            emit_started(self.sink, &step.id, &format!("Resume {}", step.label));
+            return self.continue_decision(step, &attempt, pending);
+        }
+
+        let mut components = match &self.progress.continuing {
+            Some((step_id, components)) if *step_id == step.id => components.clone(),
+            _ => run.components.clone(),
+        };
         let mut current = if let Some((unresolved_id, attempt)) = &self.progress.unresolved {
             if unresolved_id != &step.id {
                 return Err(OrchestratorError::InvalidCampaign(format!(
@@ -2670,28 +3005,9 @@ where
                             step.id
                         )));
                     }
-                    // The installer stopped without installing `remaining`. When the
-                    // collection can do without those parts, it continues without them and
-                    // without everything that needs them.
-                    if let Err(why_not) =
-                        self.leave_out_failed_run(step, &run, &current, &remaining)?
-                    {
-                        self.log(
-                            step,
-                            format!(
-                                "The installation cannot continue without {}: {why_not}",
-                                self.dependencies.artifact_name(&run.artifact_id)
-                            ),
-                        );
-                    } else {
-                        return Ok(None);
-                    }
-                    let reason = "WeiDU made no durable change; the exact run remains retryable";
-                    self.fail_step(step, &current, reason)?;
-                    return Ok(Some(CampaignOutcome::Failed {
-                        step_id: step.id.clone(),
-                        reason: reason.to_owned(),
-                    }));
+                    // The installer stopped at the first of `remaining` and left it, and those
+                    // after it, uninstalled. The player decides how the installation goes on.
+                    return self.ask_failed_component(step, &current, &run, &remaining);
                 }
                 InstallReconciliation::PartialPrefix { remaining } => {
                     let remaining = validate_remaining(&run, &remaining, Some(&components))?;
@@ -2701,7 +3017,7 @@ where
                             .seal_fresh_copy(step, &current, reason.to_owned())
                             .map(Some);
                     }
-                    self.fail_step(
+                    self.next_attempt_follows(
                         step,
                         &current,
                         "strict component prefix verified; continuing only the exact suffix",
@@ -2714,86 +3030,6 @@ where
                 }
             }
         }
-    }
-
-    /// Ends the install `step` of `run`, whose installer stopped without installing its
-    /// `failed` components, by leaving those out together with everything that needs them,
-    /// and continues with the remaining plan. Its components before `failed`, which WeiDU
-    /// installed, stay. Gives the reason instead when the collection cannot do without them,
-    /// or when leaving them out would change what is installed already.
-    fn leave_out_failed_run(
-        &mut self,
-        step: &PipelineStep,
-        run: &PlannedRun,
-        attempt: &StepAttempt,
-        failed: &[u32],
-    ) -> Result<Result<(), String>, OrchestratorError> {
-        let ids = self.progress.left_out_ids();
-        let mut parts = self.progress.failed_parts.clone();
-        parts.push((run.run_id.clone(), failed.to_vec()));
-        let reduced = match self
-            .dependencies
-            .plan_without_parts(&self.request.plan, &ids, &parts)
-        {
-            Ok(reduced) => reduced,
-            Err(failure) => return Ok(Err(failure.into_message())),
-        };
-        let installed = self.progress.installed_runs(&self.schedule);
-        let plan = adopt_installed_runs(&self.progress.effective_plan, reduced, &installed);
-        if let Err(error) = validate_reduced_plan(&self.progress.effective_plan, &plan, &ids) {
-            return Ok(Err(error.to_string()));
-        }
-        if let Err(why_not) = check_failed_run_plan(
-            &self.progress.effective_plan,
-            &plan,
-            &installed,
-            run,
-            failed,
-        ) {
-            return Ok(Err(why_not));
-        }
-        let detail = format!(
-            "its installer stopped with an error and did not install component {} of run {}",
-            failed[0], run.run_id
-        );
-        let (removed_runs, changed_runs) = plan_change(&self.progress.effective_plan, &plan);
-        self.store.append(SessionEvent::ArtifactLeftOut {
-            step_id: step.id.clone(),
-            attempt: attempt.attempt,
-            artifact_id: run.artifact_id.clone(),
-            detail: detail.clone(),
-            plan_sha256: plan_digest(&plan)?,
-            removed_runs,
-            changed_runs,
-            failed_run: Some(crate::session::FailedRun {
-                run_id: run.run_id.clone(),
-                components: failed.to_vec(),
-            }),
-        })?;
-        let left_out = self
-            .progress
-            .record_failed_run(&mut self.schedule, run, &detail, failed.to_vec(), plan)
-            .clone();
-        self.progress.unresolved = None;
-        self.progress.pending = None;
-        self.progress.last_failed.remove(&step.id);
-        self.progress.completed_prefix += 1;
-        self.log(
-            step,
-            format!(
-                "{} could not be installed completely ({detail}). The installation continues without the parts that failed and without what needs them.",
-                self.dependencies.artifact_name(&run.artifact_id)
-            ),
-        );
-        self.sink.emit(EngineEvent::ArtifactLeftOut {
-            artifact_id: left_out.artifact_id,
-            reason: left_out.reason,
-            runs: left_out.runs,
-            changed_runs: left_out.changed_runs,
-            failed_run: left_out.failed_run,
-        });
-        emit_finished(self.sink, &step.id, StepOutcome::Skipped);
-        Ok(Ok(()))
     }
 
     fn execute_install_attempt(
@@ -2915,6 +3151,7 @@ where
         })?;
         self.progress.attempts.insert(step.id.clone(), attempt);
         self.progress.unresolved = Some((step.id.clone(), attempt));
+        self.progress.continuing = None;
         emit_started(self.sink, &step.id, &step.label);
         Ok(self.attempt(step, attempt))
     }

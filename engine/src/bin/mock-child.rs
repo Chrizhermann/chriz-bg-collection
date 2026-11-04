@@ -129,7 +129,25 @@ fn weidu_install(args: &[OsString]) -> io::Result<()> {
     if setup_name_log_override {
         writeln!(debug, "WeiDU v 24900 Log")?;
     }
-    for component in &components {
+    // The installer of this component fails, as long as the marker file does not exist.
+    let failing = env::var("CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT")
+        .ok()
+        .and_then(|component| component.parse::<u32>().ok())
+        .filter(|_| {
+            env::var_os("CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT_UNTIL")
+                .is_none_or(|marker| !Path::new(&marker).exists())
+        });
+    for (index, component) in components.iter().enumerate() {
+        if Some(*component) == failing {
+            writeln!(debug, "ERROR: synthetic failure of component {component}")?;
+            writeln!(debug, "NOT INSTALLED DUE TO ERRORS component {component}")?;
+            for skipped in &components[index + 1..] {
+                writeln!(debug, "SKIPPING: component {skipped}")?;
+            }
+            log.sync_all()?;
+            debug.sync_all()?;
+            return Err(io::Error::other("synthetic component failure"));
+        }
         writeln!(
             log,
             "~{tp2}~ #{language} #{component} // Synthetic component {component}"

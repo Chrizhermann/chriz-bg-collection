@@ -2,6 +2,48 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 5 — the installer asks when a single component fails (for 0.1.2)
+
+Christopher, 2026-11-04: when one component fails, the installer "soll nachfragen" instead
+of leaving it out by itself, as 0.1.1 did for optional runs, or stopping, as it did for
+everything else.
+
+When a run's installer stops without installing a component (the reconciled `Retry` verdict,
+which proves that the attempt left nothing of it behind), the step records a
+`failed_component` question and the installation waits, as for the questions of PR 80. A
+failure after other components of the run gets one automatic retry first, as before. The
+question names the component by its feature title and its mod, and offers:
+
+- **Leave it out and continue** (`leave-out`): only the failed component and what needs it
+  leave, by the same closure as unticking its feature; one question covers all of it. The
+  components before it stay. The components after it that do not need it are still installed:
+  the step starts a new attempt with exactly those (`FailedRun::continues_with`), and a second
+  failure there is a question of its own.
+- **Try again** (`retry`): honest because of the `Retry` verdict. "Stop" followed by a resume
+  does the same; a preset `retry` is refused, because it could repeat without end.
+- **Stop the installation** (`no`).
+
+**The mandatory line is the recipe's own:** a feature with `decision = "mandatory"` and only
+mandatory parents is a fixed part (`LeaveOutError::Required`), and its question offers only to
+try again or to stop, and says why. In `curated-full-current` these are DLC Merger, the EE
+Fixpack core, EET core import, EET finalization and Modpack `640`. A mandatory feature under an
+optional parent can leave, with that parent. The same question comes when leaving out would
+change a run that is installed already.
+
+A run without an answer, or with a preset that does not fit, ends with status
+`decision_required` and the question open; `--answer failed-component=leave-out` or `=no`
+answers for one run. The end summary and the receipt name every part left out.
+
+Two fixes came with it. A run left with only the components before the failed one could not
+pass the receipt check, because its first attempt names more than the run keeps: that check
+now knows what left. And a prompt of a component the installer never reached no longer seals
+the installation as needing a fresh copy; only a prompt of an installed component must have
+been answered.
+
+Chriz Easy IWD does not have this yet. `claude/iwdee-app` branched on 2026-10-24 and has none
+of the question system; [PR #70](https://github.com/Chrizhermann/chriz-bg-collection/pull/70),
+which would bring its first part, conflicts.
+
 ## November 4 — everything on `main`
 
 Christopher retired the release line on 2026-11-04: [PR #101](https://github.com/Chrizhermann/chriz-bg-collection/pull/101)
