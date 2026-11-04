@@ -850,6 +850,21 @@ fn the_rule_names_the_players_own_changes_but_never_refuses_them() {
     }
 }
 
+/// A player may install the hotpatch's own components with the mod's setup (Christopher did with
+/// the boss fights, 2026-11-04); the check then says so instead of offering a hotpatch that
+/// cannot apply on top.
+#[test]
+fn components_installed_outside_the_app_are_named_instead_of_offered() {
+    let f = Fixture::new();
+    let mut log = fs::read(f.game().join("WeiDU.log")).unwrap();
+    log.extend_from_slice(ROW);
+    write(&f.game().join("WeiDU.log"), &log);
+    let assessment = f.assess(f.baseline());
+    let refusals = assessment.refusals.join(" ");
+    assert!(refusals.contains("already in your game"), "{refusals}");
+    assert_eq!(assessment.next.unwrap().id, "belhifet-1");
+}
+
 #[test]
 fn the_rule_refuses_a_changed_collection_and_far_away_choices() {
     let f = Fixture::new();

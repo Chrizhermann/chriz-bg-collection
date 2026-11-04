@@ -320,6 +320,33 @@ pub(super) fn assess_with(
             }
         }
     }
+    // Players may add mods themselves, including this hotpatch's own components (for example with
+    // the mod's setup); applying on top of them would fail, so the check says so first.
+    if let Some(next) = &next {
+        match super::transaction::installed_components(&ctx.game(), next) {
+            Ok(present) => {
+                let already = next
+                    .components
+                    .iter()
+                    .copied()
+                    .filter(|component| present.contains(component))
+                    .collect::<Vec<_>>();
+                if already.len() == next.components.len() {
+                    refusals.push("Everything this hotpatch installs is already in your game; it was installed outside the app.".into());
+                } else if !already.is_empty() {
+                    refusals.push(format!(
+                        "Part of this hotpatch is already in your game (components {}), installed outside the app, so it cannot be applied on top.",
+                        already
+                            .iter()
+                            .map(u32::to_string)
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ));
+                }
+            }
+            Err(error) => refusals.push(error),
+        }
+    }
     Assessment {
         refusals,
         notes,
