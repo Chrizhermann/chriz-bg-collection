@@ -8477,7 +8477,7 @@ category = "convenience"
 source_label = "The Tweaks Anthology"
 group_label = "Higher HP on Level Up"
 choice_group = "choice:cdtweaks:higher-hp-on-level-up"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 conflicts = [{ feature_id = "feature:cdtweaks:component-3001", reason = "Choose at most one option for Higher HP on Level Up." }, { feature_id = "feature:cdtweaks:component-3002", reason = "Choose at most one option for Higher HP on Level Up." }]
 components = [{ run_id = "cdtweaks-bg2", component = 3000 }]
@@ -8527,7 +8527,7 @@ category = "convenience"
 source_label = "The Tweaks Anthology"
 group_label = "Maximum HP Creatures [the bigg]"
 choice_group = "choice:cdtweaks:maximum-hp-creatures-the-bigg"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 conflicts = [{ feature_id = "feature:cdtweaks:component-3011", reason = "Choose at most one option for Maximum HP Creatures [the bigg]." }, { feature_id = "feature:cdtweaks:component-3012", reason = "Choose at most one option for Maximum HP Creatures [the bigg]." }]
 components = [{ run_id = "cdtweaks-bg2", component = 3010 }]

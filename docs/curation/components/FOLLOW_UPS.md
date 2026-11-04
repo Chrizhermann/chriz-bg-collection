@@ -149,12 +149,11 @@ Cross-repository status. Component detail stays in the sections below and in the
     v1.15.0). Both wait for 0.1.2 (Christopher, 2026-11-04); the hold in
     `manifest/own-mods.toml` names v1.16.0 since 2026-11-04. The pin PR removes the hold,
     and Chriz Easy IWD needs its own version bump for it.
-  - **Christopher's open questions** (asked 2026-11-03):
-    - When a single component fails, should CEBG leave only that one out, carry on and
-      name it at the end?
-    - Recommended still installs maximum HP on level-up (Tweaks Anthology `3000`) and
-      Maximum HP Creatures (`3010`). Should 0.1.2's Recommended use rolled HP and drop
-      Maximum HP Creatures, as the fight-AI labs do?
+  - **A single failed component** (Christopher, 2026-11-04): the installer should ask the
+    player instead of deciding by itself. Not built yet, open for 0.1.2.
+  - **Recommended: rolled HP and no Maximum HP Creatures** (Christopher, 2026-11-04): done.
+    Tweaks Anthology `3000` and `3010` are unchecked options, the way the fight-AI labs run
+    it; `docs/curation/components/CDTWEAKS.md` has the details.
 - Installers keep going when a mod's official link serves a newer file (Christopher,
   2026-10-30: as few blockers as possible; a newer version under the same link is
   installed and logged, and players report problems afterwards).

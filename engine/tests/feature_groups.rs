@@ -386,6 +386,11 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // Recommended plan changes, in the Rebalance run's artifact id; components, order and the
     // selection stay. With v0.8.9 restored, the previous plan digests return (manifest
     // 9a20fbbf…, curated ee3d8e3b…).
+    // Re-pinned on November 4 when Tweaks 3000 (maximum HP on level-up) and 3010 (Maximum HP
+    // Creatures) became optional and unselected, for 0.1.2 (Christopher, 2026-11-04). Only the
+    // curated recipe changes: the two features' decisions, their preset entries and both
+    // components in the cdtweaks-bg2 run of the plan. With both restored as defaults, the
+    // previous curated digests return (28812dc1…, 7a1ba97d…, 3cd844e7…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
@@ -395,9 +400,9 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         ),
         (
             "../recipes/curated-full-current",
-            "28812dc15b2863260be1c9cd54ab195a393a08404a9ca16a7a837f82c853568a",
-            "7a1ba97da70cba541ce9e05c68c3b0d999d41e5ec8b724745f2efd43ce3ecbf2",
-            "3cd844e77bd7834e9ce0b944d319a81f8049fdf384d86c3f85f7557d0de34048",
+            "4dcb1fd4fccc2609a013e458d1ddb1434be2dfc0ee9ea7d04544dbb73649a47f",
+            "999046f16958aecc0b39f4e9540ec03e5a2d510d81c871368d50f627f12e3fcb",
+            "8256bb6fd6c84d624985df3819bf2783c53b4b51aee679f789232f382f35623f",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();
