@@ -264,11 +264,15 @@ pub struct LeaveOutClosure {
 pub struct FailedPart {
     /// The planned run whose installer stopped; its step is `install:<run_id>`.
     pub run_id: String,
-    /// Its components that WeiDU did not install, in run order. The first one failed; the
-    /// installer never reached the others.
+    /// Its components that WeiDU did not install, in run order. The first one failed.
     pub components: Vec<u32>,
+    /// Later components that WeiDU installed all the same: it goes on after a failed component.
+    /// Then each of [`Self::components`] failed, and none can be tried again, because that
+    /// would install it after these.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub installed_after: Vec<u32>,
     /// Those of [`Self::components`] that the run still installs once the failed one is left
-    /// out, in run order. The others need the failed one and leave with it.
+    /// out, in run order, when WeiDU stopped at it. The others need it and leave with it.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub continues_with: Vec<u32>,
     /// Why the installation cannot go on without the failed component. Set exactly when the
@@ -278,15 +282,39 @@ pub struct FailedPart {
     /// The installer's own error line, when it printed one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
+    /// The attempt that ran the installer, when a later one asks after a stop: nothing ran then.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub evidence_attempt: Option<u32>,
+}
+
+impl FailedPart {
+    /// Whether the component can be tried again: nothing was installed after it.
+    pub fn can_retry(&self) -> bool {
+        self.installed_after.is_empty()
+    }
+
+    /// The components that leaving out leaves out by name: the one that failed, or each of them
+    /// when WeiDU went on after the failure and tried them all.
+    pub fn left_out(&self) -> Vec<u32> {
+        if self.can_retry() {
+            self.components.iter().take(1).copied().collect()
+        } else {
+            self.components.clone()
+        }
+    }
+}
+
+/// Whether `part` lists components of `whole`, in the same order.
+pub fn in_order(whole: &[u32], part: &[u32]) -> bool {
+    let mut rest = whole.iter();
+    part.iter()
+        .all(|component| rest.any(|candidate| candidate == component))
 }
 
 /// Whether `continues` lists components of `failed` after its first one, in the same order:
 /// what a failed run may still install after leaving out the component that failed.
 pub fn continues_after_failure(failed: &[u32], continues: &[u32]) -> bool {
-    let mut later = failed.iter().skip(1);
-    continues
-        .iter()
-        .all(|component| later.any(|candidate| candidate == component))
+    in_order(failed.get(1..).unwrap_or_default(), continues)
 }
 
 /// One question, exactly as the ledger keeps it.
@@ -345,7 +373,10 @@ impl Question {
     /// Whether `answer` is one of the answers this question offers.
     pub fn offers(&self, answer: Answer) -> bool {
         match (self.kind, answer) {
-            (QuestionKind::FailedComponent, Answer::Retry | Answer::No) => true,
+            (QuestionKind::FailedComponent, Answer::No) => true,
+            (QuestionKind::FailedComponent, Answer::Retry) => {
+                self.failed.as_ref().is_some_and(FailedPart::can_retry)
+            }
             (QuestionKind::FailedComponent, Answer::Yes) | (_, Answer::Retry) => false,
             (_, Answer::Yes | Answer::No) => true,
             (QuestionKind::UnusableDownload | QuestionKind::ModdedSource, Answer::LeaveOut) => {
@@ -405,6 +436,9 @@ impl Question {
                                     &failed.continues_with,
                                 )
                                 && failed.required.is_some() != self.leave_out.is_some()
+                                && (failed.can_retry()
+                                    || (failed.continues_with.is_empty()
+                                        && self.leave_out.is_some()))
                         })
                 }
             };
@@ -780,9 +814,11 @@ mod tests {
             failed: Some(FailedPart {
                 run_id: "snowytoes-bg2".to_owned(),
                 components: vec![10, 20, 30],
+                installed_after: Vec::new(),
                 continues_with: if leave_out { vec![30] } else { Vec::new() },
                 required: (!leave_out).then(|| "a fixed part".to_owned()),
                 error: None,
+                evidence_attempt: None,
             }),
             ..changed("22")
         }
@@ -871,6 +907,36 @@ mod tests {
 
         // Only this question takes "try again".
         assert!(!changed("22").offers(Answer::Retry));
+    }
+
+    /// WeiDU goes on after a failed component. What it installed after it is in the game, so
+    /// trying again would install the failed one out of order: only leaving out and stopping
+    /// are left, and everything it reported as failed leaves by name.
+    #[test]
+    fn a_component_failed_before_others_were_installed_cannot_be_tried_again() {
+        let mut question = failed_component(true);
+        let failed = question.failed.as_mut().unwrap();
+        failed.components = vec![10, 30];
+        failed.installed_after = vec![20];
+        failed.continues_with = Vec::new();
+        question.validate().unwrap();
+        assert!(question.offers(Answer::LeaveOut));
+        assert!(question.offers(Answer::No));
+        assert!(!question.offers(Answer::Retry));
+        assert_eq!(question.failed.as_ref().unwrap().left_out(), vec![10, 30]);
+
+        // With nothing to offer but stopping it would be no question.
+        let mut fixed = failed_component(false);
+        fixed.failed.as_mut().unwrap().installed_after = vec![20];
+        assert!(fixed.validate().is_err());
+
+        // And nothing goes on after WeiDU tried everything.
+        let mut goes_on = question.clone();
+        goes_on.failed.as_mut().unwrap().continues_with = vec![30];
+        assert!(goes_on.validate().is_err());
+
+        let stopped_at_it = failed_component(true);
+        assert_eq!(stopped_at_it.failed.as_ref().unwrap().left_out(), vec![10]);
     }
 
     #[test]

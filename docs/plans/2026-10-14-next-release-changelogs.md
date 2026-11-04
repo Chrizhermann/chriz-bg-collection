@@ -34,10 +34,11 @@ is described in [`docs/release-notes-0.1.1.md`](../release-notes-0.1.1.md).
   **Default**), unchecked in Chris's Recommended. Both stay available under Customize. Max HP
   at Level One stays **Default**. (Tweaks Anthology)
 - **The installer asks when a single part fails.** When the installer of one component stops
-  with an error, the installation pauses and names the mod and the part. You choose to leave
-  it out and continue, to try it again or to stop. Only that part leaves, with what needs it;
-  the mod's other parts are still installed, and the end of the installation names everything
-  left out. A part the collection cannot do without offers only to try again or to stop.
+  with an error, the installation pauses and names the mod and the part, instead of needing a
+  fresh start. You choose to leave it out and continue or to stop, and to try it again when
+  nothing was installed after it. Only that part leaves, with what needs it; the mod's other
+  parts stay, and the end of the installation names everything left out. A part the collection
+  cannot do without is not left out.
 
 These changes apply to new installations; existing games and saves are unchanged.
 

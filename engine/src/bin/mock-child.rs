@@ -129,7 +129,9 @@ fn weidu_install(args: &[OsString]) -> io::Result<()> {
     if setup_name_log_override {
         writeln!(debug, "WeiDU v 24900 Log")?;
     }
-    // The installer of this component fails, as long as the marker file does not exist.
+    // The installer of this component fails, as long as the marker file does not exist. Like
+    // the real WeiDU it goes on with the next component, unless the test wants the others
+    // skipped.
     let failing = env::var("CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT")
         .ok()
         .and_then(|component| component.parse::<u32>().ok())
@@ -137,16 +139,20 @@ fn weidu_install(args: &[OsString]) -> io::Result<()> {
             env::var_os("CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT_UNTIL")
                 .is_none_or(|marker| !Path::new(&marker).exists())
         });
+    let skips_the_rest = env::var_os("CHRIZ_TEST_MOCK_WEIDU_SKIP_AFTER_FAILURE").is_some();
+    let mut failed = false;
     for (index, component) in components.iter().enumerate() {
         if Some(*component) == failing {
+            failed = true;
             writeln!(debug, "ERROR: synthetic failure of component {component}")?;
             writeln!(debug, "NOT INSTALLED DUE TO ERRORS component {component}")?;
-            for skipped in &components[index + 1..] {
-                writeln!(debug, "SKIPPING: component {skipped}")?;
+            if skips_the_rest {
+                for skipped in &components[index + 1..] {
+                    writeln!(debug, "SKIPPING: component {skipped}")?;
+                }
+                break;
             }
-            log.sync_all()?;
-            debug.sync_all()?;
-            return Err(io::Error::other("synthetic component failure"));
+            continue;
         }
         writeln!(
             log,
@@ -160,7 +166,11 @@ fn weidu_install(args: &[OsString]) -> io::Result<()> {
         }
     }
     log.sync_all()?;
-    debug.sync_all()
+    debug.sync_all()?;
+    if failed {
+        return Err(io::Error::other("synthetic component failure"));
+    }
+    Ok(())
 }
 
 fn argument_after<'a>(args: &'a [OsString], flag: &str) -> io::Result<&'a str> {

@@ -8,37 +8,49 @@ Christopher, 2026-11-04: when one component fails, the installer "soll nachfrage
 of leaving it out by itself, as 0.1.1 did for optional runs, or stopping, as it did for
 everything else.
 
-When a run's installer stops without installing a component (the reconciled `Retry` verdict,
-which proves that the attempt left nothing of it behind), the step records a
-`failed_component` question and the installation waits, as for the questions of PR 80. A
-failure after other components of the run gets one automatic retry first, as before. The
-question names the component by its feature title and its mod, and offers:
+**WeiDU goes on after a failed component.** With `--force-install-list` it prints
+"Automatically Skipping [X] because of error", installs the components after it and exits
+with 2 (checked with WeiDU 249; `engine/tests/fixtures/weidu/debug-went-past.log` is its
+transcript, and the r5 failure of `docs/curated-full-acceptance-2026-09-05.md` was this case).
+Until now that non-prefix result sealed the installation as needing a fresh copy. So a failed
+component comes in two shapes, and both now stop with a `failed_component` question, as for
+the questions of PR 80. It names the component by its feature title and its mod.
 
-- **Leave it out and continue** (`leave-out`): only the failed component and what needs it
-  leave, by the same closure as unticking its feature; one question covers all of it. The
-  components before it stay. The components after it that do not need it are still installed:
-  the step starts a new attempt with exactly those (`FailedRun::continues_with`), and a second
-  failure there is a question of its own.
-- **Try again** (`retry`): honest because of the `Retry` verdict. "Stop" followed by a resume
-  does the same; a preset `retry` is refused, because it could repeat without end.
-- **Stop the installation** (`no`).
+- **Nothing was installed after it** (the `Retry` verdict, after the one automatic retry for a
+  failure behind other components, as before): **Leave it out and continue**, **Try again**,
+  **Stop the installation**. Trying again is honest here: the verdict proves the attempt left
+  nothing of it behind. If WeiDU skipped what follows it, those components that do not need it
+  are installed in a new attempt of the same step (`FailedRun::continues_with`).
+- **Later components were installed** (the new `FailedAmong` verdict: the log rows are exactly
+  the components reported as installed, in order, and the exit code says it failed):
+  **Leave it out and continue** and **Stop the installation**. "Try again" would install the
+  component out of the planned order, so it is not offered. All that failed is named in one
+  question. "Stop" keeps the question: every resume asks again and runs nothing, reading the
+  evidence of the attempt that ran (`FailedPart::evidence_attempt`).
+
+Leaving out goes by the same closure as unticking the feature, so one question covers what
+needs it. Whatever WeiDU installed stays, even when the recipe says it needs the failed part:
+the installer never uninstalls. A preset `retry` is refused, because it could repeat without
+end.
 
 **The mandatory line is the recipe's own:** a feature with `decision = "mandatory"` and only
-mandatory parents is a fixed part (`LeaveOutError::Required`), and its question offers only to
-try again or to stop, and says why. In `curated-full-current` these are DLC Merger, the EE
-Fixpack core, EET core import, EET finalization and Modpack `640`. A mandatory feature under an
-optional parent can leave, with that parent. The same question comes when leaving out would
-change a run that is installed already.
+mandatory parents is a fixed part (`LeaveOutError::Required`). In `curated-full-current` these
+are DLC Merger, the EE Fixpack core, EET core import, EET finalization and Modpack `640`. A
+mandatory feature under an optional parent can leave, with that parent. The question for a
+fixed part offers only to try again or to stop, and says why. When later components were
+installed there is nothing to offer, so that copy needs a fresh start, as before, and the
+reason says so in plain words. The same holds when leaving out would change a run that is
+installed already.
 
 A run without an answer, or with a preset that does not fit, ends with status
 `decision_required` and the question open; `--answer failed-component=leave-out` or `=no`
 answers for one run. The end summary and the receipt name every part left out.
 
-Two fixes came with it. A run left with only the components before the failed one could not
-pass the receipt check, because its first attempt names more than the run keeps: that check
-now knows what left. And a prompt of a component the installer never reached no longer seals
-the installation as needing a fresh copy; only a prompt of an installed component must have
-been answered.
+Two fixes came with it. A run that lost components could not pass the receipt check, because
+its first attempt names more than the run keeps: that check now knows what left, and accepts
+additions that skip a failed component in an attempt that failed. And a prompt of a component
+the installer did not install no longer seals the installation as needing a fresh copy; only
+a prompt of an installed component must have been answered.
 
 Chriz Easy IWD does not have this yet. `claude/iwdee-app` branched on 2026-10-24 and has none
 of the question system; [PR #70](https://github.com/Chrizhermann/chriz-bg-collection/pull/70),

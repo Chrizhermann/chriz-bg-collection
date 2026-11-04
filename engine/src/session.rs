@@ -205,11 +205,12 @@ pub struct FailedRun {
     /// Its components that WeiDU did not install, in run order. Components before them that
     /// it did install stay installed.
     pub components: Vec<u32>,
-    /// The component that failed and that the player chose to leave out, the first of
-    /// [`Self::components`]. Absent in records of earlier versions, which left out all of
-    /// [`Self::components`] without asking; those stay byte-identical.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub left_out: Option<u32>,
+    /// The components that failed and that the player chose to leave out: the first of
+    /// [`Self::components`], or each of them when WeiDU went on after the failure. Empty in
+    /// records of earlier versions, which left out all of [`Self::components`] without asking;
+    /// those stay byte-identical.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub left_out: Vec<u32>,
     /// Those of [`Self::components`] that the run still installs, in run order: the step goes
     /// on with exactly these. Empty when the step ends here.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -942,16 +943,21 @@ fn validate_progress_event(event: &SessionEvent, path: &Path) -> Result<()> {
                             "a run left out after its installer failed must end its own install step and name the components it did not install",
                         ));
                     }
-                    let named_first = failed
-                        .left_out
-                        .is_none_or(|component| failed.components.first() == Some(&component));
-                    let goes_on_after_it = (failed.left_out.is_some()
-                        || failed.continues_with.is_empty())
-                        && crate::decision::continues_after_failure(
-                            &failed.components,
-                            &failed.continues_with,
-                        );
-                    if !named_first || !goes_on_after_it {
+                    let well_formed = if failed.left_out.is_empty() {
+                        failed.continues_with.is_empty()
+                    } else {
+                        failed.left_out.first() == failed.components.first()
+                            && crate::decision::in_order(&failed.components, &failed.left_out)
+                            && crate::decision::continues_after_failure(
+                                &failed.components,
+                                &failed.continues_with,
+                            )
+                            && !failed
+                                .continues_with
+                                .iter()
+                                .any(|component| failed.left_out.contains(component))
+                    };
+                    if !well_formed {
                         return Err(ledger_error(
                             path,
                             "a failed run must leave out the first component it did not install and go on only with components after it",
@@ -1166,7 +1172,7 @@ fn answered_outcome_fits(question: &Question, answer: Answer, next: &SessionEven
                 (Some(part), Some(run)) => {
                     run.run_id == part.run_id
                         && run.components == part.components
-                        && run.left_out == part.components.first().copied()
+                        && run.left_out == part.left_out()
                         && run.continues_with == part.continues_with
                 }
                 (None, None) => true,

@@ -238,6 +238,8 @@ struct FakeDeps {
     failed_dependents: BTreeMap<String, Vec<String>>,
     /// Further components of a run that need one of its failed components, by run id.
     failed_with: BTreeMap<String, Vec<u32>>,
+    /// The attempts whose evidence was read back, in order.
+    recovered_attempts: Vec<u32>,
     /// Every `plan_without_parts` request, to see replays not recompute it.
     plan_without_parts_calls: Vec<Vec<(String, Vec<u32>)>>,
     /// Source games that look modded, with the question to ask before copying them.
@@ -563,9 +565,10 @@ impl InstallLogVerifier for FakeDeps {
     fn recover(
         &mut self,
         run: &PlannedRun,
-        _attempt: &StepAttempt,
+        attempt: &StepAttempt,
     ) -> Result<InstallReconciliation, StepFailure> {
         self.trace.push(format!("recover:{}", run.run_id));
+        self.recovered_attempts.push(attempt.attempt);
         Ok(self
             .recovery_results
             .pop_front()
@@ -3274,7 +3277,7 @@ fn a_failed_component_waits_for_the_answer_and_a_resume_applies_it() {
     assert_eq!(answered.verified_plans, vec![remaining.clone()]);
     let failed_run = left_out_run(root);
     assert_eq!(failed_run.components, vec![1, 2]);
-    assert_eq!(failed_run.left_out, Some(1));
+    assert_eq!(failed_run.left_out, vec![1]);
     assert_eq!(failed_run.continues_with, vec![2]);
     let receipt = answered.receipts.last().unwrap();
     assert!(matches!(receipt.outcome, ReceiptDraftOutcome::Succeeded));
@@ -3418,7 +3421,7 @@ fn what_needs_the_failed_component_leaves_with_it_in_one_question() {
     let failed_run = failed_run.as_ref().unwrap();
     assert_eq!(failed_run.run_id, "tweaks-bg2");
     assert_eq!(failed_run.components, vec![1, 2]);
-    assert_eq!(failed_run.left_out, Some(1));
+    assert_eq!(failed_run.left_out, vec![1]);
     assert!(failed_run.continues_with.is_empty());
     let receipt = deps.receipts.last().unwrap();
     assert!(matches!(receipt.outcome, ReceiptDraftOutcome::Succeeded));
@@ -3613,6 +3616,134 @@ fn a_run_that_failed_after_installing_some_parts_keeps_them_and_resumes_with_the
         vec!["tweaks-bg2".to_owned()]
     );
     assert!(receipt.left_out[0].runs.is_empty());
+}
+
+/// What WeiDU reports when component 1 of `tweaks-bg2` fails and it goes on with component 2.
+fn went_past_the_first_tweak() -> InstallReconciliation {
+    InstallReconciliation::FailedAmong {
+        failed: vec![1],
+        installed_after: vec![2],
+    }
+}
+
+/// WeiDU goes on after a failed component. The installer asks all the same: leaving it out
+/// keeps what WeiDU installed after it, and trying again is not offered, because that would
+/// install the component out of order. "Stop" keeps the question: a resume runs nothing and
+/// asks again, however often, from the attempt that ran the installer.
+#[test]
+fn a_component_the_installer_went_past_is_left_out_or_stopped_at_but_not_tried_again() {
+    let fixture = Fixture::with_dependents();
+    let root = &fixture.request.created.managed_root;
+    let sink = RecordingSink::default();
+    let mut results = tweaks_fail_at_their_first_component();
+    results.pop_back();
+    results.push_back(went_past_the_first_tweak());
+    let mut deps = FakeDeps {
+        after_results: results,
+        failed_dependents: needs_eefix_needs_the_tweaks(),
+        answers: answer(QuestionKind::FailedComponent, Answer::No),
+        ..FakeDeps::default()
+    };
+
+    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+
+    assert!(
+        matches!(&outcome, CampaignOutcome::Failed { step_id, .. } if step_id == "install:tweaks-bg2"),
+        "{outcome:?}"
+    );
+    let question = asked(root).remove(0).2;
+    assert!(!question.offers(Answer::Retry));
+    assert!(question.offers(Answer::LeaveOut));
+    let failed = question.failed.as_ref().unwrap();
+    assert_eq!(failed.components, vec![1]);
+    assert_eq!(failed.installed_after, vec![2]);
+    assert!(failed.continues_with.is_empty());
+    assert_eq!(failed.evidence_attempt, None);
+    let closure = question.leave_out.as_ref().unwrap();
+    assert_eq!(closure.removed_runs, vec!["needs-eefix".to_owned()]);
+    assert_eq!(closure.changed_runs[0].components, vec![2]);
+    let ran = count_events(root, "required");
+    assert_eq!(ran, 1);
+
+    for asked_again in 2..=3 {
+        let mut resumed = FakeDeps {
+            recovery_results: VecDeque::from([went_past_the_first_tweak()]),
+            failed_dependents: needs_eefix_needs_the_tweaks(),
+            ..FakeDeps::default()
+        };
+        let outcome = run_campaign(&fixture.request, &mut resumed, &sink).unwrap();
+        assert!(
+            matches!(&outcome, CampaignOutcome::DecisionRequired { .. }),
+            "{outcome:?}"
+        );
+        assert!(builds(&resumed).is_empty(), "{:?}", resumed.trace);
+        assert_eq!(resumed.recovered_attempts, vec![1], "the attempt that ran");
+        let questions = asked(root);
+        assert_eq!(questions.len(), asked_again);
+        let last = questions.last().unwrap();
+        assert_eq!(last.2.failed.as_ref().unwrap().evidence_attempt, Some(1));
+
+        if asked_again == 2 {
+            let mut stopped = FakeDeps {
+                answers: answer(QuestionKind::FailedComponent, Answer::No),
+                ..FakeDeps::default()
+            };
+            assert!(matches!(
+                run_campaign(&fixture.request, &mut stopped, &sink).unwrap(),
+                CampaignOutcome::Failed { .. }
+            ));
+        }
+    }
+
+    let mut answered = FakeDeps {
+        answers: leave_it_out(),
+        ..FakeDeps::default()
+    };
+    assert_eq!(
+        run_campaign(&fixture.request, &mut answered, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert!(!builds(&answered)
+        .iter()
+        .any(|run| run.starts_with("build:tweaks-bg2")));
+    assert!(!builds(&answered)
+        .iter()
+        .any(|run| run.starts_with("build:needs-eefix")));
+    assert_eq!(
+        answered.verified_plans[0].components_for("tweaks-bg2"),
+        Some(&[2][..])
+    );
+    let failed_run = left_out_run(root);
+    assert_eq!(failed_run.components, vec![1]);
+    assert_eq!(failed_run.left_out, vec![1]);
+    assert!(failed_run.continues_with.is_empty());
+}
+
+/// A fixed part WeiDU went past can neither be left out nor tried again: there is nothing to
+/// ask, and this copy needs a fresh start, as it always did. The reason says why in plain words.
+#[test]
+fn a_fixed_part_the_installer_went_past_needs_a_fresh_copy() {
+    let fixture = Fixture::with_dependents();
+    let root = &fixture.request.created.managed_root;
+    let sink = RecordingSink::default();
+    let mut results = tweaks_fail_at_their_first_component();
+    results.pop_back();
+    results.push_back(went_past_the_first_tweak());
+    let mut deps = FakeDeps {
+        after_results: results,
+        essential: vec!["tweaks".to_owned()],
+        ..FakeDeps::default()
+    };
+
+    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+
+    let CampaignOutcome::FreshCopyRequired { step_id, reason } = outcome else {
+        panic!("{outcome:?}");
+    };
+    assert_eq!(step_id, "install:tweaks-bg2");
+    assert!(reason.contains("tweaks is a fixed part"), "{reason}");
+    assert!(reason.contains("cannot try it again"), "{reason}");
+    assert_eq!(count_events(root, "required"), 0);
 }
 
 /// The components a failed run installed stay even when the feature of the failed component

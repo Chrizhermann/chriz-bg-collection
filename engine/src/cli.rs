@@ -1639,14 +1639,28 @@ fn run_mod_name(frozen: &FrozenCliRecipe, run_id: &str, artifact_id: &str) -> St
         )
 }
 
-/// "<component> (<mod>)", the failed component of `part` in the player's words.
+/// The titles of what failed in `part`, each once.
+fn failed_titles(frozen: &FrozenCliRecipe, part: &FailedPart) -> Vec<String> {
+    let mut titles = Vec::<String>::new();
+    for component in part.left_out() {
+        let title = component_title(frozen, &part.run_id, component);
+        if !titles.contains(&title) {
+            titles.push(title);
+        }
+    }
+    titles
+}
+
+/// "<component> (<mod>)", what failed in `part` in the player's words.
 fn failed_part_name(frozen: &FrozenCliRecipe, artifact_id: &str, part: &FailedPart) -> String {
-    let title = part.components.first().map_or_else(
-        || "A component".to_owned(),
-        |component| component_title(frozen, &part.run_id, *component),
-    );
+    let titles = failed_titles(frozen, part);
+    let named = match titles.as_slice() {
+        [] => "A component".to_owned(),
+        [first, second] => format!("{first} and {second}"),
+        titles => short_list(titles),
+    };
     format!(
-        "{title} ({})",
+        "{named} ({})",
         run_mod_name(frozen, &part.run_id, artifact_id)
     )
 }
@@ -1660,22 +1674,19 @@ fn parts_leaving_with(
     removed: &[String],
     kept_components: impl Fn(&str) -> Option<Vec<u32>>,
 ) -> Vec<String> {
-    let failed_title = part
-        .components
-        .first()
-        .map(|component| component_title(frozen, &part.run_id, *component));
+    let failed_titles = failed_titles(frozen, part);
+    let failed = part.left_out();
     let mut titles = Vec::<String>::new();
     let mut add = |run_id: &str, component: u32| {
         let title = component_title(frozen, run_id, component);
-        if Some(&title) != failed_title.as_ref() && !titles.contains(&title) {
+        if !failed_titles.contains(&title) && !titles.contains(&title) {
             titles.push(title);
         }
     };
     for component in part
         .components
         .iter()
-        .skip(1)
-        .filter(|component| !part.continues_with.contains(component))
+        .filter(|component| !failed.contains(component) && !part.continues_with.contains(component))
     {
         add(&part.run_id, *component);
     }
@@ -1995,23 +2006,30 @@ fn render_failed_component(
         answer: Answer::Retry,
         label: "Try again".to_owned(),
     };
-    let after_no = "You chose to stop. Resume this installation to try this part again.".to_owned();
     let Some(part) = &question.failed else {
         return QuestionTexts {
             message: "A part of this collection could not be installed.".to_owned(),
             details: Vec::new(),
             answers: vec![retry, stop],
             focus: Answer::Retry,
-            after_no,
+            after_no: String::new(),
         };
     };
+    let after_no = if part.can_retry() {
+        "You chose to stop. Resume this installation to try this part again."
+    } else {
+        "You chose to stop. Resume this installation to answer again."
+    }
+    .to_owned();
     let name = failed_part_name(frozen, &question.artifact_id, part);
     let own_mod = run_mod_name(frozen, &part.run_id, &question.artifact_id);
-    let mut details = vec![format!(
-        "Run {}, component {}",
-        part.run_id,
-        part.components.first().copied().unwrap_or_default()
-    )];
+    let numbers = part
+        .left_out()
+        .iter()
+        .map(u32::to_string)
+        .collect::<Vec<_>>()
+        .join(", ");
+    let mut details = vec![format!("Run {}, component {numbers}", part.run_id)];
     if let Some(error) = &part.error {
         details.push(format!("The installer said: {error}"));
     }
@@ -2047,10 +2065,20 @@ fn render_failed_component(
         .filter(|name| **name != own_mod)
         .cloned()
         .collect::<Vec<_>>();
-    let mut message = format!("{name} could not be installed. Leave it out and continue?");
+    let it = if part.left_out().len() > 1 {
+        "them"
+    } else {
+        "it"
+    };
+    let mut message = format!("{name} could not be installed. Leave {it} out and continue?");
+    if !part.can_retry() {
+        details.push(format!(
+            "The installer went on after the error, so trying again would install {it} out of order."
+        ));
+    }
     if !own_parts.is_empty() {
         message.push_str(&format!(
-            " The parts of {own_mod} that need it are left out too: {}.",
+            " The parts of {own_mod} that need {it} are left out too: {}.",
             short_list(&own_parts)
         ));
         details.push(format!(
@@ -2060,27 +2088,28 @@ fn render_failed_component(
     }
     if !dependents.is_empty() {
         message.push_str(&format!(
-            " The mods that depend on it are left out too: {}.",
+            " The mods that depend on {it} are left out too: {}.",
             short_list(dependents)
         ));
     }
     if !reduced.is_empty() {
         message.push_str(&format!(
-            " Installed without the parts that need it: {}.",
+            " Installed without the parts that need {it}: {}.",
             short_list(&reduced)
         ));
     }
+    let mut answers = vec![AnswerText {
+        answer: Answer::LeaveOut,
+        label: format!("Leave {it} out and continue"),
+    }];
+    if part.can_retry() {
+        answers.push(retry);
+    }
+    answers.push(stop);
     QuestionTexts {
         message,
         details,
-        answers: vec![
-            AnswerText {
-                answer: Answer::LeaveOut,
-                label: "Leave it out and continue".to_owned(),
-            },
-            retry,
-            stop,
-        ],
+        answers,
         focus: Answer::LeaveOut,
         after_no,
     }
@@ -5806,6 +5835,13 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
                 Reconciliation::UnchangedRetryable => InstallReconciliation::Retry {
                     remaining: prepared.components.clone(),
                 },
+                Reconciliation::FailedAmong {
+                    failed,
+                    installed_after,
+                } => InstallReconciliation::FailedAmong {
+                    failed,
+                    installed_after,
+                },
                 Reconciliation::StackDisturbed => stack_disturbed_reconciliation(
                     &String::from_utf8_lossy(&before),
                     &String::from_utf8_lossy(&after),
@@ -5825,6 +5861,7 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
             let uninstalled = match &verdict {
                 InstallReconciliation::Retry { remaining }
                 | InstallReconciliation::PartialPrefix { remaining } => remaining.as_slice(),
+                InstallReconciliation::FailedAmong { failed, .. } => failed.as_slice(),
                 _ => &[],
             };
             if installed_prompts_answered(run, &prepared.components, uninstalled, &prompts) {
@@ -7601,6 +7638,79 @@ mod tests {
         }
     }
 
+    /// When WeiDU went on after the failure, each component it reports as failed is named, and
+    /// "Try again" is not offered, because that would install them out of order.
+    #[test]
+    fn components_weidu_went_past_are_named_together_and_cannot_be_tried_again() {
+        let mut frozen = frozen_recipe_fixture();
+        frozen.plan.runs = vec![crate::resolve::PlannedRun {
+            run_id: "tweaks-bg2".to_owned(),
+            mod_id: "tweaks".to_owned(),
+            target: GameRoot::Bg2,
+            phase: crate::manifest::Phase::Main,
+            components: vec![1, 2, 3],
+            args: Vec::new(),
+            postconditions: Vec::new(),
+            artifact_id: "tweaks".to_owned(),
+            weidu_artifact_id: "weidu".to_owned(),
+            prompt_scripts: Vec::new(),
+        }];
+        let question = Question {
+            kind: QuestionKind::FailedComponent,
+            artifact_id: "tweaks".to_owned(),
+            artifact_kind: ArtifactKind::Payload,
+            reviewed: FrozenIdentity {
+                id: "tweaks".to_owned(),
+                version: "1".to_owned(),
+                sha256: "11".repeat(32),
+                length: 10,
+            },
+            served: None,
+            reason: None,
+            leave_out: Some(crate::decision::LeaveOutClosure {
+                removed_runs: Vec::new(),
+                changed_runs: Vec::new(),
+                plan_sha256: "33".repeat(32),
+            }),
+            failed: Some(crate::decision::FailedPart {
+                run_id: "tweaks-bg2".to_owned(),
+                components: vec![1, 3],
+                installed_after: vec![2],
+                continues_with: Vec::new(),
+                required: None,
+                error: None,
+                evidence_attempt: None,
+            }),
+        };
+
+        let texts = render_question(&frozen, &question, &std::collections::BTreeSet::new());
+
+        assert_eq!(
+            texts.message,
+            "Component 1 and Component 3 (tweaks) could not be installed. Leave them out and continue?"
+        );
+        assert_eq!(
+            texts
+                .answers
+                .iter()
+                .map(|answer| (answer.answer, answer.label.as_str()))
+                .collect::<Vec<_>>(),
+            [
+                (Answer::LeaveOut, "Leave them out and continue"),
+                (Answer::No, "Stop the installation"),
+            ]
+        );
+        assert_eq!(texts.details[0], "Run tweaks-bg2, component 1, 3");
+        assert_eq!(
+            texts.details[1],
+            "The installer went on after the error, so trying again would install them out of order."
+        );
+        assert_eq!(
+            texts.after_no,
+            "You chose to stop. Resume this installation to answer again."
+        );
+    }
+
     /// The question uses the names the player knows from the app: the source name of the mod
     /// and the feature's title, with its choice for an option of a choice.
     #[test]
@@ -7790,9 +7900,11 @@ mod tests {
             failed: Some(crate::decision::FailedPart {
                 run_id: "tweaks-bg2".to_owned(),
                 components: (1..=10).collect(),
+                installed_after: Vec::new(),
                 continues_with,
                 required: None,
                 error: Some("cannot convert a variable".to_owned()),
+                evidence_attempt: None,
             }),
         };
 

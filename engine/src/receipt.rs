@@ -909,7 +909,8 @@ impl ManagedReceiptWriter {
 
 /// Checks that the attempts of a run add up to `planned`, as installed. A run that lost
 /// components after its attempts began keeps those in their attempts: `frozen` says which
-/// components the attempts may name beyond what `planned` still installs.
+/// components the attempts may name beyond what `planned` still installs. An attempt that
+/// failed may have gone past a failed component, as WeiDU does; its additions then skip it.
 pub(crate) fn validate_run_attempt_sequence(
     evidence: &RunReceipt,
     planned: &crate::resolve::PlannedRun,
@@ -922,7 +923,7 @@ pub(crate) fn validate_run_attempt_sequence(
         .iter()
         .filter(|component| !planned.components.contains(component))
         .collect::<BTreeSet<_>>();
-    let mut completed = 0_usize;
+    let mut remaining = planned.components.clone();
     let mut previous_attempt = 0_u32;
     for attempt in &evidence.attempts {
         if attempt.attempt == 0 || attempt.attempt <= previous_attempt {
@@ -932,14 +933,13 @@ pub(crate) fn validate_run_attempt_sequence(
             ));
         }
         previous_attempt = attempt.attempt;
-        let expected_suffix = &planned.components[completed..];
         let requested = attempt
             .components
             .iter()
             .filter(|component| !left_out.contains(component))
             .copied()
             .collect::<Vec<_>>();
-        if requested != expected_suffix {
+        if requested != remaining {
             return Err(format!(
                 "run {:?} attempt {} does not target the exact remaining suffix",
                 evidence.run_id, attempt.attempt
@@ -951,21 +951,25 @@ pub(crate) fn validate_run_attempt_sequence(
                 evidence.run_id, attempt.attempt
             ));
         }
-        if !attempt.log_diff.removed.is_empty()
-            || attempt.log_diff.added.len() > expected_suffix.len()
-        {
+        if !attempt.log_diff.removed.is_empty() || attempt.log_diff.added.len() > remaining.len() {
             return Err(format!(
                 "run {:?} attempt {} has unsafe WeiDU.log changes",
                 evidence.run_id, attempt.attempt
             ));
         }
-        for (offset, added) in attempt.log_diff.added.iter().enumerate() {
-            if added.component != expected_suffix[offset] {
-                return Err(format!(
-                    "run {:?} attempt {} additions are not the next exact planned prefix",
-                    evidence.run_id, attempt.attempt
-                ));
-            }
+        let added = attempt
+            .log_diff
+            .added
+            .iter()
+            .map(|added| added.component)
+            .collect::<Vec<_>>();
+        let went_past_a_failure =
+            attempt.exit_code != 0 && crate::decision::in_order(&remaining, &added);
+        if !remaining.starts_with(&added) && !went_past_a_failure {
+            return Err(format!(
+                "run {:?} attempt {} additions are not the next exact planned prefix",
+                evidence.run_id, attempt.attempt
+            ));
         }
         if attempt.log_diff.added.len() == attempt.components.len()
             && attempt.prompts.iter().any(|prompt| !prompt.matched)
@@ -975,9 +979,9 @@ pub(crate) fn validate_run_attempt_sequence(
                 evidence.run_id, attempt.attempt
             ));
         }
-        completed += attempt.log_diff.added.len();
+        remaining.retain(|component| !added.contains(component));
     }
-    if require_complete && completed != planned.components.len() {
+    if require_complete && !remaining.is_empty() {
         return Err(format!(
             "run {:?} accumulated additions do not complete the frozen component sequence",
             evidence.run_id
