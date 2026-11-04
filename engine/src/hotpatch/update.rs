@@ -1,13 +1,14 @@
 //! Whole-mod updates: one installed mod, such as BuffBot, brought to a newer release in a
-//! finished installation. WeiDU re-installs the mod's installed components from the new release,
-//! as the mod's own update path does. The update is a transaction of the hotpatch history, so
-//! there is one chain: Undo always takes back the latest change, and the hotpatch rule takes the
-//! game folder as the update left it.
+//! finished installation. WeiDU installs the mod's installed components again from the new
+//! release, as the mod's own update path does. The update is a transaction of the hotpatch
+//! history, so there is one chain: Undo always takes back the latest change, and the hotpatch
+//! rule takes the game folder as the update left it.
 //!
-//! WeiDU takes every component after the updated ones off and puts it back. That is allowed only
-//! for rows the installer or a hotpatch put there whose components install without questions,
-//! and their files must come back unchanged. Saves, the profile and the original installation
-//! record are never written.
+//! Left to itself, WeiDU would take every component after the updated ones off and put it back:
+//! voice packs a player added, boss fights from a hotpatch, whatever stands there. So for the run
+//! the mod list ends with the mod. WeiDU takes off only the old version and installs the new one,
+//! and the rows after it come back as they were (see [`visible_log`]). Saves, the profile and the
+//! original installation record are never written.
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -17,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use super::catalog::{Catalog, ModUpdate, UpdateSource};
 use super::transaction::{self, Applied, History, Package, Prepared};
 use super::{gate, Context};
-use crate::cli::VerifiedInstalledBaseline;
+use crate::cli::{PlayerMods, VerifiedInstalledBaseline};
 use crate::digest::sha256_bytes;
 use crate::game_files::{self, GameFiles};
 use crate::manifest::{ArchiveLimitsSpec, Artifact};
@@ -48,22 +49,6 @@ pub struct ReleaseRecord {
     pub page: Option<String>,
 }
 
-/// A mod WeiDU takes off and puts back after the updated components.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Reinstalled {
-    pub name: String,
-    /// Its installer, as the mod list names it (normalized).
-    pub tp2: String,
-    /// Its components after the updated ones, in mod-list order.
-    pub components: Vec<u32>,
-    /// Lowercase folder the mod's files live in, when it has one.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub mod_folder: Option<String>,
-    /// Lowercase folder WeiDU keeps its uninstall copies in.
-    pub backup_folder: String,
-}
-
 /// What a whole-mod update transaction records next to its package.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -74,11 +59,14 @@ pub struct UpdateRecord {
     pub from_version: String,
     pub to_version: String,
     pub release: ReleaseRecord,
+    /// The mod's installer, as the mod list names it (normalized).
+    pub tp2: String,
+    /// The language number its rows have after the update.
+    pub language: u32,
     /// Lowercase folder WeiDU keeps the mod's uninstall copies in.
     pub backup_folder: String,
-    /// The mod list rows the run must leave, in order.
+    /// The whole mod list after the update, in order.
     pub rows: Vec<LogComponentReceipt>,
-    pub reinstalled: Vec<Reinstalled>,
 }
 
 /// What Updates shows for one mod of one installation. Checking never writes the game.
@@ -96,11 +84,8 @@ pub struct ModUpdatePreview {
     pub target_version: Option<String>,
     pub release_title: Option<String>,
     pub release_url: Option<String>,
-    /// Mods WeiDU takes off and puts back after it.
-    pub reinstalled: Vec<String>,
     /// Why the update is refused.
     pub refusals: Vec<String>,
-    pub notes: Vec<String>,
     pub review_token: Option<String>,
     /// The latest change is an update of this mod and can be undone.
     pub can_undo: bool,
@@ -113,14 +98,11 @@ pub struct ModUpdatePreview {
 }
 
 /// Whether `name` lies in what the update `p` may change: the mod's folder and WeiDU's records of
-/// it and of the mods it re-installs, `override/`, the game language's dialog files, WeiDU's own
-/// files and logs, and the LuaJIT files of BuffBot's loader helper.
+/// it, `override/`, the game language's dialog files, WeiDU's own files and logs, and the LuaJIT
+/// files of BuffBot's loader helper.
 pub(super) fn writable(name: &str, p: &Prepared, update: &UpdateRecord) -> bool {
     let below = |folder: &str| name == folder || name.starts_with(&format!("{folder}/"));
     let language = p.language.to_ascii_lowercase();
-    let mod_area = |mod_folder: &str, backup: &str| {
-        below(mod_folder) || below(backup) || below(&format!("weidu_external/data/{mod_folder}"))
-    };
     matches!(
         name,
         "weidu.log"
@@ -131,14 +113,9 @@ pub(super) fn writable(name: &str, p: &Prepared, update: &UpdateRecord) -> bool 
             | "lua51.dll"
             | "luaprovider.dll"
     ) || below("override")
-        || mod_area(&p.package.mod_folder, &update.backup_folder)
-        || update.reinstalled.iter().any(|other| {
-            below(&other.backup_folder)
-                || other
-                    .mod_folder
-                    .as_deref()
-                    .is_some_and(|folder| mod_area(folder, &other.backup_folder))
-        })
+        || below(&p.package.mod_folder)
+        || below(&update.backup_folder)
+        || below(&format!("weidu_external/data/{}", p.package.mod_folder))
         || name == format!("lang/{language}/dialog.tlk")
         || name == format!("lang/{language}/dialogf.tlk")
         // A WeiDU log such as `setup-buffbot.debug` beside the game.
@@ -161,17 +138,6 @@ impl Installed {
         self.own
             .iter()
             .map(|index| self.all[*index].component)
-            .collect()
-    }
-    /// Rows after the mod's first one that are not its own: WeiDU re-installs them.
-    fn later(&self) -> Vec<&LogEntry> {
-        let first = self.own[0];
-        self.all
-            .iter()
-            .enumerate()
-            .skip(first + 1)
-            .filter(|(index, _)| !self.own.contains(index))
-            .map(|(_, entry)| entry)
             .collect()
     }
 }
@@ -394,45 +360,32 @@ fn owned_files(
     Ok(names)
 }
 
-/// Everything the rule found for one installation and the update of one mod.
+/// Everything the check found for one installation and the update of one mod.
 pub(super) struct Assessment {
     pub refusals: Vec<String>,
-    pub notes: Vec<String>,
     pub baseline: Option<VerifiedInstalledBaseline>,
     pub installed: Option<Installed>,
-    pub reinstalled: Vec<Reinstalled>,
     pub current: Option<GameFiles>,
-    /// The folder is not known to be as the installer and the transactions left it.
-    pub untrusted: bool,
 }
 
-fn assess(
-    ctx: &Context<'_>,
-    catalog: &Catalog,
-    entry: &ModUpdate,
-    history: &History,
-) -> Assessment {
-    let baseline =
-        crate::cli::verify_installed_baseline(ctx.record).map_err(|error| error.to_string());
-    assess_with(ctx, catalog, entry, history, baseline)
+fn assess(ctx: &Context<'_>, entry: &ModUpdate) -> Assessment {
+    // Other mods' rows do not matter here: the update leaves them alone, wherever they stand.
+    let baseline = crate::cli::verify_installed_baseline(ctx.record, PlayerMods::Unchecked)
+        .map_err(|error| error.to_string());
+    assess_with(ctx, entry, baseline)
 }
 
 /// [`assess`] with the installation's verified recipe and receipt already read.
 pub(super) fn assess_with(
     ctx: &Context<'_>,
-    catalog: &Catalog,
     entry: &ModUpdate,
-    history: &History,
     baseline: Result<VerifiedInstalledBaseline, String>,
 ) -> Assessment {
     let mut assessment = Assessment {
         refusals: Vec::new(),
-        notes: Vec::new(),
         baseline: None,
         installed: None,
-        reinstalled: Vec::new(),
         current: None,
-        untrusted: history.untrusted().is_some(),
     };
     let baseline = match baseline {
         Ok(baseline) => baseline,
@@ -477,150 +430,14 @@ pub(super) fn assess_with(
             ));
         }
     }
-    match reinstalled(ctx, catalog, history, &baseline, found) {
-        Ok(others) => assessment.reinstalled = others,
-        Err(mut refusals) => assessment.refusals.append(&mut refusals),
-    }
     match game_files::capture(&ctx.game()) {
-        Ok(now) => {
-            if !assessment.untrusted {
-                match history.expected_state(&ctx.record.managed_root) {
-                    Ok(expected) => {
-                        let changed =
-                            expected.differences(&now, |name| catalog.runtime_files.matches(name));
-                        if !changed.is_empty() {
-                            assessment.untrusted = true;
-                            assessment.notes.push(format!(
-                                "Files in the game folder changed since the installer and its updates left it: {}. The update keeps them, but hotpatches stay unavailable for this game afterwards.",
-                                gate::summarize(&changed)
-                            ));
-                        }
-                    }
-                    // Made before game updates could check the folder: nothing to compare with.
-                    Err(_) => assessment.untrusted = true,
-                }
-            }
-            assessment.current = Some(now);
-        }
+        Ok(now) => assessment.current = Some(now),
         Err(error) => assessment
             .refusals
             .push(format!("The game folder could not be read: {error}")),
     }
     assessment.baseline = Some(baseline);
     assessment
-}
-
-/// The mods WeiDU takes off and puts back after the updated components, or why that is refused.
-fn reinstalled(
-    ctx: &Context<'_>,
-    catalog: &Catalog,
-    history: &History,
-    baseline: &VerifiedInstalledBaseline,
-    found: &Installed,
-) -> Result<Vec<Reinstalled>, Vec<String>> {
-    // Rows an applied hotpatch put there, with the folder its package published.
-    let mut hotpatch_rows: BTreeMap<String, (String, String, BTreeSet<u32>)> = BTreeMap::new();
-    for entry in &history.entries {
-        if entry.state != transaction::State::Applied || entry.update.is_some() {
-            continue;
-        }
-        let Ok(p) = transaction::load_prepared(
-            &ctx.record.managed_root,
-            &ctx.record.install_id,
-            &entry.dir,
-        ) else {
-            continue;
-        };
-        let title = entry.title(catalog);
-        let row = hotpatch_rows
-            .entry(normalize_tp2_key(&p.package.tp2))
-            .or_insert_with(|| (title, p.package.mod_folder.clone(), BTreeSet::new()));
-        row.2.extend(p.package.components.iter().copied());
-    }
-    let mut out: Vec<Reinstalled> = Vec::new();
-    let mut refusals = Vec::new();
-    for row in found.later() {
-        if let Some(existing) = out.iter_mut().find(|other| other.tp2 == row.tp2_key) {
-            existing.components.push(row.component);
-            continue;
-        }
-        let recipe_mod = baseline
-            .manifest
-            .mods
-            .values()
-            .find(|installer| normalize_tp2_key(&installer.tp2) == row.tp2_key);
-        let (name, mod_folder) = if let Some(installer) = recipe_mod {
-            let asks = installer
-                .components
-                .iter()
-                .find(|declared| declared.id == row.component)
-                .is_none_or(|declared| declared.stdin.is_some() || !declared.prompts.is_empty());
-            let scripted = baseline.receipt.plan.runs.iter().any(|run| {
-                run.mod_id == installer.id
-                    && run.components.contains(&row.component)
-                    && (!run.args.is_empty() || !run.prompt_scripts.is_empty())
-            });
-            if asks || scripted {
-                refusals.push(format!(
-                    "{} comes after it and asks questions while installing; WeiDU would have to install it again unattended.",
-                    installer.name
-                ));
-                continue;
-            }
-            let folder = baseline
-                .manifest
-                .artifacts
-                .get(&installer.artifact_id)
-                .and_then(|artifact| {
-                    artifact.archive.publish_roots.iter().find(|root| {
-                        tp2_folder(&installer.tp2)
-                            .is_some_and(|folder| root.eq_ignore_ascii_case(&folder))
-                    })
-                })
-                .map(|root| root.to_ascii_lowercase());
-            (installer.name.clone(), folder)
-        } else if let Some((title, folder, components)) = hotpatch_rows.get(&row.tp2_key) {
-            if !components.contains(&row.component) {
-                refusals.push(format!(
-                    "{} component {} comes after it, but no hotpatch installed it; WeiDU would have to install it again.",
-                    row.tp2, row.component
-                ));
-                continue;
-            }
-            (title.clone(), Some(folder.clone()))
-        } else {
-            refusals.push(format!(
-                "{} comes after it in the mod list, but the installer did not put it there; WeiDU would have to install it again.",
-                row.tp2
-            ));
-            continue;
-        };
-        let tp2 = ctx.game().join(&row.tp2);
-        let backup = files::read(&tp2, TP2_LIMIT)
-            .ok()
-            .and_then(|bytes| tp2_facts(&String::from_utf8_lossy(&bytes)).backup)
-            .filter(|folder| files::safe_relative(folder).is_ok());
-        let Some(backup_folder) = backup else {
-            refusals.push(format!(
-                "{name} comes after it, and its installer does not say where WeiDU keeps its uninstall copies."
-            ));
-            continue;
-        };
-        out.push(Reinstalled {
-            name,
-            tp2: row.tp2_key.clone(),
-            components: vec![row.component],
-            mod_folder,
-            backup_folder,
-        });
-    }
-    if refusals.is_empty() {
-        Ok(out)
-    } else {
-        let mut seen = BTreeSet::new();
-        refusals.retain(|refusal| seen.insert(refusal.clone()));
-        Err(refusals)
-    }
 }
 
 /// The release an update installs, with its package as a recipe artifact.
@@ -747,9 +564,7 @@ pub fn inspect(
         target_version: None,
         release_title: None,
         release_url: None,
-        reinstalled: Vec::new(),
         refusals: Vec::new(),
-        notes: Vec::new(),
         review_token: None,
         can_undo: false,
         undo_title: None,
@@ -768,7 +583,7 @@ pub fn inspect(
         preview.can_restore = transaction::restorable(ctx, catalog, unfinished).is_ok();
         return Ok(preview);
     }
-    let assessment = assess(ctx, catalog, entry, &history);
+    let assessment = assess(ctx, entry);
     if let (Some(target), Some(current)) = (history.undo_target(), &assessment.current) {
         if target
             .update
@@ -779,12 +594,6 @@ pub fn inspect(
             preview.can_undo = transaction::undoable(ctx, catalog, target, current).is_ok();
         }
     }
-    preview.notes = assessment.notes;
-    preview.reinstalled = assessment
-        .reinstalled
-        .iter()
-        .map(|other| other.name.clone())
-        .collect();
     let Some(baseline) = &assessment.baseline else {
         preview.refusals = assessment.refusals;
         preview.detail = format!(
@@ -941,7 +750,7 @@ pub fn apply_with_progress(
     if history.unfinished().is_some() {
         return Err("A game update did not finish. Restore it before applying another.".into());
     }
-    let assessment = assess(ctx, catalog, entry, &history);
+    let assessment = assess(ctx, entry);
     if !assessment.refusals.is_empty() {
         return Err(assessment.refusals.join(" "));
     }
@@ -1019,15 +828,7 @@ pub fn apply_with_progress(
     // No game writes happen here, even if a download fails.
     let extracted = transaction::unpack(ctx, &release.artifact)?;
     let plan = plan(
-        ctx,
-        entry,
-        &baseline,
-        &found,
-        assessment.reinstalled,
-        assessment.untrusted,
-        &release,
-        &extracted,
-        language,
+        ctx, entry, &baseline, &found, &release, &extracted, language,
     )?;
     let (tool, tool_sha256) = transaction::weidu_tool(
         ctx,
@@ -1090,19 +891,15 @@ pub(super) struct Plan {
     pub payload: BTreeMap<String, PathBuf>,
     /// The version the new installer declares; the mod list must name it afterwards.
     pub new_version: Option<String>,
-    pub untrusted: bool,
 }
 
 /// Decide the update of `found` to `release`, unpacked at `extracted`: the mod's folder, its
 /// language in the new installer, the components and the mod list the run must leave.
-#[allow(clippy::too_many_arguments)]
 pub(super) fn plan(
     ctx: &Context<'_>,
     entry: &ModUpdate,
     baseline: &VerifiedInstalledBaseline,
     found: &Installed,
-    reinstalled: Vec<Reinstalled>,
-    untrusted: bool,
     release: &Release,
     extracted: &Path,
     language: String,
@@ -1183,7 +980,7 @@ pub(super) fn plan(
             artifact_id: release.artifact.id.clone(),
             version: release.version.clone(),
             sha256: release.artifact.source.sha256.to_ascii_lowercase(),
-            tp2,
+            tp2: tp2.clone(),
             language: language_number,
             components,
             mod_folder: mod_folder.to_ascii_lowercase(),
@@ -1194,20 +991,19 @@ pub(super) fn plan(
             from_version: found.version.clone(),
             to_version: release.version.clone(),
             release: release.record.clone(),
+            tp2: normalize_tp2_key(&tp2),
+            language: language_number,
             backup_folder,
             rows,
-            reinstalled,
         },
         language,
         payload,
         new_version: new_facts.version,
-        untrusted,
     })
 }
 
-/// Every existing file the run may replace or remove: WeiDU's own files, the mod's folder and
-/// WeiDU's records of it and of the mods it re-installs, and every file their uninstall lists
-/// name.
+/// Every existing file the run may replace or remove: WeiDU's own files, the mod's folder,
+/// WeiDU's records of it, and every file its uninstall lists name.
 fn saved_names(game: &Path, current: &GameFiles, p: &Plan) -> Result<BTreeSet<String>, String> {
     let read = |name: &str| files::read(&game.join(name), LIST_LIMIT);
     let mut names = transaction::guarded(current, &p.language)
@@ -1218,30 +1014,17 @@ fn saved_names(game: &Path, current: &GameFiles, p: &Plan) -> Result<BTreeSet<St
             names.insert(name.to_owned());
         }
     }
-    let mut folders = vec![
-        p.package.mod_folder.clone(),
-        p.update.backup_folder.clone(),
-        format!("weidu_external/data/{}", p.package.mod_folder),
-    ];
     names.extend(owned_files(
         current,
         read,
         &p.update.backup_folder,
         &p.package.components,
     )?);
-    for other in &p.update.reinstalled {
-        folders.push(other.backup_folder.clone());
-        if let Some(folder) = &other.mod_folder {
-            folders.push(folder.clone());
-            folders.push(format!("weidu_external/data/{folder}"));
-        }
-        names.extend(owned_files(
-            current,
-            read,
-            &other.backup_folder,
-            &other.components,
-        )?);
-    }
+    let folders = [
+        p.package.mod_folder.clone(),
+        p.update.backup_folder.clone(),
+        format!("weidu_external/data/{}", p.package.mod_folder),
+    ];
     for name in current.files.keys() {
         if folders
             .iter()
@@ -1312,7 +1095,6 @@ pub(super) fn prepare(
         payload,
         tool_sha256,
         update: Some(p.update.clone()),
-        untrusted: p.untrusted,
     };
     files::json_new(&dir.join("prepared.json"), &prepared)?;
     Ok(prepared)
@@ -1326,6 +1108,7 @@ fn execute(
     new_version: Option<&str>,
 ) -> Result<(), String> {
     place_release(ctx, dir, p)?;
+    hide_later_rows(ctx, dir, p)?;
     let evidence = transaction::invoke_weidu(ctx, dir, p, false)?;
     reinstalled_as_planned(
         &files::read(&dir.join("affected/weidu.log"), LOG_LIMIT)?,
@@ -1334,7 +1117,114 @@ fn execute(
         p,
         new_version,
     )?;
+    put_later_rows_back(ctx, dir, p)?;
     record_applied(ctx, catalog, dir, p)
+}
+
+/// The one active row on `line`, if it holds one. Rows can hold bytes in a mod's own encoding, so
+/// the mod list stays bytes and only this reading is lossy.
+fn log_row(line: &[u8]) -> Result<Option<LogEntry>, String> {
+    Ok(parse_active_entries(&String::from_utf8_lossy(line))
+        .map_err(files::err)?
+        .into_iter()
+        .next())
+}
+
+fn log_lines(log: &[u8]) -> impl Iterator<Item = &[u8]> {
+    log.split_inclusive(|byte| *byte == b'\n')
+}
+
+/// `log` as WeiDU sees it during the run: without the rows after the mod's first one that are not
+/// its own. With them in place, WeiDU would take off every one of them and install it again,
+/// which would run the installers of mods this app knows nothing about. Without them it takes off
+/// only the old version: the mod's files, by its own uninstall lists.
+fn visible_log(log: &[u8], tp2_key: &str) -> Result<Vec<u8>, String> {
+    let mut out = Vec::with_capacity(log.len());
+    let mut own_seen = false;
+    for line in log_lines(log) {
+        if let Some(row) = log_row(line)? {
+            if row.tp2_key == tp2_key {
+                own_seen = true;
+            } else if own_seen {
+                continue;
+            }
+        }
+        out.extend_from_slice(line);
+    }
+    Ok(out)
+}
+
+/// The whole mod list after the run: `before`, with each of the mod's rows replaced by the row
+/// WeiDU wrote for that component in `after`. Every other line stays byte for byte.
+fn merged_log(before: &[u8], after: &[u8], tp2_key: &str) -> Result<Vec<u8>, String> {
+    let without_end = |line: &'_ [u8]| -> usize {
+        line.iter()
+            .rposition(|byte| !matches!(byte, b'\r' | b'\n'))
+            .map_or(0, |last| last + 1)
+    };
+    let mut written = BTreeMap::new();
+    for line in log_lines(after) {
+        if let Some(row) = log_row(line)? {
+            if row.tp2_key == tp2_key {
+                written.insert(row.component, line[..without_end(line)].to_vec());
+            }
+        }
+    }
+    let mut out = Vec::with_capacity(before.len());
+    for line in log_lines(before) {
+        match log_row(line)? {
+            Some(row) if row.tp2_key == tp2_key => {
+                let new = written
+                    .get(&row.component)
+                    .ok_or("WeiDU left a component uninstalled.")?;
+                out.extend_from_slice(new);
+                out.extend_from_slice(&line[without_end(line)..]);
+            }
+            _ => out.extend_from_slice(line),
+        }
+    }
+    Ok(out)
+}
+
+/// Before WeiDU runs: the mod list ends with the mod ([`visible_log`]). The record holds the whole
+/// list, so an interrupted run is put back with it.
+pub(super) fn hide_later_rows(ctx: &Context<'_>, dir: &Path, p: &Prepared) -> Result<(), String> {
+    let update = p.update.as_ref().ok_or("Not an update record.")?;
+    let log = files::read(&dir.join("affected/weidu.log"), LOG_LIMIT)?;
+    let held = files::hold(&ctx.record.managed_root, dir)?;
+    files::write_held(&held.game, "WeiDU.log", &visible_log(&log, &update.tp2)?)
+}
+
+/// After WeiDU ran: the rows that were hidden come back, and the mod list must be the planned one.
+pub(super) fn put_later_rows_back(
+    ctx: &Context<'_>,
+    dir: &Path,
+    p: &Prepared,
+) -> Result<(), String> {
+    let update = p.update.as_ref().ok_or("Not an update record.")?;
+    let merged = merged_log(
+        &files::read(&dir.join("affected/weidu.log"), LOG_LIMIT)?,
+        &files::read(&ctx.game().join("WeiDU.log"), LOG_LIMIT)?,
+        &update.tp2,
+    )?;
+    let rows = parse_active_entries(&String::from_utf8_lossy(&merged)).map_err(files::err)?;
+    if rows
+        .iter()
+        .map(row_identity)
+        .ne(update.rows.iter().map(receipt_identity))
+    {
+        return Err("The mod list could not be put back as planned.".into());
+    }
+    let held = files::hold(&ctx.record.managed_root, dir)?;
+    files::write_held(&held.game, "WeiDU.log", &merged)
+}
+
+fn row_identity(row: &LogEntry) -> (String, u32, u32) {
+    (row.tp2_key.clone(), row.language, row.component)
+}
+
+fn receipt_identity(row: &LogComponentReceipt) -> (String, u32, u32) {
+    (normalize_tp2_key(&row.tp2), row.language, row.component)
 }
 
 /// Replace the mod's folder with the release: files the release no longer has go, its files are
@@ -1379,9 +1269,9 @@ pub(super) fn place_release(ctx: &Context<'_>, dir: &Path, p: &Prepared) -> Resu
     Ok(())
 }
 
-/// Judges WeiDU's run: an exit code that agrees with its result lines, no component that failed,
-/// a result line for every row it installed, the same mod list rows in the same order with the
-/// updated mod's in its new language, and the new version on the updated rows.
+/// Judges WeiDU's run on the list it saw: an exit code that agrees with its result lines, no
+/// component that failed, a result line for every component, the same rows in the same order
+/// with the updated mod's in its new language, and the new version on the updated rows.
 pub(super) fn reinstalled_as_planned(
     before: &[u8],
     after: &[u8],
@@ -1404,12 +1294,7 @@ pub(super) fn reinstalled_as_planned(
         })
         .count();
     let expected_code = if warned { 3 } else { 0 };
-    let rerun = p.package.components.len()
-        + update
-            .reinstalled
-            .iter()
-            .map(|other| other.components.len())
-            .sum::<usize>();
+    let rerun = p.package.components.len();
     if failed || evidence.exit_code != expected_code || installed < rerun {
         return Err(format!(
             "WeiDU did not install every component again (exit code {}, {installed} of at least {rerun} results).",
@@ -1431,16 +1316,19 @@ pub(super) fn reinstalled_as_planned(
             return Err("WeiDU left a component uninstalled.".into());
         }
     }
-    let found = rows
+    // The list WeiDU saw: everything before the mod's first row, and the mod's own rows.
+    let first = update
+        .rows
         .iter()
-        .map(|row| (row.tp2_key.clone(), row.language, row.component))
-        .collect::<Vec<_>>();
+        .position(|row| normalize_tp2_key(&row.tp2) == update.tp2)
+        .unwrap_or(update.rows.len());
     let expected = update
         .rows
         .iter()
-        .map(|row| (normalize_tp2_key(&row.tp2), row.language, row.component))
-        .collect::<Vec<_>>();
-    if found != expected {
+        .enumerate()
+        .filter(|(index, row)| *index < first || normalize_tp2_key(&row.tp2) == update.tp2)
+        .map(|(_, row)| receipt_identity(row));
+    if rows.iter().map(row_identity).ne(expected) {
         return Err("WeiDU changed the mod list's order or another mod's rows.".into());
     }
     if let Some(version) = new_version {
@@ -1497,9 +1385,9 @@ fn new_uninstall_lines(before: &str, after: &str) -> Vec<Option<(String, u32)>> 
     out
 }
 
-/// Check what the run did and publish the applied record: nothing outside the update's area, the
-/// re-installed mods' files as they were, the old release's plain copies replaced by the new
-/// release's, and an earlier copy of every changed file.
+/// Check what the run did and publish the applied record: nothing outside the update's area, in
+/// `override/` nothing but the mod's own files, the old release's plain copies replaced by the
+/// new release's, and an earlier copy of every changed file.
 pub(super) fn record_applied(
     ctx: &Context<'_>,
     catalog: &Catalog,
@@ -1535,28 +1423,16 @@ pub(super) fn record_applied(
         &update.backup_folder,
         &p.package.components,
     )?);
-    // Outside `override/` the area holds the mods' folders and WeiDU's records of them. In
-    // `override/` only files the updated mod wrote may change: the others belong to the mods
-    // installed again after it, which must put back the same files.
+    // Outside `override/` the area holds the mod's folder and WeiDU's records. In `override/` only
+    // the files the mod wrote may change: every other mod stays as it is.
     let different = changed
         .iter()
         .filter(|(name, _)| name.starts_with("override/") && !own.contains(*name))
         .map(|(name, difference)| (name.clone(), *difference))
         .collect::<BTreeMap<_, _>>();
     if !different.is_empty() {
-        let names = update
-            .reinstalled
-            .iter()
-            .map(|other| other.name.as_str())
-            .collect::<Vec<_>>()
-            .join(", ");
         return Err(format!(
-            "Installing {} again ({names}) did not give the same files: {}.",
-            if names.is_empty() {
-                "the other mods"
-            } else {
-                "the mods after it"
-            },
+            "The update changed files of other mods: {}.",
             gate::summarize(&different)
         ));
     }

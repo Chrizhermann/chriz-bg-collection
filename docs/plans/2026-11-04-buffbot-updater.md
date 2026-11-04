@@ -1,15 +1,16 @@
 # BuffBot updater for existing games (Chriz Easy IWD first, then Chriz Easy BG)
 
-Status: design, 2026-11-04. Christopher asked for it on 2026-11-04: update BuffBot in an existing
-game to the newest release from either installer, without breaking later hotpatches.
+Status: built for Chriz Easy IWD, 2026-11-04. Christopher asked for it on 2026-11-04: update
+BuffBot in an existing game to the newest release from either installer, without breaking later
+hotpatches.
 
 ## Why the existing paths do not fit
 
-- The IWD hotpatch only appends new components of one pinned release. `WeiDU.log` may only grow
-  by its rows, and it refuses any installation with a recorded whole-mod update.
+- The IWD hotpatch only appends new components of one pinned release; it cannot replace an
+  installed mod.
 - The BG route (`engine/src/mod_upgrades/`) knows exactly one transition, 1.8.3-alpha → 1.8.4-alpha,
   English only, BuffBot last.
-- Updating by hand changes the mod list, so the IWD hotpatch rule refuses the game afterwards.
+- Updating by hand leaves no record: no Undo, no Restore, and the app does not know the version.
 
 ## Flow
 
@@ -23,15 +24,18 @@ Undo and Restore work as for hotpatches.
    of WeiDU's BuffBot backup folder, and of every `override/` file BuffBot's uninstall lists
    name. Optional full-folder backup (on by default) and saves backup (off).
 3. **Apply.** The new release replaces `buffbot/` (files the new release no longer has are
-   removed). WeiDU re-installs BuffBot's installed components in their log order
-   (`--force-install-list`), in the installed language, mapped by its folder name in the new
-   installer, not by number. The run has no `--safe-exit`: with it, WeiDU 249 skips a component
-   that is already installed (bg-modding `weidu-install-runs.md`, lab 2026-10-20).
-4. **Verify.** Exit code 0 (3 = with warnings), the same `WeiDU.log` rows in the same order,
-   BuffBot's rows now carry the new version, every file that was a plain copy of the old release
-   is now the new release's file (WeiDU can report success and leave the old files), no new
-   "Recently Uninstalled" line, and nothing outside the update's area changed. Otherwise the game
-   files are put back automatically.
+   removed). For the run `WeiDU.log` ends with BuffBot (see "Mods after BuffBot"). WeiDU
+   re-installs BuffBot's installed components in their log order (`--force-install-list`), in the
+   installed language, mapped by its folder name in the new installer, not by number. The run has
+   no `--safe-exit`: with it, WeiDU 249 skips a component that is already installed (bg-modding
+   `weidu-install-runs.md`, lab 2026-10-20).
+4. **Verify.** Exit code 0 (3 = with warnings); the rows WeiDU saw are all there, in order, with
+   the new version on BuffBot's; `// Recently Uninstalled:` lines only for components that are
+   active again. Then the whole mod list comes back: the list from before the run with BuffBot's
+   rows replaced by the ones WeiDU wrote, every other line byte for byte. Every file that was a
+   plain copy of the old release must now be the new release's file (WeiDU can report success and
+   leave the old files); in `override/` nothing but BuffBot's own files may have changed, and
+   nothing outside the update's area. Otherwise the game files are put back automatically.
 
 The engine is `engine/src/hotpatch/update.rs`; the catalog lists the mods it updates
 (`[[updates]]` in `hotpatches/iwd/catalog.toml`). For labs:
@@ -61,39 +65,52 @@ BuffBot updates are transactions in the same history as hotpatches
 - The hotpatch rule takes the game folder as the last transaction left it, so a recorded
   BuffBot update is a known state and later hotpatches stay possible.
 - Hotpatch lists ("applied", "next") count hotpatch transactions only.
-- A BuffBot update on a folder that was changed by hand is allowed, but it is marked; hotpatches
-  stay refused for that installation, because the record must not adopt hand changes.
+- What a player changed by hand stays through an update and its Undo, and does not stop either:
+  as for hotpatches since 2026-11-04, the record holds the folder as it was right before.
 
 ## Mods after BuffBot
 
-WeiDU takes every component after BuffBot off and puts it back. That is allowed only for rows
-the installer or a hotpatch put there whose components install without questions (for example
-the EEex Remote Console, hotpatch components). Their re-installation must give the same files;
-otherwise everything is put back. Mods added by hand after BuffBot are refused, with their names:
-WeiDU would have to re-run installers the app does not know.
+Left to itself, WeiDU takes every component after BuffBot off and puts it back. In Christopher's
+stream game that would be 88 rows: voice packs, Rondak, The Hound and the twelve boss fights. The
+first version of this update allowed that for rows the app knows and refused mods added by hand,
+the strictness Christopher rejected for hotpatches the same day ("viel zu streng").
+
+So for the run `WeiDU.log` ends with BuffBot: the rows after its first one that are not its own
+are left out, and WeiDU sees BuffBot as the last mod. It takes off only the old version, by
+BuffBot's own uninstall lists, and installs the new one. No other installer runs, so nothing is
+refused and no other mod's files change. Afterwards the rows come back byte for byte, in their
+own encoding. The record holds the whole list, so an interrupted run is put back with it.
+
+This keeps WeiDU's own records of BuffBot true, unlike replacing the files directly as the
+one-off script for the stream game did (2026-11-04). It relies on one thing: taking BuffBot off
+must not undo another mod's work. No mod we know of builds on BuffBot's files.
 
 ## Variation handled
 
 - Any installed BuffBot version, components 0 and 1 in either order, or only one of them.
 - Any BuffBot language and game language (`weidu.conf`); a female `dialogF.tlk`.
+- Any mods after BuffBot, from the installer, a hotpatch or the player.
 - BuffBot not installed: nothing is offered ("This update does not add BuffBot").
 - Already newest: "BuffBot is up to date".
 
-## Open decision (Christopher)
+## Where the update comes from
 
-Where the update comes from: the newest GitHub release at update time (like Radar's Latest,
-checked against the size and SHA-256 GitHub publishes), or the newest BuffBot the installer's
-recipe pins (tested, but a new installer release per BuffBot version).
+Christopher, 2026-11-04: the newest GitHub release when the player checks, like Radar's Latest,
+checked against the length and SHA-256 GitHub publishes. Fresh installations keep their exact pin
+(`docs/own-mod-pins.md`), so a release is not tested with the installer before it reaches a game;
+Undo is the way back. `artifact = …` in the catalog would pin one release instead.
 
 ## Chriz Easy BG
 
 Same engine module. Chriz Easy BG installations have no finished-folder record, so the record
 starts at the first update; hotpatches do not exist there. The 1.8.3 → 1.8.4 route is replaced.
-In Chriz Easy BG, BuffBot is followed by the Modpack's scroll casting run, which WeiDU takes off
-and puts back. Needs the hotpatch history and `game_files.rs` on the Chriz Easy BG line first.
-Comes after Chriz Easy IWD, for CEBG 0.1.2.
+Needs the hotpatch history and `game_files.rs` on `main` first. Comes after Chriz Easy IWD, for
+CEBG 0.1.2.
 
-## Lab check (2026-11-04)
+## Lab check of the first version (2026-11-04)
+
+This lab ran the first version, in which WeiDU took the mods after BuffBot off and put them back.
+The version that leaves them out of the list still needs its own lab run.
 
 A fresh installation of Chriz Easy IWD 0.1.5 (the recommended setup plus the EEex Remote Console,
 so BuffBot 1.12.6 is followed by one more mod), from the Steam IWD:EE 2.7.3.0, in its own

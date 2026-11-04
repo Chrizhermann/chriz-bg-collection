@@ -82,10 +82,6 @@ pub(super) struct Prepared {
     /// Set for a whole-mod update; `package` is then the new release.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub update: Option<super::update::UpdateRecord>,
-    /// The folder was not known to be as the installer and the earlier transactions left it.
-    /// Hotpatches stay refused afterwards, because this record would otherwise adopt hand changes.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub untrusted: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -120,7 +116,6 @@ pub(super) struct Entry {
     pub hotpatch_id: String,
     /// Set for a whole-mod update.
     pub update: Option<super::update::UpdateRecord>,
-    pub untrusted: bool,
     /// Digest chaining the next transaction to this one's latest record.
     pub terminal: String,
     /// The same digest of its applied record, which a later transaction chains to when this one
@@ -286,7 +281,6 @@ impl History {
                 state,
                 hotpatch_id: p.hotpatch_id,
                 update: p.update,
-                untrusted: p.untrusted,
                 terminal,
                 applied_terminal,
             });
@@ -323,12 +317,6 @@ impl History {
             .filter(|entry| entry.state == State::Applied)
             .filter_map(|entry| entry.update.as_ref())
             .collect()
-    }
-
-    /// The first transaction that started from a folder not known to be as the installer and the
-    /// transactions before it left it, if any.
-    pub fn untrusted(&self) -> Option<&Entry> {
-        self.entries.iter().find(|entry| entry.untrusted)
     }
 
     /// The latest applied transaction, when everything after it was undone.
@@ -392,17 +380,11 @@ pub(super) fn install_id_of(receipt: &Path) -> Result<String, String> {
 }
 
 /// The mod-list rows applied hotpatches added after the completed installation's, in order.
-/// The current `WeiDU.log` must be exactly the one the latest hotpatch record left.
+/// Mods the player installs before or after a hotpatch add their own rows; callers compare the
+/// current `WeiDU.log` with these rows and name such rows as extra.
 pub fn verified_log_suffix(root: &Path) -> Result<Vec<LogComponentReceipt>, String> {
-    Ok(verified_log(root)?.unwrap_or_default())
-}
-
-/// [`verified_log_suffix`], or `None` when no transaction is recorded. `Some` means the history
-/// checked the current `WeiDU.log` byte for byte against the latest record, which also covers
-/// whole-mod updates that change rows' versions without adding rows.
-pub fn verified_log(root: &Path) -> Result<Option<Vec<LogComponentReceipt>>, String> {
     if !root.join(".chriz/hotpatches").exists() {
-        return Ok(None);
+        return Ok(vec![]);
     }
     let install_id = install_id_of(&root.join(".chriz/install-receipt.json"))?;
     let history = History::load(root, &install_id)?;
@@ -415,23 +397,7 @@ pub fn verified_log(root: &Path) -> Result<Option<Vec<LogComponentReceipt>>, Str
             suffix.extend(read_json::<Applied>(&entry.dir.join("applied.json"))?.suffix);
         }
     }
-    if history.entries.is_empty() {
-        return Ok(None);
-    }
-    let expected = history.expected_state(root)?;
-    let log = root.join("game/WeiDU.log");
-    files::regular(&log)?;
-    let actual = files::hash(&log)?;
-    if expected
-        .files
-        .get("weidu.log")
-        .map(|identity| &identity.sha256)
-        != Some(&actual)
-    {
-        // Also after an Undo, so not "after the last hotpatch".
-        return Err("The mod list changed after the installer and its hotpatches left it.".into());
-    }
-    Ok(Some(suffix))
+    Ok(suffix)
 }
 
 /// Whether `name` lies in what the transaction `p` may change.
@@ -440,6 +406,42 @@ pub(super) fn area(name: &str, p: &Prepared) -> bool {
         Some(update) => super::update::writable(name, p, update),
         None => writable(name, &p.package, &p.language),
     }
+}
+
+/// SHA-256 of `WeiDU.log` as the latest hotpatch record left it (or its Undo put it back), for
+/// checks that need the exact mod list; `None` before any hotpatch.
+pub fn recorded_log_sha256(root: &Path) -> Result<Option<String>, String> {
+    if !root.join(".chriz/hotpatches").exists() {
+        return Ok(None);
+    }
+    let install_id = install_id_of(&root.join(".chriz/install-receipt.json"))?;
+    let history = History::load(root, &install_id)?;
+    if history.entries.is_empty() {
+        return Ok(None);
+    }
+    let expected = history.expected_state(root)?;
+    Ok(expected
+        .files
+        .get("weidu.log")
+        .map(|identity| identity.sha256.clone()))
+}
+
+/// Components of the hotpatch's mod that the game's mod list has now, however they came there.
+pub(super) fn installed_components(
+    game: &Path,
+    hotpatch: &Hotpatch,
+) -> Result<BTreeSet<u32>, String> {
+    let installed = parse_active_entries(&String::from_utf8_lossy(&files::read(
+        &game.join("WeiDU.log"),
+        16 * 1024 * 1024,
+    )?))
+    .map_err(files::err)?;
+    let tp2_key = normalize_tp2_key(&hotpatch.installer.tp2);
+    Ok(installed
+        .iter()
+        .filter(|entry| entry.tp2_key == tp2_key)
+        .map(|entry| entry.component)
+        .collect())
 }
 
 /// Whether `name` lies in what a hotpatch for `package` may change.
@@ -639,17 +641,7 @@ pub fn apply_with_progress(
         );
     }
     let language = super::language_folder(&ctx.game())?;
-    let installed = parse_active_entries(&String::from_utf8_lossy(&files::read(
-        &ctx.game().join("WeiDU.log"),
-        16 * 1024 * 1024,
-    )?))
-    .map_err(files::err)?;
-    let tp2_key = normalize_tp2_key(&hotpatch.installer.tp2);
-    let present = installed
-        .iter()
-        .filter(|entry| entry.tp2_key == tp2_key)
-        .map(|entry| entry.component)
-        .collect::<BTreeSet<_>>();
+    let present = installed_components(&ctx.game(), &hotpatch)?;
     if hotpatch
         .components
         .iter()
@@ -827,8 +819,6 @@ pub(super) fn prepare_record(
         payload,
         tool_sha256: sources.tool_sha256.clone(),
         update: None,
-        // The rule refuses a hotpatch for a folder that is not as the records left it.
-        untrusted: false,
     };
     files::json_new(&dir.join("prepared.json"), &prepared)?;
     Ok(prepared)

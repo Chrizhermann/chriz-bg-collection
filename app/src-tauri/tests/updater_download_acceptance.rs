@@ -111,12 +111,8 @@ fn acceptance_input(name: &str) -> String {
 
 // check_updates gives the feed check a short timeout. tauri-plugin-updater 2.11 applies it to
 // the feed request only and hands out the update without a timeout, so a slow setup download
-// that keeps progressing is not cut off by it.
+// that keeps progressing is not cut off by it. Both apps run it with their own configuration.
 #[test]
-#[cfg_attr(
-    chriz_flavor_iwd,
-    ignore = "the Icewind Dale app has no updater configuration or plugin"
-)]
 fn a_slow_update_download_outlasts_the_feed_check_timeout() {
     let check_timeout = Duration::from_secs(1);
     let setup: Vec<u8> = (0..60_000).map(|index| (index % 251) as u8).collect();
@@ -168,6 +164,49 @@ fn a_slow_update_download_outlasts_the_feed_check_timeout() {
     );
     assert_eq!(
         feed.server.join().expect("join paced feed server"),
+        ["/latest.json", "/update.exe"]
+    );
+}
+
+// Every setup is checked against the key in the app's own configuration: one signed with any
+// other key, such as the other app's, is refused before it runs.
+#[test]
+fn a_setup_signed_with_another_key_is_refused() {
+    let setup: Vec<u8> = (0..4_096).map(|index| (index % 251) as u8).collect();
+    let keys = minisign::KeyPair::generate_unencrypted_keypair().expect("generate test key");
+    let signature = minisign::sign(None, &keys.sk, Cursor::new(&setup), None, None)
+        .expect("sign test setup")
+        .into_string();
+    let base64 = base64::engine::general_purpose::STANDARD;
+
+    let app = mock_app("0.1.0-alpha.2");
+    let feed = spawn_feed("0.1.0-alpha.3", &base64.encode(signature), setup);
+    let endpoint = feed.endpoint.parse().expect("parse loopback feed URL");
+    let error = tauri::async_runtime::block_on(async {
+        let updater = app
+            .updater_builder()
+            .endpoints(vec![endpoint])
+            .expect("use loopback endpoint in this debug-only test")
+            .no_proxy()
+            .timeout(Duration::from_secs(15))
+            .build()
+            .expect("build updater with the configured public key");
+        let update = updater
+            .check()
+            .await
+            .expect("check local feed")
+            .expect("newer update should be offered");
+        update
+            .download(|_, _| {}, || {})
+            .await
+            .expect_err("a setup signed with another key must be refused")
+    });
+    assert!(
+        matches!(error, UpdaterError::Minisign(_)),
+        "a foreign signature must fail in the Minisign verifier, got: {error}"
+    );
+    assert_eq!(
+        feed.server.join().expect("join feed server"),
         ["/latest.json", "/update.exe"]
     );
 }

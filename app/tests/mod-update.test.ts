@@ -19,7 +19,7 @@ function preview(overrides: Partial<ModUpdatePreview> = {}): ModUpdatePreview {
     detail: "Brings BuffBot in this game to its newest release. Your saves, BuffBot settings and exported presets stay as they are.",
     installedVersion: "1.12.6", targetVersion: "1.16.0", releaseTitle: "BuffBot 1.16.0 — party presets",
     releaseUrl: "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/tag/v1.16.0",
-    reinstalled: [], refusals: [], notes: [], reviewToken: "bound-review",
+    refusals: [], reviewToken: "bound-review",
     canUndo: false, undoTitle: null, canRestore: false,
     fullBackupBytes: "4294967296", saveBackupBytes: "52428800", availableBytes: "107374182400",
     backupPath: "C:\\Users\\Player\\AppData\\Local\\Chriz IWD Collection\\hotpatch-backups\\first",
@@ -70,7 +70,7 @@ describe("mod update card", () => {
   });
 
   it("offers an available update with versions, release title and backup choices", () => {
-    const callbacks = checked({ reinstalled: ["EEex Remote Console"], notes: ["Files in the game folder changed since the installer left it."] });
+    const callbacks = checked();
     const section = render(callbacks);
     expect(section.querySelector(".mod-update-installed")?.textContent).toBe("Installed: 1.12.6");
     expect(section.querySelector(".mod-update-target")?.textContent).toBe("Newest release: 1.16.0");
@@ -78,8 +78,6 @@ describe("mod update card", () => {
     // The release page is not opened from here: the app has no external-link helper.
     expect(section.querySelector("a")).toBeNull();
     expect(section.textContent).toContain("Your saves, BuffBot settings and exported presets stay as they are.");
-    expect(section.querySelector(".mod-update-reinstalled")?.textContent).toBe("Taken off and put back after it:EEex Remote Console");
-    expect(section.querySelector(".mod-update-notes")?.textContent).toContain("Please note:");
     expect(section.textContent).toContain("Close the game first. Undo puts the game files back; progress you saved after the update stays in those saves.");
     expect((getByRole(section, "checkbox", { name: /Back up the whole game folder/ }) as HTMLInputElement).checked).toBe(true);
     expect((getByRole(section, "checkbox", { name: /Copy your saved games/ }) as HTMLInputElement).checked).toBe(false);

@@ -1,0 +1,39 @@
+schema = 1
+recipe_id = "chriz-easy-iwd"
+version = "0.1.6"
+published_at = "2026-11-04T00:00:00Z"
+minimum_app_version = "0.1.1"
+supersedes = "0.1.5"
+
+[[changes]]
+id = "chriz-iwd-encounters-0.2.0"
+title = "Chriz IWD Encounters 0.2.0: twelve boss fights"
+summary = "Christopher's fight mod adds twelve boss fights, on by default: the orog raid on Kuldahar, Yxunomei, Joril, Maiden Ilmadia, the Idol, Poquelin in the Ascension Cave, Cryshal-Tirith, Belhifet, Mebdinga, Icasaracht, Lord Maluradek and the Luremaster. They are harder through behaviour and tactics, with more hit points where it fits; each works with and without Sword Coast Stratagems. A game already in progress gets them through the hotpatch."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-iwd-encounters-0.1.0",
+  "artifact:chriz-iwd-encounters-0.2.0",
+  "feature:mod:chriz-iwd-encounters",
+  "feature:feature:chriz-iwd-encounters:component-300",
+  "feature:feature:chriz-iwd-encounters:component-310",
+  "feature:feature:chriz-iwd-encounters:component-320",
+  "feature:feature:chriz-iwd-encounters:component-330",
+  "feature:feature:chriz-iwd-encounters:component-340",
+  "feature:feature:chriz-iwd-encounters:component-350",
+  "feature:feature:chriz-iwd-encounters:component-360",
+  "feature:feature:chriz-iwd-encounters:component-370",
+  "feature:feature:chriz-iwd-encounters:component-380",
+  "feature:feature:chriz-iwd-encounters:component-390",
+  "feature:feature:chriz-iwd-encounters:component-400",
+  "feature:feature:chriz-iwd-encounters:component-410",
+  "run:chriz-iwd-encounters-main",
+]
+
+[[changes]]
+id = "hotpatches-with-own-additions"
+title = "Hotpatches also reach games with your own additions"
+summary = "Voice packs, portraits and other mods you add after installing no longer stop a hotpatch. It is installed after them, and Undo puts the game back as it was right before the hotpatch, your additions included."
+save_applicability = "current-save"
+urgency = "informational"
+covers = ["release:hotpatch-own-additions"]

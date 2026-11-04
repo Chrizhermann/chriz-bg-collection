@@ -82,7 +82,9 @@ use crate::Manifest;
 mod installed_update;
 mod recovery;
 pub use installed_update::inspect_installed_update;
-pub(crate) use installed_update::{verify_installed_baseline, VerifiedInstalledBaseline};
+pub(crate) use installed_update::{
+    verify_installed_baseline, PlayerMods, VerifiedInstalledBaseline,
+};
 pub use recovery::{
     accept_supervised_recovery, inspect_supervised_recovery, SupervisedRecoveryRequest,
 };

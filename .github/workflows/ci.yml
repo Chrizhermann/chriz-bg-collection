@@ -184,6 +184,31 @@ jobs:
           git diff --exit-code
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # The in-app updater runs the setup in update mode, where Tauri's installer keeps files an
+      # older version shipped; the preinstall hook in app/src-tauri/windows/hooks.nsh removes them.
+      # The runner is disposable, so these steps install both apps' setups for real.
+      - name: Check that an update install replaces the bundled data (Chriz Easy BG)
+        run: |
+          $cebgSetups = @(Get-ChildItem -LiteralPath target/x86_64-pc-windows-msvc/release/bundle/nsis -Filter 'Chriz Easy BG_*_x64-setup.exe' -File)
+          if ($cebgSetups.Count -ne 1) { throw 'Expected exactly one Chriz Easy BG setup.' }
+          ./tools/check-nsis-update-cleanup.ps1 -SetupPath $cebgSetups[0].FullName -TauriConfiguration app/src-tauri/tauri.conf.json -WorkDirectory (Join-Path $env:RUNNER_TEMP 'cebg-update-check') 2>&1 | Tee-Object -FilePath target/ci-evidence/update-install-bg.log
+
+      - name: Build an unsigned Chriz Easy IWD development package
+        working-directory: app
+        run: |
+          $cebgLocalConfig = Join-Path $env:RUNNER_TEMP 'cebg-unsigned-ci.json'
+          $cebgIwdConfig = (Resolve-Path 'src-tauri/tauri.iwd.conf.json').Path
+          npm.cmd run tauri -- build --target x86_64-pc-windows-msvc --bundles nsis --config $cebgIwdConfig --config $cebgLocalConfig -- --locked 2>&1 | Tee-Object -FilePath ../target/ci-evidence/unsigned-package-iwd.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Check that an update install replaces the bundled data (Chriz Easy IWD)
+        run: |
+          $cebgBundle = 'target/x86_64-pc-windows-msvc/release/bundle/nsis'
+          $cebgSetups = @(Get-ChildItem -LiteralPath $cebgBundle -Filter 'Chriz Easy IWD_*_x64-setup.exe' -File)
+          if ($cebgSetups.Count -ne 1) { throw 'Expected exactly one Chriz Easy IWD setup.' }
+          if (@(Get-ChildItem -LiteralPath $cebgBundle -Filter '*.sig' -File).Count -ne 0) { throw 'CI must not produce production updater signatures.' }
+          ./tools/check-nsis-update-cleanup.ps1 -SetupPath $cebgSetups[0].FullName -TauriConfiguration app/src-tauri/tauri.conf.json, app/src-tauri/tauri.iwd.conf.json -WorkDirectory (Join-Path $env:RUNNER_TEMP 'iwd-update-check') -RecipeFolder recipes/iwd-current -ValidatorPath target/debug/chriz-bg-install.exe 2>&1 | Tee-Object -FilePath target/ci-evidence/update-install-iwd.log
+
       - name: Retain source-check evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

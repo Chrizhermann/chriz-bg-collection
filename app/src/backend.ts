@@ -1350,7 +1350,7 @@ export class FixtureBackend implements Backend {
       installId, modId, title: "BuffBot", state: "available",
       detail: "Preview only: brings BuffBot in this game to its newest release.",
       installedVersion: "1.12.6", targetVersion: "1.16.0", releaseTitle: "BuffBot 1.16.0", releaseUrl: null,
-      reinstalled: ["EEex Remote Console"], refusals: [], notes: [],
+      refusals: [],
       reviewToken: `fixture-mod-update-${installId}-${modId}`, canUndo: false, undoTitle: null, canRestore: false,
       fullBackupBytes: "4294967296", saveBackupBytes: "52428800", availableBytes: "107374182400",
       backupPath: "C:\\Fixture\\Hotpatch-Backups",

@@ -78,6 +78,9 @@ $cebgLocalConfig = Join-Path (Resolve-Path ..\target).Path 'cebg-local-build.jso
 npm.cmd run tauri -- build --target x86_64-pc-windows-msvc --bundles nsis --config $cebgLocalConfig -- --locked
 ```
 
+For Chriz Easy IWD, pass its configuration first and the override after it:
+`--config (Resolve-Path src-tauri/tauri.iwd.conf.json).Path --config $cebgLocalConfig`.
+
 This creates a local setup under
 `target/x86_64-pc-windows-msvc/release/bundle/nsis/`. It does not create the Tauri `.sig`
 required by the production updater and does not provide an Authenticode signature. The
@@ -149,6 +152,9 @@ Preserve these existing public locations:
 - [Versioned alpha.14 setup](https://github.com/Chrizhermann/chriz-easy-bg/releases/download/v0.1.0-alpha.14/Chriz.Easy.BG_0.1.0-alpha.14_x64-setup.exe)
 - [Alpha update feed](https://github.com/Chrizhermann/chriz-easy-bg/releases/download/alpha/latest.json)
 
+Chriz Easy IWD has its own updater key and feed on `Chrizhermann/chriz-easy-iwd`; its release
+steps are in [Chriz Easy IWD releases](iwd-release.md).
+
 The production build enables Tauri updater artifacts. An authorized release builder supplies
 `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` through external secret
 storage; no contributor needs those credentials to compile or run normal tests. The public
@@ -210,8 +216,13 @@ read-only repository permissions and does not receive production signing keys.
 
 The workflow installs the locked frontend dependencies, runs the frontend check, Rust
 format/tests/Clippy, Python tooling tests and locked-notice verification, then builds an unsigned NSIS package
-using the local updater-artifact override. It does not launch the setup or the app, run a
-game installation, publish a release, or edit the live updater feed. These are configured
+using the local updater-artifact override, and one of Chriz Easy IWD the same way. On the
+disposable runner it installs each setup, leaves files there that an older version could have
+shipped plus a junction, installs again in update mode as the in-app updater does, and checks
+that the bundled folders hold exactly the new version's files
+(`tools/check-nsis-update-cleanup.ps1`; the preinstall hook in `app/src-tauri/windows/hooks.nsh`
+does the emptying). It does not launch the app, run a game installation, publish a release, or
+edit the live updater feed. Only the Chriz Easy BG package is retained. These are configured
 checks; consult the actual [Actions run](https://github.com/Chrizhermann/chriz-bg-collection/actions/workflows/ci.yml)
 for a passed or failed result.
 

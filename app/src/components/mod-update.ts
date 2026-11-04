@@ -73,8 +73,6 @@ export function modUpdateSection(copy: ManagedCopyUpdate, offer: ModUpdateOffer,
     if (preview.releaseTitle !== null) result.append(element("p", "update-note mod-update-release", preview.releaseTitle));
     if (preview.detail) result.append(element("p", "update-note", preview.detail));
     if (preview.refusals.length > 0) result.append(list("mod-update-refusals", "Why it is not offered:", preview.refusals));
-    if (preview.notes.length > 0) result.append(list("mod-update-notes", "Please note:", preview.notes));
-    if (preview.reinstalled.length > 0) result.append(list("mod-update-reinstalled", "Taken off and put back after it:", preview.reinstalled));
     if (preview.state === "available") result.append(backupChoices(offer, preview, actions, blocked));
     if (preview.state === "needs-recovery" && preview.canRestore && actions.onRestoreModUpdate) {
       const restore = actionButton("Restore game files", () => !blocked ? actions.onRestoreModUpdate?.(offer.modId) : undefined, "primary compact");

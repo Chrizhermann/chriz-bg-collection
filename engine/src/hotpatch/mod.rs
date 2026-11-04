@@ -2,11 +2,12 @@
 //! installed after everything else, so that running games get them too.
 //!
 //! A hotpatch is offered only to an installation the strict rule in [`gate`] accepts: the
-//! collection as published, its game files exactly as the installer and earlier hotpatches left
-//! them, and choices close to the recommended setup. Base receipts and saves stay immutable.
-//! Every file a hotpatch changes keeps an earlier copy in its transaction record, so Undo puts
-//! the game folder back byte for byte; transactions follow [`transaction`]. Whole-mod updates of
-//! an installed mod, such as BuffBot, are transactions of the same history ([`update`]).
+//! collection as published and choices close to the recommended setup. What the player added
+//! since (voice packs, other mods) stays and never blocks it. Base receipts and saves stay
+//! immutable. Every file a hotpatch changes keeps an earlier copy in its transaction record, so
+//! Undo puts the game folder back byte for byte as it was right before the hotpatch;
+//! transactions follow [`transaction`]. Whole-mod updates of an installed mod, such as BuffBot,
+//! are transactions of the same history ([`update`]).
 pub mod catalog;
 pub mod gate;
 mod github;
@@ -27,7 +28,7 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 pub use transaction::{
-    apply, apply_with_progress, launch_guard, restore, restore_with_progress, verified_log,
+    apply, apply_with_progress, launch_guard, recorded_log_sha256, restore, restore_with_progress,
     verified_log_suffix,
 };
 
@@ -292,7 +293,11 @@ pub fn inspect(ctx: &Context<'_>, catalog: &catalog::Catalog) -> Result<Hotpatch
     });
     if !assessment.refusals.is_empty() {
         preview.refusals = assessment.refusals;
-        preview.detail = "This hotpatch is not offered for this installation, because it differs too much from the recommended setup. Your game has not been changed.".into();
+        // The reasons follow in `refusals`: a setup too far from the recommended one, or the
+        // hotpatch's components already installed by other means.
+        preview.detail =
+            "This hotpatch is not offered for this installation. Your game has not been changed."
+                .into();
         return Ok(preview);
     }
     let current = assessment

@@ -105,7 +105,8 @@ pub const IWD: AppFlavor = AppFlavor {
     radar: true,
     install_patches: false,
     mod_upgrades: false,
-    app_updates: false,
+    // Its own feed and key on the chriz-easy-iwd releases; see docs/iwd-release.md.
+    app_updates: true,
     hotpatches: Some("hotpatches/iwd"),
 };
 

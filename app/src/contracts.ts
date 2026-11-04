@@ -571,11 +571,8 @@ export interface ModUpdatePreview {
   readonly targetVersion: string | null;
   readonly releaseTitle: string | null;
   readonly releaseUrl: string | null;
-  /** Mods WeiDU takes off and puts back after the updated mod. */
-  readonly reinstalled: readonly string[];
   /** Why the update is not offered. */
   readonly refusals: readonly string[];
-  readonly notes: readonly string[];
   readonly reviewToken: string | null;
   /** The latest change is an update of this mod and can be undone. */
   readonly canUndo: boolean;
