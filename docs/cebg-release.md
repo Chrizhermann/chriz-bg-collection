@@ -20,6 +20,8 @@ After a successful signed NSIS build, prepare its update files from PowerShell:
 
 Use the actual `.exe` and its matching Tauri `.sig`; keep the signing key outside
 the repository. The helper never reads a private key, builds, or uploads anything.
+Chriz Easy IWD uses the same helper with `-Flavor iwd`, its own key and its own
+feed; see [Chriz Easy IWD releases](iwd-release.md).
 `-RecipeVersion` defaults to the app version and can be supplied separately when
 the bundled collection keeps a different version.
 

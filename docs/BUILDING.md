@@ -78,6 +78,9 @@ $cebgLocalConfig = Join-Path (Resolve-Path ..\target).Path 'cebg-local-build.jso
 npm.cmd run tauri -- build --target x86_64-pc-windows-msvc --bundles nsis --config $cebgLocalConfig -- --locked
 ```
 
+For Chriz Easy IWD, pass its configuration first and the override after it:
+`--config (Resolve-Path src-tauri/tauri.iwd.conf.json).Path --config $cebgLocalConfig`.
+
 This creates a local setup under
 `target/x86_64-pc-windows-msvc/release/bundle/nsis/`. It does not create the Tauri `.sig`
 required by the production updater and does not provide an Authenticode signature. The
@@ -148,6 +151,9 @@ Preserve these existing public locations:
 - [Versioned alpha.14 release](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.14)
 - [Versioned alpha.14 setup](https://github.com/Chrizhermann/chriz-easy-bg/releases/download/v0.1.0-alpha.14/Chriz.Easy.BG_0.1.0-alpha.14_x64-setup.exe)
 - [Alpha update feed](https://github.com/Chrizhermann/chriz-easy-bg/releases/download/alpha/latest.json)
+
+Chriz Easy IWD has its own updater key and feed on `Chrizhermann/chriz-easy-iwd`; its release
+steps are in [Chriz Easy IWD releases](iwd-release.md).
 
 The production build enables Tauri updater artifacts. An authorized release builder supplies
 `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` through external secret
