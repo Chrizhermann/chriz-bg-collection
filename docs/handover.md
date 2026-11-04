@@ -52,9 +52,13 @@ answers for one run. The end summary and the receipt name every part left out.
 
 Two fixes came with it. A run that lost components could not pass the receipt check, because
 its first attempt names more than the run keeps: that check now knows what left, and accepts
-additions that skip a failed component in an attempt that failed. And a prompt of a component
-the installer did not install no longer seals the installation as needing a fresh copy; only
-a prompt of an installed component must have been answered.
+additions that skip a failed component in an attempt that failed. And a component can fail
+before it asks its prompt. The runner took that for a lost process ("WeiDU could not be
+supervised") and kept waiting for the prompt, so the prompt of a later component was never
+answered and WeiDU would have waited for ever. Now a failing exit leaves unanswered prompts to
+the run's evidence, the runner answers a later prompt in its authored place, and only a prompt
+of an installed component must have been answered. A success without every answer stays
+refused, and an installed component without its answer still needs a fresh copy.
 
 Chriz Easy IWD does not have this yet. `claude/iwdee-app` branched on 2026-10-24 and has none
 of the question system; [PR #70](https://github.com/Chrizhermann/chriz-bg-collection/pull/70),

@@ -2653,6 +2653,92 @@ fn install_until_component_fails(fixture: &ExecutableFixture, component: &str) -
     check_decision(fixture, response["install_id"].as_str().unwrap())
 }
 
+/// A component that fails before it asks its prompt gets its question like any other, and the
+/// prompt of the component after it is answered, or the installer would wait for ever.
+#[cfg(windows)]
+#[test]
+fn a_component_that_fails_before_its_prompt_is_asked_about_at_once() {
+    let fixture = executable_fixture();
+    split_bg1_fixes(&fixture);
+    let prompt = |expected: &str| {
+        format!("prompts = [{{ expected_output = \"{expected}\", answer = {{ kind = \"literal\", value = {{ kind = \"boolean\", value = true }} }} }}]")
+    };
+    let mod_file = fixture.recipe.join("mods/eefixpack.toml");
+    let text = fs::read_to_string(&mod_file).unwrap();
+    assert!(text.contains("stdin = \"1\\n\""), "{text}");
+    fs::write(
+        &mod_file,
+        text.replace(
+            "name = \"Core fixes\"",
+            &format!(
+                "name = \"Core fixes\"\n{}",
+                prompt("Question of component 0: ")
+            ),
+        )
+        .replace("stdin = \"1\\n\"", &prompt("Question of component 2: ")),
+    )
+    .unwrap();
+
+    let (code, response) = run_installer_with(
+        &fixture,
+        None,
+        &[
+            (
+                "CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT",
+                std::ffi::OsStr::new("0"),
+            ),
+            (
+                "CHRIZ_TEST_MOCK_WEIDU_ASKING_COMPONENT",
+                std::ffi::OsStr::new("2"),
+            ),
+        ],
+        &install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ),
+    );
+
+    waiting_for(code, &response, "install:eefixpack-bg1");
+    let decision = check_decision(&fixture, response["install_id"].as_str().unwrap());
+    assert_eq!(decision["question"]["kind"], "failed_component");
+    assert_eq!(
+        decision["texts"]["message"],
+        "BG1 fixes (EE Fixpack) could not be installed. Leave it out and continue?"
+    );
+    assert_eq!(
+        labels(&decision),
+        vec!["Leave it out and continue", "Stop the installation"]
+    );
+
+    decide(&fixture, &decision, "leave-out");
+    // The BG2 run has a component 0 of its own, which asks and does not fail.
+    let (code, resumed) = run_installer_with(
+        &fixture,
+        None,
+        &[(
+            "CHRIZ_TEST_MOCK_WEIDU_ASKING_COMPONENT",
+            std::ffi::OsStr::new("0"),
+        )],
+        &["--json", "resume", fixture.managed.to_str().unwrap()],
+    );
+
+    assert_eq!(code, Some(0), "{resumed:#}");
+    assert_eq!(resumed["status"]["status"], "complete", "{resumed:#}");
+    let receipt = read_install_receipt(&fixture);
+    let installed = receipt.installed_plan.as_ref().unwrap();
+    assert_eq!(installed.components_for("eefixpack-bg1"), Some(&[2][..]));
+    let answers = receipt.runs[0].attempts[0]
+        .prompts
+        .iter()
+        .map(|prompt| prompt.matched)
+        .collect::<Vec<_>>();
+    assert_eq!(answers, vec![false, true]);
+    assert_eq!(receipt.runs[0].attempts[0].exit_code, 2);
+}
+
 /// `resume` of the fixture, with its failing component failing still.
 #[cfg(windows)]
 fn resume_with_failing_component(fixture: &ExecutableFixture, component: &str) -> Value {

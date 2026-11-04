@@ -44,6 +44,7 @@ fn dispatch(args: Vec<OsString>) -> io::Result<()> {
         "fragmented-prompt" => fragmented_prompt(),
         "emit-prompt-exit" => emit_prompt_exit(),
         "unmatched-prompt" => unmatched_prompt(),
+        "failing-prompt" => failing_prompt(),
         "quiet" => quiet(parse_millis(args.get(1))?),
         "gated-output" => gated_output(required_path(args.get(1))?, required_path(args.get(2))?),
         "expect-eof" => expect_eof(),
@@ -140,6 +141,10 @@ fn weidu_install(args: &[OsString]) -> io::Result<()> {
                 .is_none_or(|marker| !Path::new(&marker).exists())
         });
     let skips_the_rest = env::var_os("CHRIZ_TEST_MOCK_WEIDU_SKIP_AFTER_FAILURE").is_some();
+    // The installer of this component asks a question before it installs anything.
+    let asking = env::var("CHRIZ_TEST_MOCK_WEIDU_ASKING_COMPONENT")
+        .ok()
+        .and_then(|component| component.parse::<u32>().ok());
     let mut failed = false;
     for (index, component) in components.iter().enumerate() {
         if Some(*component) == failing {
@@ -153,6 +158,11 @@ fn weidu_install(args: &[OsString]) -> io::Result<()> {
                 break;
             }
             continue;
+        }
+        if Some(*component) == asking {
+            print!("Question of component {component}: ");
+            io::stdout().flush()?;
+            io::stdin().lock().read_line(&mut String::new())?;
         }
         writeln!(
             log,
@@ -267,6 +277,15 @@ fn unmatched_prompt() -> io::Result<()> {
     io::stdin().read_line(&mut answer)?;
     println!("unexpected-answer:{}", answer.trim_end());
     Ok(())
+}
+
+fn failing_prompt() -> io::Result<()> {
+    print!("Later prompt: ");
+    io::stdout().flush()?;
+    let mut answer = String::new();
+    io::stdin().read_line(&mut answer)?;
+    println!("answer:{}", answer.trim_end());
+    Err(io::Error::other("synthetic failure after a prompt"))
 }
 
 fn quiet(delay: Duration) -> io::Result<()> {

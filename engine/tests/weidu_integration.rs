@@ -417,6 +417,55 @@ fn weidu_goes_on_after_a_failed_component_and_the_evidence_says_so() {
     harness.assert_override_publications(&["tmcopy.ids", "tmbare.txt"]);
 }
 
+/// A component can fail before it asks its prompt. WeiDU goes on to the next one, and that one's
+/// prompt is answered, or WeiDU would wait for ever.
+#[test]
+#[ignore = "requires CHRIZ_WEIDU_EXE pointing to the pinned WeiDU 249 Windows binary"]
+fn a_prompt_after_a_failed_component_is_answered() {
+    let harness = Harness::new();
+    let components = [30, 40];
+    let invocation = harness.invocation(
+        "prompt-after-failure",
+        InvocationMode::SetupName,
+        &components,
+        vec![
+            ResolvedPrompt {
+                expected_output: b"THIS_PROMPT_NEVER_COMES".to_vec(),
+                answer: b"alpha\n".to_vec(),
+            },
+            ResolvedPrompt {
+                expected_output: b"TESTMOD_UNEXPECTED_PROMPT: type beta".to_vec(),
+                answer: b"beta\n".to_vec(),
+            },
+        ],
+    );
+    let evidence = harness.run_sync(invocation, "prompt-after-failure");
+    let exit_code = match evidence.outcome {
+        RunOutcome::Exited { code } => code,
+        other => panic!("real WeiDU did not exit normally: {other:?}"),
+    };
+
+    assert_eq!(
+        reconcile(
+            &evidence.before_log,
+            &evidence.after_log,
+            &evidence.output,
+            &expected_run(&components, exit_code),
+        ),
+        Reconciliation::FailedAmong {
+            failed: vec![30],
+            installed_after: vec![40],
+        },
+        "before:\n{}\nafter:\n{}\noutput:\n{}\ndebug:\n{}",
+        evidence.before_log,
+        evidence.after_log,
+        evidence.output,
+        evidence.debug
+    );
+    harness.assert_protected_unchanged();
+    harness.assert_override_publications(&["tmunexpected.txt"]);
+}
+
 #[test]
 #[ignore = "requires CHRIZ_WEIDU_EXE pointing to the pinned WeiDU 249 Windows binary"]
 fn unexpected_prompt_requires_attention_and_remains_alive_until_cancelled() {

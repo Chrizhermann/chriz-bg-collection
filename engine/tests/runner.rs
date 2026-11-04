@@ -193,6 +193,77 @@ fn child_exit_before_an_authored_prompt_is_not_accepted() {
     );
 }
 
+/// WeiDU goes on after a failed component, and exits with an error: a prompt of that component
+/// never came, and the run's evidence decides what that means.
+#[test]
+fn a_failing_child_reports_its_exit_code_with_a_prompt_unanswered() {
+    let mut harness = Harness::start(
+        "quiet",
+        [OsString::from("not a number")],
+        vec![ResolvedPrompt {
+            expected_output: b"Never emitted: ".to_vec(),
+            answer: b"yes\n".to_vec(),
+        }],
+        Duration::from_secs(2),
+    );
+
+    assert_eq!(
+        harness.wait_outcome(Duration::from_secs(5)),
+        RunOutcome::Exited { code: 2 }
+    );
+    assert_eq!(fs::metadata(harness.prompt_results_log()).unwrap().len(), 0);
+}
+
+fn prompts_after_one_that_never_comes(later: &[u8]) -> Vec<ResolvedPrompt> {
+    vec![
+        ResolvedPrompt {
+            expected_output: b"Never emitted: ".to_vec(),
+            answer: b"no\n".to_vec(),
+        },
+        ResolvedPrompt {
+            expected_output: later.to_vec(),
+            answer: b"yes\n".to_vec(),
+        },
+    ]
+}
+
+/// The prompt of a later component is answered, with the place it has in the authored sequence,
+/// or WeiDU would wait for ever.
+#[test]
+fn a_later_prompt_is_answered_when_an_earlier_one_never_came() {
+    let mut harness = Harness::start(
+        "failing-prompt",
+        [],
+        prompts_after_one_that_never_comes(b"Later prompt: "),
+        Duration::from_secs(2),
+    );
+
+    assert_eq!(
+        harness.wait_outcome(Duration::from_secs(5)),
+        RunOutcome::Exited { code: 2 }
+    );
+    assert!(harness.console_text().contains("answer:yes"));
+    let results = fs::read_to_string(harness.prompt_results_log()).unwrap();
+    let result: serde_json::Value = serde_json::from_str(results.trim()).unwrap();
+    assert_eq!(result["index"], 1);
+}
+
+/// WeiDU reporting success with a prompt that never came stays unaccepted.
+#[test]
+fn a_successful_child_cannot_leave_an_earlier_prompt_unanswered() {
+    let mut harness = Harness::start(
+        "unmatched-prompt",
+        [],
+        prompts_after_one_that_never_comes(b"Unexpected prompt: "),
+        Duration::from_secs(2),
+    );
+
+    assert_eq!(
+        harness.wait_outcome(Duration::from_secs(5)),
+        RunOutcome::SpawnFailed
+    );
+}
+
 #[test]
 fn failed_prompt_answer_write_is_not_accepted() {
     let oversized_answer = vec![b'x'; 8 * 1024 * 1024];

@@ -5994,10 +5994,14 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
         }
         let bytes = read_direct_file(&attempt.evidence_root.join(PROMPT_RESULTS_FILE_NAME))?;
         let answered = parse_prompt_results(&bytes).map_err(step_error)?;
-        if answered.len() > prepared.prompt_identities.len()
-            || answered.iter().enumerate().any(|(index, found)| {
-                found.index != index || found != &prepared.prompt_identities[index]
-            })
+        // A component that failed may not have asked: the answers can leave gaps, but each is
+        // the authored one of its place, in order.
+        if answered
+            .windows(2)
+            .any(|pair| pair[0].index >= pair[1].index)
+            || answered
+                .iter()
+                .any(|found| prepared.prompt_identities.get(found.index) != Some(found))
         {
             return Err(StepFailure::new(
                 "runner prompt evidence differs from the prepared authored sequence",
@@ -6009,7 +6013,7 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
             .cloned()
             .enumerate()
             .map(|(index, mut prompt)| {
-                prompt.matched = index < answered.len();
+                prompt.matched = answered.iter().any(|found| found.index == index);
                 prompt
             })
             .collect())
@@ -7832,6 +7836,13 @@ mod tests {
             &all,
             &[2, 3],
             &prompts(&[false, false, false])
+        ));
+        // 1 failed before its prompt, and the installer went on to ask those of 3.
+        assert!(crate::cli::installed_prompts_answered(
+            &run,
+            &all,
+            &[1],
+            &prompts(&[false, true, true])
         ));
         // The attempt's own components count, and its record must fit them.
         assert!(crate::cli::installed_prompts_answered(
