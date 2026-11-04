@@ -55,6 +55,7 @@ struct RunEvidence {
     after_log: String,
     debug: String,
     output: String,
+    stdout: String,
 }
 
 impl Harness {
@@ -147,6 +148,8 @@ impl Harness {
             before_log,
             after_log: read_optional(&self.game.root.join("WeiDU.log")),
             debug: fs::read_to_string(debug_path).expect("read real WeiDU debug log"),
+            stdout: fs::read_to_string(output_log.with_file_name("stdout.log"))
+                .expect("read real WeiDU stdout"),
             output: fs::read_to_string(output_log).expect("read real WeiDU process log"),
         }
     }
@@ -370,7 +373,8 @@ fn failed_component_rolls_back_while_successful_prefix_reconciles() {
 }
 
 /// WeiDU does not stop at a failed component: it installs the next one and reports both. The
-/// evidence says exactly that, so the installation can ask instead of needing a fresh copy.
+/// evidence says exactly that, so the installation can ask instead of needing a fresh copy. The
+/// debug file of a setup-name run holds only a header, so the engine reads the run's stdout.
 #[test]
 #[ignore = "requires CHRIZ_WEIDU_EXE pointing to the pinned WeiDU 249 Windows binary"]
 fn weidu_goes_on_after_a_failed_component_and_the_evidence_says_so() {
@@ -392,7 +396,7 @@ fn weidu_goes_on_after_a_failed_component_and_the_evidence_says_so() {
         reconcile(
             &evidence.before_log,
             &evidence.after_log,
-            &evidence.output,
+            &evidence.stdout,
             &expected_run(&components, exit_code),
         ),
         Reconciliation::FailedAmong {
@@ -406,7 +410,7 @@ fn weidu_goes_on_after_a_failed_component_and_the_evidence_says_so() {
         evidence.debug
     );
     assert_eq!(
-        bg_engine::weidu::log::failure_message(&evidence.output).as_deref(),
+        bg_engine::weidu::log::failure_message(&evidence.stdout).as_deref(),
         Some("Failure(\"TESTMOD_CONTROLLED_FAILURE\")")
     );
     assert!(
@@ -449,7 +453,7 @@ fn a_prompt_after_a_failed_component_is_answered() {
         reconcile(
             &evidence.before_log,
             &evidence.after_log,
-            &evidence.output,
+            &evidence.stdout,
             &expected_run(&components, exit_code),
         ),
         Reconciliation::FailedAmong {
