@@ -2,7 +2,12 @@
 
 import { fireEvent, getByRole, waitFor } from "@testing-library/dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { installationNameEditor, installationNameError } from "../src/components/installation-name";
+import {
+  installationNameEditor,
+  installationNameNote,
+  sanitizeInstallationName,
+  savedInstallationName,
+} from "../src/components/installation-name";
 
 const installations = [
   { installId: "first", name: "My adventure" },
@@ -11,16 +16,29 @@ const installations = [
 afterEach(() => { document.body.replaceChildren(); });
 
 describe("installation display names", () => {
-  it("validates trimmed names, legacy duplicates and case-insensitive Unicode names", () => {
-    expect(installationNameError("  new adventure  ", installations)).toBeNull();
-    expect(installationNameError(" MY ADVENTURE ", installations)).toContain("already exists");
-    expect(installationNameError("MY ADVENTURE", installations, "first")).toBeNull();
-    expect(installationNameError("älven", [{ installId: "unicode", name: "ÄLVEN" }])).toContain("already exists");
-    expect(installationNameError("My adventure", [...installations, { installId: "legacy", name: "My adventure" }], "first")).toContain("already exists");
-    for (const name of ["", " ", ".", "..", "Bad/name", "Bad\\name", "Bad:name", "Bad?name", "Bad\nname", "a".repeat(81)]) {
-      expect(installationNameError(name, [])).not.toBeNull();
+  it("saves every name, numbering taken ones and cleaning what Windows cannot use", () => {
+    expect(installationNameNote("  new adventure  ", installations)).toBeNull();
+    expect(savedInstallationName(" MY ADVENTURE ", installations)).toBe("MY ADVENTURE (2)");
+    expect(installationNameNote(" MY ADVENTURE ", installations)).toBe("Will be saved as “MY ADVENTURE (2)”.");
+    expect(installationNameNote("MY ADVENTURE", installations, "first")).toBeNull();
+    expect(savedInstallationName("älven", [{ installId: "unicode", name: "ÄLVEN" }])).toBe("älven (2)");
+    expect(savedInstallationName("My adventure", [...installations, { installId: "legacy", name: "My adventure" }], "first")).toBe("My adventure (2)");
+    expect(savedInstallationName("Run", [{ installId: "a", name: "Run" }, { installId: "b", name: "run (2)" }])).toBe("Run (3)");
+    for (const [typed, saved] of [
+      ["Bad/name", "Bad-name"], ["Bad\\name", "Bad-name"], ["Bad:name", "Bad-name"], ["Bad?name", "Bad-name"],
+      ["Bad\nname", "Badname"], ["<a|b*c>", "-a-b-c-"], ["a".repeat(81), "a".repeat(80)],
+    ] as const) {
+      expect(sanitizeInstallationName(typed)).toBe(saved);
+      expect(installationNameNote(typed, [])).toBe(`Will be saved as “${saved}”.`);
     }
-    expect(installationNameError("🐉".repeat(80), [])).toBeNull();
+    for (const empty of ["", " ", ".", "..", " ... ", "\u0001"]) {
+      expect(sanitizeInstallationName(empty)).toBeNull();
+      expect(savedInstallationName(empty, [])).toBe("Chriz Easy BG");
+      expect(savedInstallationName(empty, [{ installId: "default", name: "Chriz Easy BG" }])).toBe("Chriz Easy BG (2)");
+    }
+    expect(installationNameNote("🐉".repeat(80), [])).toBeNull();
+    const long = "L".repeat(80);
+    expect(savedInstallationName(long, [{ installId: "long", name: long }])).toBe(`${"L".repeat(76)} (2)`);
   });
 
   it("starts collapsed and renames only the exact stable ID with a trimmed name", async () => {
@@ -38,18 +56,20 @@ describe("installation display names", () => {
     expect(getByRole(control, "status").textContent).toBe("Installation renamed to “Dragon run”.");
   });
 
-  it("shows an inline duplicate error and never submits it", () => {
-    const onRename = vi.fn();
+  it("shows a calm note for a taken name and saves it numbered", async () => {
+    const onRename = vi.fn().mockResolvedValue(undefined);
     const control = installationNameEditor({ installId: "first", name: "My adventure", installations, onRename });
     document.body.append(control);
     (control as HTMLDetailsElement).open = true;
     const input = getByRole(control, "textbox") as HTMLInputElement;
     fireEvent.input(input, { target: { value: " OTHER ADVENTURE " } });
-    expect(input.getAttribute("aria-invalid")).toBe("true");
-    expect(getByRole(control, "alert").textContent).toContain("already exists");
-    expect((getByRole(control, "button", { name: "Save name" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(input.getAttribute("aria-invalid")).toBeNull();
+    expect(control.querySelector("[role=alert]:not([hidden])")).toBeNull();
+    expect(control.textContent).toContain("Will be saved as “OTHER ADVENTURE (2)”.");
+    expect((getByRole(control, "button", { name: "Save name" }) as HTMLButtonElement).disabled).toBe(false);
     fireEvent.submit(control.querySelector("form")!);
-    expect(onRename).not.toHaveBeenCalled();
+    await waitFor(() => expect(onRename).toHaveBeenCalledExactlyOnceWith("first", "OTHER ADVENTURE (2)"));
+    expect(getByRole(control, "status").textContent).toBe("Installation renamed to “OTHER ADVENTURE (2)”.");
   });
 
   it("keeps the entered name and displays a backend conflict as plain text", async () => {

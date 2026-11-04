@@ -10,6 +10,43 @@ published. Christopher decided on 2026-11-01 that this release is app and collec
 **0.1.0** (prepared as alpha.22); the player-facing notes are in
 [`docs/release-notes-0.1.0.md`](../release-notes-0.1.0.md).
 
+## Collection 0.1.2 (draft)
+
+Drafts for the next release, Chriz Easy BG 0.1.2, on the same branch. Nothing here is
+released. Everything after this section is the 0.1.0 draft, published on 2026-11-02; 0.1.1
+is described in [`docs/release-notes-0.1.1.md`](../release-notes-0.1.1.md).
+
+### Changed behavior
+
+- **A new installation without Spell Revisions no longer stops at BG Rebalance.** This
+  was the known issue of 0.1.1: with Spell Revisions unticked, Flail of the Ages balance
+  (Default) did not recognize the Haste and Slow spells SCS uses without Spell Revisions and
+  stopped the installation. It now installs there, so you no longer need to keep Spell
+  Revisions ticked or untick Flail of the Ages balance. A target that makes its save against
+  the flail's Slow is not slowed and keeps its Haste; a hasted target that fails it loses its
+  Haste instead of being slowed, as SCS intends. (Rebalance v0.8.10)
+- **The Flail of the Ages +5 lets Potion of Haste and Haste rings work** (Default), not only
+  the Haste and Improved Haste spells, with and without Spell Revisions. It still gives Free
+  Action and immunity to Slow, Hold, Web and Entangle, and the Slow saves of all four flails
+  are unchanged. (Rebalance v0.8.10)
+
+These changes apply to new installations; existing games and saves are unchanged.
+
+### Mod versions
+
+- BG Rebalance v0.8.10 (was v0.8.9)
+
+### Notes for the release integrator
+
+- **Rebalance v0.8.10** (pinned 2026-11-04, Christopher's OK of that day) changes only
+  Flail of the Ages `302`; its components, their order and the Recommended selection stay.
+  Its owner suite (840 tests with WeiDU 249) and dry runs on copies of a CEBG test install
+  without Spell Revisions, of Spell Revisions data and of vanilla data passed; the flail has
+  not been tested in a running game, in a localized game or with other item or spell
+  overhauls of the flail (its release notes). The 0.1.1 known issue ends with this pin, so
+  0.1.2's release notes drop it, and the 0.1.2 update ledger needs an entry that covers
+  `artifact:chriz-bg-rebalance-0.8.10`.
+
 ## Installer changelog
 
 - **Uninstalling with "Delete the application data" removes it completely and

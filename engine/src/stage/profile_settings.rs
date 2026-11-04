@@ -395,6 +395,42 @@ pub fn repair_installed_profile_settings(
     engine_name: &str,
     save_root: &Path,
 ) -> Result<bool> {
+    let game_root = verify_installed_save_root(managed_root, install_id, engine_name, save_root)?;
+    let changed = ensure_settings(&game_root, save_root)?;
+    verify_settings(&game_root, save_root)?;
+    Ok(changed)
+}
+
+/// Prepares a completed installation's isolated profile for the player to open.
+/// The game reads custom portraits from the profile's `portraits` folder but never
+/// creates it, so players cannot find where to put them; it is created here. An
+/// existing entry of that name is the player's and is left as it is. Only a save
+/// folder that still carries this installation's ownership marker is changed.
+/// Returns the profile folder.
+pub fn prepare_installed_profile_folder(
+    managed_root: &Path,
+    install_id: &str,
+    engine_name: &str,
+    save_root: &Path,
+) -> Result<PathBuf> {
+    verify_installed_save_root(managed_root, install_id, engine_name, save_root)?;
+    let portraits = save_root.join("portraits");
+    match fs::create_dir(&portraits) {
+        Ok(()) => {}
+        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
+        Err(source) => return Err(io_failure("create portraits folder", &portraits, source)),
+    }
+    Ok(save_root.to_path_buf())
+}
+
+/// Proves that `save_root` is still the profile the completed installation in
+/// `managed_root` reserved, and that its game still uses it. Returns the game folder.
+fn verify_installed_save_root(
+    managed_root: &Path,
+    install_id: &str,
+    engine_name: &str,
+    save_root: &Path,
+) -> Result<PathBuf> {
     let root = canonical_direct_directory(managed_root)
         .map_err(|error| folder_context("check installation folder", managed_root, error))?;
     let game_root = root.join("game");
@@ -435,9 +471,7 @@ pub fn repair_installed_profile_settings(
             "ownership marker belongs to a different managed installation",
         ));
     }
-    let changed = ensure_settings(&game_root, save_root)?;
-    verify_settings(&game_root, save_root)?;
-    Ok(changed)
+    Ok(game_root)
 }
 
 #[cfg(all(test, windows))]

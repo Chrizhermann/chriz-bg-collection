@@ -69,6 +69,20 @@ impl VerifiedWeidu {
             });
         }
 
+        let unpinned = Self::read_unpinned(path)?;
+        let expected = expected_sha256.to_ascii_lowercase();
+        if unpinned.sha256 != expected {
+            return Err(InvocationError::ToolHashMismatch {
+                path: unpinned.source_path,
+                expected,
+                actual: unpinned.sha256,
+            });
+        }
+        Ok(unpinned)
+    }
+
+    /// Reads a regular, unlinked executable and takes its identity from its own bytes.
+    fn read_unpinned(path: &Path) -> Result<Self, InvocationError> {
         let metadata = fs::symlink_metadata(path).map_err(|source| InvocationError::Io {
             path: path.to_path_buf(),
             source,
@@ -87,19 +101,9 @@ impl VerifiedWeidu {
             path: source_path.clone(),
             source,
         })?;
-        let actual = hex::encode(Sha256::digest(&bytes));
-        let expected = expected_sha256.to_ascii_lowercase();
-        if actual != expected {
-            return Err(InvocationError::ToolHashMismatch {
-                path: source_path,
-                expected,
-                actual,
-            });
-        }
-
         Ok(Self {
             source_path,
-            sha256: expected,
+            sha256: hex::encode(Sha256::digest(&bytes)),
             bytes,
         })
     }
@@ -173,6 +177,48 @@ pub fn verify_tool_contract(
         });
     }
 
+    let evidence = VerifiedToolEvidence {
+        length,
+        sha256: verified.sha256.clone(),
+        weidu_version,
+        pe_machine,
+    };
+    Ok((verified, evidence))
+}
+
+/// Verifies a WeiDU executable from a download that differs from its reviewed pin.
+///
+/// The official link may serve a newer WeiDU build, so its bytes, length and version may
+/// differ from `contract`. It must still be a regular executable for the reviewed
+/// architecture that answers `--version` like WeiDU, because the installer cannot work with
+/// anything else; the returned evidence records what it actually is.
+pub fn verify_served_tool(
+    path: &Path,
+    contract: &ToolSpec,
+) -> Result<(VerifiedWeidu, VerifiedToolEvidence), InvocationError> {
+    let verified = VerifiedWeidu::read_unpinned(path)?;
+    let length =
+        u64::try_from(verified.bytes.len()).map_err(|_| InvocationError::ToolLengthMismatch {
+            path: verified.source_path.clone(),
+            expected: contract.expected_length,
+            actual: u64::MAX,
+        })?;
+    let pe_machine = read_pe_machine(&verified.source_path, &verified.bytes)?;
+    if pe_machine != contract.pe_machine {
+        return Err(InvocationError::ToolArchitectureMismatch {
+            path: verified.source_path.clone(),
+            expected: contract.pe_machine,
+            actual: pe_machine,
+        });
+    }
+    let output = run_bounded_version_probe(&verified)?;
+    if !output.status.success() {
+        return Err(InvocationError::ToolVersionProbeFailed {
+            path: verified.source_path.clone(),
+            status: output.status.to_string(),
+        });
+    }
+    let weidu_version = parse_weidu_version_output(&output.stdout)?;
     let evidence = VerifiedToolEvidence {
         length,
         sha256: verified.sha256.clone(),

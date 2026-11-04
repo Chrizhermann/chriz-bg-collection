@@ -23,7 +23,7 @@ from tools.curation_audit import Decision, RowKey, load_catalogs, load_curation_
 from tools.recipe_presentation import apply_feature_presentations, build_feature_presentations
 
 
-RECIPE_VERSION = "0.1.0"
+RECIPE_VERSION = "0.1.1"
 RECIPE_LABEL = "CEBG curated full setup"
 ADDED_CATALOGS = {
     "BARDICWONDERS",
@@ -67,8 +67,9 @@ NATIVE_RUN_ORDERS = {
     # Modpack alpha.11 (October 13): scroll policy 430 moved to its own final run;
     # Degrodel 660 is declared after 640 and before the campaign XP pair 650/651.
     # Alpha.13 declares Dorn's ambush fix 135 after 130 and the party AI fix 460 after
-    # 450; the collection offers both from the alpha.14 pin (October 26).
-    "chriz-bg-modpack-bg2": [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660],
+    # 450; the collection offers both from the alpha.14 pin (October 26). Alpha.15
+    # (November 3) declares Marek's Boomerang Dagger 670 after 660 and before 650.
+    "chriz-bg-modpack-bg2": [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660, 670],
     # Modpack alpha.13 (October 20) declares EET join XP 239 right after 238; it runs
     # after the NPC mods and EET_end and before the campaign XP run, as 650 requires.
     "chriz-bg-modpack-late-companions-bg2": [189, 237, 238, 239, 620],
@@ -80,7 +81,7 @@ NATIVE_RUN_ORDERS = {
     # v0.8.5 (October 25) declares Chris Revisions 340 after them, and v0.8.6 (October 27)
     # the Time Stop and Haste effect clocks 360 after 340. v0.8.8 (October 29) declares
     # Druid weapons 410 and Alaghor of Clangeddin weapons 411 between 302 and 420; v0.8.9
-    # (November 2) keeps every component and the order.
+    # (November 2) keeps every component and the order, and so does v0.8.10 (November 3).
     "chriz-bg-rebalance-bg2": [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360],
     "chriz-bg-modpack-edwin-bg2": [236],
     "chriz-bg-modpack-baeloth-bg2": [235],

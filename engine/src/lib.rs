@@ -1,5 +1,7 @@
 pub mod acquire;
 pub mod cli;
+mod contained;
+pub mod decision;
 pub mod diagnostics;
 pub mod digest;
 pub mod error;

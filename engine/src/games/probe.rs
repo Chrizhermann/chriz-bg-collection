@@ -130,11 +130,20 @@ impl FileSystemProvider for SystemFileSystem {
     }
 }
 
+/// The file whose presence shows that Siege of Dragonspear is already merged into a BG:EE
+/// folder, as in Beamdog client copies. EET tests the same file to find SoD.
+const SOD_MERGED_MARKER: &str = "movies/sodcin05.wbm";
+
+/// The store whose copies the collection is rehearsed with.
+const TESTED_STOREFRONT: Storefront = Storefront::Steam;
+
 /// Inspects one explicitly browsed role/storefront/path without consulting the registry.
 ///
 /// The storefront is explicit because a raw directory path alone is not reliable store
-/// provenance. The provider surface is read-only and no profile is derived from the
-/// candidate being inspected.
+/// provenance; [`detect_storefront`] gives the best guess for a browsed folder. When the
+/// recipe has no profile for that store, the role's tested profiles are used as reference,
+/// and the store difference is reported as a warning. The provider surface is read-only and
+/// no profile is derived from the candidate being inspected.
 pub fn inspect_game_path<F: FileSystemProvider>(
     profiles: &GameProfiles,
     fs_provider: &F,
@@ -142,67 +151,168 @@ pub fn inspect_game_path<F: FileSystemProvider>(
     storefront: Storefront,
     root: &Path,
 ) -> Result<GameCandidate> {
-    let matching = profiles.matching(role, storefront).collect::<Vec<_>>();
-    let first = matching
-        .first()
-        .copied()
-        .ok_or(GameError::MissingProfile { role, storefront })?;
-    if fs_provider
-        .file_kind(root)
-        .map_err(|source| GameError::Io {
-            path: root.to_path_buf(),
-            source,
-        })?
-        != FileKind::Directory
-    {
-        return Err(GameError::Io {
-            path: root.to_path_buf(),
-            source: io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "source root is not a direct directory",
-            ),
-        });
+    inspect_game_path_with_language(profiles, fs_provider, role, storefront, root, None)
+}
+
+/// [`inspect_game_path`] with the game language a store's records name, such as Steam's
+/// `german`; a language other than English is reported as a warning.
+pub fn inspect_game_path_with_language<F: FileSystemProvider>(
+    profiles: &GameProfiles,
+    fs_provider: &F,
+    role: GameRole,
+    storefront: Storefront,
+    root: &Path,
+    language: Option<&str>,
+) -> Result<GameCandidate> {
+    let matching = role_profiles(profiles, role, storefront);
+    if matching.is_empty() {
+        return Err(GameError::MissingProfile { role, storefront });
     }
-    let canonical_root = fs_provider
-        .canonicalize(root)
-        .map_err(|source| GameError::Io {
-            path: root.to_path_buf(),
-            source,
-        })?;
+    inspect_profile_paths(fs_provider, &matching, root, storefront, language)
+}
 
-    let version_path = canonical_root.join(normalized_path(&first.executable));
-    let (build, version_error) = match direct_relative_kind(
-        fs_provider,
-        &canonical_root,
-        &first.executable,
-        FileKind::File,
-    ) {
-        Ok(()) => match fs_provider.product_version(&version_path) {
-            Ok(version) => (Some(version), None),
-            Err(error) => (None, Some(error.to_string())),
-        },
-        Err(()) => (
-            None,
-            Some("executable path contains a missing or indirect component".to_owned()),
-        ),
-    };
-    let profile = build
-        .as_deref()
-        .and_then(|version| {
-            matching
-                .iter()
-                .copied()
-                .find(|profile| profile.product_version == version)
-        })
-        .unwrap_or(first);
+/// The profiles of `role` for `storefront`, or, when the recipe has none for that store, the
+/// role's profiles of every store, the tested Steam ones first.
+pub(crate) fn role_profiles(
+    profiles: &GameProfiles,
+    role: GameRole,
+    storefront: Storefront,
+) -> Vec<&GameProfile> {
+    let mut matching = profiles.matching(role, storefront).collect::<Vec<_>>();
+    if matching.is_empty() {
+        matching = profiles
+            .iter()
+            .filter(|profile| profile.role == role)
+            .collect();
+    }
+    matching.sort_by_key(|profile| {
+        (
+            profile.storefront != Storefront::Steam,
+            profile.product_version.clone(),
+            profile.id.clone(),
+        )
+    });
+    matching
+}
 
-    inspect_with_profile(fs_provider, profile, &canonical_root, build, version_error)
+/// The store a browsed game folder most likely comes from, judged from the folder alone: a
+/// Microsoft Store or Xbox app folder by its location, a GOG copy by its `goggame-*.info`
+/// file, a Steam copy by a `steamapps` folder on its path and a Beamdog copy by a `Beamdog`
+/// folder on its path. Anything else is [`Storefront::Other`].
+pub fn detect_storefront<F: FileSystemProvider>(fs_provider: &F, root: &Path) -> Storefront {
+    if is_protected_store_folder(root) || has_component(root, "xboxgames") {
+        return Storefront::Microsoft;
+    }
+    if let Ok(entries) = fs_provider.read_dir(root) {
+        if entries.iter().any(|entry| {
+            entry.kind == FileKind::File
+                && wildcard_match("goggame-*.info", &entry.name.to_string_lossy())
+        }) {
+            return Storefront::Gog;
+        }
+    }
+    if has_component(root, "steamapps") {
+        return Storefront::Steam;
+    }
+    if has_component(root, "beamdog") {
+        return Storefront::Beamdog;
+    }
+    Storefront::Other
+}
+
+/// Whether `path` lies in the folder where Windows keeps Microsoft Store apps. Windows
+/// protects it: its files cannot be listed or copied by other programs.
+pub(crate) fn is_protected_store_folder(path: &Path) -> bool {
+    has_component(path, "windowsapps")
+}
+
+fn has_component(path: &Path, name: &str) -> bool {
+    path.components().any(|component| {
+        component
+            .as_os_str()
+            .to_string_lossy()
+            .eq_ignore_ascii_case(name)
+    })
+}
+
+/// A candidate that cannot be used because its folder is protected by Windows.
+pub(crate) fn protected_candidate(role: GameRole, root: &Path) -> GameCandidate {
+    GameCandidate {
+        role,
+        storefront: Storefront::Microsoft,
+        root: root.to_path_buf(),
+        build: None,
+        eligibility: Eligibility::Ineligible,
+        findings: vec![GameFinding {
+            kind: FindingKind::ProtectedFolder,
+            message: "This copy comes from the Microsoft Store or the Xbox app. Windows protects its folder, so CEBG cannot copy the game from it. Use a Steam or GOG copy of the game instead.".to_owned(),
+            paths: vec![root.to_path_buf()],
+        }],
+        fingerprint: None,
+    }
+}
+
+/// A candidate whose folder could not be checked at all, for example because reading it was
+/// denied. It is listed with the reason instead of hiding it or stopping the search.
+pub(crate) fn unreadable_candidate(
+    role: GameRole,
+    storefront: Storefront,
+    root: &Path,
+    error: &GameError,
+) -> GameCandidate {
+    GameCandidate {
+        role,
+        storefront,
+        root: root.to_path_buf(),
+        build: None,
+        eligibility: Eligibility::Ineligible,
+        findings: vec![GameFinding {
+            kind: FindingKind::Unreadable,
+            message: format!(
+                "CEBG could not check this game folder ({error}). Close programs that use the game, check that the folder can be read, then check again."
+            ),
+            paths: vec![root.to_path_buf()],
+        }],
+        fingerprint: None,
+    }
+}
+
+/// Root entry patterns that mark leftovers of earlier mod installs, such as `WeiDU.log`,
+/// `setup-*` programs and mod folders. A clean game has none of them; the copy of a source
+/// game leaves them out.
+pub fn left_out_root_patterns(profile: &GameProfile) -> Vec<String> {
+    let mut patterns = Vec::<String>::new();
+    let surfaces = profile
+        .inventory_surfaces
+        .iter()
+        .filter(|surface| surface.kind == InventoryKind::Matching && surface.path == ".")
+        .flat_map(|surface| surface.patterns.iter());
+    let residue = profile
+        .forbidden_residue_patterns
+        .iter()
+        .filter(|residue| residue.surface == "." && !residue.recursive)
+        .map(|residue| &residue.pattern);
+    for pattern in surfaces.chain(residue) {
+        if !patterns
+            .iter()
+            .any(|known| known.eq_ignore_ascii_case(pattern))
+        {
+            patterns.push(pattern.clone());
+        }
+    }
+    patterns
+}
+
+fn is_left_out(patterns: &[String], name: &str) -> bool {
+    patterns.iter().any(|pattern| wildcard_match(pattern, name))
 }
 
 pub(crate) fn inspect_profile_paths<F: FileSystemProvider>(
     fs_provider: &F,
     profiles: &[&GameProfile],
     root: &Path,
+    storefront: Storefront,
+    language: Option<&str>,
 ) -> Result<GameCandidate> {
     let profile = profiles.first().copied().ok_or_else(|| GameError::Io {
         path: root.to_path_buf(),
@@ -211,6 +321,9 @@ pub(crate) fn inspect_profile_paths<F: FileSystemProvider>(
             "no profiles supplied for discovered source",
         ),
     })?;
+    if is_protected_store_folder(root) {
+        return Ok(protected_candidate(profile.role, root));
+    }
     if fs_provider
         .file_kind(root)
         .map_err(|source| GameError::Io {
@@ -233,6 +346,9 @@ pub(crate) fn inspect_profile_paths<F: FileSystemProvider>(
             path: root.to_path_buf(),
             source,
         })?;
+    if is_protected_store_folder(&canonical_root) {
+        return Ok(protected_candidate(profile.role, &canonical_root));
+    }
     let version_path = canonical_root.join(normalized_path(&profile.executable));
     let (build, version_error) = match direct_relative_kind(
         fs_provider,
@@ -246,19 +362,31 @@ pub(crate) fn inspect_profile_paths<F: FileSystemProvider>(
         },
         Err(()) => (
             None,
-            Some("executable path contains a missing or indirect component".to_owned()),
+            Some("the game program is missing or is a link".to_owned()),
         ),
     };
-    let profile = build
-        .as_deref()
-        .and_then(|version| {
-            profiles
-                .iter()
-                .copied()
-                .find(|profile| profile.product_version == version)
-        })
+    let same_version = |candidate: &&GameProfile| {
+        build
+            .as_deref()
+            .is_some_and(|version| candidate.product_version == version)
+    };
+    let profile = profiles
+        .iter()
+        .copied()
+        .find(|candidate| same_version(candidate) && candidate.storefront == storefront)
+        .or_else(|| profiles.iter().copied().find(same_version))
         .unwrap_or(profile);
-    inspect_with_profile(fs_provider, profile, &canonical_root, build, version_error)
+    inspect_with_profile(
+        fs_provider,
+        profile,
+        &canonical_root,
+        Source {
+            build,
+            version_error,
+            storefront,
+            language,
+        },
+    )
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -273,29 +401,45 @@ struct Observation {
     inventory: BTreeMap<String, ObservedEntry>,
     complete_fingerprints: bool,
     complete_inventory: bool,
+    /// Profiled paths that are absent although the profile expects them, slash-folded.
+    missing: BTreeSet<String>,
+    /// Profiled paths that could not be read, or that are links or of the wrong kind.
+    unreadable: Vec<PathBuf>,
+}
+
+/// What is known about a source besides its files.
+struct Source<'a> {
+    build: Option<String>,
+    version_error: Option<String>,
+    storefront: Storefront,
+    language: Option<&'a str>,
 }
 
 fn inspect_with_profile<F: FileSystemProvider>(
     fs_provider: &F,
     profile: &GameProfile,
     root: &Path,
-    build: Option<String>,
-    version_error: Option<String>,
+    source: Source<'_>,
 ) -> Result<GameCandidate> {
+    let Source {
+        build,
+        version_error,
+        storefront,
+        language,
+    } = source;
     let mut findings = Vec::new();
-    if build.as_deref() != Some(profile.product_version.as_str()) {
+    let tested_build = build.as_deref() == Some(profile.product_version.as_str());
+    if !tested_build {
+        let tested = &profile.product_version;
         let message = match (&build, version_error) {
             (Some(found), _) => format!(
-                "ProductVersion {found} is unsupported; expected {} for profile {}.",
-                profile.product_version, profile.id
+                "Game version {found}. The collection is tested with version {tested}; other versions install too, but some mods may not work as expected."
             ),
             (None, Some(detail)) => format!(
-                "Could not prove ProductVersion {} for profile {}: {detail}.",
-                profile.product_version, profile.id
+                "Could not read the game version ({detail}). The collection is tested with version {tested}."
             ),
             (None, None) => format!(
-                "Could not prove ProductVersion {} for profile {}.",
-                profile.product_version, profile.id
+                "Could not read the game version. The collection is tested with version {tested}."
             ),
         };
         findings.push(GameFinding {
@@ -304,12 +448,13 @@ fn inspect_with_profile<F: FileSystemProvider>(
             paths: vec![root.join(normalized_path(&profile.executable))],
         });
     }
-    if profile.locale != "en_US" {
+    let other_language = language.filter(|language| !is_english(language));
+    if let Some(language) = other_language {
         findings.push(GameFinding {
             kind: FindingKind::UnsupportedLocale,
             message: format!(
-                "Profile locale {:?} is not the verified locale en_US.",
-                profile.locale
+                "This game is set to {}. The collection installs English texts, so set the game's language to English before you play; otherwise texts that mods add may be missing.",
+                language_name(language)
             ),
             paths: vec![root.join("lang")],
         });
@@ -327,140 +472,213 @@ fn inspect_with_profile<F: FileSystemProvider>(
         match direct_relative_kind(fs_provider, root, relative, FileKind::File) {
             Ok(()) => {}
             Err(()) if sod_paths.contains(&relative.to_ascii_lowercase()) => missing_sod.push(path),
-            Err(()) => missing_required.push(path),
+            Err(()) => missing_required.push(relative.clone()),
         }
     }
-    if !missing_sod.is_empty() {
+    let sod_merged = !missing_sod.is_empty()
+        && profile.role == GameRole::BgeeSod
+        && direct_relative_kind(fs_provider, root, SOD_MERGED_MARKER, FileKind::File).is_ok();
+    if sod_merged {
+        findings.push(GameFinding {
+            kind: FindingKind::SodMerged,
+            message: "Siege of Dragonspear is already merged into this game folder, as in copies from the Beamdog client. The collection skips its DLC Merger step for this copy.".to_owned(),
+            paths: vec![root.join(normalized_path(SOD_MERGED_MARKER))],
+        });
+    } else if !missing_sod.is_empty() {
         findings.push(GameFinding {
             kind: FindingKind::MissingSod,
-            message: "Required Siege of Dragonspear payload is missing or unsafe.".to_owned(),
+            message: "Siege of Dragonspear is missing. The collection needs Baldur's Gate: Enhanced Edition with Siege of Dragonspear installed.".to_owned(),
             paths: missing_sod,
         });
     }
     if !missing_required.is_empty() {
+        let english = missing_required
+            .iter()
+            .any(|path| path.eq_ignore_ascii_case("lang/en_US/dialog.tlk"));
+        let message = if english {
+            format!(
+                "The English game texts are missing ({}). The collection installs English texts and needs them. Repair or reinstall the game with English included, then check again.",
+                missing_required.join(", ")
+            )
+        } else {
+            format!(
+                "Game files that every installation needs are missing or are links: {}. Repair or reinstall the game, for example with your store's verify or repair option, then check again.",
+                missing_required.join(", ")
+            )
+        };
         findings.push(GameFinding {
-            kind: FindingKind::Modified,
-            message: "Required source files are missing or are not direct regular files."
-                .to_owned(),
-            paths: missing_required,
+            kind: FindingKind::MissingFiles,
+            message,
+            paths: missing_required
+                .iter()
+                .map(|relative| root.join(normalized_path(relative)))
+                .collect(),
         });
     }
 
-    let (observation, mut scan_paths) = observe_profile(fs_provider, profile, root);
-    let residue_findings = scan_forbidden_residue(fs_provider, profile, root);
-    for (message, paths) in residue_findings {
+    let left_out_patterns = left_out_root_patterns(profile);
+    let observation = observe_profile(fs_provider, profile, root, &left_out_patterns);
+    findings.extend(left_out_findings(
+        fs_provider,
+        profile,
+        root,
+        &left_out_patterns,
+    ));
+    for (message, paths) in scan_forbidden_residue(fs_provider, profile, root) {
         findings.push(GameFinding {
             kind: FindingKind::Modified,
             message,
             paths,
         });
     }
-
-    let fingerprint_variants = matching_fingerprint_variants(profile, &observation);
-    if observation.complete_fingerprints && fingerprint_variants.is_empty() {
+    if !observation.unreadable.is_empty() {
+        let names = observation
+            .unreadable
+            .iter()
+            .map(|path| {
+                path.strip_prefix(root)
+                    .unwrap_or(path)
+                    .to_string_lossy()
+                    .replace('\\', "/")
+            })
+            .collect::<Vec<_>>();
         findings.push(GameFinding {
-            kind: FindingKind::UnknownFingerprint,
+            kind: FindingKind::Unreadable,
             message: format!(
-                "Core files do not match any allowed clean variant for profile {}.",
-                profile.id
+                "Some game files could not be read or are links: {}. Close programs that use the game, check that the folder can be read, then check again.",
+                names.join(", ")
             ),
-            paths: profile
-                .fingerprint_files
-                .iter()
-                .map(|path| root.join(normalized_path(path)))
-                .collect(),
+            paths: observation.unreadable.clone(),
         });
     }
 
-    let inventory_variants = matching_inventory_variants(profile, &observation);
-    if !observation.complete_inventory || inventory_variants.is_empty() {
-        if scan_paths.is_empty() {
-            scan_paths.extend(
-                profile
-                    .inventory_surfaces
-                    .iter()
-                    .map(|surface| root.join(normalized_path(&surface.path))),
-            );
-        }
-        findings.push(GameFinding {
-            kind: FindingKind::Modified,
-            message: "The mod-sensitive file inventory differs from every allowed clean variant."
-                .to_owned(),
-            paths: scan_paths,
-        });
-    }
-
+    // What the copy installs from: every observed entry except the leftovers it leaves out.
+    let copied_inventory = observation
+        .inventory
+        .iter()
+        .filter(|(path, _)| path.contains('/') || !is_left_out(&left_out_patterns, path))
+        .map(|(path, entry)| (path.clone(), entry.clone()))
+        .collect::<BTreeMap<_, _>>();
+    let fingerprint_variants = matching_fingerprint_variants(profile, &observation);
+    let inventory_variants = matching_inventory_variants(profile, &observation, &copied_inventory);
     let same_variant = fingerprint_variants
         .intersection(&inventory_variants)
         .next()
         .is_some();
-    if !same_variant
-        && !findings
+    // The profile knows this store's clean files: its own store, or a folder whose store
+    // cannot be told. Only Steam copies are the tested setup; every other store installs
+    // with a warning, even when its files match its own profile.
+    let reference_store = storefront == profile.storefront || storefront == Storefront::Other;
+    let blocked = findings
+        .iter()
+        .any(|finding| finding.kind.blocks_installation());
+    let tested = reference_store
+        && profile.storefront == TESTED_STOREFRONT
+        && tested_build
+        && same_variant
+        && other_language.is_none()
+        && !sod_merged
+        && !blocked;
+    let storefront = if tested && storefront == Storefront::Other {
+        profile.storefront
+    } else {
+        storefront
+    };
+
+    if !same_variant && !blocked && reference_store && tested_build {
+        if observation.complete_fingerprints && fingerprint_variants.is_empty() {
+            findings.push(GameFinding {
+                kind: FindingKind::UnknownFingerprint,
+                message: format!(
+                    "The game's program or data files differ from a clean version {} game. The installation continues, but it may fail or behave differently.",
+                    profile.product_version
+                ),
+                paths: profile
+                    .fingerprint_files
+                    .iter()
+                    .map(|path| root.join(normalized_path(path)))
+                    .collect(),
+            });
+        }
+        if observation.complete_inventory && inventory_variants.is_empty() {
+            findings.push(GameFinding {
+                kind: FindingKind::Modified,
+                message: "Files that mods change (chitin.key, dialog.tlk, engine.lua or the override folder) differ from a clean game, so mods were probably installed into this folder. The installation continues, but it may fail or behave differently. For the best result, restore a clean game first, for example with your store's verify or repair option.".to_owned(),
+                paths: profile
+                    .inventory_surfaces
+                    .iter()
+                    .filter(|surface| surface.kind != InventoryKind::Matching)
+                    .map(|surface| root.join(normalized_path(&surface.path)))
+                    .collect(),
+            });
+        }
+        if !fingerprint_variants.is_empty() && !inventory_variants.is_empty() {
+            findings.push(GameFinding {
+                kind: FindingKind::UnknownFingerprint,
+                message: "The game's files mix two different clean game versions. The installation continues, but it may fail or behave differently.".to_owned(),
+                paths: Vec::new(),
+            });
+        }
+    } else if !same_variant && !blocked {
+        // Another store or version: its clean files are not known, so only what a clean game
+        // never has is worth a word.
+        let override_files = copied_inventory
             .iter()
-            .any(|finding| finding.kind == FindingKind::UnknownFingerprint)
-        && observation.complete_fingerprints
-        && observation.complete_inventory
-    {
+            .filter(|(path, entry)| {
+                path.starts_with("override/") && entry.kind == InventoryEntryKind::File
+            })
+            .count();
+        if override_files > 0 {
+            findings.push(GameFinding {
+                kind: FindingKind::Modified,
+                message: format!(
+                    "The override folder holds {override_files} {}. A clean game has none there, so they may be left over from mods. They are copied as they are; if the installation fails, try a clean game.",
+                    if override_files == 1 { "file" } else { "files" }
+                ),
+                paths: vec![root.join("override")],
+            });
+        }
+    }
+
+    let store_note = match storefront {
+        Storefront::Steam => None,
+        Storefront::Gog => Some("GOG copies are less tested than Steam copies. CEBG runs the same checks; if something does not work, please report it."),
+        Storefront::Beamdog => Some("Copies from the Beamdog client are less tested than Steam copies. CEBG runs the same checks; if something does not work, please report it."),
+        Storefront::Microsoft => Some("Microsoft Store and Xbox app copies were never tested with the collection. CEBG runs the same checks; if something does not work, please report it."),
+        Storefront::Other => Some("CEBG could not tell which store this game comes from, and it differs from the tested Steam game. CEBG runs the same checks; if something does not work, please report it."),
+    };
+    if let Some(message) = store_note.filter(|_| !blocked) {
         findings.push(GameFinding {
-            kind: FindingKind::UnknownFingerprint,
-            message: "Core fingerprints and inventory match different clean variants.".to_owned(),
+            kind: FindingKind::UnverifiedStorefront,
+            message: message.to_owned(),
             paths: Vec::new(),
         });
     }
 
-    let fingerprint = if observation.complete_fingerprints && observation.complete_inventory {
-        Some(observation_digest(profile, build.as_deref(), &observation))
-    } else {
-        None
-    };
-
-    let has_blocker = findings.iter().any(|finding| {
-        matches!(
-            finding.kind,
-            FindingKind::Modified
-                | FindingKind::UnsupportedVersion
-                | FindingKind::MissingSod
-                | FindingKind::UnknownFingerprint
-                | FindingKind::UnsupportedLocale
-        )
-    });
-    let eligibility = if has_blocker || !same_variant {
+    let fingerprint = observation
+        .unreadable
+        .is_empty()
+        .then(|| observation_digest(profile, build.as_deref(), &observation));
+    let eligibility = if blocked || fingerprint.is_none() {
         Eligibility::Ineligible
-    } else if profile.storefront == Storefront::Gog {
-        findings.push(GameFinding {
-            kind: FindingKind::UnverifiedStorefront,
-            message: "GOG 2.7.3 remains experimental until a complete clean GOG rehearsal passes."
-                .to_owned(),
-            paths: Vec::new(),
-        });
-        Eligibility::Experimental
-    } else {
+    } else if tested {
         findings.push(GameFinding {
             kind: FindingKind::Fresh,
             message: format!(
-                "Matches verified clean profile {} and one complete allowed variant.",
-                profile.id
+                "Clean {} game, version {}: the tested setup.",
+                storefront.display_name(),
+                profile.product_version
             ),
             paths: Vec::new(),
         });
         Eligibility::Eligible
+    } else {
+        Eligibility::Experimental
     };
-
-    if profile.storefront == Storefront::Gog
-        && !findings
-            .iter()
-            .any(|finding| finding.kind == FindingKind::UnverifiedStorefront)
-    {
-        findings.push(GameFinding {
-            kind: FindingKind::UnverifiedStorefront,
-            message: "GOG remains an unverified storefront for this version.".to_owned(),
-            paths: Vec::new(),
-        });
-    }
 
     Ok(GameCandidate {
         role: profile.role,
-        storefront: profile.storefront,
+        storefront,
         root: root.to_path_buf(),
         build,
         eligibility,
@@ -469,29 +687,120 @@ fn inspect_with_profile<F: FileSystemProvider>(
     })
 }
 
+/// Whether a store's language name or code means English.
+fn is_english(language: &str) -> bool {
+    let language = language.trim().to_ascii_lowercase();
+    language.is_empty()
+        || language == "english"
+        || language == "en"
+        || language.starts_with("en_")
+        || language.starts_with("en-")
+}
+
+/// A store's language name as a player reads it: `german` becomes `German`.
+fn language_name(language: &str) -> String {
+    let language = language.trim();
+    let mut characters = language.chars();
+    match characters.next() {
+        Some(first)
+            if language
+                .chars()
+                .all(|character| character.is_ascii_lowercase()) =>
+        {
+            first.to_ascii_uppercase().to_string() + characters.as_str()
+        }
+        _ => language.to_owned(),
+    }
+}
+
+/// The warnings for leftovers of earlier mod installs that the copy leaves out: the profile's
+/// own words for the leftovers it names, and one finding for the rest.
+fn left_out_findings<F: FileSystemProvider>(
+    fs_provider: &F,
+    profile: &GameProfile,
+    root: &Path,
+    patterns: &[String],
+) -> Vec<GameFinding> {
+    let Ok(entries) = sorted_entries(fs_provider, root) else {
+        // The root itself could not be listed; the observation reports that.
+        return Vec::new();
+    };
+    let mut findings = Vec::new();
+    let mut named = BTreeSet::new();
+    for residue in profile
+        .forbidden_residue_patterns
+        .iter()
+        .filter(|residue| residue.surface == "." && !residue.recursive)
+    {
+        let matched = entries
+            .iter()
+            .filter(|entry| wildcard_match(&residue.pattern, &entry.name.to_string_lossy()))
+            .map(|entry| entry.path.clone())
+            .collect::<Vec<_>>();
+        if !matched.is_empty() {
+            named.extend(matched.iter().cloned());
+            findings.push(GameFinding {
+                kind: FindingKind::LeftOut,
+                message: format!("{} The copy leaves them out.", residue.message.trim_end()),
+                paths: matched,
+            });
+        }
+    }
+    let rest = entries
+        .iter()
+        .filter(|entry| {
+            is_left_out(patterns, &entry.name.to_string_lossy()) && !named.contains(&entry.path)
+        })
+        .collect::<Vec<_>>();
+    if !rest.is_empty() {
+        findings.push(GameFinding {
+            kind: FindingKind::LeftOut,
+            message: format!(
+                "Leftovers of earlier mod installs are in this folder ({}). The copy leaves them out, so they do not affect the new installation.",
+                rest.iter()
+                    .map(|entry| entry.name.to_string_lossy().into_owned())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+            paths: rest.iter().map(|entry| entry.path.clone()).collect(),
+        });
+    }
+    findings
+}
+
 fn observe_profile<F: FileSystemProvider>(
     fs_provider: &F,
     profile: &GameProfile,
     root: &Path,
-) -> (Observation, Vec<PathBuf>) {
+    left_out_patterns: &[String],
+) -> Observation {
     let mut observation = Observation {
         complete_fingerprints: true,
         complete_inventory: true,
         ..Observation::default()
     };
-    let mut problem_paths = Vec::new();
 
     for relative in &profile.fingerprint_files {
         let path = root.join(normalized_path(relative));
-        match hash_profile_file(fs_provider, root, relative) {
-            Ok(digest) => {
-                observation
-                    .fingerprints
-                    .insert(folded_path(relative), digest);
+        match direct_relative_kind_or_missing(fs_provider, root, relative, FileKind::File) {
+            Ok(true) => match fs_provider.read(&path) {
+                Ok(bytes) => {
+                    observation
+                        .fingerprints
+                        .insert(folded_path(relative), hash_bytes(&bytes));
+                }
+                Err(_) => {
+                    observation.complete_fingerprints = false;
+                    observation.unreadable.push(path);
+                }
+            },
+            Ok(false) => {
+                observation.complete_fingerprints = false;
+                observation.missing.insert(folded_path(relative));
             }
             Err(()) => {
                 observation.complete_fingerprints = false;
-                problem_paths.push(path);
+                observation.unreadable.push(path);
             }
         }
     }
@@ -518,12 +827,16 @@ fn observe_profile<F: FileSystemProvider>(
                     }
                     Err(_) => {
                         observation.complete_inventory = false;
-                        problem_paths.push(surface_path);
+                        observation.unreadable.push(surface_path);
                     }
                 },
-                Ok(false) | Err(()) => {
+                Ok(false) => {
                     observation.complete_inventory = false;
-                    problem_paths.push(surface_path);
+                    observation.missing.insert(folded_path(&surface.path));
+                }
+                Err(()) => {
+                    observation.complete_inventory = false;
+                    observation.unreadable.push(surface_path);
                 }
             },
             InventoryKind::Tree => match direct_relative_kind_or_missing(
@@ -534,22 +847,29 @@ fn observe_profile<F: FileSystemProvider>(
             ) {
                 Ok(false) if surface.allow_missing => {}
                 Ok(true) => {
-                    if collect_tree(
+                    let mut problems = Vec::new();
+                    let listed = collect_tree(
                         fs_provider,
                         root,
                         &surface_path,
                         &mut observation.inventory,
-                        &mut problem_paths,
-                    )
-                    .is_err()
-                    {
+                        &mut problems,
+                    );
+                    if listed.is_err() {
                         observation.complete_inventory = false;
-                        problem_paths.push(surface_path);
+                        if problems.is_empty() {
+                            problems.push(surface_path);
+                        }
+                        observation.unreadable.extend(problems);
                     }
                 }
-                Ok(false) | Err(()) => {
+                Ok(false) => {
                     observation.complete_inventory = false;
-                    problem_paths.push(surface_path);
+                    observation.missing.insert(folded_path(&surface.path));
+                }
+                Err(()) => {
+                    observation.complete_inventory = false;
+                    observation.unreadable.push(surface_path);
                 }
             },
             InventoryKind::Matching => {
@@ -569,22 +889,30 @@ fn observe_profile<F: FileSystemProvider>(
                             if insert_entry(fs_provider, root, &entry, &mut observation.inventory)
                                 .is_err()
                             {
+                                // A leftover the copy leaves out never needs to be read.
+                                if surface.path == "." && is_left_out(left_out_patterns, &name) {
+                                    continue;
+                                }
                                 observation.complete_inventory = false;
-                                problem_paths.push(entry.path);
+                                observation.unreadable.push(entry.path);
                             }
                         }
                     }
                     Err(()) => {
                         observation.complete_inventory = false;
-                        problem_paths.push(surface_path);
+                        observation.unreadable.push(surface_path);
                     }
                 }
             }
         }
     }
-    problem_paths.sort_by_key(|path| path.to_string_lossy().to_ascii_lowercase());
-    problem_paths.dedup_by(|left, right| path_eq(left, right));
-    (observation, problem_paths)
+    observation
+        .unreadable
+        .sort_by_key(|path| path.to_string_lossy().to_ascii_lowercase());
+    observation
+        .unreadable
+        .dedup_by(|left, right| path_eq(left, right));
+    observation
 }
 
 fn collect_tree<F: FileSystemProvider>(
@@ -650,7 +978,13 @@ fn scan_forbidden_residue<F: FileSystemProvider>(
     root: &Path,
 ) -> Vec<(String, Vec<PathBuf>)> {
     let mut findings = Vec::new();
-    for residue in &profile.forbidden_residue_patterns {
+    // Root leftovers are left out of the copy and reported by `left_out_findings`; only
+    // residue elsewhere, which the copy keeps, is reported here.
+    for residue in profile
+        .forbidden_residue_patterns
+        .iter()
+        .filter(|residue| residue.surface != "." || residue.recursive)
+    {
         let directory = root.join(normalized_path(&residue.surface));
         let mut entries = Vec::new();
         if direct_relative_kind(fs_provider, root, &residue.surface, FileKind::Directory)
@@ -661,8 +995,8 @@ fn scan_forbidden_residue<F: FileSystemProvider>(
         {
             findings.push((
                 format!(
-                    "Could not completely inspect residue pattern {:?}; source is not fresh.",
-                    residue.pattern
+                    "Could not completely check {} for leftovers of earlier mod installs ({:?}).",
+                    residue.surface, residue.pattern
                 ),
                 vec![directory],
             ));
@@ -681,7 +1015,13 @@ fn scan_forbidden_residue<F: FileSystemProvider>(
             .collect::<Vec<_>>();
         if !matched.is_empty() {
             matched.sort_by_key(|path| path.to_string_lossy().to_ascii_lowercase());
-            findings.push((residue.message.clone(), matched));
+            findings.push((
+                format!(
+                    "{} The installation continues, but they may affect it.",
+                    residue.message.trim_end()
+                ),
+                matched,
+            ));
         }
     }
     findings
@@ -721,6 +1061,7 @@ fn matching_fingerprint_variants(
 fn matching_inventory_variants(
     profile: &GameProfile,
     observation: &Observation,
+    copied_inventory: &BTreeMap<String, ObservedEntry>,
 ) -> BTreeSet<String> {
     if !observation.complete_inventory {
         return BTreeSet::new();
@@ -728,7 +1069,7 @@ fn matching_inventory_variants(
     profile
         .allowed_clean_variants
         .iter()
-        .filter(|variant| expected_inventory(variant) == observation.inventory)
+        .filter(|variant| expected_inventory(variant) == *copied_inventory)
         .map(|variant| variant.id.clone())
         .collect()
 }
@@ -787,6 +1128,11 @@ fn observation_digest(
             digest_field(&mut digest, b"inventory-sha256", sha256.as_bytes());
         }
     }
+    // Absent profiled files are part of the identity, so that one appearing later is a
+    // change. A source without any keeps the digest it always had.
+    for path in &observation.missing {
+        digest_field(&mut digest, b"missing-path", path.as_bytes());
+    }
     hex::encode(digest.finalize())
 }
 
@@ -795,19 +1141,6 @@ fn digest_field(digest: &mut Sha256, label: &[u8], value: &[u8]) {
     digest.update(label);
     digest.update((value.len() as u64).to_le_bytes());
     digest.update(value);
-}
-
-fn hash_profile_file<F: FileSystemProvider>(
-    fs_provider: &F,
-    root: &Path,
-    relative: &str,
-) -> std::result::Result<String, ()> {
-    direct_relative_kind(fs_provider, root, relative, FileKind::File)?;
-    let path = root.join(normalized_path(relative));
-    fs_provider
-        .read(&path)
-        .map(|bytes| hash_bytes(&bytes))
-        .map_err(|_| ())
 }
 
 fn direct_relative_kind<F: FileSystemProvider>(
@@ -868,7 +1201,7 @@ fn sorted_entries<F: FileSystemProvider>(
     Ok(entries)
 }
 
-fn wildcard_match(pattern: &str, value: &str) -> bool {
+pub(crate) fn wildcard_match(pattern: &str, value: &str) -> bool {
     let pattern = pattern.to_ascii_lowercase().into_bytes();
     let value = value.to_ascii_lowercase().into_bytes();
     let mut previous = vec![false; value.len() + 1];

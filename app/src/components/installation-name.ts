@@ -5,23 +5,60 @@ export interface NamedInstallation {
   readonly name: string;
 }
 
-/** Advisory inline check; the backend repeats it under a cross-process lock. */
-export function installationNameError(
+/** The name CEBG uses when nothing but spaces or dots is entered. */
+export const DEFAULT_INSTALLATION_NAME = "Chriz Easy BG";
+const MAX_INSTALLATION_NAME_CHARACTERS = 80;
+
+/**
+ * Mirrors the engine's sanitizing, which never refuses a name: edge spaces and control
+ * characters are dropped, each of < > : " / \ | ? * becomes "-", and the name is cut to 80
+ * characters. Null when nothing but spaces or dots is left.
+ */
+export function sanitizeInstallationName(value: string): string | null {
+  const cleaned = [...value]
+    .filter((character) => !/^[\u0000-\u001f\u007f-\u009f]$/u.test(character))
+    .map((character) => (/^[<>:"/\\|?*]$/u.test(character) ? "-" : character))
+    .join("")
+    .trim();
+  const name = [...cleaned].slice(0, MAX_INSTALLATION_NAME_CHARACTERS).join("").trimEnd();
+  return /^\.*$/u.test(name) ? null : name;
+}
+
+function numberedName(base: string, number: number): string {
+  if (number === 1) return base;
+  const suffix = ` (${number})`;
+  return `${[...base].slice(0, MAX_INSTALLATION_NAME_CHARACTERS - suffix.length).join("").trimEnd()}${suffix}`;
+}
+
+/**
+ * The name CEBG will save: sanitized, the default name for an empty one, and numbered
+ * " (2)", " (3)", … when another installation has it. Advisory; the backend repeats it under a
+ * cross-process lock.
+ */
+export function savedInstallationName(
+  value: string,
+  installations: readonly NamedInstallation[],
+  excludingInstallId?: string,
+): string {
+  const base = sanitizeInstallationName(value) ?? DEFAULT_INSTALLATION_NAME;
+  const taken = new Set(installations
+    .filter((copy) => copy.installId !== excludingInstallId)
+    .map((copy) => copy.name.trim().toLowerCase()));
+  for (let number = 1; number <= 10_000; number += 1) {
+    const candidate = numberedName(base, number);
+    if (!taken.has(candidate.toLowerCase())) return candidate;
+  }
+  return base;
+}
+
+/** A calm note when the saved name differs from what was entered; null when it is the same. */
+export function installationNameNote(
   value: string,
   installations: readonly NamedInstallation[],
   excludingInstallId?: string,
 ): string | null {
-  const name = value.trim();
-  if (!name) return "Enter a name for this installation.";
-  if ([...name].length > 80) return "Keep the installation name to 80 characters or fewer.";
-  if (/[\u0000-\u001f\u007f-\u009f]/u.test(name)) return "Installation names cannot contain control characters.";
-  if (name === "." || name === ".." || /[<>:"/\\|?*]/u.test(name)) {
-    return 'Installation names cannot contain < > : " / \\ | ? * or consist only of dots.';
-  }
-  if (installations.some((copy) => copy.installId !== excludingInstallId && copy.name.trim().toLowerCase() === name.toLowerCase())) {
-    return `An installation named “${name}” already exists. Choose a different name.`;
-  }
-  return null;
+  const saved = savedInstallationName(value, installations, excludingInstallId);
+  return saved === value.trim() ? null : `Will be saved as “${saved}”.`;
 }
 
 export interface InstallationNameEditorOptions {
@@ -50,10 +87,14 @@ export function installationNameEditor(options: InstallationNameEditorOptions): 
   input.autocomplete = "off";
   input.value = options.name;
   input.disabled = options.disabled ?? false;
-  input.setAttribute("aria-describedby", `${id}-hint ${id}-error`);
+  input.setAttribute("aria-describedby", `${id}-hint ${id}-note ${id}-error`);
   const hint = element("p", "muted");
   hint.id = `${id}-hint`;
   hint.textContent = "Changes the name shown in CEBG, not your game or save folders.";
+  const note = element("p", "field-help");
+  note.id = `${id}-note`;
+  note.setAttribute("aria-live", "polite");
+  note.hidden = true;
   const error = element("p", "error-message");
   error.id = `${id}-error`;
   error.setAttribute("role", "alert");
@@ -67,30 +108,31 @@ export function installationNameEditor(options: InstallationNameEditorOptions): 
   save.disabled = options.disabled ?? false;
   let busy = false;
 
-  const check = (): string | null => {
-    const problem = installationNameError(input.value, options.installations, options.installId);
-    error.textContent = problem ?? "";
-    error.hidden = problem === null;
-    input.setAttribute("aria-invalid", String(problem !== null));
-    save.disabled = busy || Boolean(options.disabled) || problem !== null;
-    return problem;
+  // Every name can be saved: one Windows cannot use as a folder name, or one another
+  // installation has, is shown as the name it will be saved as.
+  const describe = (): void => {
+    const text = installationNameNote(input.value, options.installations, options.installId);
+    note.textContent = text ?? "";
+    note.hidden = text === null;
+    error.hidden = true;
   };
   input.addEventListener("input", () => {
     result.hidden = true;
-    check();
+    describe();
   });
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (busy || options.disabled || check()) return;
+    if (busy || options.disabled) return;
     busy = true;
     save.disabled = true;
     input.disabled = true;
     result.hidden = true;
     save.textContent = "Saving name…";
     try {
-      const name = input.value.trim();
+      const name = savedInstallationName(input.value, options.installations, options.installId);
       await options.onRename(options.installId, name);
       input.value = name;
+      note.hidden = true;
       result.textContent = `Installation renamed to “${name}”.`;
       result.hidden = false;
     } catch (failure) {
@@ -103,7 +145,7 @@ export function installationNameEditor(options: InstallationNameEditorOptions): 
       save.textContent = "Save name";
     }
   });
-  form.append(label, input, hint, error, save, result);
+  form.append(label, input, hint, note, error, save, result);
   details.append(summary, form);
   return details;
 }

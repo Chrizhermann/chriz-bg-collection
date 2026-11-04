@@ -365,9 +365,41 @@ fn recommended_defaults_resolve_the_core_spine_but_keep_bg1npc_160_visible_and_o
             .collect::<Vec<_>>()
     };
     assert_eq!(other_runs(&bg1ub.plan.runs), other_runs(&plan.runs));
+    // BG1 NPC Project is optional and unselected since November 3 (Christopher). Ticking
+    // it plans its reviewed defaults again, and the Kivan quest guard Modpack 130 follows
+    // them; no other run changes.
+    assert_eq!(plan.components_for("bg1npc-bg1"), None);
+    let mut bg1npc = Selection {
+        platform: "windows".to_owned(),
+        choices: manifest.presets["chris-recommended"].selections.clone(),
+    };
+    bg1npc.set_feature("mod:bg1npc", true);
+    let bg1npc = bg_engine::recipe_view::evaluate(&manifest, &bg1npc).unwrap();
     assert_eq!(
-        plan.components_for("bg1npc-bg1"),
+        bg1npc.plan.components_for("bg1npc-bg1"),
         Some(BG1NPC_RESOLVED_COMPONENTS)
+    );
+    let modpack = |plan: &bg_engine::resolve::InstallPlan| {
+        plan.components_for("chriz-bg-modpack-bg2")
+            .unwrap()
+            .to_vec()
+    };
+    let mut with_guard = modpack(plan);
+    assert!(!with_guard.contains(&130));
+    with_guard.push(130);
+    with_guard.sort_unstable();
+    let mut ticked_modpack = modpack(&bg1npc.plan);
+    ticked_modpack.sort_unstable();
+    assert_eq!(ticked_modpack, with_guard);
+    let unrelated_runs = |runs: &[PlannedRun]| {
+        runs.iter()
+            .filter(|run| run.run_id != "bg1npc-bg1" && run.run_id != "chriz-bg-modpack-bg2")
+            .cloned()
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(
+        unrelated_runs(&bg1npc.plan.runs),
+        unrelated_runs(&plan.runs)
     );
     assert_eq!(plan.components_for("eefixpack-bg2"), Some(&[0, 2][..]));
     // EET's desktop shortcut (100) is an unchecked option since October 13.
@@ -387,7 +419,13 @@ fn recommended_defaults_resolve_the_core_spine_but_keep_bg1npc_160_visible_and_o
         .as_deref()
         .unwrap()
         .contains("copyright"));
-    assert!(evaluation.findings.iter().any(|finding| {
+    // While the mod is unticked nothing of it is requested, so nothing is reported as
+    // omitted; once it is ticked, the blocked portraits are.
+    assert!(!evaluation
+        .findings
+        .iter()
+        .any(|finding| finding.feature_id.starts_with("feature:bg1npc:")));
+    assert!(bg1npc.findings.iter().any(|finding| {
         finding.rule == "blocked-default-omitted"
             && finding.feature_id == "feature:bg1npc:component-160"
     }));

@@ -585,3 +585,43 @@ fn mismatched_or_tampered_fresh_copy_seal_is_rejected() {
 
     assert!(store.replay().is_err());
 }
+
+/// A mod left out after its installer failed ends its own install step and names the
+/// components it did not install; it cannot end another step.
+#[test]
+fn a_failed_run_left_out_must_end_its_own_install_step() {
+    let left_out = |step_id: &str, components: Vec<u32>| SessionEvent::ArtifactLeftOut {
+        step_id: step_id.to_owned(),
+        attempt: 1,
+        artifact_id: "tweaks".to_owned(),
+        detail: "its installer stopped with an error".to_owned(),
+        plan_sha256: "77".repeat(32),
+        removed_runs: vec!["tweaks-bg2".to_owned()],
+        changed_runs: Vec::new(),
+        failed_run: Some(bg_engine::session::FailedRun {
+            run_id: "tweaks-bg2".to_owned(),
+            components,
+        }),
+    };
+    for (step_id, components, accepted) in [
+        ("install:tweaks-bg2", vec![1, 2], true),
+        ("install:other-bg2", vec![1, 2], false),
+        ("acquire:tweaks", vec![1, 2], false),
+        ("install:tweaks-bg2", Vec::new(), false),
+    ] {
+        let fixture = campaign_fixture();
+        let store = create_store(&fixture);
+        store
+            .append(SessionEvent::StepStarted {
+                step_id: step_id.to_owned(),
+                attempt: 1,
+            })
+            .unwrap();
+        let result = store.append(left_out(step_id, components.clone()));
+        assert_eq!(
+            result.is_ok(),
+            accepted,
+            "{step_id} {components:?}: {result:?}"
+        );
+    }
+}

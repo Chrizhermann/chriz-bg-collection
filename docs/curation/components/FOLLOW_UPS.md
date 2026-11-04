@@ -129,6 +129,32 @@ Cross-repository status. Component detail stays in the sections below and in the
      2026-11-02 with Kitpack chriz.6 and Rebalance v0.8.9 (step 1); the first 0.1.0
      candidate and the alpha.22 candidate of 2026-11-01 were superseded and never
      published.
+- CEBG **0.1.1** is published since 2026-11-03 (18:29:55 UTC; Christopher's OK of
+  2026-11-04), built from `161bb72`. It brings the fewer-stops round, GOG and Beamdog
+  copies, the download questions, the saves & portraits button, BG1 NPC Project as an
+  option and Marek's Boomerang Dagger. Package, lab and publication:
+  `docs/package-acceptance-0.1.1-2026-11-03.md`.
+  Open for **0.1.2** on the next-release branch:
+  - **BG Rebalance v0.8.10** fixes 0.1.1's known issue: without Spell Revisions, `302`
+    (Flail of the Ages balance) stops the installation on SCS's own Slow and Haste spells
+    ([chriz-bg-rebalance#26](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/26)).
+    Christopher OK'd its release on 2026-11-04; it goes into 0.1.2. Only Chriz Easy BG
+    ships it. The
+    script-engine session's lab without Spell Revisions and with `302` off installed
+    cleanly (450 components, 2026-11-03), so nothing else stops there. Pinned in both BG
+    recipes by [PR #103](https://github.com/Chrizhermann/chriz-bg-collection/pull/103)
+    (evidence in `manifest/evidence/release-intake-20261103-chriz-bg-rebalance-chriz-easy-bg.toml`).
+  - **BuffBot's newest release in both installers**: v1.16.0 since 2026-11-03 (after
+    v1.15.0). Both wait for 0.1.2 (Christopher, 2026-11-04); the hold in
+    `manifest/own-mods.toml` names v1.16.0 since 2026-11-04. The pin PR removes the hold,
+    and Chriz Easy IWD needs its own version bump for it.
+  - **Christopher's open questions** (asked 2026-11-03):
+    - When a single component fails, should CEBG leave only that one out, carry on and
+      name it at the end?
+    - Recommended still installs maximum HP on level-up (Tweaks Anthology `3000`) and
+      Maximum HP Creatures (`3010`). Should 0.1.2's Recommended use rolled HP and drop
+      Maximum HP Creatures, as the fight-AI labs do?
+  - Merging the release line back into `main`: Christopher decides.
 - Installers keep going when a mod's official link serves a newer file (Christopher,
   2026-10-30: as few blockers as possible; a newer version under the same link is
   installed and logged, and players report problems afterwards).
@@ -524,6 +550,43 @@ Cross-repository status. Component detail stays in the sections below and in the
       was not run with the package; the same two files ran as `360` on EET.
     - Adding or removing it during a playthrough stays unsupported (Christopher's rule).
     - Pinned for alpha.22 in PR #56.
+- Spell Revisions, Artisan's Kitpack and Bardic Wonders forks frozen (Christopher,
+  2026-11-03): no more fixes or balancing; CEBG keeps the current pins until the own spell
+  mod and own kit mod replace them (design chats running).
+- [x] BG1 NPC Project out of the default (Christopher, 2026-11-03). **Done** on
+  2026-11-03 in [PR #88](https://github.com/Chrizhermann/chriz-bg-collection/pull/88)
+  (merge commit `9eda4e6`): it is optional and unticked in Recommended and in the curated
+  recipe, and ticking it under Customize selects the same reviewed set as before
+  (components 0, 10, 90, 111, 120, 130, 240, 200). The only dependent is Modpack `130`
+  ("BG1NPC Kivan sea-elf quest: SCS dialogue-phase guard"); it follows the mod and is
+  unavailable while the mod is unticked. The 0.1.1 ledger records the change.
+- Boomerang Dagger without BG1 NPC Project (Christopher, 2026-11-03). Put it into the
+  Item Randomiser's BG1 pool in the standard preset. Without the randomiser, place it with
+  a strong rogue, thief or assassin enemy in a BG1 fight; one of our own mods does that
+  (likely a new Modpack component), design with Christopher.
+  - Where the dagger comes from today, verified on 2026-11-03 (read-only, on a full CEBG
+    install and its BG1 side): `DAGG11.ITM`, "Boomerang Dagger +2". BG1 NPC Project
+    component 10 is its only placement in BG1 or Siege of Dragonspear: its script
+    `P#FW3100.BAF` puts `DAGG11` and `AMUL11` into `Container1` on the Shipwreck's Coast
+    (`AR3100`) once `X#KivanSea` reaches 7, the reward for Kivan's sea-elf quest. No
+    creature, container or store of BG1 or Siege of Dragonspear holds it. In BG2 it stays
+    where vanilla has it, with BG2:EE's own enemies. Every EET install already has the
+    item file, so the new component does not need to ship it.
+  - Candidates: see the candidate list in the coordinator notes. The Randomiser's BG1
+    pool entry needs the carrier's CRE resref, script name and area.
+  - The carrier is Marek (Christopher, 2026-11-03): Modpack
+    [v0.2.0-alpha.15](https://github.com/Chrizhermann/chriz-bg-modpack/releases/tag/v0.2.0-alpha.15)
+    adds `670`, which gives both Marek files, `MAREK.CRE` (first meeting, north-east
+    district of Baldur's Gate) and `MAREK1.CRE` (antidote fight at the Blushing Mermaid),
+    one unequipped dagger in the backpack and changes nothing when the Kivan quest already
+    gives it. Pinned in both recipes and on in Recommended for 0.1.1 (evidence in
+    `manifest/evidence/release-intake-20261103-modpack-alpha15.toml`); the 0.1.1 ledger
+    records it. Not yet tested in a game: the two Marek fights and the drop.
+  - Still open: the Randomiser's BG1 pool. The recipe's Randomiser fork v8.1.1 has
+    `DAGG11` only in its BG2 lists, so it never handles Marek's dagger. If the dagger joins
+    the BG1 pool with Marek as its holder, `670` has to install before the Randomiser (the
+    Modpack's guide asks for that order); today it runs in the post-EET_end Modpack run,
+    after the Randomiser.
 
 **Ready to start**
 
@@ -570,6 +633,15 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Christopher's own Elementalist Druid mod: the design continues right after alpha.22
   (Christopher, 2026-10-25). A design record from May/June 2026 exists; which sprites
   the forms use is still open.
+- Open saves & portraits folder
+  ([PR #82](https://github.com/Chrizhermann/chriz-bg-collection/pull/82), 2026-11-02): a
+  YouTube viewer could not find where custom portraits go. Each installation keeps its
+  saves and portraits in its own Documents folder, `<installation name> - <12-character
+  code>`, and the game never creates the `portraits` folder there. My installs gets a
+  button that creates it and opens the folder, the folder's path under Installation
+  details and a first-play tip. It goes into 0.1.1, the release after 0.1.0 (Christopher,
+  2026-11-02), through the next-release branch. Still open: Chriz Easy IWD
+  (`claude/iwdee-app`) needs the same change afterwards.
 - Fewer installer stops in both installers, as quick patches after the release (blocker
   audit of 2026-10-30; Christopher: as few blockers as possible, only PC and source-game
   safety stays strict):
@@ -584,6 +656,14 @@ Cross-repository status. Component detail stays in the sections below and in the
   Also: manual downloads (Evandra) accept a newer version, as #69 does for links. GOG,
   other game versions and non-English games install with a warning instead of stopping
   (Christopher, 2026-10-30).
+  Chriz Easy BG, for 0.1.1 (2026-11-03): all of it is in a stack of five PRs from the
+  `claude/fewer-blockers-*` branches into the next-release branch, awaiting Christopher's
+  review and merge OK (sources, retries, optional runs, manual downloads, environment).
+  On Christopher's request of 2026-11-03 the game check also finds GOG (registry records
+  and default folders) and Beamdog client copies and installs from them with a "less
+  tested" warning, and names a Microsoft Store folder as protected. Steam 2.7.3.0 in
+  English stays the tested setup. Not yet in the IWD app; Mac and Linux (Proton/Wine) are a
+  later research item.
 - Balance, close to vanilla (Christopher, 2026-10-30), collected as "Chris Revisions" (the
   name BG Rebalance `340` already carries). His line: characters, items, encounters and
   spells may be a little unbalanced, but neither too strong nor too weak: no must-haves or
@@ -645,6 +725,18 @@ Cross-repository status. Component detail stays in the sections below and in the
   is fine. Optional quest mods that need such travel must say that they don't work with
   Challenge Mode. Reasons: fewer bugs, and no exploits through shops or stashed items. The
   exact area list is defined together with Christopher later.
+- Low priority: make cloud creatures able to squeeze through doors. (Christopher told a
+  Codex chat on 2026-11-01; it was only written into a stale copy of this list and moved
+  here on 2026-11-04.)
+
+**Ideas for later (Christopher, 2026-11-04)**
+
+- Rogue Rebalancing: we may reuse and improve its code, crediting its author aVENGER, as we
+  credit every mod (license CC BY-NC-SA 3.0; last release v4.92 of 2018). Christopher,
+  2026-11-04: settled, not to be raised again and never a blocker. His view: popular and
+  used in every kind of setup, but old, partly not well written, and some items are too
+  strong late in the game. The loot of the Chosen of Cyric encounter (`11`, on in
+  Recommended) is great to win, but a bit much overall.
 
 **Larger projects:** Time Stop/Haste (Rebalance `360`, above); script engine / Fight Director
 (design with Christopher; it also takes enemy mages' Dispelling Screen, Christopher,

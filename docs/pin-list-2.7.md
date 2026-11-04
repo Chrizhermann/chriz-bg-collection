@@ -30,8 +30,8 @@ no installer references, such as older versions, are not listed.
 | Bubb's Spell Menu Extended | 5.2 | `bubb-spell-menu` | `ac5380e99a53…` | [tag archive](https://codeload.github.com/Bubb13/Bubbs-Spell-Menu-Extended/zip/refs/tags/v5.2) |
 | BuffBot | 1.12.6 | `buffbot` | `f99781368d64…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.12.6/buffbot-v1.12.6.zip) |
 | The Tweaks Anthology | 7649ced6cd25865874d787ec1a9abbc67b068729 | `cdtweaks` | `117cd79cb518…` | [commit archive](https://codeload.github.com/Gibberlings3/Tweaks-Anthology/zip/7649ced6cd25865874d787ec1a9abbc67b068729) |
-| chriz-bg-modpack | 0.2.0-alpha.14 | `chriz-bg-modpack` | `45c767b21342…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.14/chriz-bg-modpack-v0.2.0-alpha.14.zip) |
-| CHRIZ-BG-REBALANCE | 0.8.9 | `chriz-bg-rebalance` | `da03fe9e2a36…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.9/chriz-bg-rebalance-v0.8.9-windows.zip) |
+| chriz-bg-modpack | 0.2.0-alpha.15 | `chriz-bg-modpack` | `a6031332c10c…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.15/chriz-bg-modpack-v0.2.0-alpha.15.zip) |
+| CHRIZ-BG-REBALANCE | 0.8.10 | `chriz-bg-rebalance` | `40be063d26d5…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.10/chriz-bg-rebalance-v0.8.10-windows.zip) |
 | CHRIZ-SOD-REMIX | 0.6.16 | `chriz-sod-remix` | `7da50d206e4f…` | [release asset](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.16/chriz-sod-remix-v0.6.16.zip) |
 | Crossmod Banter Pack for Baldur's Gate II | 30 | `crossmodbg2` | `6b1555d1cf6f…` | [release asset](https://github.com/Gibberlings3/Crossmod_Banter_Pack_for_Baldurs_Gate_II/releases/download/v30/crossmod-banter-pack-for-baldurs-gate-ii-v30.iemod) |
 | DLC Merger | 2.1 | `dlcmerger` | `ea7584fd7285…` | [release asset](https://github.com/Argent77/A7-DlcMerger/releases/download/v2.1/DlcMerger-v2.1.iemod) |
@@ -103,8 +103,8 @@ no installer references, such as older versions, are not listed.
 | Black Hearts | 2.05 | `blackhearts` | `a1a6257a2c21…` | [release asset](https://github.com/A-Wizard-Did-It/Black-Hearts/releases/download/v2.05/BlackHearts-v2.05.iemod) |
 | Bubb's Spell Menu Extended | 5.2 | `bubb-spell-menu` | `ac5380e99a53…` | [tag archive](https://codeload.github.com/Bubb13/Bubbs-Spell-Menu-Extended/zip/refs/tags/v5.2) |
 | BuffBot | 1.12.6 | `buffbot` | `f99781368d64…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.12.6/buffbot-v1.12.6.zip) |
-| chriz-bg-modpack | 0.2.0-alpha.14 | `chriz-bg-modpack` | `45c767b21342…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.14/chriz-bg-modpack-v0.2.0-alpha.14.zip) |
-| CHRIZ-BG-REBALANCE | 0.8.9 | `chriz-bg-rebalance` | `da03fe9e2a36…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.9/chriz-bg-rebalance-v0.8.9-windows.zip) |
+| chriz-bg-modpack | 0.2.0-alpha.15 | `chriz-bg-modpack` | `a6031332c10c…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.15/chriz-bg-modpack-v0.2.0-alpha.15.zip) |
+| CHRIZ-BG-REBALANCE | 0.8.10 | `chriz-bg-rebalance` | `40be063d26d5…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.10/chriz-bg-rebalance-v0.8.10-windows.zip) |
 | CHRIZ-SOD-REMIX | 0.6.16 | `chriz-sod-remix` | `7da50d206e4f…` | [release asset](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.16/chriz-sod-remix-v0.6.16.zip) |
 | Crossmod Banter Pack for Baldur's Gate II | 30 | `crossmodbg2` | `6b1555d1cf6f…` | [release asset](https://github.com/Gibberlings3/Crossmod_Banter_Pack_for_Baldurs_Gate_II/releases/download/v30/crossmod-banter-pack-for-baldurs-gate-ii-v30.iemod) |
 | DLC Merger | 2.1 | `dlcmerger` | `ea7584fd7285…` | [release asset](https://github.com/Argent77/A7-DlcMerger/releases/download/v2.1/DlcMerger-v2.1.iemod) |

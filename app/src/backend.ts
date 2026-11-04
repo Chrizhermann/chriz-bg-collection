@@ -29,6 +29,8 @@ import type {
   ManualCheckpointOption,
   ManualCheckpointStatus,
   ManagedInstallation,
+  DecisionAnswer,
+  PendingDecision,
   ModUpgradePreview,
   OperationProgress,
   NormalizedSelection,
@@ -67,6 +69,10 @@ export interface Backend {
   checkManualCheckpoint?(installId: string): Promise<ManualCheckpointStatus>;
   acceptManualCheckpoint?(installId: string, reviewToken: string, acceptAdditions: boolean): Promise<void>;
   openManualCheckpointFolder?(installId: string): Promise<void>;
+  /** The question about a download that a resumable installation waits for, or null. */
+  getPendingDecision?(installId: string): Promise<PendingDecision | null>;
+  /** Stores the answer; resuming the installation applies it. */
+  answerDecision?(installId: string, decisionId: string, token: string, answer: DecisionAnswer): Promise<void>;
   startBuild(reviewToken: string, onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse>;
   resumeBuild(installId: string, onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse>;
   supplyManualArchive(artifactId: string): Promise<ManualArchiveSupply | null>;
@@ -80,6 +86,8 @@ export interface Backend {
   retryBuild(): Promise<BuildSnapshot>;
   exportDiagnostics(installId: string): Promise<{ readonly path: string } | null>;
   listManagedInstallations(): Promise<ManagedInstallation[]>;
+  /** End-summary lines of a completed installation: mods left out and changed downloads. */
+  installationSummary?(installId: string): Promise<readonly string[]>;
   renameInstallation?(installId: string, name: string): Promise<{ readonly name: string }>;
   previewInstallationRemoval(installId: string): Promise<InstallationRemovalPreview>;
   removeInstallation(installId: string, confirmationToken: string): Promise<InstallationRemovalResult>;
@@ -89,6 +97,7 @@ export interface Backend {
   /** Turns the game log on or off for the next game start. */
   setGameLog?(installId: string, enabled: boolean): Promise<GameLogStatus>;
   openInstallFolder(installId: string): Promise<void>;
+  openProfileFolder(installId: string): Promise<void>;
   createDesktopShortcut(installId: string): Promise<{ readonly path: string }>;
   installRadar(installId: string): Promise<void>;
   getUpdates(): Promise<UpdateSummary>;
@@ -129,6 +138,7 @@ type GameCandidateWire = {
   readonly build: string | null;
   readonly freshness: Freshness;
   readonly eligible: boolean;
+  readonly tested?: boolean;
   readonly findings: readonly string[];
 };
 
@@ -240,6 +250,7 @@ type ManagedInstallationWire = {
   readonly status: string;
   readonly receipt_path: string | null;
   readonly launch_path: string | null;
+  readonly profile_path?: string | null;
   readonly completed_at_millis: number | null;
   readonly available: boolean;
   readonly resumable: boolean;
@@ -556,6 +567,14 @@ export class NativeBackend implements Backend {
     return this.#command("open_manual_checkpoint_folder", { installId });
   }
 
+  getPendingDecision(installId: string): Promise<PendingDecision | null> {
+    return this.#command("get_pending_decision", { installId });
+  }
+
+  answerDecision(installId: string, decisionId: string, token: string, answer: DecisionAnswer): Promise<void> {
+    return this.#command("answer_decision", { installId, decisionId, token, answer });
+  }
+
   async resumeBuild(installId: string, onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse> {
     const onEventChannel = this.#eventChannel((event) => onEvent(projectRunEvent(event as RunEventEnvelopeWire)));
     const started = await this.#command<StartBuildWire>("resume_build", { installId, onEvent: onEventChannel });
@@ -620,6 +639,7 @@ export class NativeBackend implements Backend {
     return installations.map(({
       receipt_path: receiptPath,
       launch_path: launchPath,
+      profile_path: profilePath,
       completed_at_millis: completedAtMillis,
       recipe_version: recipeVersion,
       radar_version: radarVersion,
@@ -630,6 +650,7 @@ export class NativeBackend implements Backend {
       ...installation,
       receiptPath,
       launchPath,
+      profilePath,
       completedAtMillis,
       recipeVersion,
       radarVersion,
@@ -642,6 +663,10 @@ export class NativeBackend implements Backend {
         components: consistency.components,
       },
     }));
+  }
+
+  installationSummary(installId: string): Promise<readonly string[]> {
+    return this.#command("installation_summary", { installId });
   }
 
   launchInstall(installId: string, startRadar: boolean): Promise<LaunchInstallResult> {
@@ -666,6 +691,10 @@ export class NativeBackend implements Backend {
 
   async openInstallFolder(installId: string): Promise<void> {
     await this.#command("open_install_folder", { installId });
+  }
+
+  async openProfileFolder(installId: string): Promise<void> {
+    await this.#command("open_profile_folder", { installId });
   }
 
   createDesktopShortcut(installId: string): Promise<{ readonly path: string }> {
@@ -847,13 +876,13 @@ export class FixtureBackend implements Backend {
       selectedBg2Id: "bg2-fresh",
       bg1Candidates: [
         { id: "bg1-fresh", label: "BG:EE + SoD — clean", path: this.#options.textOverrides?.gamePath ?? "C:\\Fixture\\BGEE", storefront: "steam", build: "2.7.3.0", freshness: "fresh", eligible: true, findings: ["Clean supported installation."] },
-        { id: "bg1-modified", label: "BG:EE — modified", path: "C:\\Fixture\\BGEE Modified", storefront: "steam", build: "2.7.3.0", freshness: "modified", eligible: false, findings: ["Files differ from a clean store installation."] },
-        { id: "bg1-old", label: "BG:EE — old version", path: "C:\\Fixture\\BGEE Old", storefront: "steam", build: "2.6.6.0", freshness: "unsupported-version", eligible: false, findings: ["The installed game version is not supported."] },
+        { id: "bg1-modified", label: "BG:EE + SoD — Steam — less tested", path: "C:\\Fixture\\BGEE Modified", storefront: "steam", build: "2.7.3.0", freshness: "modified", eligible: true, tested: false, findings: ["Files that mods change differ from a clean game, so mods were probably installed into this folder. The installation continues, but it may fail or behave differently."] },
+        { id: "bg1-old", label: "BG:EE + SoD — Steam — less tested", path: "C:\\Fixture\\BGEE Old", storefront: "steam", build: "2.6.6.0", freshness: "unsupported-version", eligible: true, tested: false, findings: ["Game version 2.6.6.0. The collection is tested with version 2.7.3.0; other versions install too, but some mods may not work as expected."] },
         { id: "bg1-nosod", label: "BG:EE — SoD missing", path: "C:\\Fixture\\BGEE No SoD", storefront: "steam", build: "2.7.3.0", freshness: "missing-sod", eligible: false, findings: ["Siege of Dragonspear is required for this EET recipe."] },
       ],
       bg2Candidates: [
         { id: "bg2-fresh", label: "BGII:EE — clean", path: "C:\\Fixture\\BG2EE", storefront: "steam", build: "2.7.3.0", freshness: "fresh", eligible: true, findings: ["Clean supported installation."] },
-        { id: "bg2-store", label: "BGII:EE — verify storefront", path: "C:\\Fixture\\BG2EE Other", storefront: "gog", build: "2.7.3.0", freshness: "unverified-storefront", eligible: false, findings: ["This storefront layout has not been verified yet."] },
+        { id: "bg2-store", label: "BGII:EE — GOG — less tested", path: "C:\\Fixture\\BG2EE Other", storefront: "gog", build: "2.7.3.0", freshness: "unverified-storefront", eligible: true, tested: false, findings: ["GOG copies are less tested than Steam copies. CEBG runs the same checks; if something does not work, please report it."] },
       ],
     });
   }
@@ -895,12 +924,17 @@ export class FixtureBackend implements Backend {
 
   inspectDestination(path: string, _bg1CandidateId: string, _bg2CandidateId: string): Promise<DestinationEvaluation> {
     const normalized = path.trim();
-    const safe = normalized.length > 3 && !normalized.toLowerCase().includes("steamapps");
+    const safe = normalized.length > 3;
+    // Like the native check: a Steam or Windows program folder warns but stays usable.
+    const note = /(^|[\\/])(steamapps|program files|program files \(x86\))([\\/]|$)/iu.test(normalized)
+      ? "Steam or Windows may change files in this folder, so a folder elsewhere is safer. CEBG can still install here."
+      : undefined;
     return Promise.resolve({
       path: normalized,
       safe,
       title: safe ? "Ready to install" : "Choose a separate install location",
-      detail: safe ? "The source games and their saves will remain untouched." : "The collection cannot be built inside a store-managed game folder.",
+      detail: safe ? note ?? "The source games and their saves will remain untouched." : "Choose a complete folder path, such as D:\\Games\\Chriz Easy BG.",
+      ...(safe && note !== undefined ? { note } : {}),
       requiredSpace: "62 GB",
       availableSpace: "184 GB",
     });
@@ -1013,6 +1047,7 @@ export class FixtureBackend implements Backend {
       status: "Ready to play",
       receiptPath: "D:\\Fixture Installations\\Chriz Easy BG\\install-receipt.json",
       launchPath: "D:\\Fixture Installations\\Chriz Easy BG\\InfinityLoader.exe",
+      profilePath: "C:\\Users\\Player\\Documents\\Chriz Easy BG - 0123456789ab",
       completedAtMillis: 1_788_451_200_000,
       available: true,
       resumable: false,
@@ -1065,6 +1100,10 @@ export class FixtureBackend implements Backend {
   }
 
   openInstallFolder(_installId: string): Promise<void> {
+    return Promise.resolve();
+  }
+
+  openProfileFolder(_installId: string): Promise<void> {
     return Promise.resolve();
   }
 

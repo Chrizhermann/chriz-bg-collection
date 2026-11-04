@@ -277,6 +277,9 @@ mod tests {
             weidu_tools: Vec::new(),
             runs: Vec::new(),
             final_state: None,
+            left_out: Vec::new(),
+            installed_plan: None,
+            decisions: Vec::new(),
         }
     }
 

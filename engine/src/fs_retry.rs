@@ -120,6 +120,31 @@ pub(crate) fn persist_noclobber(temporary: NamedTempFile, to: &Path) -> io::Resu
     })
 }
 
+/// Run `operation` again, with the waits of a rename, while it fails with an I/O error that
+/// another program's brief hold explains; `io_error` finds that error in `E`, if there is one.
+/// Any other error, and the last attempt's error, is returned unchanged. The operation must be
+/// safe to repeat from its start, as copying one file to a fresh temporary is.
+pub(crate) fn retry_while_held<T, E>(
+    mut operation: impl FnMut() -> Result<T, E>,
+    io_error: impl Fn(&E) -> Option<&io::Error>,
+) -> Result<T, E> {
+    let mut next_wait = BACKOFF.first_wait;
+    let mut attempt = 1;
+    loop {
+        match operation() {
+            Ok(value) => return Ok(value),
+            Err(error)
+                if attempt < BACKOFF.attempts && io_error(&error).is_some_and(is_transient) =>
+            {
+                pause(next_wait);
+                next_wait = next_wait.saturating_mul(2).min(BACKOFF.longest_wait);
+                attempt += 1;
+            }
+            Err(error) => return Err(error),
+        }
+    }
+}
+
 /// The wait between two attempts. Tests can step in at every wait, for example to let go of a
 /// hold they set up, so that no outcome depends on timing.
 fn pause(duration: Duration) {

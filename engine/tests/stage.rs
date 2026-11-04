@@ -5,10 +5,11 @@ use std::time::{Duration, SystemTime};
 
 use bg_engine::games::GameRole;
 use bg_engine::stage::{
-    finalize_game_identity, propose_save_identity, read_engine_name,
-    repair_installed_profile_settings, reserve_save_identity, stage_bgee_sod, stage_game_copy,
-    stage_game_copy_with_observer, stage_initial_games, verify_profile_settings, DocumentsLocator,
-    ManagedLayout, ReservedSaveIdentity, StageObserver, SystemDocuments, TEST_DOCUMENTS_VARIABLE,
+    finalize_game_identity, prepare_installed_profile_folder, propose_save_identity,
+    read_engine_name, repair_installed_profile_settings, reserve_save_identity, stage_bgee_sod,
+    stage_game_copy, stage_game_copy_with_observer, stage_initial_games, verify_profile_settings,
+    DocumentsLocator, ManagedLayout, ReservedSaveIdentity, StageObserver, SystemDocuments,
+    TEST_DOCUMENTS_VARIABLE,
 };
 
 mod support;
@@ -117,6 +118,50 @@ fn copies_regular_files_and_empty_directories_without_sharing_file_identity() {
         fs::read(bg1.join("data/base.bif")).unwrap(),
         b"base payload"
     );
+}
+
+#[test]
+fn the_copy_leaves_out_leftovers_of_earlier_mod_installs_at_the_game_root_only() {
+    let temp = tempfile::tempdir().unwrap();
+    let bg1 = source_tree(temp.path(), "source-bg1");
+    let bg2 = source_tree(temp.path(), "source-bg2");
+    fs::write(bg1.join("WeiDU.log"), b"// old mods\n").unwrap();
+    fs::write(bg1.join("setup-stratagems.exe"), b"old installer").unwrap();
+    fs::create_dir_all(bg1.join("stratagems/lib")).unwrap();
+    fs::write(bg1.join("stratagems/lib/a.tph"), b"old mod").unwrap();
+    // The same names below the root are game files and are copied.
+    fs::write(bg1.join("data/weidu.log"), b"not a leftover").unwrap();
+    let layout = ManagedLayout::prepare(temp.path().join("managed"), &bg1, &bg2)
+        .unwrap()
+        .leaving_out(
+            GameRole::BgeeSod,
+            vec![
+                "weidu*".to_owned(),
+                "setup-*".to_owned(),
+                "stratagems".to_owned(),
+            ],
+        );
+
+    let report = stage_game_copy(&layout, GameRole::BgeeSod).unwrap();
+
+    let copy = layout.bg1_root();
+    assert!(!copy.join("WeiDU.log").exists());
+    assert!(!copy.join("setup-stratagems.exe").exists());
+    assert!(!copy.join("stratagems").exists());
+    assert_eq!(
+        fs::read(copy.join("data/weidu.log")).unwrap(),
+        b"not a leftover"
+    );
+    assert_eq!(report.copied_files, 3);
+    // The source stays untouched, and a resume verifies the same copy.
+    assert!(bg1.join("WeiDU.log").is_file());
+    let resumed = stage_game_copy(&layout, GameRole::BgeeSod).unwrap();
+    assert_eq!(resumed.copied_files, 0);
+    assert_eq!(resumed.source_fingerprint, report.source_fingerprint);
+
+    // A change to a left-out leftover does not disturb the copy.
+    fs::write(bg1.join("WeiDU.log"), b"// changed\n").unwrap();
+    stage_game_copy(&layout, GameRole::BgeeSod).unwrap();
 }
 
 #[test]
@@ -1208,6 +1253,97 @@ fn existing_installation_repair_records_eet_state_once_and_only_in_its_own_save_
     );
     assert!(!repair());
     verify_profile_settings(&layout, &identity).unwrap();
+}
+
+#[test]
+fn opening_an_installed_profile_adds_its_portraits_folder_only_in_its_own_save_folder() {
+    let (_temp, layout, identity) = eet_profile_fixture("");
+    finalize_game_identity(&layout, &identity).unwrap();
+    let portraits = identity.save_root.join("portraits");
+    assert!(!portraits.exists(), "the game never creates it");
+
+    for (install_id, engine_name) in [
+        ("another-install", identity.engine_name.as_str()),
+        ("eet-state-test", "Another Game"),
+    ] {
+        assert!(prepare_installed_profile_folder(
+            layout.root(),
+            install_id,
+            engine_name,
+            &identity.save_root
+        )
+        .is_err());
+        assert!(!portraits.exists());
+    }
+    let elsewhere = layout.root().join(&identity.engine_name);
+    fs::create_dir(&elsewhere).unwrap();
+    assert!(prepare_installed_profile_folder(
+        layout.root(),
+        "eet-state-test",
+        &identity.engine_name,
+        &elsewhere
+    )
+    .is_err());
+    assert!(!elsewhere.join("portraits").exists());
+
+    let prepare = || {
+        prepare_installed_profile_folder(
+            layout.root(),
+            "eet-state-test",
+            &identity.engine_name,
+            &identity.save_root,
+        )
+        .unwrap()
+    };
+    assert_eq!(prepare(), identity.save_root);
+    assert!(portraits.is_dir());
+    let portrait = portraits.join("CUSTOML.bmp");
+    fs::write(&portrait, b"player portrait").unwrap();
+    assert_eq!(prepare(), identity.save_root);
+    assert_eq!(fs::read(&portrait).unwrap(), b"player portrait");
+}
+
+#[test]
+fn opening_an_installed_profile_keeps_a_portraits_entry_the_player_made() {
+    for linked in [false, true] {
+        let (temp, layout, identity) = eet_profile_fixture("");
+        finalize_game_identity(&layout, &identity).unwrap();
+        let portraits = identity.save_root.join("portraits");
+        if linked {
+            // A portraits folder shared between installations.
+            let shared = temp.path().join("shared portraits");
+            fs::create_dir(&shared).unwrap();
+            if let Err(error) = symlink_directory(&shared, &portraits) {
+                if cfg!(windows)
+                    && matches!(
+                        error.kind(),
+                        io::ErrorKind::PermissionDenied | io::ErrorKind::Unsupported
+                    )
+                {
+                    continue;
+                }
+                panic!("could not create test directory symlink: {error}");
+            }
+        } else {
+            fs::write(&portraits, b"not a folder").unwrap();
+        }
+        let before = fs::symlink_metadata(&portraits).unwrap().file_type();
+
+        assert_eq!(
+            prepare_installed_profile_folder(
+                layout.root(),
+                "eet-state-test",
+                &identity.engine_name,
+                &identity.save_root,
+            )
+            .unwrap(),
+            identity.save_root
+        );
+        assert_eq!(
+            fs::symlink_metadata(&portraits).unwrap().file_type(),
+            before
+        );
+    }
 }
 
 #[cfg(unix)]

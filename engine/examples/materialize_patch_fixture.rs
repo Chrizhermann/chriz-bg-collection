@@ -188,6 +188,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             launch_path: game.join("Baldur.exe"),
             verification_summary: "synthetic completed installation".into(),
         }),
+        left_out: Vec::new(),
+        installed_plan: None,
+        decisions: Vec::new(),
     };
     let receipt = serde_json::to_vec_pretty(&receipt)?;
     write(&root.join(".chriz/install-receipt.json"), &receipt)?;

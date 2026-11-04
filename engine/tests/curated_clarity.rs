@@ -14,6 +14,22 @@ fn recipe() -> Manifest {
     .expect("curated recipe loads with presentation metadata")
 }
 
+/// Chris's Recommended with BG1 NPC Project ticked. The mod is optional and unchecked since
+/// 2026-11-03 (Christopher); ticking it selects its reviewed defaults inside it.
+fn recommended_with_bg1npc(manifest: &Manifest) -> bg_engine::recipe_view::SelectionEvaluation {
+    let recommended = evaluate_preset(manifest, "chris-recommended", "windows").unwrap();
+    assert!(!recommended.view.control("mod:bg1npc").unwrap().selected);
+    assert_eq!(recommended.plan.components_for("bg1npc-bg1"), None);
+    let mut selection = recommended.normalized_selection.to_selection();
+    selection.set_feature("mod:bg1npc", true);
+    let ticked = evaluate(manifest, &selection).unwrap();
+    assert_eq!(
+        ticked.plan.components_for("bg1npc-bg1"),
+        Some(&[0, 10, 90, 111, 120, 130, 240, 200][..])
+    );
+    ticked
+}
+
 #[test]
 fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
     let manifest = recipe();
@@ -25,7 +41,9 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
     // BG1 Unfinished Business became optional and unselected on October 23, so the
     // bg1ub-bg1 run no longer runs by default; the new quest mods are unchecked.
     // The October 29 intake adds the default Sirene NPC for BG:EE run.
-    assert_eq!(result.plan.runs.len(), 70);
+    // BG1 NPC Project became optional and unselected on November 3, so the bg1npc-bg1
+    // run no longer runs by default.
+    assert_eq!(result.plan.runs.len(), 69);
     assert_eq!(
         result
             .plan
@@ -54,7 +72,10 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         // end of the late tweak run, and Sirene NPC for BG:EE 0, 3 and 6.
         // The October 29 Rebalance v0.8.8 pin adds default Druid weapons 410 and Alaghor of
         // Clangeddin weapons 411, and the Kitpack chriz.5 pin the default katana fix 7205.
-        476
+        // November 3 removes BG1 NPC Project's 8 defaults and the Kivan quest guard
+        // Modpack 130 that follows them; the Modpack alpha.15 pin adds default Marek's
+        // Boomerang Dagger 670.
+        468
     );
     // Scroll policy 430 hashes the final scrolls and spells, so it follows BuffBot.
     let (tail, rest) = result.plan.runs.split_last().unwrap();
@@ -99,7 +120,7 @@ fn emotion_exclusivity_is_a_ready_optional_choice_with_an_independent_opt_in() {
     assert_eq!(feature.parent.as_deref(), Some("mod:chriz-bg-rebalance"));
     assert_eq!(
         manifest.mods["chriz-bg-rebalance"].artifact_id,
-        "chriz-bg-rebalance-0.8.9"
+        "chriz-bg-rebalance-0.8.10"
     );
     assert_eq!(
         baseline.plan.components_for("chriz-bg-rebalance-bg2"),
@@ -236,7 +257,7 @@ fn emotion_exclusivity_keeps_the_reviewed_provider_and_later_tweak_order() {
 #[test]
 fn custom_bg1npc_choices_require_the_core_even_with_the_parent_enabled() {
     let manifest = recipe();
-    let baseline = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+    let baseline = recommended_with_bg1npc(&manifest);
     let mut selection = baseline.normalized_selection.to_selection();
     selection.set_feature("feature:bg1npc:component-0", false);
     for feature in &manifest.collection.features {
@@ -420,7 +441,7 @@ fn disabling_eeex_explains_and_omits_buffbot_without_changing_requested_preferen
 #[test]
 fn repaired_bg1npc_groups_replace_only_the_authored_alternative() {
     let manifest = recipe();
-    let baseline = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+    let baseline = recommended_with_bg1npc(&manifest);
     for (old, new) in [(111, 110), (240, 241), (130, 131)] {
         let option = baseline
             .view

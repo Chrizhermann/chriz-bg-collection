@@ -2,6 +2,72 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 3 — 0.1.1 published
+
+**Published** on 2026-11-03 at 18:29:55 UTC, with Christopher's OK of 2026-11-04 (03:12
+KST):
+- the [v0.1.1 release](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.1),
+  marked Latest;
+- the `alpha` update feed, serving 0.1.1 since 18:30:44 UTC;
+- the website, handed to its own chat.
+
+Details: [Publication](package-acceptance-0.1.1-2026-11-03.md#publication).
+
+- **BuffBot waits for 0.1.2** (Christopher, 2026-11-04): first v1.15.0, then v1.16.0
+  (released 2026-11-03 21:02 UTC), which the hold in `manifest/own-mods.toml` names since
+  2026-11-04. 0.1.1 ships the tested v1.12.6.
+- **Known issue:** without Spell Revisions, a new installation stops at BG Rebalance
+  `302`. BG Rebalance v0.8.10 fixes it, for 0.1.2; its pin is
+  [PR #103](https://github.com/Chrizhermann/chriz-bg-collection/pull/103).
+- **Next:**
+  - pin BG Rebalance v0.8.10 (PR #103) and the newest BuffBot (v1.16.0) for 0.1.2;
+  - the release line goes back into `main`, which Christopher decides.
+
+### The candidate
+
+Branch `claude/release-0.1.1`, from the next-release branch at `c6279f9` (#97), sets the
+app to **0.1.1** in the five files the 0.1.0 bump changed and refreshes the notices'
+lockfile digests. The bundled collection already reads 0.1.1. Its update ledger keeps
+2026-11-03 as the publication date, fixed before packaging because the setup bundles the
+ledger, and needs app 0.1.0. The [release notes](release-notes-0.1.1.md) cover everything
+since 0.1.0:
+
+- the fewer-stops round (#89–#93, #96): GOG, Beamdog and other copies, the modded-game
+  question and failed optional mods left out;
+- the download questions (#69, #80);
+- the saves & portraits folder button (#82);
+- BG1 NPC Project optional (#88) and Marek's Boomerang Dagger (#97).
+
+Christopher OK'd building and testing the candidate (2026-11-03).
+
+PR #98 merged as `161bb72`. The signed setup is built from its head `f855441`, whose tree
+the merge commit keeps unchanged: 6,413,423 bytes, SHA-256
+`0d20eac8175ffecbf8a29f3c24e7c59cce156e949724e2ca5273f5723d631652`. The checks all
+passed:
+
+- the signature, resource and updater checks (0.1.0 → 0.1.1);
+- the native order proof of the Modpack alpha.15 pin;
+- a Defender scan of the setup;
+- the full suite in a new clean worktree: 1,336 native, 478 frontend and 281 Python tests.
+
+The setup, its signature, the feed and the other release files are in Christopher's test
+folder, with the prepared `alpha` channel feed and the 0.1.0 feed as its rollback copy.
+Exact results: [0.1.1 package verification](package-acceptance-0.1.1-2026-11-03.md).
+
+## November 3 — questions about changed or unusable downloads (PR 80, for 0.1.1)
+
+PR 80 (`claude/drift-dialogs`), on top of PR 69, for 0.1.1. The installer no longer
+decides silently: a changed download that passed every check, a mod whose download cannot
+be used (with the mods that need it), and a changed installer tool from a host the recipe
+did not review each stop the installation with a question recorded in the ledger
+(`DecisionRequired`). The app shows it in a modal dialog (`components/download-decision.ts`),
+stores the answer through `answer_decision` and resumes; "Decide later" leaves the
+installation waiting, and its card offers "Answer the question". On the CLI, `check-decision`
+shows the question with its English texts and token, `decide` stores the answer once under
+the target lock, and `resume` records and applies it. `--answer <question>=<answer>` on
+`install` and `resume` answers for one run, for tests and automation. Parts the collection
+cannot do without and tools still stop without a question. Christopher's live test of the
+dialogs is still to come.
 ## November 2 — app and collection 0.1.0 published
 
 **App and collection 0.1.0 are public**, the first CEBG release without the alpha label:
@@ -62,6 +128,11 @@ earlier that day (`1101253f…`,
 Not in 0.1.0: the open PRs against the next-release branch, #69 (install what a mod's
 official link serves when it differs from the pin) and #53 (own-mod pin check). The
 next-release branch has not been merged back into `main` yet; Christopher decides when.
+
+## November 1 — download drift fixes (PR 69)
+
+Campaigns started with a build of PR 69 from before ba32684 are unsupported: those builds
+were never merged or released, so no player has one.
 
 ## October 14 — app alpha.21 and its website published (installer fixes)
 
