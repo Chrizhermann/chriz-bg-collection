@@ -114,8 +114,9 @@ this setup to the live update channel. See Tauri's
 [`createUpdaterArtifacts` setting](https://v2.tauri.app/reference/config/#createupdaterartifacts).
 
 The production resource allowlist is in `app/src-tauri/tauri.conf.json`. It bundles CEBG's
-license/notices, runtime manifest data, and `recipes/curated-full-current/`. It excludes
-creator-only recipes and authoring reference/evidence inventories. Mods are acquired from
+license/notices, runtime manifest data, `recipes/curated-full-current/` and the catalog of
+mods the app updates, `hotpatches/bg/`. It excludes creator-only recipes and authoring
+reference/evidence inventories. Mods are acquired from
 their declared sources during installation. Linked dependencies retain their own licenses;
 see [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md), including the UnRAR restriction.
 

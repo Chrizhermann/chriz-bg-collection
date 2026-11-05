@@ -1,0 +1,643 @@
+//! The hotpatches one app offers, read from its bundled catalog folder: `catalog.toml`, plus the
+//! package of each hotpatch in the recipe's own artifact and mod formats below `artifacts/` and
+//! `mods/`. The catalog ships inside the app like its recipe; every package is pinned by exact
+//! length and SHA-256, as recipe artifacts are.
+use std::collections::BTreeSet;
+use std::path::Path;
+
+use serde::{Deserialize, Serialize};
+
+use crate::digest::sha256_bytes;
+use crate::manifest::{AcquisitionPolicy, ArchiveKind, Artifact, ModFile, SourceKind};
+use crate::patches::files;
+use crate::updates::SaveApplicability;
+
+/// Format of `catalog.toml`.
+pub const CATALOG_SCHEMA: u32 = 1;
+const FILE_LIMIT: u64 = 1024 * 1024;
+
+/// The game a catalog is for. Chriz Easy BG installs the Enhanced Edition Trilogy only.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum CatalogGame {
+    Eet,
+}
+
+/// Christopher's rule for how far an installation may differ from the recommended setup.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GateRules {
+    /// Preset of the installation's own recipe that counts as the recommended setup.
+    pub recommended_preset: String,
+    /// Most mods that may differ from the recommended setup, counting neither free mods nor
+    /// required ones that were merely kept.
+    pub max_changed_mods: usize,
+    /// Mods whose choices never count, such as Tweaks Anthology or the interface.
+    #[serde(default)]
+    pub free_mods: BTreeSet<String>,
+    /// Mods that must stay installed, such as Sword Coast Stratagems.
+    #[serde(default)]
+    pub required_mods: BTreeSet<String>,
+}
+
+/// One collection release that hotpatches are made for, identified by its recipe content.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Base {
+    pub id: String,
+    pub label: String,
+    pub recipe_version: String,
+    /// [`super::recipe_content_digest`] of the released recipe.
+    pub content_sha256: String,
+}
+
+/// A component one installed mod must have before a hotpatch fits.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ComponentRequirement {
+    #[serde(rename = "mod")]
+    pub mod_id: String,
+    pub any_of: Vec<u32>,
+}
+
+/// One changelog line and what it means for running saves.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Change {
+    pub title: String,
+    pub summary: String,
+    pub save_applicability: SaveApplicability,
+    #[serde(default)]
+    pub condition_note: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CatalogFile {
+    schema: u32,
+    game: CatalogGame,
+    #[serde(default)]
+    runtime_files: Vec<String>,
+    gate: GateRules,
+    #[serde(default)]
+    bases: Vec<Base>,
+    #[serde(default)]
+    hotpatches: Vec<HotpatchEntry>,
+    #[serde(default)]
+    updates: Vec<UpdateEntry>,
+}
+
+/// A mod the app can update in finished installations. Its release comes either from
+/// `repository`'s Latest release on GitHub, with the ZIP `asset` (`{tag}` stands for the tag), or
+/// from the pinned `artifact` below `artifacts/`.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct UpdateEntry {
+    #[serde(rename = "mod")]
+    mod_id: String,
+    title: String,
+    summary: String,
+    #[serde(default)]
+    repository: Option<String>,
+    #[serde(default)]
+    asset: Option<String>,
+    #[serde(default)]
+    artifact: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct HotpatchEntry {
+    id: String,
+    title: String,
+    summary: String,
+    bases: Vec<String>,
+    #[serde(default)]
+    requires: Vec<String>,
+    artifact: String,
+    #[serde(rename = "mod")]
+    mod_id: String,
+    components: Vec<u32>,
+    #[serde(default)]
+    requires_components: Vec<ComponentRequirement>,
+    changes: Vec<Change>,
+}
+
+/// One hotpatch: new components of one pinned mod release, installed after everything else.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Hotpatch {
+    pub id: String,
+    pub title: String,
+    pub summary: String,
+    /// Ids of the bases it fits.
+    pub bases: Vec<String>,
+    /// Hotpatches that must already be applied, in catalog order.
+    pub requires: Vec<String>,
+    pub artifact: Artifact,
+    pub installer: ModFile,
+    /// Components installed, in this order.
+    pub components: Vec<u32>,
+    pub requires_components: Vec<ComponentRequirement>,
+    pub changes: Vec<Change>,
+}
+
+impl Hotpatch {
+    /// The single folder the package publishes into the game folder, lowercase.
+    pub fn mod_folder(&self) -> String {
+        self.artifact.archive.publish_roots[0].to_ascii_lowercase()
+    }
+}
+
+/// Where an update's release comes from.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub enum UpdateSource {
+    /// The release GitHub marks as Latest when the player checks; `asset` names its ZIP, with
+    /// `{tag}` for the release's tag. GitHub's published length and SHA-256 are checked.
+    LatestRelease { repository: String, asset: String },
+    /// One pinned release, in the recipe's artifact format.
+    Pinned(Box<Artifact>),
+}
+
+/// A mod the app can update in finished installations (see [`super::update`]).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ModUpdate {
+    /// The mod's id in the installation's recipe.
+    pub mod_id: String,
+    pub title: String,
+    pub summary: String,
+    pub source: UpdateSource,
+}
+
+/// Paths the game, its loader or installed mods write while the game runs. They never count as
+/// the player's changes or block Undo, and a hotpatch may not write them.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct RuntimeFiles(Vec<String>);
+
+impl RuntimeFiles {
+    /// Whether the lowercase relative `name` is written at runtime.
+    pub fn matches(&self, name: &str) -> bool {
+        self.0.iter().any(|pattern| pattern_matches(pattern, name))
+    }
+}
+
+/// The whole validated catalog.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Catalog {
+    pub game: CatalogGame,
+    pub runtime_files: RuntimeFiles,
+    pub gate: GateRules,
+    pub bases: Vec<Base>,
+    /// In the order they apply.
+    pub hotpatches: Vec<Hotpatch>,
+    pub updates: Vec<ModUpdate>,
+    /// Digest of every catalog file read, so a review token never outlives a catalog change.
+    pub digest: String,
+}
+
+impl Catalog {
+    pub fn base(&self, id: &str) -> Option<&Base> {
+        self.bases.iter().find(|base| base.id == id)
+    }
+    pub fn hotpatch(&self, id: &str) -> Option<&Hotpatch> {
+        self.hotpatches.iter().find(|hotpatch| hotpatch.id == id)
+    }
+    pub fn update(&self, mod_id: &str) -> Option<&ModUpdate> {
+        self.updates.iter().find(|update| update.mod_id == mod_id)
+    }
+}
+
+/// Read and check the catalog folder `dir`.
+pub fn load(dir: &Path) -> Result<Catalog, String> {
+    let mut digest_input = Vec::new();
+    let mut read = |relative: &str| -> Result<String, String> {
+        let bytes = files::read(&dir.join(relative), FILE_LIMIT)?;
+        digest_input.extend_from_slice(relative.as_bytes());
+        digest_input.push(0);
+        digest_input.extend_from_slice(sha256_bytes(&bytes).as_bytes());
+        String::from_utf8(bytes).map_err(|_| format!("{relative} is not UTF-8."))
+    };
+    let text = read("catalog.toml")?;
+    let file: CatalogFile =
+        toml::from_str(&text).map_err(|error| format!("catalog.toml: {error}"))?;
+    if file.schema != CATALOG_SCHEMA {
+        return Err("This hotpatch catalog has an unknown format.".into());
+    }
+    validate_rules(&file.gate)?;
+    let mut runtime = Vec::new();
+    for pattern in &file.runtime_files {
+        validate_pattern(pattern)?;
+        runtime.push(pattern.clone());
+    }
+    let mut base_ids = BTreeSet::new();
+    for base in &file.bases {
+        identifier(&base.id)?;
+        if !base_ids.insert(base.id.clone())
+            || base.label.trim().is_empty()
+            || base.recipe_version.trim().is_empty()
+            || !hex64(&base.content_sha256)
+        {
+            return Err(format!("Invalid hotpatch base {:?}.", base.id));
+        }
+    }
+    let mut hotpatches: Vec<Hotpatch> = Vec::new();
+    for entry in file.hotpatches {
+        identifier(&entry.id)?;
+        if hotpatches.iter().any(|earlier| earlier.id == entry.id) {
+            return Err(format!("Hotpatch {:?} is listed twice.", entry.id));
+        }
+        if entry.title.trim().is_empty() || entry.summary.trim().is_empty() {
+            return Err(format!(
+                "Hotpatch {:?} needs a title and a summary.",
+                entry.id
+            ));
+        }
+        if entry.bases.is_empty() || entry.bases.iter().any(|id| !base_ids.contains(id)) {
+            return Err(format!("Hotpatch {:?} names an unknown base.", entry.id));
+        }
+        if entry
+            .requires
+            .iter()
+            .any(|id| !hotpatches.iter().any(|earlier| earlier.id == *id))
+        {
+            return Err(format!(
+                "Hotpatch {:?} requires a hotpatch that is not listed before it.",
+                entry.id
+            ));
+        }
+        if entry.changes.is_empty()
+            || entry
+                .changes
+                .iter()
+                .any(|change| change.title.trim().is_empty() || change.summary.trim().is_empty())
+        {
+            return Err(format!(
+                "Hotpatch {:?} needs a complete changelog.",
+                entry.id
+            ));
+        }
+        identifier(&entry.artifact)?;
+        identifier(&entry.mod_id)?;
+        let artifact: Artifact =
+            toml::from_str(&read(&format!("artifacts/{}.toml", entry.artifact))?)
+                .map_err(|error| format!("artifacts/{}.toml: {error}", entry.artifact))?;
+        let installer: ModFile = toml::from_str(&read(&format!("mods/{}.toml", entry.mod_id))?)
+            .map_err(|error| format!("mods/{}.toml: {error}", entry.mod_id))?;
+        let hotpatch = Hotpatch {
+            id: entry.id,
+            title: entry.title,
+            summary: entry.summary,
+            bases: entry.bases,
+            requires: entry.requires,
+            artifact,
+            installer,
+            components: entry.components,
+            requires_components: entry.requires_components,
+            changes: entry.changes,
+        };
+        validate_package(&hotpatch, &entry.artifact, &entry.mod_id)?;
+        hotpatches.push(hotpatch);
+    }
+    let mut updates: Vec<ModUpdate> = Vec::new();
+    for entry in file.updates {
+        identifier(&entry.mod_id)?;
+        if updates.iter().any(|earlier| earlier.mod_id == entry.mod_id) {
+            return Err(format!("The update of {:?} is listed twice.", entry.mod_id));
+        }
+        if entry.title.trim().is_empty() || entry.summary.trim().is_empty() {
+            return Err(format!(
+                "The update of {:?} needs a title and a summary.",
+                entry.mod_id
+            ));
+        }
+        let source = match (entry.repository, entry.asset, entry.artifact) {
+            (Some(repository), Some(asset), None) => {
+                validate_release_names(&repository, &asset)
+                    .map_err(|what| format!("The update of {:?}: {what}", entry.mod_id))?;
+                UpdateSource::LatestRelease { repository, asset }
+            }
+            (None, None, Some(id)) => {
+                identifier(&id)?;
+                let artifact: Artifact = toml::from_str(&read(&format!("artifacts/{id}.toml"))?)
+                    .map_err(|error| format!("artifacts/{id}.toml: {error}"))?;
+                validate_release_artifact(&artifact, &id)
+                    .map_err(|what| format!("The update of {:?}: {what}", entry.mod_id))?;
+                UpdateSource::Pinned(Box::new(artifact))
+            }
+            _ => {
+                return Err(format!(
+                    "The update of {:?} needs either a repository and an asset, or an artifact.",
+                    entry.mod_id
+                ))
+            }
+        };
+        updates.push(ModUpdate {
+            mod_id: entry.mod_id,
+            title: entry.title,
+            summary: entry.summary,
+            source,
+        });
+    }
+    Ok(Catalog {
+        game: file.game,
+        runtime_files: RuntimeFiles(runtime),
+        gate: file.gate,
+        bases: file.bases,
+        hotpatches,
+        updates,
+        digest: sha256_bytes(&digest_input),
+    })
+}
+
+/// A GitHub repository as `owner/name`, and a ZIP asset name with `{tag}` in it.
+fn validate_release_names(repository: &str, asset: &str) -> Result<(), String> {
+    let plain = |part: &str| {
+        !part.is_empty()
+            && !part.starts_with('.')
+            && part
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b"-_.".contains(&b))
+    };
+    let parts = repository.split('/').collect::<Vec<_>>();
+    if parts.len() != 2 || !parts.iter().all(|part| plain(part)) {
+        return Err(format!("{repository:?} is not a GitHub repository."));
+    }
+    let named = asset.replace("{tag}", "v1");
+    if !asset.contains("{tag}") || !named.to_ascii_lowercase().ends_with(".zip") || !plain(&named) {
+        return Err(format!("{asset:?} does not name a ZIP with {{tag}}."));
+    }
+    Ok(())
+}
+
+/// A pinned release ZIP of one mod folder, as a hotpatch package is.
+fn validate_release_artifact(artifact: &Artifact, id: &str) -> Result<(), String> {
+    if artifact.id != id
+        || artifact.acquisition != AcquisitionPolicy::FetchOnly
+        || artifact.source.kind != SourceKind::GithubRelease
+        || !artifact.source.url.starts_with("https://")
+        || artifact.source.expected_length.is_none()
+        || !hex64(&artifact.source.sha256)
+        || artifact.archive.kind != ArchiveKind::Zip
+        || artifact.tool.is_some()
+        || artifact.archive.publish_roots.len() != 1
+    {
+        return Err("its release must be a pinned GitHub release ZIP of one mod folder.".into());
+    }
+    Ok(())
+}
+
+fn validate_rules(rules: &GateRules) -> Result<(), String> {
+    identifier(&rules.recommended_preset)?;
+    for id in rules.free_mods.iter().chain(&rules.required_mods) {
+        identifier(id)?;
+    }
+    Ok(())
+}
+
+fn validate_package(hotpatch: &Hotpatch, artifact_id: &str, mod_id: &str) -> Result<(), String> {
+    let refuse = |what: &str| Err(format!("Hotpatch {:?}: {what}", hotpatch.id));
+    let artifact = &hotpatch.artifact;
+    let installer = &hotpatch.installer;
+    if artifact.id != artifact_id || installer.id != mod_id || installer.artifact_id != artifact.id
+    {
+        return refuse("its artifact and mod files do not name each other.");
+    }
+    if artifact.acquisition != AcquisitionPolicy::FetchOnly
+        || artifact.source.kind != SourceKind::GithubRelease
+        || !artifact.source.url.starts_with("https://")
+        || artifact.source.expected_length.is_none()
+        || !hex64(&artifact.source.sha256)
+        || artifact.archive.kind != ArchiveKind::Zip
+        || artifact.tool.is_some()
+    {
+        return refuse("its package must be a pinned GitHub release ZIP of a mod.");
+    }
+    let [root] = artifact.archive.publish_roots.as_slice() else {
+        return refuse("its package must publish exactly one mod folder.");
+    };
+    identifier(&root.to_ascii_lowercase())?;
+    let tp2 = installer.tp2.replace('\\', "/");
+    files::safe_relative(&tp2)?;
+    if artifact.archive.tp2_paths != [installer.tp2.clone()]
+        || !tp2
+            .to_ascii_lowercase()
+            .starts_with(&format!("{}/", root.to_ascii_lowercase()))
+    {
+        return refuse("its installer must lie in the mod folder it publishes.");
+    }
+    if hotpatch.components.is_empty()
+        || hotpatch.components.iter().collect::<BTreeSet<_>>().len() != hotpatch.components.len()
+    {
+        return refuse("it must install distinct components.");
+    }
+    for id in &hotpatch.components {
+        let Some(component) = installer.components.iter().find(|c| c.id == *id) else {
+            return refuse("it installs a component its mod file does not declare.");
+        };
+        // A hotpatch runs unattended; a component that asks questions does not fit.
+        if component.stdin.is_some()
+            || !component.prompts.is_empty()
+            || !component.config_files.is_empty()
+        {
+            return refuse("its components must install without questions or settings.");
+        }
+    }
+    for requirement in &hotpatch.requires_components {
+        identifier(&requirement.mod_id)?;
+        if requirement.any_of.is_empty() {
+            return refuse("a component requirement names no component.");
+        }
+    }
+    Ok(())
+}
+
+fn identifier(value: &str) -> Result<(), String> {
+    if value.is_empty()
+        || value.len() > 128
+        || !value
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b"-_.".contains(&b))
+        || value.starts_with('.')
+    {
+        return Err(format!("Invalid hotpatch catalog identifier {value:?}."));
+    }
+    Ok(())
+}
+
+fn hex64(value: &str) -> bool {
+    value.len() == 64 && value.bytes().all(|b| b.is_ascii_hexdigit())
+}
+
+/// Patterns are lowercase relative names: an exact name, `folder/**` for a folder and everything
+/// below it, or a last segment with `*` wildcards such as `override/bfbotbg*.mos`.
+fn validate_pattern(pattern: &str) -> Result<(), String> {
+    let invalid = || Err(format!("Invalid runtime file pattern {pattern:?}."));
+    if pattern.to_ascii_lowercase() != pattern {
+        return invalid();
+    }
+    let (folders, last) = match pattern.rsplit_once('/') {
+        Some((folders, last)) => (Some(folders), last),
+        None => (None, pattern),
+    };
+    if let Some(folders) = folders {
+        if folders.contains('*') || files::safe_relative(folders).is_err() {
+            return invalid();
+        }
+    }
+    if last == "**" {
+        return if folders.is_some() { Ok(()) } else { invalid() };
+    }
+    if last.is_empty()
+        || last.contains("**")
+        || files::safe_relative(&last.replace('*', "x")).is_err()
+    {
+        return invalid();
+    }
+    Ok(())
+}
+
+fn pattern_matches(pattern: &str, name: &str) -> bool {
+    if let Some(folder) = pattern.strip_suffix("/**") {
+        return name == folder || name.starts_with(&format!("{folder}/"));
+    }
+    let (pattern_folder, pattern_last) = pattern.rsplit_once('/').unwrap_or(("", pattern));
+    let (name_folder, name_last) = name.rsplit_once('/').unwrap_or(("", name));
+    pattern_folder == name_folder && wildcard(pattern_last.as_bytes(), name_last.as_bytes())
+}
+
+fn wildcard(pattern: &[u8], text: &[u8]) -> bool {
+    match pattern.split_first() {
+        None => text.is_empty(),
+        Some((b'*', rest)) => (0..=text.len()).any(|skip| wildcard(rest, &text[skip..])),
+        Some((first, rest)) => text
+            .split_first()
+            .is_some_and(|(head, tail)| head == first && wildcard(rest, tail)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const RECIPE: &str = "recipes/curated-full-current";
+
+    fn repository() -> std::path::PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("..")
+    }
+
+    /// Chriz Easy BG's catalog fits the recipe it ships with.
+    #[test]
+    fn the_bundled_bg_catalog_fits_the_current_recipe() {
+        let catalog = load(&repository().join("hotpatches/bg")).unwrap();
+        let recipe = crate::Manifest::load(&repository().join(RECIPE)).unwrap();
+        assert!(recipe
+            .presets
+            .contains_key(&catalog.gate.recommended_preset));
+        assert!(catalog.hotpatch("").is_none());
+        assert!(!catalog.updates.is_empty());
+        for update in &catalog.updates {
+            assert!(
+                recipe.mods.contains_key(&update.mod_id),
+                "unknown mod {:?}",
+                update.mod_id
+            );
+        }
+    }
+
+    /// What the game, its loader and its add-ons write must not stop Undo, but the mods' own
+    /// files must stay checked.
+    #[test]
+    fn the_bundled_bg_catalog_ignores_what_a_played_game_writes() {
+        let catalog = load(&repository().join("hotpatches/bg")).unwrap();
+        for name in [
+            "infinityloader.ini",
+            "infinityloader.db",
+            "infinityloader.log",
+            "eeex_scripts/extra_pattern_dbs/v2.7.3.0.db",
+            "eeex_scripts/override",
+            "buffbot_exec.log",
+            "override/bfbtch.spl",
+            "override/bfbotbg2.mos",
+            "override/eeex_remote_ready.json",
+            "override/eeex_remote_result.json.tmp",
+            "override/eeex_remote_cmd.lua.run",
+        ] {
+            assert!(catalog.runtime_files.matches(name), "{name}");
+        }
+        for name in [
+            "weidu.log",
+            "chitin.key",
+            "lang/en_us/dialog.tlk",
+            "override/ui.menu",
+            "override/m___eeex.lua",
+            "override/m_eeexrc.lua",
+            "eeex_scripts/extra_pattern_dbs",
+            "eeex_scripts/extra_pattern_dbs/readme.txt",
+            "eeex_scripts/override/eeex_main.lua",
+            "eeex_scripts/eeex_main.lua",
+            "eeex/loader/v2.7.3.0/pattern_dbs/v2.7.3.0.db",
+        ] {
+            assert!(!catalog.runtime_files.matches(name), "{name}");
+        }
+    }
+
+    /// An installation keeps its recipe as JSON; read back, it has the digest it was made with.
+    #[test]
+    fn a_frozen_recipe_keeps_its_content_digest() {
+        let recipe = crate::Manifest::load(&repository().join(RECIPE)).unwrap();
+        let frozen = serde_json::to_vec(&(
+            &recipe.collection,
+            &recipe.artifacts,
+            &recipe.mods,
+            &recipe.presets,
+        ))
+        .unwrap();
+        let (collection, artifacts, mods, presets) = serde_json::from_slice(&frozen).unwrap();
+        let thawed = crate::Manifest {
+            root: std::path::PathBuf::from("elsewhere"),
+            collection,
+            artifacts,
+            mods,
+            presets,
+        };
+        assert_eq!(
+            super::super::recipe_content_digest(&thawed).unwrap(),
+            super::super::recipe_content_digest(&recipe).unwrap()
+        );
+    }
+
+    #[test]
+    fn runtime_patterns_match_exact_names_folders_and_wildcards_only() {
+        let runtime = RuntimeFiles(vec![
+            "infinityloader.ini".into(),
+            "infinityloader_crash/**".into(),
+            "buffbot_*.log".into(),
+            "override/bfbotbg*.mos".into(),
+        ]);
+        for name in [
+            "infinityloader.ini",
+            "infinityloader_crash",
+            "infinityloader_crash/dump/1.dmp",
+            "buffbot_exec.log",
+            "override/bfbotbg.mos",
+            "override/bfbotbg3.mos",
+        ] {
+            assert!(runtime.matches(name), "{name}");
+        }
+        for name in [
+            "infinityloader.ini.bak",
+            "infinityloader_crashes/x",
+            "override/buffbot_exec.log",
+            "override/bfbotbg.mos/x",
+            "bfbotbg.mos",
+            "weidu.log",
+        ] {
+            assert!(!runtime.matches(name), "{name}");
+        }
+        for bad in ["**", "Override/x", "a/*/b", "../x", "a/**/b", "a/***"] {
+            assert!(validate_pattern(bad).is_err(), "{bad}");
+        }
+        for good in ["a", "a/b/**", "a/*.log", "*.log"] {
+            validate_pattern(good).unwrap();
+        }
+    }
+}

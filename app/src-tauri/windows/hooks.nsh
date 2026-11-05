@@ -18,6 +18,7 @@
   !insertmacro CebgClearBundledFolder "manifest\game-builds"
   !insertmacro CebgClearBundledFolder "manifest\releases"
   !insertmacro CebgClearBundledFolder "recipes\curated-full-current"
+  !insertmacro CebgClearBundledFolder "hotpatches\bg"
 !macroend
 
 !macro CebgClearBundledFolder FOLDER
