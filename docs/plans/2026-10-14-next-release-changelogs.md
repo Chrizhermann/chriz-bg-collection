@@ -64,6 +64,9 @@ These changes apply to new installations; existing games and saves are unchanged
   own now, `failed_component`, in the ledger, `check-decision`, `decide` and the app's dialog.
   It replaces the automatic leave-out of 0.1.1. A script that wants the old behaviour passes
   `--answer failed-component=leave-out`; without an answer a run ends with the question open.
+  The recipe gains `core_components` and `[[component_needs]]`, which only decide what leaves
+  with a failed part: plans and selections stay the same. A dependent that needs one part of a
+  feature of several components should get a row, read from its own installer.
 
 ## Installer changelog
 

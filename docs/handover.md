@@ -33,14 +33,31 @@ feature title and its mod.
   evidence of the attempt that ran (`FailedPart::evidence_attempt`).
 
 Leaving out goes by what is in the game, because the installer never uninstalls.
-`plan_without_parts` gets the components installed so far. A feature with one of them, and the
-features above it, count as there: such a feature only loses what failed, and whatever needs it
-stays, so SCS failing at its last component keeps BG Rebalance's repairs of its spells. A feature
-of which nothing is in the game leaves as when it is unticked, with what needs it, and one
-question covers them all. A dependent that really needs the failed part fails on its own and gets
-its own question. A feature that lost a requirement keeps what is in the game, loses the rest
-and still counts as there; prompts follow what is there, because mods ask by what the game
-holds. A preset `retry` is refused, because it could repeat without end.
+`plan_without_parts` gets the components installed so far and works on components. A feature with
+one of them, and the features above it, count as there: such a feature only loses what failed.
+What else leaves goes by what it really needs, and the recipe says that:
+
+- **`core_components` of a feature** are what it exists for. What requires the feature needs
+  these; its other components are extras. The game must not hold only part of a core
+  (`LeaveOutError::Incomplete`): the question then offers only to try again or to stop, and a
+  copy with later components installed needs a fresh start. EEex is the case. Mods check only its
+  marker, component `0`, and component `1` is the runtime they build on, so the marker alone would
+  be a lie; its modules are extras. EEex is not a fixed part: the player can untick it, and it
+  leaves whole while nothing of it is in the game.
+- **`[[component_needs]]` of the collection** say what one component needs of a feature it
+  requires: all of `needs`, one of `needs_any`. They come from that component's installer, and
+  `tools/curated_full_recipe.py` holds them. SCS is the case: BG Rebalance `100` needs SCS `2500`,
+  and SCS `8190` leaves alone.
+- **Without either** a requirement needs all of the feature. A mod without components of its own
+  stands for the cores of its mandatory parts. Without one it is enough that the mod is there, and
+  a mod is gone once all that was chosen of it left.
+
+What was never selected did not leave: a need the player unticked takes nothing along while its
+feature stands. A feature of which nothing is in the game leaves as when it is unticked, with what
+needs it, and one question covers them all. That can be a lot: the recipe has SCS require
+Ascension's first component, so that one takes SCS along, 84 other components. What is in the game
+stays even when it lost a requirement. Prompts follow what is there, because mods ask by what the
+game holds. A preset `retry` is refused, because it could repeat without end.
 
 **The mandatory line is the recipe's own:** a feature with `decision = "mandatory"` and only
 mandatory parents is a fixed part (`LeaveOutError::Required`). In `curated-full-current` these
@@ -54,7 +71,9 @@ fixed (454 without Spell Revisions), and all others can leave at the point where
 
 A run without an answer, or with a preset that does not fit, ends with status
 `decision_required` and the question open; `--answer failed-component=leave-out` or `=no`
-answers for one run. The end summary and the receipt name every part left out.
+answers for one run. The end summary and the receipt name every part left out, also when an
+earlier answer left out a part of a run that left later: the answer's receipt keeps what it
+kept of each run (`DecisionReceipt::kept_components`).
 
 A question survives crashes around it. An attempt recovered without its process result keeps the
 end time of its first recovery, so reconciling it again publishes the same record. The attempt
