@@ -43,7 +43,7 @@ fn feature(id: &str, decision: Decision) -> Feature {
         requires_any: Vec::new(),
         conflicts: Vec::new(),
         inputs: Vec::new(),
-        core_components: Vec::new(),
+        core_components: None,
     }
 }
 
@@ -1021,10 +1021,10 @@ fn alternatives_of_a_component_cannot_reach_across_what_it_requires() {
 #[test]
 fn core_components_must_be_components_of_their_feature() {
     let mut manifest = manifest_with_needs();
-    manifest.collection.features[0].core_components = vec![ComponentRef {
+    manifest.collection.features[0].core_components = Some(vec![ComponentRef {
         run_id: "eefixpack-bg1".to_owned(),
         component: 2,
-    }];
+    }]);
 
     assert!(needs_findings(&manifest)[0].contains("is not a component of feature"));
 }

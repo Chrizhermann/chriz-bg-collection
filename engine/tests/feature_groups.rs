@@ -52,7 +52,7 @@ fn feature(id: &str, decision: Decision, component: u32) -> Feature {
         requires_any: Vec::new(),
         conflicts: Vec::new(),
         inputs: Vec::new(),
-        core_components: Vec::new(),
+        core_components: None,
     }
 }
 
@@ -421,7 +421,7 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         without_groups.feature_groups.clear();
         without_groups.component_needs.clear();
         for feature in &mut without_groups.features {
-            feature.core_components.clear();
+            feature.core_components = None;
         }
         assert_eq!(
             sha256_bytes(&serde_json::to_vec(&without_groups).unwrap()),

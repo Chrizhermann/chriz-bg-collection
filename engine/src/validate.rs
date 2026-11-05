@@ -1473,7 +1473,7 @@ fn check_component_needs(manifest: &Manifest, findings: &mut Vec<Finding>) {
         .flat_map(|feature| feature.components.iter().map(move |part| (part, feature)))
         .collect::<BTreeMap<_, _>>();
     for feature in &manifest.collection.features {
-        for part in &feature.core_components {
+        for part in feature.core_components.iter().flatten() {
             if !feature.components.contains(part) {
                 error(
                     findings,

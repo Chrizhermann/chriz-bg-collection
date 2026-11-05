@@ -78,7 +78,7 @@ fn feature(id: &str, decision: Decision, components: Vec<ComponentRef>) -> Featu
         requires_any: Vec::new(),
         conflicts: Vec::new(),
         inputs: Vec::new(),
-        core_components: Vec::new(),
+        core_components: None,
     }
 }
 
@@ -1025,11 +1025,14 @@ fn bundle_manifest() -> Manifest {
         )
     };
     manifest.collection.features.extend([
-        feature(
-            "bundle",
-            Decision::Default,
-            component_refs("bundle-mod", &[1, 2, 3]),
-        ),
+        Feature {
+            core_components: Some(Vec::new()),
+            ..feature(
+                "bundle",
+                Decision::Default,
+                component_refs("bundle-mod", &[1, 2, 3]),
+            )
+        },
         dependent("needs-one", 4),
         dependent("needs-either", 5),
         dependent("needs-all", 6),
@@ -1247,6 +1250,41 @@ fn a_mod_that_lost_all_its_parts_takes_along_what_needs_it() {
     ));
 }
 
+/// A recipe that does not say what a feature of several components exists for cannot vouch for
+/// part of it: with something of it in the game none of it can leave, and with nothing of it in
+/// the game it leaves whole.
+#[test]
+fn a_feature_that_says_nothing_about_its_parts_cannot_stay_in_part() {
+    let mut manifest = bundle_manifest();
+    manifest
+        .collection
+        .features
+        .iter_mut()
+        .find(|feature| feature.id == "bundle")
+        .unwrap()
+        .core_components = None;
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    let without = |failed: &[u32], in_game: &[u32]| {
+        plan_without_parts(
+            &manifest,
+            &evaluation.normalized_selection,
+            &evaluation.plan,
+            &BTreeSet::new(),
+            &component_refs("bundle-mod", failed).into_iter().collect(),
+            &component_refs("bundle-mod", in_game).into_iter().collect(),
+        )
+    };
+
+    assert!(matches!(
+        without(&[2], &[1]),
+        Err(LeaveOutError::Incomplete { .. })
+    ));
+    assert!(without(&[1], &[])
+        .unwrap()
+        .components_for("bundle-mod")
+        .is_none());
+}
+
 /// What a feature exists for: what requires it needs its core, not its extras, and the game
 /// must not hold only part of that core.
 #[test]
@@ -1259,7 +1297,7 @@ fn a_core_decides_what_needs_a_bundle_and_cannot_stay_in_part() {
         .iter_mut()
         .find(|feature| feature.id == "bundle")
         .unwrap()
-        .core_components = component_refs("bundle-mod", &[1, 2]);
+        .core_components = Some(component_refs("bundle-mod", &[1, 2]));
 
     assert_eq!(later_mod_without(&manifest, &[3], &[1, 2]), [4, 5, 6]);
 

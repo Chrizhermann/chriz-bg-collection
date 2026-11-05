@@ -534,11 +534,13 @@ pub struct Feature {
     /// Exact component ownership in authored recipe runs.
     #[serde(default)]
     pub components: Vec<ComponentRef>,
-    /// The components this feature exists for, when it installs more than them. What requires
-    /// the feature needs these, and the others are extras. The game must not hold only some of
-    /// them: EEex's marker tells other mods that its runtime is there.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub core_components: Vec<ComponentRef>,
+    /// The components this feature exists for, when it has several. What requires the feature
+    /// needs these, and the others are extras. The game must not hold only some of them: EEex's
+    /// marker tells other mods that its runtime is there. An empty list says that its components
+    /// stand alone. Without a list nothing says what can go, as in the recipes of earlier
+    /// versions, and all of the feature counts as its core.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub core_components: Option<Vec<ComponentRef>>,
     /// Other features that must be effective first.
     #[serde(default)]
     pub requires: Vec<String>,

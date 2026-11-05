@@ -43,11 +43,17 @@ What else leaves goes by what it really needs, and the recipe says that:
   copy with later components installed needs a fresh start. EEex is the case. Mods check only its
   marker, component `0`, and component `1` is the runtime they build on, so the marker alone would
   be a lie; its modules are extras. EEex is not a fixed part: the player can untick it, and it
-  leaves whole while nothing of it is in the game.
+  leaves whole while nothing of it is in the game. An empty list says that the components stand
+  alone, as those of the SCS core do. A feature of several components without the key has no word
+  on it, so all of it counts as its core. That is every such feature of a campaign frozen before
+  0.1.2, which a newer app resumes: nothing can tell whether part of it would work, so it is not
+  left in part. A new bundle in a recipe needs the key, or the sweep names it.
 - **`[[component_needs]]` of the collection** say what one component needs of a feature it
-  requires: all of `needs`, one of `needs_any`. They come from that component's installer, and
-  `tools/curated_full_recipe.py` holds them. SCS is the case: BG Rebalance `100` needs SCS `2500`,
-  and SCS `8190` leaves alone.
+  requires: all of `needs`, one of `needs_any`. They come from that component's installer. They
+  live in `manifest/collection.toml`, and `tools/curated_full_recipe.py` adds the rows of what
+  only the curated recipe has, so both shipped recipes answer alike. SCS is the case: BG
+  Rebalance `100` needs SCS `2500`, and SCS `8190` leaves alone. Alternatives cannot reach across
+  the features of `requires`, which must all hold; across `requires_any` they can.
 - **Without either** a requirement needs all of the feature. A mod without components of its own
   stands for the cores of its mandatory parts. Without one it is enough that the mod is there, and
   a mod is gone once all that was chosen of it left.
@@ -72,14 +78,17 @@ fixed (454 without Spell Revisions), and all others can leave at the point where
 A run without an answer, or with a preset that does not fit, ends with status
 `decision_required` and the question open; `--answer failed-component=leave-out` or `=no`
 answers for one run. The end summary and the receipt name every part left out, also when an
-earlier answer left out a part of a run that left later: the answer's receipt keeps what it
-kept of each run (`DecisionReceipt::kept_components`).
+earlier answer left out a part of a run that left later: the question in the ledger recorded
+what each run kept. A receipt is compared with what the ledger yields, field by field, so an
+answer's receipt must not gain what an older ledger yields and an older receipt lacks.
 
 A question survives crashes around it. An attempt recovered without its process result keeps the
 end time of its first recovery, so reconciling it again publishes the same record. The attempt
 that asks again after a stop is recorded before its question: an attempt without evidence after
-one that went past a failure ran nothing and only asks (`question_left_unasked`). The ledger can
-only seal the attempt that failed last, not the one with the evidence.
+one that went past a failure ran nothing and only asks (`question_left_unasked`). The attempt
+that goes on after a left-out component is the same: without evidence it simply runs
+(`continuation_not_begun`). The ledger can only seal the attempt that failed last, not the one
+with the evidence.
 
 Two fixes came with it. A run that lost components could not pass the receipt check, because
 its first attempt names more than the run keeps: that check now knows what left, and accepts

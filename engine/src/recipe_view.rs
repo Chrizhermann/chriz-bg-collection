@@ -1199,7 +1199,7 @@ pub enum LeaveOutError {
         title: String,
     },
     /// Leaving out would keep only part of what a feature exists for in the game.
-    #[error("{title} is installed only in part, and it cannot work that way")]
+    #[error("{title} is installed only in part, and it can't stay that way")]
     Incomplete {
         /// The feature that would stay in part.
         feature_id: String,
@@ -1270,7 +1270,8 @@ pub fn recipe_run_in<'a>(collection: &'a Collection, planned_run_id: &str) -> Op
 /// such a feature only loses its failed components. What leaves with them goes by what each
 /// component really needs: its `component_needs` entry, or else the `core_components` of what it
 /// requires, or else all of that. So an extra of a bundle leaves alone, and the part a feature
-/// exists for takes what needs it along. Fails when only part of a feature's core would stay.
+/// exists for takes what needs it along. Fails when only part of a feature's core would stay,
+/// and all of a feature counts as its core when the recipe does not say.
 pub fn plan_without_parts(
     manifest: &Manifest,
     selection: &NormalizedSelection,
@@ -1543,8 +1544,12 @@ impl<'a> Remaining<'a> {
     /// without components of its own stands for the cores among its mandatory parts; without
     /// one, it is enough that the mod is there.
     fn core_of(&self, feature: &'a Feature) -> Vec<&'a ComponentRef> {
-        if !feature.core_components.is_empty() {
-            return feature.core_components.iter().collect();
+        if let Some(core) = feature
+            .core_components
+            .as_ref()
+            .filter(|core| !core.is_empty())
+        {
+            return core.iter().collect();
         }
         if !feature.components.is_empty() {
             return feature.components.iter().collect();
@@ -1556,7 +1561,7 @@ impl<'a> Remaining<'a> {
                     && child.decision == Decision::Mandatory
                     && self.effective.get(&child.id).copied().unwrap_or(false)
             })
-            .flat_map(|child| child.core_components.iter())
+            .flat_map(|child| child.core_components.iter().flatten())
             .collect()
     }
 
@@ -1663,17 +1668,16 @@ impl<'a> Remaining<'a> {
         }
     }
 
-    /// A feature whose core would stay in the game in part.
+    /// A feature whose core would stay in the game in part. A recipe that does not say what a
+    /// feature exists for cannot vouch for any part of it alone.
     fn incomplete(&self, manifest: &'a Manifest) -> Option<&'a Feature> {
         manifest.collection.features.iter().find(|feature| {
-            feature
+            let core = feature
                 .core_components
-                .iter()
-                .any(|part| self.in_game.contains(part))
-                && feature
-                    .core_components
-                    .iter()
-                    .any(|part| self.gone.contains(part))
+                .as_ref()
+                .unwrap_or(&feature.components);
+            core.iter().any(|part| self.in_game.contains(part))
+                && core.iter().any(|part| self.gone.contains(part))
         })
     }
 }

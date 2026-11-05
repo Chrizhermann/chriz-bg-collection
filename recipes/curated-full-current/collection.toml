@@ -3462,6 +3462,7 @@ group_label = "Tougher Throne of Bhaal battles"
 decision = "mandatory"
 readiness = "ready"
 parent = "mod:ascension"
+core_components = []
 components = [
   { run_id = "ascension-bg2", component = 1000 },
   { run_id = "ascension-bg2", component = 1100 },
@@ -4556,6 +4557,7 @@ group_label = "Spell system revisions and new spells / Gameplay tweaks / AI enha
 decision = "mandatory"
 readiness = "ready"
 parent = "mod:stratagems"
+core_components = []
 components = [
   { run_id = "stratagems-bg2", component = 2000 },
   { run_id = "stratagems-bg2", component = 2500 },
@@ -5307,6 +5309,7 @@ group_label = "SoD remix: treasure from removed content"
 decision = "mandatory"
 readiness = "ready"
 parent = "mod:chriz-sod-remix"
+core_components = []
 components = [
   { run_id = "chriz-sod-remix-bg2", component = 100 },
   { run_id = "chriz-sod-remix-bg2", component = 110 },
@@ -5372,6 +5375,7 @@ decision = "mandatory"
 readiness = "ready"
 parent = "mod:chriz-bg-rebalance"
 requires = ["feature:stratagems:mandatory-components", "feature:spell-rev:mandatory-components"]
+core_components = []
 components = [
   { run_id = "chriz-bg-rebalance-bg2", component = 100 },
   { run_id = "chriz-bg-rebalance-bg2", component = 120 },
@@ -5650,6 +5654,7 @@ decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-rebalance"
 requires = ["feature:eeex:mandatory-components"]
+core_components = []
 components = [
   { run_id = "chriz-bg-rebalance-bg2", component = 420 },
   { run_id = "chriz-bg-rebalance-bg2", component = 421 },
@@ -5691,6 +5696,7 @@ decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-rebalance"
 requires = ["mod:artisanskitpack", "feature:eeex:mandatory-components"]
+core_components = []
 components = [
   { run_id = "chriz-bg-rebalance-bg2", component = 400 },
   { run_id = "chriz-bg-rebalance-bg2", component = 401 },
@@ -6206,6 +6212,7 @@ group_label = "Buff automation"
 decision = "mandatory"
 readiness = "ready"
 parent = "mod:buffbot"
+core_components = [{ run_id = "buffbot-bg2", component = 0 }]
 components = [
   { run_id = "buffbot-bg2", component = 1 },
   { run_id = "buffbot-bg2", component = 0 },
@@ -6828,6 +6835,7 @@ group_label = "Additional Spells"
 decision = "mandatory"
 readiness = "ready"
 parent = "mod:iwdification"
+core_components = []
 components = [
   { run_id = "iwdification-bg2", component = 30 },
   { run_id = "iwdification-bg2", component = 40 },

@@ -3138,6 +3138,10 @@ needs = [{ run_id = "eefixpack-bg1", component = 0 }]
         text.replace(
             bg2_feature,
             "components = [{ run_id = \"eefixpack-bg2\", component = 0 }]\nrequires = [\"eefix-bg1\"]\n",
+        )
+        .replace(
+            "components = [\n  { run_id = \"eefixpack-bg1\", component = 0 },\n",
+            "core_components = []\ncomponents = [\n  { run_id = \"eefixpack-bg1\", component = 0 },\n",
         ) + needs,
     )
     .unwrap();
@@ -3330,6 +3334,42 @@ fn a_crash_as_a_run_goes_on_after_a_left_out_component_runs_the_rest() {
     assert_eq!(installed.components_for("eefixpack-bg1"), Some(&[2][..]));
 }
 
+/// A campaign frozen on a recipe that does not say what a feature of several components exists
+/// for: leaving out one part could leave the rest without what it needs, and nothing can tell.
+/// The player can only try again or stop.
+#[cfg(windows)]
+#[test]
+fn a_recipe_that_says_nothing_about_a_feature_keeps_it_whole() {
+    let fixture = executable_fixture();
+
+    let decision = install_until_component_fails(&fixture, "2");
+
+    let replay = SessionStore::open(&fixture.managed)
+        .unwrap()
+        .replay()
+        .unwrap();
+    let frozen: Value = serde_json::from_slice(&replay.created().recipe_payload).unwrap();
+    assert!(frozen["collection"]["features"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|feature| feature.get("core_components").is_none()));
+    assert_eq!(
+        labels(&decision),
+        vec!["Try again", "Stop the installation"]
+    );
+    assert!(decision["question"]["leave_out"].is_null(), "{decision:#}");
+    assert!(
+        decision["texts"]["details"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|detail| detail
+                == "BG1 fixes is installed only in part, and it can't stay that way"),
+        "{decision:#}"
+    );
+}
+
 /// The part a feature exists for cannot leave once another part of its core is in the game: mods
 /// would take the feature for installed. The player can only try again or stop.
 #[cfg(windows)]
@@ -3367,7 +3407,7 @@ fn half_of_a_core_in_the_game_offers_only_to_try_again_or_stop() {
             .unwrap()
             .iter()
             .any(|detail| detail
-                == "BG1 fixes is installed only in part, and it cannot work that way"),
+                == "BG1 fixes is installed only in part, and it can't stay that way"),
         "{decision:#}"
     );
 }

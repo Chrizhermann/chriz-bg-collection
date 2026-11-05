@@ -41,7 +41,7 @@ fn fixture() -> Manifest {
         requires_any: Vec::new(),
         conflicts: Vec::new(),
         inputs: Vec::new(),
-        core_components: Vec::new(),
+        core_components: None,
     }];
     manifest
 }

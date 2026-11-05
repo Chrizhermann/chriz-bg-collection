@@ -42,7 +42,7 @@ fn fixture() -> Manifest {
             requires_any: vec![],
             conflicts: vec![],
             inputs: vec![],
-            core_components: vec![],
+            core_components: None,
         })
         .collect();
     manifest

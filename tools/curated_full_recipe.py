@@ -453,72 +453,23 @@ args = []
 }
 
 
-COMPONENT_NEEDS = """
-# What a component really needs of the features it requires, as its own installer checks it,
-# when that is less than all of those features: bundles such as the SCS core hold independent
-# components. Without an entry a component needs the core_components of a required feature, or
-# all of it. A failed component leaves what does not need it in the plan.
+# The rows of manifest/collection.toml start here. They reach the curated recipe with it and
+# stay at its end, followed by the rows of what only the curated recipe has.
+COMPONENT_NEEDS_START = "# What a component really needs of the features it requires"
 
-[[component_needs]]
-component = { run_id = "chriz-bg-rebalance-bg2", component = 100 }
-needs = [{ run_id = "stratagems-bg2", component = 2500 }]
-
-[[component_needs]]
-component = { run_id = "chriz-bg-rebalance-bg2", component = 101 }
-needs_any = [{ run_id = "stratagems-bg2", component = 2000 }, { run_id = "stratagems-bg2", component = 5900 }]
-
-[[component_needs]]
-component = { run_id = "chriz-bg-rebalance-bg2", component = 110 }
-needs = [{ run_id = "stratagems-bg2", component = 6540 }]
-
-[[component_needs]]
-component = { run_id = "chriz-bg-rebalance-bg2", component = 111 }
-needs = [{ run_id = "stratagems-bg2", component = 6540 }]
-
-[[component_needs]]
-component = { run_id = "chriz-bg-rebalance-bg2", component = 120 }
-needs = [{ run_id = "stratagems-bg2", component = 6030 }]
-
-[[component_needs]]
-component = { run_id = "chriz-bg-rebalance-bg2", component = 121 }
-needs = [{ run_id = "stratagems-bg2", component = 6030 }]
-
-[[component_needs]]
-component = { run_id = "chriz-bg-rebalance-bg2", component = 130 }
-needs = [{ run_id = "stratagems-bg2", component = 2000 }]
-
-[[component_needs]]
-component = { run_id = "chriz-bg-modpack-bg2", component = 130 }
-needs = [{ run_id = "stratagems-bg2", component = 5900 }]
-
-[[component_needs]]
-component = { run_id = "chriz-bg-modpack-bg2", component = 440 }
-needs = [{ run_id = "ascension-bg2", component = 50 }]
-
-[[component_needs]]
-component = { run_id = "chriz-bg-modpack-bg2", component = 450 }
-needs = [{ run_id = "stratagems-bg2", component = 2000 }]
-
-[[component_needs]]
-component = { run_id = "chriz-sod-remix-bg2", component = 257 }
-needs = [{ run_id = "chriz-sod-remix-bg2", component = 256 }]
-
-[[component_needs]]
-component = { run_id = "chriz-sod-remix-bg2", component = 292 }
-needs = [{ run_id = "chriz-sod-remix-bg2", component = 160 }, { run_id = "chriz-sod-remix-bg2", component = 290 }]
-
-[[component_needs]]
-component = { run_id = "chriz-sod-remix-bg2", component = 293 }
-needs = [{ run_id = "chriz-sod-remix-bg2", component = 160 }, { run_id = "chriz-sod-remix-bg2", component = 290 }]
-
-[[component_needs]]
-component = { run_id = "chriz-sod-remix-bg2", component = 294 }
-needs = [{ run_id = "chriz-sod-remix-bg2", component = 160 }, { run_id = "chriz-sod-remix-bg2", component = 290 }]
-
+CURATED_COMPONENT_NEEDS = """
 [[component_needs]]
 component = { run_id = "bardicwonders-progression-bg2", component = 3010 }
 needs = [{ run_id = "chriz-bg-rebalance-bg2", component = 420 }]
 """
+
+
+def _split_component_needs(collection: str) -> tuple[str, str]:
+    """The collection without the rows of component needs at its end, and those rows."""
+    if collection.count(COMPONENT_NEEDS_START) != 1:
+        raise ValueError("manifest/collection.toml must end with its component needs")
+    start = collection.index(COMPONENT_NEEDS_START)
+    return collection[:start].rstrip("\n") + "\n", collection[start:]
 
 
 def _q(value: str) -> str:
@@ -696,7 +647,8 @@ def _feature_blocks(root: Path, collection: dict) -> str:
         if len(components) == 1:
             lines.append(f"components = [{components[0].strip().rstrip(',')}]")
         else:
-            lines.extend(["components = [", *components, "]"])
+            # The spell packs of a mandatory bundle stand alone.
+            lines.extend(["core_components = []", "components = [", *components, "]"])
         blocks.append("\n".join(lines))
     return "\n\n".join(blocks).rstrip() + "\n"
 
@@ -1163,6 +1115,7 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
         (destination / "artifacts" / filename).write_text(text, encoding="utf-8", newline="\n")
 
     base_collection = (root / "manifest/collection.toml").read_text(encoding="utf-8").replace("\r\n", "\n")
+    base_collection, component_needs = _split_component_needs(base_collection)
     base_collection = _preserve_native_run_orders(base_collection)
     base = tomllib.loads(base_collection)
     rows = load_catalogs(root / "docs/curation/components")
@@ -1283,7 +1236,9 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
     _validate_game_interface_order(base_collection)
     base_collection = _add_curated_group_members(base_collection, base)
     _validate_feature_groups(base, tomllib.loads(base_collection))
-    base_collection = base_collection.rstrip("\n") + "\n" + COMPONENT_NEEDS
+    base_collection = (
+        base_collection.rstrip("\n") + "\n\n" + component_needs.rstrip("\n") + "\n" + CURATED_COMPONENT_NEEDS
+    )
     (destination / "collection.toml").write_text(base_collection, encoding="utf-8", newline="\n")
 
     preset_path = destination / "presets/chris-recommended.toml"

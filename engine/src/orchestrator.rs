@@ -4020,6 +4020,12 @@ mod tests {
         .unwrap()
     }
 
+    /// The smaller recipe the app ships next to the curated one.
+    fn bundled() -> Manifest {
+        Manifest::load(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../manifest"))
+            .unwrap()
+    }
+
     /// `components` of the planned `run`, as the recipe names them.
     fn recipe_parts<'a>(
         manifest: &'a Manifest,
@@ -4145,8 +4151,12 @@ mod tests {
         /// What is needed of feature `required` without an entry that says more.
         fn core_of(&self, required: &str) -> Vec<&'a ComponentRef> {
             let wanted = self.features[required];
-            if !wanted.core_components.is_empty() {
-                return wanted.core_components.iter().collect();
+            if let Some(core) = wanted
+                .core_components
+                .as_ref()
+                .filter(|core| !core.is_empty())
+            {
+                return core.iter().collect();
             }
             if !wanted.components.is_empty() {
                 return wanted.components.iter().collect();
@@ -4161,7 +4171,7 @@ mod tests {
                             .iter()
                             .any(|part| self.planned.contains(part))
                 })
-                .flat_map(|child| child.core_components.iter())
+                .flat_map(|child| child.core_components.iter().flatten())
                 .collect()
         }
 
@@ -4308,30 +4318,61 @@ mod tests {
         assert_eq!(parts(&kept), parts(&expected));
     }
 
-    /// A part of a bundle takes along what its own installer checks for, and nothing else.
+    /// A part of a bundle takes along what its own installer checks for, and nothing else, in
+    /// both shipped recipes.
     #[test]
     fn a_part_of_a_bundle_takes_only_what_needs_it() {
-        let manifest = curated();
-        let evaluation = recommended(&manifest, true);
-        let rebalance = "chriz-bg-rebalance-bg2";
-        for (failed, expected) in [
-            (2500, vec![(rebalance, 100)]),
-            (6030, vec![(rebalance, 120), (rebalance, 121)]),
-            (6540, vec![(rebalance, 111)]),
-            (2000, vec![(rebalance, 130), ("chriz-bg-modpack-bg2", 450)]),
-            // Freedom scrolls need 2000 or 5900, and Modpack 130 is not in the recommended setup.
-            (5900, vec![]),
-        ] {
-            let expected = expected
-                .into_iter()
-                .map(|(run, component)| (run.to_owned(), component))
-                .collect::<BTreeSet<_>>();
-            assert_eq!(
-                what_leaves_with(&manifest, &evaluation, "stratagems-bg2", failed),
-                expected,
-                "SCS component {failed}"
-            );
+        for manifest in [bundled(), curated()] {
+            let evaluation = recommended(&manifest, true);
+            let rebalance = "chriz-bg-rebalance-bg2";
+            for (failed, expected) in [
+                (2500, vec![(rebalance, 100)]),
+                (6030, vec![(rebalance, 120), (rebalance, 121)]),
+                (6540, vec![(rebalance, 111)]),
+                (2000, vec![(rebalance, 130), ("chriz-bg-modpack-bg2", 450)]),
+                // Freedom scrolls need 2000 or 5900, and Modpack 130 is not in the recommended
+                // setup.
+                (5900, vec![]),
+                (8190, vec![]),
+            ] {
+                let expected = expected
+                    .into_iter()
+                    .map(|(run, component)| (run.to_owned(), component))
+                    .collect::<BTreeSet<_>>();
+                assert_eq!(
+                    what_leaves_with(&manifest, &evaluation, "stratagems-bg2", failed),
+                    expected,
+                    "SCS component {failed}"
+                );
+            }
         }
+    }
+
+    /// `manifest` as a campaign of an earlier version froze it, which says nothing about what a
+    /// feature exists for or what a component needs.
+    fn as_frozen_earlier(mut manifest: Manifest) -> Manifest {
+        manifest.collection.component_needs.clear();
+        for feature in &mut manifest.collection.features {
+            feature.core_components = None;
+        }
+        manifest
+    }
+
+    /// A campaign frozen on an earlier recipe has no word on what EEex exists for. Its marker
+    /// cannot stay without its runtime all the same, so nothing is left out.
+    #[test]
+    fn an_earlier_recipe_does_not_leave_the_marker_of_eeex_alone() {
+        let manifest = as_frozen_earlier(curated());
+        let evaluation = recommended(&manifest, true);
+        let position = position_of(&evaluation.plan, "eeex-bg2");
+        let waiting = &evaluation.plan.runs[position].components[1..];
+
+        let result = plan_after_failure(&manifest, &evaluation, position, waiting, true);
+
+        assert!(
+            matches!(result, Err(LeaveOutError::Incomplete { .. })),
+            "{result:?}"
+        );
     }
 
     /// EEex's marker tells other mods that EEex is there, and several check nothing else. With
@@ -4420,37 +4461,96 @@ mod tests {
     /// failed extra would take it along: by its own entry, or by the feature's core.
     #[test]
     fn what_requires_a_bundle_says_what_it_needs_of_it() {
-        let manifest = curated();
-        let evaluation = recommended(&manifest, true);
-        let needs = Needs::new(&manifest, &evaluation.plan);
-        for dependent in &manifest.collection.features {
-            for required in dependent.requires.iter().chain(&dependent.requires_any) {
-                for part in dependent
-                    .components
-                    .iter()
-                    .filter(|part| needs.planned.contains(*part))
-                {
-                    let (all, any) = needs
-                        .entry_of(Some(part), required)
-                        .unwrap_or_else(|| (needs.core_of(required), Vec::new()));
-                    let of_core = all.iter().all(|need| {
-                        needs.owners.get(*need).is_some_and(|chain| {
-                            needs.features[chain[0]].core_components.contains(*need)
-                        })
-                    });
-                    let own_entry = needs.entries.get(part).is_some_and(|entry| {
-                        entry
-                            .needs
-                            .iter()
-                            .chain(&entry.needs_any)
-                            .any(|need| needs.is_below(need, required))
-                    });
-                    assert!(
-                        all.len() + any.len() <= 1 || of_core || own_entry,
-                        "{part:?} does not say what it needs of {required}"
-                    );
+        for manifest in [bundled(), curated()] {
+            let evaluation = recommended(&manifest, true);
+            let needs = Needs::new(&manifest, &evaluation.plan);
+            for dependent in &manifest.collection.features {
+                for required in dependent.requires.iter().chain(&dependent.requires_any) {
+                    for part in dependent
+                        .components
+                        .iter()
+                        .filter(|part| needs.planned.contains(*part))
+                    {
+                        let (all, any) = needs
+                            .entry_of(Some(part), required)
+                            .unwrap_or_else(|| (needs.core_of(required), Vec::new()));
+                        let of_core = all.iter().all(|need| {
+                            needs.owners.get(*need).is_some_and(|chain| {
+                                let owner = needs.features[chain[0]];
+                                owner
+                                    .core_components
+                                    .iter()
+                                    .flatten()
+                                    .any(|core| core == *need)
+                            })
+                        });
+                        let own_entry = needs.entries.get(part).is_some_and(|entry| {
+                            entry
+                                .needs
+                                .iter()
+                                .chain(&entry.needs_any)
+                                .any(|need| needs.is_below(need, required))
+                        });
+                        assert!(
+                            all.len() + any.len() <= 1 || of_core || own_entry,
+                            "{part:?} does not say what it needs of {required}"
+                        );
+                    }
                 }
             }
+        }
+    }
+
+    /// Where `part`, which the plan of `evaluation` has, is: the planned run it is in and
+    /// whether it is the last of that run.
+    fn place_of(
+        manifest: &Manifest,
+        evaluation: &SelectionEvaluation,
+        part: &ComponentRef,
+    ) -> (usize, bool) {
+        let position = evaluation
+            .plan
+            .runs
+            .iter()
+            .position(|run| {
+                run.components.contains(&part.component)
+                    && recipe_run_id(manifest, &run.run_id).as_ref() == Some(&part.run_id)
+            })
+            .unwrap();
+        let last = evaluation.plan.runs[position].components.last() == Some(&part.component);
+        (position, last)
+    }
+
+    /// The same failure gets the same answer from both shipped recipes, as far as they share
+    /// what it concerns.
+    #[test]
+    fn both_shipped_recipes_give_the_same_answer_to_the_same_failure() {
+        let (small, full) = (bundled(), curated());
+        for spell_revisions in [true, false] {
+            let narrow = recommended(&small, spell_revisions);
+            let wide = recommended(&full, spell_revisions);
+            let shared = plan_parts(&small, &narrow.plan)
+                .intersection(&plan_parts(&full, &wide.plan))
+                .cloned()
+                .collect::<BTreeSet<_>>();
+            let answer = |manifest: &Manifest, evaluation: &SelectionEvaluation, part| {
+                let (position, last) = place_of(manifest, evaluation, part);
+                plan_after_failure(manifest, evaluation, position, &[part.component], last)
+                    .map(|(kept, _)| {
+                        let kept = plan_parts(manifest, &kept);
+                        shared
+                            .iter()
+                            .filter(|part| !kept.contains(*part))
+                            .cloned()
+                            .collect::<BTreeSet<_>>()
+                    })
+                    .map_err(|error| error.to_string())
+            };
+            let different = shared
+                .iter()
+                .filter(|part| answer(&small, &narrow, part) != answer(&full, &wide, part))
+                .collect::<Vec<_>>();
+            assert!(different.is_empty(), "{different:#?}");
         }
     }
 
@@ -4461,55 +4561,96 @@ mod tests {
     /// directions hold: nothing leaves that has all it needs, and nothing stays that lost it.
     #[test]
     fn every_planned_component_can_leave_where_it_fails_or_is_a_fixed_part() {
-        let manifest = curated();
-        for spell_revisions in [true, false] {
-            let evaluation = recommended(&manifest, spell_revisions);
-            let plan = &evaluation.plan;
-            let needs = Needs::new(&manifest, plan);
-            let mut fixed = BTreeSet::new();
-            let mut incomplete = BTreeSet::new();
-            for (position, run) in plan.runs.iter().enumerate() {
-                for (index, component) in run.components.iter().enumerate() {
-                    let last = index + 1 == run.components.len();
-                    let failed = recipe_parts(&manifest, run, [component]).next().unwrap();
-                    for (not_installed, goes_on) in [
-                        (std::slice::from_ref(component), last),
-                        (&run.components[index..], true),
-                    ] {
-                        match plan_after_failure(
-                            &manifest,
-                            &evaluation,
-                            position,
-                            not_installed,
-                            goes_on,
-                        ) {
-                            Ok((kept, in_game)) => assert_the_right_parts_leave(
-                                &manifest, &needs, &kept, &in_game, &failed,
-                            ),
-                            Err(LeaveOutError::Required { title, .. }) => {
-                                fixed.insert(title);
+        for manifest in [bundled(), curated()] {
+            for spell_revisions in [true, false] {
+                let evaluation = recommended(&manifest, spell_revisions);
+                let plan = &evaluation.plan;
+                let needs = Needs::new(&manifest, plan);
+                let mut fixed = BTreeSet::new();
+                let mut incomplete = BTreeSet::new();
+                for (position, run) in plan.runs.iter().enumerate() {
+                    for (index, component) in run.components.iter().enumerate() {
+                        let last = index + 1 == run.components.len();
+                        let failed = recipe_parts(&manifest, run, [component]).next().unwrap();
+                        for (not_installed, goes_on) in [
+                            (std::slice::from_ref(component), last),
+                            (&run.components[index..], true),
+                        ] {
+                            match plan_after_failure(
+                                &manifest,
+                                &evaluation,
+                                position,
+                                not_installed,
+                                goes_on,
+                            ) {
+                                Ok((kept, in_game)) => assert_the_right_parts_leave(
+                                    &manifest, &needs, &kept, &in_game, &failed,
+                                ),
+                                Err(LeaveOutError::Required { title, .. }) => {
+                                    fixed.insert(title);
+                                }
+                                Err(LeaveOutError::Incomplete { title, .. }) => {
+                                    incomplete.insert(title);
+                                }
+                                Err(error) => panic!("{failed:?}: {error}"),
                             }
-                            Err(LeaveOutError::Incomplete { title, .. }) => {
-                                incomplete.insert(title);
-                            }
-                            Err(error) => panic!("{failed:?}: {error}"),
                         }
                     }
                 }
+                assert_eq!(
+                    fixed.iter().map(String::as_str).collect::<Vec<_>>(),
+                    [
+                        "Core fixes and Game Text Update",
+                        "EET core import",
+                        "Merge Siege of Dragonspear DLC",
+                        "Standard EET finalization"
+                    ]
+                );
+                assert_eq!(
+                    incomplete.iter().map(String::as_str).collect::<Vec<_>>(),
+                    ["EEex full runtime with LuaJIT"]
+                );
             }
-            assert_eq!(
-                fixed.iter().map(String::as_str).collect::<Vec<_>>(),
-                [
-                    "Core fixes and Game Text Update",
-                    "EET core import",
-                    "Merge Siege of Dragonspear DLC",
-                    "Standard EET finalization"
-                ]
-            );
-            assert_eq!(
-                incomplete.iter().map(String::as_str).collect::<Vec<_>>(),
-                ["EEex full runtime with LuaJIT"]
-            );
+        }
+    }
+
+    /// A campaign frozen on an earlier recipe: whatever fails, a question has an answer, and
+    /// nothing leaves a feature of several components in part.
+    #[test]
+    fn every_failure_has_an_answer_on_a_recipe_of_an_earlier_version() {
+        let manifest = as_frozen_earlier(curated());
+        let evaluation = recommended(&manifest, true);
+        let plan = &evaluation.plan;
+        let features = manifest
+            .collection
+            .features
+            .iter()
+            .filter(|feature| feature.components.len() > 1)
+            .collect::<Vec<_>>();
+        for (position, run) in plan.runs.iter().enumerate() {
+            for (index, component) in run.components.iter().enumerate() {
+                let last = index + 1 == run.components.len();
+                match plan_after_failure(&manifest, &evaluation, position, &[*component], last) {
+                    Ok((kept, in_game)) => {
+                        let there = plan_parts(&manifest, &kept);
+                        for feature in &features {
+                            let some = feature.components.iter().any(|part| in_game.contains(part));
+                            let planned = feature
+                                .components
+                                .iter()
+                                .filter(|part| plan_parts(&manifest, plan).contains(*part));
+                            assert!(
+                                !some || planned.clone().all(|part| there.contains(part)),
+                                "{} stays in part without {component} of {}",
+                                feature.id,
+                                run.run_id
+                            );
+                        }
+                    }
+                    Err(LeaveOutError::Required { .. } | LeaveOutError::Incomplete { .. }) => {}
+                    Err(error) => panic!("{}: {error}", run.run_id),
+                }
+            }
         }
     }
 }
