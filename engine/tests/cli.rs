@@ -3113,25 +3113,29 @@ fn a_crash_while_asking_again_after_a_stop_only_asks_again() {
     );
     waiting_for(code, &response, "install:eefixpack-bg1");
     let install_id = response["install_id"].as_str().unwrap().to_owned();
-    decide(&fixture, &check_decision(&fixture, &install_id), "no");
+    let mut decision = check_decision(&fixture, &install_id);
     let resume = ["--json", "resume", fixture.managed.to_str().unwrap()];
-    let (code, stopped) = run_installer(&fixture, None, &resume);
-    assert_eq!(code, Some(1), "{stopped:#}");
-    let (code, asked) = run_installer(&fixture, None, &resume);
-    waiting_for(code, &asked, "install:eefixpack-bg1");
-    let log = fs::read(fixture.managed.join("bg1/WeiDU.log")).unwrap();
+    // The second round has the evidence two attempts back.
+    for _ in 0..2 {
+        decide(&fixture, &decision, "no");
+        let (code, stopped) = run_installer(&fixture, None, &resume);
+        assert_eq!(code, Some(1), "{stopped:#}");
+        let (code, asked) = run_installer(&fixture, None, &resume);
+        waiting_for(code, &asked, "install:eefixpack-bg1");
+        let log = fs::read(fixture.managed.join("bg1/WeiDU.log")).unwrap();
 
-    let lost = lose_last_ledger_record(&fixture);
-    assert_eq!(lost["event"]["type"], "decision_required", "{lost:#}");
+        let lost = lose_last_ledger_record(&fixture);
+        assert_eq!(lost["event"]["type"], "decision_required", "{lost:#}");
 
-    let (code, asked) = run_installer(&fixture, None, &resume);
-    waiting_for(code, &asked, "install:eefixpack-bg1");
-    let decision = check_decision(&fixture, &install_id);
-    assert_eq!(decision["question"]["failed"]["evidence_attempt"], 1);
-    assert_eq!(
-        fs::read(fixture.managed.join("bg1/WeiDU.log")).unwrap(),
-        log
-    );
+        let (code, asked) = run_installer(&fixture, None, &resume);
+        waiting_for(code, &asked, "install:eefixpack-bg1");
+        decision = check_decision(&fixture, &install_id);
+        assert_eq!(decision["question"]["failed"]["evidence_attempt"], 1);
+        assert_eq!(
+            fs::read(fixture.managed.join("bg1/WeiDU.log")).unwrap(),
+            log
+        );
+    }
 
     decide(&fixture, &decision, "leave-out");
     let (code, resumed) = run_installer(&fixture, None, &resume);
