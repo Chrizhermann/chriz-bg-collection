@@ -1077,6 +1077,60 @@ fn what_needs_part_of_a_bundle_goes_by_that_part() {
     assert!(later_mod_without(&manifest, &[1, 2], &[3]).is_empty());
 }
 
+/// Alternatives in different features of `requires_any`: the one that stays is enough, and the
+/// component leaves with the last of them.
+#[test]
+fn alternatives_across_requires_any_need_only_one_of_them() {
+    let mut manifest = semantic_manifest();
+    add_run(&mut manifest, "one-mod", &[1]);
+    add_run(&mut manifest, "other-mod", &[2]);
+    add_run(&mut manifest, "later-mod", &[4]);
+    manifest.collection.features.extend([
+        feature("one", Decision::Default, component_refs("one-mod", &[1])),
+        feature(
+            "other",
+            Decision::Default,
+            component_refs("other-mod", &[2]),
+        ),
+        Feature {
+            requires_any: vec!["one".to_owned(), "other".to_owned()],
+            ..feature(
+                "needs-either",
+                Decision::Default,
+                component_refs("later-mod", &[4]),
+            )
+        },
+    ]);
+    let mut alternatives = component_refs("one-mod", &[1]);
+    alternatives.extend(component_refs("other-mod", &[2]));
+    manifest.collection.component_needs = vec![ComponentNeeds {
+        component: component_refs("later-mod", &[4]).remove(0),
+        needs: Vec::new(),
+        needs_any: alternatives,
+    }];
+    check(&manifest).unwrap();
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    let later_mod_stays = |failed: Vec<ComponentRef>| {
+        plan_without_parts(
+            &manifest,
+            &evaluation.normalized_selection,
+            &evaluation.plan,
+            &BTreeSet::new(),
+            &failed.into_iter().collect(),
+            &BTreeSet::new(),
+        )
+        .unwrap()
+        .components_for("later-mod")
+        .is_some()
+    };
+
+    assert!(later_mod_stays(component_refs("one-mod", &[1])));
+    assert!(later_mod_stays(component_refs("other-mod", &[2])));
+    let mut both = component_refs("one-mod", &[1]);
+    both.extend(component_refs("other-mod", &[2]));
+    assert!(!later_mod_stays(both));
+}
+
 /// What was never selected did not leave: what names it stays while its mod does. It does not
 /// stand in for what was selected and left, and it does not hold up a mod that is gone.
 #[test]

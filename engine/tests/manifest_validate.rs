@@ -981,6 +981,43 @@ fn component_needs_must_name_what_their_feature_requires() {
     assert!(needs_findings(&manifest)[0].contains("no feature owns it"));
 }
 
+/// Every feature of `requires` must hold on its own, so alternatives cannot reach across them.
+/// Of `requires_any` one is enough, so there they mean what they say.
+#[test]
+fn alternatives_of_a_component_cannot_reach_across_what_it_requires() {
+    let part = |run_id: &str, component: u32| ComponentRef {
+        run_id: run_id.to_owned(),
+        component,
+    };
+    let mut manifest = manifest_with_needs();
+    manifest.collection.features.push(Feature {
+        components: vec![part("eefixpack-bg2", 0)],
+        ..feature("third", Decision::Default)
+    });
+    let second = manifest
+        .collection
+        .features
+        .iter_mut()
+        .find(|feature| feature.id == "second")
+        .unwrap();
+    second.requires = vec!["first".to_owned(), "third".to_owned()];
+    manifest.collection.component_needs = vec![ComponentNeeds {
+        component: part("eefixpack-bg1", 2),
+        needs: Vec::new(),
+        needs_any: vec![part("eefixpack-bg1", 0), part("eefixpack-bg2", 0)],
+    }];
+    assert!(needs_findings(&manifest)[0].contains("every feature it requires must hold"));
+
+    let second = manifest
+        .collection
+        .features
+        .iter_mut()
+        .find(|feature| feature.id == "second")
+        .unwrap();
+    second.requires_any = std::mem::take(&mut second.requires);
+    assert!(needs_findings(&manifest).is_empty());
+}
+
 #[test]
 fn core_components_must_be_components_of_their_feature() {
     let mut manifest = manifest_with_needs();

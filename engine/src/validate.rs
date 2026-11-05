@@ -1486,6 +1486,22 @@ fn check_component_needs(manifest: &Manifest, findings: &mut Vec<Finding>) {
             }
         }
     }
+    let is_below = |need: &ComponentRef, id: &str| {
+        let mut above = owners.get(need).copied();
+        for _ in 0..=features.len() {
+            let Some(feature) = above else {
+                return false;
+            };
+            if feature.id == id {
+                return true;
+            }
+            above = feature
+                .parent
+                .as_deref()
+                .and_then(|parent| features.get(parent).copied());
+        }
+        false
+    };
     let mut seen = BTreeSet::new();
     for entry in &manifest.collection.component_needs {
         let component = &entry.component;
@@ -1517,19 +1533,11 @@ fn check_component_needs(manifest: &Manifest, findings: &mut Vec<Finding>) {
         };
         for need in entry.needs.iter().chain(&entry.needs_any) {
             // A need must lie within a required feature, or it would mean nothing.
-            let mut above = owners.get(need).copied();
-            let mut required = false;
-            for _ in 0..=features.len() {
-                let Some(feature) = above else {
-                    break;
-                };
-                required |= owner.requires.contains(&feature.id)
-                    || owner.requires_any.contains(&feature.id);
-                above = feature
-                    .parent
-                    .as_deref()
-                    .and_then(|id| features.get(id).copied());
-            }
+            let required = owner
+                .requires
+                .iter()
+                .chain(&owner.requires_any)
+                .any(|id| is_below(need, id));
             if !required {
                 error(
                     findings,
@@ -1537,6 +1545,24 @@ fn check_component_needs(manifest: &Manifest, findings: &mut Vec<Finding>) {
                     format!(
                         "{name} needs component {} of run {:?}, which no feature it requires owns",
                         need.component, need.run_id
+                    ),
+                );
+            }
+        }
+        // Every feature of `requires` must hold on its own, so an alternative outside one
+        // could not stand in for it: the entry would promise what the requirement does not keep.
+        for id in &owner.requires {
+            let within = entry
+                .needs_any
+                .iter()
+                .filter(|need| is_below(need, id))
+                .count();
+            if within != 0 && within != entry.needs_any.len() {
+                error(
+                    findings,
+                    RULE_COMPONENT_NEEDS,
+                    format!(
+                        "{name} has alternatives that reach beyond {id:?}, but every feature it requires must hold"
                     ),
                 );
             }
