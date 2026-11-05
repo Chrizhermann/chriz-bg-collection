@@ -1043,7 +1043,8 @@ struct Progress {
     /// The question that the unresolved step asked and that was not withdrawn.
     pending: Option<PendingDecision>,
     /// The install step that left a failed component out and goes on, with the components its
-    /// next attempt installs. Later attempts prove their own remaining components.
+    /// next attempt installs. It stays until that attempt has shown more than its start, which a
+    /// crash can cut short. Later attempts prove their own remaining components.
     continuing: Option<(String, Vec<u32>)>,
     /// The attempt that ran the installer, by step, for a step asking again after a stop: the
     /// attempts that only asked have no evidence of their own.
@@ -1082,6 +1083,9 @@ impl Progress {
                     | SessionEvent::DecisionWithdrawn { .. }
             ) {
                 progress.pending = None;
+            }
+            if !matches!(record.event, SessionEvent::StepStarted { .. }) {
+                progress.continuing = None;
             }
             match &record.event {
                 SessionEvent::DecisionRequired {
@@ -1193,7 +1197,6 @@ impl Progress {
                     }
                     progress.attempts.insert(step_id.clone(), *attempt);
                     progress.unresolved = Some((step_id.clone(), *attempt));
-                    progress.continuing = None;
                 }
                 SessionEvent::StepCompleted { step_id, attempt } => {
                     if progress.unresolved.as_ref() != Some(&(step_id.clone(), *attempt)) {
@@ -2402,6 +2405,21 @@ where
         })
     }
 
+    /// Whether `attempt` is the one that goes on after a left-out component and a crash came
+    /// right after its start: it left no evidence, so it ran nothing, and it can simply run.
+    fn continuation_not_begun(
+        &mut self,
+        step: &PipelineStep,
+        attempt: &StepAttempt,
+    ) -> Result<bool, StepFailure> {
+        let continues = self
+            .progress
+            .continuing
+            .take()
+            .is_some_and(|(step_id, _)| step_id == step.id);
+        Ok(continues && !self.dependencies.attempt_left_evidence(attempt)?)
+    }
+
     /// The plan that remains without the failed part of `run`, and the components of
     /// `not_installed` that the run then still installs. When the run `goes_on`, the first of
     /// `not_installed` failed and the others wait; otherwise all of them failed. Gives the
@@ -3080,60 +3098,71 @@ where
             }
             let attempt = self.attempt(step, *attempt);
             emit_started(self.sink, &step.id, &format!("Resume {}", step.label));
-            match self.question_left_unasked(step, &attempt, &run) {
-                Ok(Some(question)) => {
-                    return self.ask_failed_component(
-                        step,
-                        &attempt,
-                        &run,
-                        &question.failed,
-                        &question.installed_after,
-                        Some(question.ran),
-                    );
-                }
-                Ok(None) => {}
+            let not_begun = match self.continuation_not_begun(step, &attempt) {
+                Ok(not_begun) => not_begun,
                 Err(failure) => {
                     let reason = format!("could not reconcile interrupted evidence: {failure}");
                     return self.seal_fresh_copy(step, &attempt, reason).map(Some);
                 }
-            }
-            match self.dependencies.recover(&run, &attempt) {
-                Ok(InstallReconciliation::ProvenDone) => {
-                    if let Some(outcome) = self.postcondition_failure(step, &run, &attempt)? {
-                        return Ok(Some(outcome));
+            };
+            if not_begun {
+                attempt
+            } else {
+                match self.question_left_unasked(step, &attempt, &run) {
+                    Ok(Some(question)) => {
+                        return self.ask_failed_component(
+                            step,
+                            &attempt,
+                            &run,
+                            &question.failed,
+                            &question.installed_after,
+                            Some(question.ran),
+                        );
                     }
-                    self.complete_step(step, &attempt)?;
-                    return Ok(None);
+                    Ok(None) => {}
+                    Err(failure) => {
+                        let reason = format!("could not reconcile interrupted evidence: {failure}");
+                        return self.seal_fresh_copy(step, &attempt, reason).map(Some);
+                    }
                 }
-                Ok(InstallReconciliation::Retry { remaining })
-                | Ok(InstallReconciliation::PartialPrefix { remaining }) => {
-                    components = validate_remaining(&run, &remaining, None)?;
-                    self.fail_step(
-                        step,
-                        &attempt,
-                        "interrupted attempt reconciled; continuing its exact remaining suffix",
-                    )?;
-                    self.begin_new(step)?
-                }
-                Ok(InstallReconciliation::FailedAmong {
-                    failed,
-                    installed_after,
-                }) => {
-                    return self.ask_failed_component(
-                        step,
-                        &attempt,
-                        &run,
-                        &failed,
-                        &installed_after,
-                        None,
-                    );
-                }
-                Ok(InstallReconciliation::FreshCopyRequired { reason }) => {
-                    return self.seal_fresh_copy(step, &attempt, reason).map(Some);
-                }
-                Err(failure) => {
-                    let reason = format!("could not reconcile interrupted evidence: {failure}");
-                    return self.seal_fresh_copy(step, &attempt, reason).map(Some);
+                match self.dependencies.recover(&run, &attempt) {
+                    Ok(InstallReconciliation::ProvenDone) => {
+                        if let Some(outcome) = self.postcondition_failure(step, &run, &attempt)? {
+                            return Ok(Some(outcome));
+                        }
+                        self.complete_step(step, &attempt)?;
+                        return Ok(None);
+                    }
+                    Ok(InstallReconciliation::Retry { remaining })
+                    | Ok(InstallReconciliation::PartialPrefix { remaining }) => {
+                        components = validate_remaining(&run, &remaining, None)?;
+                        self.fail_step(
+                            step,
+                            &attempt,
+                            "interrupted attempt reconciled; continuing its exact remaining suffix",
+                        )?;
+                        self.begin_new(step)?
+                    }
+                    Ok(InstallReconciliation::FailedAmong {
+                        failed,
+                        installed_after,
+                    }) => {
+                        return self.ask_failed_component(
+                            step,
+                            &attempt,
+                            &run,
+                            &failed,
+                            &installed_after,
+                            None,
+                        );
+                    }
+                    Ok(InstallReconciliation::FreshCopyRequired { reason }) => {
+                        return self.seal_fresh_copy(step, &attempt, reason).map(Some);
+                    }
+                    Err(failure) => {
+                        let reason = format!("could not reconcile interrupted evidence: {failure}");
+                        return self.seal_fresh_copy(step, &attempt, reason).map(Some);
+                    }
                 }
             }
         } else if let Some(attempt) = self.progress.last_failed.get(&step.id).copied() {

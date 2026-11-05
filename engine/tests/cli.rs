@@ -3276,6 +3276,60 @@ components = [{ run_id = "eefixpack-bg2", component = 3 }]
     );
 }
 
+/// The attempt that goes on after a left-out component is recorded before it does anything. A
+/// crash right after that record leaves an attempt that ran nothing, so the next resume runs
+/// what it was to run, and no fresh copy is needed.
+#[cfg(windows)]
+#[test]
+fn a_crash_as_a_run_goes_on_after_a_left_out_component_runs_the_rest() {
+    let fixture = executable_fixture();
+    split_bg1_fixes(&fixture);
+    let decision = install_until_component_fails(&fixture, "0");
+    assert_eq!(decision["question"]["failed"]["continues_with"][0], 2);
+    decide(&fixture, &decision, "leave-out");
+    let resume = ["--json", "resume", fixture.managed.to_str().unwrap()];
+    // A guard stops the attempt before WeiDU. A crash right after its start leaves neither the
+    // record of that failure, nor the attempt's folder, nor the receipt of the stop.
+    let (code, stopped) = run_installer_with(
+        &fixture,
+        None,
+        &[(
+            "CHRIZ_BG_COLLECTION_TEST_FAIL_RECHECK",
+            std::ffi::OsStr::new("invocation-build:install:eefixpack-bg1"),
+        )],
+        &resume,
+    );
+    assert_eq!(code, Some(1), "{stopped:#}");
+    let lost = lose_last_ledger_record(&fixture);
+    assert_eq!(lost["event"]["type"], "step_failed", "{lost:#}");
+    for entry in fs::read_dir(fixture.managed.join(".chriz/attempts")).unwrap() {
+        let path = entry.unwrap().path();
+        if path
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .starts_with("terminal-")
+        {
+            fs::remove_dir_all(path).unwrap();
+        } else {
+            for step in fs::read_dir(path.join("steps")).unwrap() {
+                let attempt = step.unwrap().path().join("attempt-0002");
+                if attempt.is_dir() {
+                    fs::remove_dir_all(attempt).unwrap();
+                }
+            }
+        }
+    }
+
+    let (code, resumed) = run_installer(&fixture, None, &resume);
+
+    assert_eq!(code, Some(0), "{resumed:#}");
+    assert_eq!(resumed["status"]["status"], "complete", "{resumed:#}");
+    let receipt = read_install_receipt(&fixture);
+    let installed = receipt.installed_plan.as_ref().unwrap();
+    assert_eq!(installed.components_for("eefixpack-bg1"), Some(&[2][..]));
+}
+
 /// The part a feature exists for cannot leave once another part of its core is in the game: mods
 /// would take the feature for installed. The player can only try again or stop.
 #[cfg(windows)]
