@@ -1447,6 +1447,20 @@ pub fn plan_without_parts(
     Ok(InstallPlan { runs })
 }
 
+/// The features with a feature of `on` directly below them.
+fn features_with_parts<'a>(
+    manifest: &'a Manifest,
+    on: &BTreeMap<String, bool>,
+) -> BTreeSet<&'a str> {
+    manifest
+        .collection
+        .features
+        .iter()
+        .filter(|feature| on.get(&feature.id).copied().unwrap_or(false))
+        .filter_map(|feature| feature.parent.as_deref())
+        .collect()
+}
+
 /// The features with a component in `in_game`, and the features above them.
 fn features_in_game<'a>(
     features: &BTreeMap<&'a str, &'a Feature>,
@@ -1498,6 +1512,13 @@ impl<'a> Remaining<'a> {
                     .owners
                     .get(part)
                     .is_some_and(|owner| self.is_kept(&owner.id)))
+    }
+
+    /// Whether `part` belonged to this installation before anything left.
+    fn was_selected(&self, part: &ComponentRef) -> bool {
+        self.owners
+            .get(part)
+            .is_some_and(|owner| self.effective.get(&owner.id).copied().unwrap_or(false))
     }
 
     /// Whether `part` belongs to feature `id` or to a feature below it.
@@ -1557,8 +1578,13 @@ impl<'a> Remaining<'a> {
                 .filter(|need| self.belongs_to(need, id))
                 .collect::<Vec<_>>();
             if !all.is_empty() || !any.is_empty() {
-                return all.iter().all(|need| self.available(need))
-                    && (any.is_empty() || any.iter().any(|need| self.available(need)));
+                // What was never selected did not leave, as long as its feature stands.
+                return (self.is_kept(id) || self.there.contains(id))
+                    && all
+                        .iter()
+                        .all(|need| self.available(need) || !self.was_selected(need))
+                    && (any.iter().any(|need| self.available(need))
+                        || !any.iter().any(|need| self.was_selected(need)));
             }
         }
         let core = self.core_of(required);
@@ -1580,12 +1606,14 @@ impl<'a> Remaining<'a> {
                     .any(|required| self.requirement_holds(part, required)))
     }
 
-    /// Takes out, until nothing changes, every feature whose parent is gone and every component
-    /// that lost what it needs. It only removes: what is off stays off, so no conflict can
-    /// arise, and what is in the game stays.
+    /// Takes out, until nothing changes, every feature whose parent is gone, every mod that lost
+    /// all that was chosen of it and every component that lost what it needs. It only removes:
+    /// what is off stays off, so no conflict can arise, and what is in the game stays.
     fn settle(&mut self, manifest: &Manifest) {
+        let had_parts = features_with_parts(manifest, self.effective);
         loop {
             let mut changed = false;
+            let has_parts = features_with_parts(manifest, &self.kept);
             for feature in &manifest.collection.features {
                 if !self.is_kept(&feature.id) {
                     continue;
@@ -1594,7 +1622,14 @@ impl<'a> Remaining<'a> {
                     .parent
                     .as_deref()
                     .is_none_or(|id| self.is_kept(id) || self.there.contains(id));
-                if !has_parent || (feature.components.is_empty() && !self.supported(feature, None))
+                let id = feature.id.as_str();
+                let emptied = feature.components.is_empty()
+                    && had_parts.contains(id)
+                    && !has_parts.contains(id)
+                    && !self.there.contains(id);
+                if !has_parent
+                    || emptied
+                    || (feature.components.is_empty() && !self.supported(feature, None))
                 {
                     self.kept.insert(feature.id.clone(), false);
                     changed = true;

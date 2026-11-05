@@ -4099,30 +4099,30 @@ mod tests {
                 .is_some_and(|chain| chain.contains(&id))
         }
 
-        /// What `part` needs of feature `required`: the components of which all must be there,
-        /// and those of which one must be.
-        fn of(
+        /// What the entry of `part` says it needs of feature `required`: the components of
+        /// which all must be there, and those of which one must be.
+        fn entry_of(
             &self,
             part: Option<&ComponentRef>,
             required: &str,
-        ) -> (Vec<&'a ComponentRef>, Vec<&'a ComponentRef>) {
-            if let Some(entry) = part.and_then(|part| self.entries.get(part)) {
-                let below = |need: &&'a ComponentRef| self.is_below(need, required);
-                let all = entry.needs.iter().filter(below).collect::<Vec<_>>();
-                let any = entry.needs_any.iter().filter(below).collect::<Vec<_>>();
-                if !all.is_empty() || !any.is_empty() {
-                    return (all, any);
-                }
-            }
+        ) -> Option<(Vec<&'a ComponentRef>, Vec<&'a ComponentRef>)> {
+            let entry = self.entries.get(part?)?;
+            let below = |need: &&'a ComponentRef| self.is_below(need, required);
+            let all = entry.needs.iter().filter(below).collect::<Vec<_>>();
+            let any = entry.needs_any.iter().filter(below).collect::<Vec<_>>();
+            (!all.is_empty() || !any.is_empty()).then_some((all, any))
+        }
+
+        /// What is needed of feature `required` without an entry that says more.
+        fn core_of(&self, required: &str) -> Vec<&'a ComponentRef> {
             let wanted = self.features[required];
             if !wanted.core_components.is_empty() {
-                return (wanted.core_components.iter().collect(), Vec::new());
+                return wanted.core_components.iter().collect();
             }
             if !wanted.components.is_empty() {
-                return (wanted.components.iter().collect(), Vec::new());
+                return wanted.components.iter().collect();
             }
-            let parts = self
-                .features
+            self.features
                 .values()
                 .filter(|child| {
                     child.parent.as_deref() == Some(required)
@@ -4133,8 +4133,7 @@ mod tests {
                             .any(|part| self.planned.contains(part))
                 })
                 .flat_map(|child| child.core_components.iter())
-                .collect();
-            (parts, Vec::new())
+                .collect()
         }
 
         /// Whether all that `part` of `owner` needs is in `there`. A mod that names no core is
@@ -4147,12 +4146,21 @@ mod tests {
             part: Option<&ComponentRef>,
         ) -> bool {
             let holds = |required: &String| {
-                let (all, any) = self.of(part, required);
-                if all.is_empty() && any.is_empty() {
-                    return features_there.contains(required.as_str());
+                let stands = features_there.contains(required.as_str());
+                let is_there = |need: &&ComponentRef| there.contains(*need);
+                let was_planned = |need: &&ComponentRef| self.planned.contains(*need);
+                if let Some((all, any)) = self.entry_of(part, required) {
+                    // What was never planned did not leave.
+                    return stands
+                        && all.iter().all(|need| is_there(need) || !was_planned(need))
+                        && (any.iter().any(is_there) || !any.iter().any(was_planned));
                 }
-                all.iter().all(|need| there.contains(*need))
-                    && (any.is_empty() || any.iter().any(|need| there.contains(*need)))
+                let core = self.core_of(required);
+                if core.is_empty() {
+                    stands
+                } else {
+                    core.iter().all(is_there)
+                }
             };
             owner.requires.iter().all(holds)
                 && (owner.requires_any.is_empty() || owner.requires_any.iter().any(holds))
@@ -4342,6 +4350,43 @@ mod tests {
         assert!(what_leaves_with(&manifest, &evaluation, "eeex-bg2", 5).is_empty());
     }
 
+    /// Modpack 440 reworks Ascension's Slayer spells, and the player can untick them: nothing it
+    /// needs left when something else of Ascension fails, but it leaves with Ascension.
+    #[test]
+    fn a_need_the_player_unticked_did_not_leave() {
+        let manifest = curated();
+        let mut selection = Selection {
+            platform: "windows".to_owned(),
+            choices: manifest.presets["chris-recommended"].selections.clone(),
+        };
+        selection.set_feature("feature:ascension:component-50", false);
+        let evaluation = evaluate(&manifest, &selection).unwrap();
+        let plan = &evaluation.plan;
+        let modpack = "chriz-bg-modpack-bg2";
+        let ascension = plan.components_for("ascension-bg2").unwrap();
+        assert!(!ascension.contains(&50), "{ascension:?}");
+        assert!(plan.components_for(modpack).unwrap().contains(&440));
+
+        let left = what_leaves_with(&manifest, &evaluation, "ascension-bg2", 60);
+        assert!(!left.contains(&(modpack.to_owned(), 440)), "{left:?}");
+
+        let fixed_part = ComponentRef {
+            run_id: "ascension-bg2".to_owned(),
+            component: 1000,
+        };
+        let kept = plan_without_parts(
+            &manifest,
+            &evaluation.normalized_selection,
+            plan,
+            &BTreeSet::new(),
+            &BTreeSet::from([fixed_part]),
+            &BTreeSet::new(),
+        )
+        .unwrap();
+        assert!(kept.components_for("ascension-bg2").is_none());
+        assert!(!kept.components_for(modpack).unwrap().contains(&440));
+    }
+
     /// Whatever requires a feature of several components must say what it needs of it, or a
     /// failed extra would take it along: by its own entry, or by the feature's core.
     #[test]
@@ -4356,7 +4401,9 @@ mod tests {
                     .iter()
                     .filter(|part| needs.planned.contains(*part))
                 {
-                    let (all, any) = needs.of(Some(part), required);
+                    let (all, any) = needs
+                        .entry_of(Some(part), required)
+                        .unwrap_or_else(|| (needs.core_of(required), Vec::new()));
                     let of_core = all.iter().all(|need| {
                         needs.owners.get(*need).is_some_and(|chain| {
                             needs.features[chain[0]].core_components.contains(*need)

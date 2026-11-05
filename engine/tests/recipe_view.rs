@@ -1077,6 +1077,122 @@ fn what_needs_part_of_a_bundle_goes_by_that_part() {
     assert!(later_mod_without(&manifest, &[1, 2], &[3]).is_empty());
 }
 
+/// What was never selected did not leave: what names it stays while its mod does. It does not
+/// stand in for what was selected and left, and it does not hold up a mod that is gone.
+#[test]
+fn a_need_that_was_never_selected_takes_nothing_along() {
+    let mut manifest = semantic_manifest();
+    add_run(&mut manifest, "split-mod", &[1, 2, 3]);
+    add_run(&mut manifest, "later-mod", &[4, 5]);
+    let part = |id: &str, decision: Decision, component: u32| Feature {
+        parent: Some("split".to_owned()),
+        ..feature(id, decision, component_refs("split-mod", &[component]))
+    };
+    let dependent = |id: &str, component: u32| Feature {
+        requires: vec!["split".to_owned()],
+        ..feature(
+            id,
+            Decision::Default,
+            component_refs("later-mod", &[component]),
+        )
+    };
+    manifest.collection.features.extend([
+        feature("split", Decision::Default, Vec::new()),
+        part("split-core", Decision::Mandatory, 1),
+        part("split-extra", Decision::Default, 2),
+        part("split-off", Decision::Optional, 3),
+        dependent("names-the-one-off", 4),
+        dependent("names-either", 5),
+    ]);
+    manifest.collection.component_needs = vec![
+        ComponentNeeds {
+            component: component_refs("later-mod", &[4]).remove(0),
+            needs: component_refs("split-mod", &[3]),
+            needs_any: Vec::new(),
+        },
+        ComponentNeeds {
+            component: component_refs("later-mod", &[5]).remove(0),
+            needs: Vec::new(),
+            needs_any: component_refs("split-mod", &[1, 3]),
+        },
+    ];
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    let later_mod = |failed: &[u32], in_game: &[u32]| {
+        plan_without_parts(
+            &manifest,
+            &evaluation.normalized_selection,
+            &evaluation.plan,
+            &BTreeSet::new(),
+            &component_refs("split-mod", failed).into_iter().collect(),
+            &component_refs("split-mod", in_game).into_iter().collect(),
+        )
+        .unwrap()
+        .components_for("later-mod")
+        .unwrap_or(&[])
+        .to_vec()
+    };
+
+    assert_eq!(later_mod(&[2], &[1]), [4, 5]);
+    assert_eq!(later_mod(&[1], &[2]), [4]);
+    assert!(later_mod(&[1], &[]).is_empty());
+}
+
+/// A mod is gone once all that was chosen of it left, and what needs it leaves too. A mod with
+/// nothing chosen of it has lost nothing.
+#[test]
+fn a_mod_that_lost_all_its_parts_takes_along_what_needs_it() {
+    let mut manifest = semantic_manifest();
+    add_run(&mut manifest, "split-mod", &[1, 2]);
+    add_run(&mut manifest, "other-mod", &[3]);
+    add_run(&mut manifest, "later-mod", &[4]);
+    let part = |id: &str, decision: Decision, component: u32| Feature {
+        parent: Some("split".to_owned()),
+        ..feature(id, decision, component_refs("split-mod", &[component]))
+    };
+    manifest.collection.features.extend([
+        feature("split", Decision::Default, Vec::new()),
+        part("split-one", Decision::Default, 1),
+        part("split-other", Decision::Optional, 2),
+        feature(
+            "other",
+            Decision::Default,
+            component_refs("other-mod", &[3]),
+        ),
+        Feature {
+            requires: vec!["split".to_owned()],
+            ..feature(
+                "needs-mod",
+                Decision::Default,
+                component_refs("later-mod", &[4]),
+            )
+        },
+    ]);
+    let later_mod_stays = |selection: &Selection, failed: Vec<ComponentRef>| {
+        let evaluation = evaluate(&manifest, selection).unwrap();
+        plan_without_parts(
+            &manifest,
+            &evaluation.normalized_selection,
+            &evaluation.plan,
+            &BTreeSet::new(),
+            &failed.into_iter().collect(),
+            &BTreeSet::new(),
+        )
+        .unwrap()
+        .components_for("later-mod")
+        .is_some()
+    };
+
+    let chosen = Selection::defaults("windows");
+    assert!(!later_mod_stays(&chosen, component_refs("split-mod", &[1])));
+
+    let mut nothing_of_it = Selection::defaults("windows");
+    nothing_of_it.set_feature("split-one", false);
+    assert!(later_mod_stays(
+        &nothing_of_it,
+        component_refs("other-mod", &[3])
+    ));
+}
+
 /// What a feature exists for: what requires it needs its core, not its extras, and the game
 /// must not hold only part of that core.
 #[test]

@@ -9913,7 +9913,7 @@ needs = [{ run_id = "stratagems-bg2", component = 5900 }]
 
 [[component_needs]]
 component = { run_id = "chriz-bg-modpack-bg2", component = 440 }
-needs = [{ run_id = "ascension-bg2", component = 0 }]
+needs = [{ run_id = "ascension-bg2", component = 50 }]
 
 [[component_needs]]
 component = { run_id = "chriz-bg-modpack-bg2", component = 450 }
