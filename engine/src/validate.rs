@@ -103,6 +103,9 @@ pub const RULE_FEATURE_CYCLES: &str = "feature-cycles";
 pub const RULE_FEATURE_DEFAULT_CONFLICTS: &str = "feature-default-conflicts";
 /// Rule requiring one semantic owner for each exact run component.
 pub const RULE_FEATURE_COMPONENT_OWNERSHIP: &str = "feature-component-ownership";
+/// Rule requiring core components and component needs to name what their features own and
+/// require.
+pub const RULE_COMPONENT_NEEDS: &str = "component-needs";
 /// Rule requiring typed feature inputs to have coherent defaults and bounds.
 pub const RULE_FEATURE_INPUTS: &str = "feature-inputs";
 /// Rule requiring prompt input references to resolve to declared typed inputs.
@@ -150,6 +153,7 @@ pub fn validate(manifest: &Manifest) -> Vec<Finding> {
     check_feature_cycles(manifest, &mut findings);
     check_feature_default_conflicts(manifest, &mut findings);
     check_feature_component_ownership(manifest, &mut findings);
+    check_component_needs(manifest, &mut findings);
     check_feature_inputs(manifest, &mut findings);
     check_prompt_input_references(manifest, &mut findings);
     check_feature_readiness(manifest, &mut findings);
@@ -1448,6 +1452,117 @@ fn check_feature_component_ownership(manifest: &Manifest, findings: &mut Vec<Fin
                     format!(
                         "run {:?} component {} is owned by both {:?} and {:?}",
                         component.run_id, component.component, first_owner, feature.id
+                    ),
+                );
+            }
+        }
+    }
+}
+
+fn check_component_needs(manifest: &Manifest, findings: &mut Vec<Finding>) {
+    let features = manifest
+        .collection
+        .features
+        .iter()
+        .map(|feature| (feature.id.as_str(), feature))
+        .collect::<BTreeMap<_, _>>();
+    let owners = manifest
+        .collection
+        .features
+        .iter()
+        .flat_map(|feature| feature.components.iter().map(move |part| (part, feature)))
+        .collect::<BTreeMap<_, _>>();
+    for feature in &manifest.collection.features {
+        for part in feature.core_components.iter().flatten() {
+            if !feature.components.contains(part) {
+                error(
+                    findings,
+                    RULE_COMPONENT_NEEDS,
+                    format!(
+                        "core component {} of run {:?} is not a component of feature {:?}",
+                        part.component, part.run_id, feature.id
+                    ),
+                );
+            }
+        }
+    }
+    let is_below = |need: &ComponentRef, id: &str| {
+        let mut above = owners.get(need).copied();
+        for _ in 0..=features.len() {
+            let Some(feature) = above else {
+                return false;
+            };
+            if feature.id == id {
+                return true;
+            }
+            above = feature
+                .parent
+                .as_deref()
+                .and_then(|parent| features.get(parent).copied());
+        }
+        false
+    };
+    let mut seen = BTreeSet::new();
+    for entry in &manifest.collection.component_needs {
+        let component = &entry.component;
+        let name = format!(
+            "component {} of run {:?}",
+            component.component, component.run_id
+        );
+        if !seen.insert(component) {
+            error(
+                findings,
+                RULE_COMPONENT_NEEDS,
+                format!("{name} has more than one entry of needs"),
+            );
+        }
+        if entry.needs.is_empty() && entry.needs_any.is_empty() {
+            error(
+                findings,
+                RULE_COMPONENT_NEEDS,
+                format!("{name} has an entry of needs that names nothing"),
+            );
+        }
+        let Some(owner) = owners.get(component) else {
+            error(
+                findings,
+                RULE_COMPONENT_NEEDS,
+                format!("{name} has needs, but no feature owns it"),
+            );
+            continue;
+        };
+        for need in entry.needs.iter().chain(&entry.needs_any) {
+            // A need must lie within a required feature, or it would mean nothing.
+            let required = owner
+                .requires
+                .iter()
+                .chain(&owner.requires_any)
+                .any(|id| is_below(need, id));
+            if !required {
+                error(
+                    findings,
+                    RULE_COMPONENT_NEEDS,
+                    format!(
+                        "{name} needs component {} of run {:?}, which no feature it requires owns",
+                        need.component, need.run_id
+                    ),
+                );
+            }
+        }
+        // Every feature of `requires` must hold on its own, so an alternative outside one
+        // could not stand in for it: the entry would promise what the requirement does not keep.
+        for id in &owner.requires {
+            let within = entry
+                .needs_any
+                .iter()
+                .filter(|need| is_below(need, id))
+                .count();
+            if within != 0 && within != entry.needs_any.len() {
+                error(
+                    findings,
+                    RULE_COMPONENT_NEEDS,
+                    format!(
+                        "{name} has alternatives that reach beyond {id:?}, but every feature it requires must hold"
                     ),
                 );
             }

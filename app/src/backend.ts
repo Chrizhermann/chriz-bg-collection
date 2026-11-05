@@ -70,7 +70,7 @@ export interface Backend {
   checkManualCheckpoint?(installId: string): Promise<ManualCheckpointStatus>;
   acceptManualCheckpoint?(installId: string, reviewToken: string, acceptAdditions: boolean): Promise<void>;
   openManualCheckpointFolder?(installId: string): Promise<void>;
-  /** The question about a download that a resumable installation waits for, or null. */
+  /** The question that a resumable installation waits for, or null. */
   getPendingDecision?(installId: string): Promise<PendingDecision | null>;
   /** Stores the answer; resuming the installation applies it. */
   answerDecision?(installId: string, decisionId: string, token: string, answer: DecisionAnswer): Promise<void>;

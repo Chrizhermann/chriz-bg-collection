@@ -223,13 +223,14 @@ export interface ManualCheckpointStatus {
   readonly customized: boolean;
 }
 
-/** One answer to a question about a download, as the engine spells it. */
-export type DecisionAnswer = "yes" | "no" | "leave_out";
+/** One answer to a question, as the engine spells it. */
+export type DecisionAnswer = "yes" | "no" | "leave_out" | "retry";
 
 /**
- * A question about a download that an installation waits for: a newer download, a download
- * that cannot be used, or a newer installer tool from a host the collection did not review.
- * The engine renders every text; the app only shows them.
+ * A question that an installation waits for: a newer download, a download that cannot be used,
+ * a newer installer tool from a host the collection did not review, a source game that looks
+ * modded, or a mod's component whose installer failed. The engine renders every text; the app
+ * only shows them.
  */
 export interface PendingDecision {
   readonly installId: string;
@@ -237,7 +238,7 @@ export interface PendingDecision {
   readonly decisionId: string;
   /** Binds the answer to exactly this question. */
   readonly token: string;
-  readonly kind: "changed_download" | "unusable_download" | "unreviewed_tool" | "modded_source";
+  readonly kind: "changed_download" | "unusable_download" | "unreviewed_tool" | "modded_source" | "failed_component";
   readonly artifactId: string;
   readonly message: string;
   readonly details: readonly string[];
@@ -270,7 +271,7 @@ export type EngineEvent =
   | { readonly type: "manual_download_needed"; readonly mod_id: string; readonly page: string; readonly expected_sha256: string; readonly drop_dir: string }
   /** A mod's changed download cannot be used: the installation continues without it and what needs it. */
   | { readonly type: "artifact_left_out"; readonly artifact_id: string; readonly reason: string; readonly runs: readonly string[]; readonly changed_runs: readonly string[]; readonly failed_run?: string }
-  /** A step asks the player a question about a download; the installation waits for the answer. */
+  /** A step asks the player a question; the installation waits for the answer. */
   | { readonly type: "decision_required"; readonly install_id: string; readonly step_id: string; readonly decision_id: string }
   | { readonly type: "error"; readonly step_id: string | null; readonly message: string };
 

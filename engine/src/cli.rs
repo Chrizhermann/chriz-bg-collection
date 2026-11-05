@@ -22,7 +22,7 @@ use crate::acquire::{
     MaterializationRequest, ServedRedirects, ServedRules, StopSignal, DEFAULT_DOWNLOAD_ATTEMPTS,
 };
 use crate::decision::{
-    answered_decisions, Answer, AnswerSource, PendingDecision, PresetAnswers, Question,
+    answered_decisions, Answer, AnswerSource, FailedPart, PendingDecision, PresetAnswers, Question,
     QuestionKind, ServedDownload, UnusableKind, UnusableReason,
 };
 use crate::diagnostics::{export_diagnostics, DiagnosticsBundle, DiagnosticsRequest};
@@ -366,8 +366,8 @@ pub enum CampaignStatus {
         /// Durable, user-facing reason.
         reason: String,
     },
-    /// A step asked a question about a download and waits for the answer: `check-decision`
-    /// shows it, `decide` answers it, and `resume` continues. Resumable, not an error.
+    /// A step asked a question and waits for the answer: `check-decision` shows it, `decide`
+    /// answers it, and `resume` continues. Resumable, not an error.
     DecisionRequired {
         /// The step that asks.
         step_id: String,
@@ -378,7 +378,7 @@ pub enum CampaignStatus {
     },
 }
 
-/// A question about a download that waits for the player's answer, for `check-decision`.
+/// A question that waits for the player's answer, for `check-decision`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DecisionStatus {
@@ -425,7 +425,7 @@ pub struct AnswerText {
     pub label: String,
 }
 
-/// An answer to a question about a download, stored once per question by `decide`.
+/// An answer to a question, stored once per question by `decide`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct AnswerRecord {
@@ -1456,8 +1456,8 @@ fn read_decision_answer(
     }
     Ok(Some(record))
 }
-/// The question about a download that the installation at `managed_root` waits for, with its
-/// English texts and the token that `decide` needs; `None` when it waits for nothing.
+/// The question that the installation at `managed_root` waits for, with its English texts and
+/// the token that `decide` needs; `None` when it waits for nothing.
 pub fn inspect_decision(
     managed_root: &Path,
     expected_install_id: &str,
@@ -1586,6 +1586,172 @@ fn left_out_runs(replay: &SessionReplay) -> BTreeSet<String> {
         .flatten()
         .collect()
 }
+/// The title the player knows component `component` of planned run `run_id` by: the title of the
+/// feature that installs it, or else its number. An option of a choice is named with its choice,
+/// because its title alone, such as "Maximum", says little.
+fn component_title(frozen: &FrozenCliRecipe, run_id: &str, component: u32) -> String {
+    let recipe_run = crate::recipe_view::recipe_run_in(&frozen.collection, run_id)
+        .map_or(run_id, |run| run.run_id.as_str());
+    let feature = frozen.collection.features.iter().find(|feature| {
+        feature
+            .components
+            .iter()
+            .any(|part| part.run_id == recipe_run && part.component == component)
+    });
+    match feature {
+        Some(feature) => match (&feature.choice_group, &feature.group_label) {
+            (Some(_), Some(group)) => format!("{group}: {}", feature.title),
+            _ => feature.title.clone(),
+        },
+        None => format!("Component {component}"),
+    }
+}
+
+/// The name the player knows the mod `mod_id` by: the source name its features show, or else
+/// the name of its installer.
+fn mod_display_name(frozen: &FrozenCliRecipe, mod_id: &str) -> String {
+    frozen
+        .collection
+        .features
+        .iter()
+        .find(|feature| {
+            feature.components.iter().any(|part| {
+                frozen
+                    .collection
+                    .runs
+                    .iter()
+                    .any(|run| run.run_id == part.run_id && run.mod_id == mod_id)
+            })
+        })
+        .and_then(|feature| feature.source_label.clone())
+        .or_else(|| {
+            frozen
+                .mods
+                .get(mod_id)
+                .map(|installer| installer.name.clone())
+        })
+        .unwrap_or_else(|| mod_id.to_owned())
+}
+
+/// The name of the mod that planned run `run_id` installs from `artifact_id`.
+fn run_mod_name(frozen: &FrozenCliRecipe, run_id: &str, artifact_id: &str) -> String {
+    frozen
+        .plan
+        .runs
+        .iter()
+        .find(|run| run.run_id == run_id)
+        .map_or_else(
+            || frozen_artifact_name(frozen, artifact_id),
+            |run| mod_display_name(frozen, &run.mod_id),
+        )
+}
+
+/// What the player knows the failed `component` of planned run `run_id` by: as
+/// [`component_title`], or by its own name when its feature installs more than this component,
+/// because the rest of that feature may stay.
+fn failed_component_title(frozen: &FrozenCliRecipe, run_id: &str, component: u32) -> String {
+    crate::recipe_view::recipe_run_in(&frozen.collection, run_id)
+        .filter(|run| {
+            frozen.collection.features.iter().any(|feature| {
+                feature.components.len() > 1
+                    && feature
+                        .components
+                        .iter()
+                        .any(|part| part.run_id == run.run_id && part.component == component)
+            })
+        })
+        .and_then(|run| frozen.mods.get(&run.mod_id))
+        .and_then(|installer| installer.components.iter().find(|own| own.id == component))
+        .map_or_else(
+            || component_title(frozen, run_id, component),
+            |own| own.name.clone(),
+        )
+}
+
+/// The titles of what failed in `part`, each once.
+fn failed_titles(frozen: &FrozenCliRecipe, part: &FailedPart) -> Vec<String> {
+    let mut titles = Vec::<String>::new();
+    for component in part.left_out() {
+        let title = failed_component_title(frozen, &part.run_id, component);
+        if !titles.contains(&title) {
+            titles.push(title);
+        }
+    }
+    titles
+}
+
+/// "<component> (<mod>)", what failed in `part` in the player's words.
+fn failed_part_name(frozen: &FrozenCliRecipe, artifact_id: &str, part: &FailedPart) -> String {
+    let titles = failed_titles(frozen, part);
+    let named = match titles.as_slice() {
+        [] => "A component".to_owned(),
+        [first, second] => format!("{first} and {second}"),
+        titles => short_list(titles),
+    };
+    format!(
+        "{named} ({})",
+        run_mod_name(frozen, &part.run_id, artifact_id)
+    )
+}
+
+/// The other parts of the failed mod that leave with the failed component of `part`, by title:
+/// those it did not reach and those of its other runs.
+fn parts_leaving_with(
+    frozen: &FrozenCliRecipe,
+    artifact_id: &str,
+    part: &FailedPart,
+    removed: &[String],
+    kept_components: impl Fn(&str) -> Option<Vec<u32>>,
+) -> Vec<String> {
+    let failed_titles = failed_titles(frozen, part);
+    let failed = part.left_out();
+    let mut titles = Vec::<String>::new();
+    let mut add = |run_id: &str, component: u32| {
+        let title = component_title(frozen, run_id, component);
+        if !failed_titles.contains(&title) && !titles.contains(&title) {
+            titles.push(title);
+        }
+    };
+    for component in part
+        .components
+        .iter()
+        .filter(|component| !failed.contains(component) && !part.continues_with.contains(component))
+    {
+        add(&part.run_id, *component);
+    }
+    for run in frozen
+        .plan
+        .runs
+        .iter()
+        .filter(|run| run.artifact_id == artifact_id && run.run_id != part.run_id)
+    {
+        let kept = kept_components(&run.run_id);
+        for component in &run.components {
+            let leaves = removed.contains(&run.run_id)
+                || kept.as_ref().is_some_and(|kept| !kept.contains(component));
+            if leaves {
+                add(&run.run_id, *component);
+            }
+        }
+    }
+    titles
+}
+
+/// `names`, joined, with a long list cut short: the question stays readable, and its details
+/// keep the whole list.
+fn short_list(names: &[String]) -> String {
+    const SHOWN: usize = 6;
+    if names.len() <= SHOWN + 1 {
+        names.join(", ")
+    } else {
+        format!(
+            "{} and {} more",
+            names[..SHOWN].join(", "),
+            names.len() - SHOWN
+        )
+    }
+}
+
 /// One sentence that names `question`, for the installation log and "You chose to stop: …".
 fn question_summary(frozen: &FrozenCliRecipe, question: &Question) -> String {
     if question.kind == QuestionKind::ModdedSource {
@@ -1593,6 +1759,12 @@ fn question_summary(frozen: &FrozenCliRecipe, question: &Question) -> String {
         return format!(
             "your {game} game at {} looks modded already.",
             source.root.display()
+        );
+    }
+    if let Some(part) = &question.failed {
+        return format!(
+            "{} could not be installed.",
+            failed_part_name(frozen, &question.artifact_id, part)
         );
     }
     let name = frozen_artifact_name(frozen, &question.artifact_id);
@@ -1618,12 +1790,7 @@ fn affected_mods(
     changed: &[String],
     remaining: &BTreeSet<String>,
 ) -> (Vec<String>, Vec<String>) {
-    let name = |mod_id: &str| {
-        frozen
-            .mods
-            .get(mod_id)
-            .map_or_else(|| mod_id.to_owned(), |installer| installer.name.clone())
-    };
+    let name = |mod_id: &str| mod_display_name(frozen, mod_id);
     let (mut left_out, mut reduced) = (Vec::<String>::new(), Vec::<String>::new());
     for run in frozen
         .plan
@@ -1665,6 +1832,34 @@ fn affected_mods(
         }
     }
     (left_out, reduced)
+}
+
+/// The other mods that a leaving out of `artifact_id` shortened and that left the plan later:
+/// a later failure names only what failed then, so this answer names them.
+fn mods_gone_later(
+    frozen: &FrozenCliRecipe,
+    artifact_id: &str,
+    changed: &[String],
+    remaining: &BTreeSet<String>,
+) -> Vec<String> {
+    let mut names = Vec::<String>::new();
+    for run in frozen
+        .plan
+        .runs
+        .iter()
+        .filter(|run| changed.contains(&run.run_id) && run.artifact_id != artifact_id)
+    {
+        let still_installed = frozen
+            .plan
+            .runs
+            .iter()
+            .any(|other| other.mod_id == run.mod_id && remaining.contains(&other.run_id));
+        let name = mod_display_name(frozen, &run.mod_id);
+        if !still_installed && !names.contains(&name) {
+            names.push(name);
+        }
+    }
+    names
 }
 
 /// The game a [`QuestionKind::ModdedSource`] question is about, and its frozen source.
@@ -1719,6 +1914,9 @@ fn render_question(
     };
     let after_no = "You chose to stop. Resume this installation to check the download again.";
     match question.kind {
+        QuestionKind::FailedComponent => {
+            render_failed_component(frozen, question, &dependents, &reduced, stop)
+        }
         QuestionKind::ModdedSource => {
             let (game, source) = source_of_question(frozen, question);
             QuestionTexts {
@@ -1849,6 +2047,128 @@ fn render_question(
                 after_no: after_no.to_owned(),
             }
         }
+    }
+}
+
+/// A [`QuestionKind::FailedComponent`] question in the player's words: `dependents` are the
+/// other mods that leave with the component, `reduced` those that lose parts.
+fn render_failed_component(
+    frozen: &FrozenCliRecipe,
+    question: &Question,
+    dependents: &[String],
+    reduced: &[String],
+    stop: AnswerText,
+) -> QuestionTexts {
+    let retry = AnswerText {
+        answer: Answer::Retry,
+        label: "Try again".to_owned(),
+    };
+    let Some(part) = &question.failed else {
+        return QuestionTexts {
+            message: "A part of this collection could not be installed.".to_owned(),
+            details: Vec::new(),
+            answers: vec![retry, stop],
+            focus: Answer::Retry,
+            after_no: String::new(),
+        };
+    };
+    let after_no = if part.can_retry() {
+        "You chose to stop. Resume this installation to try this part again."
+    } else {
+        "You chose to stop. Resume this installation to answer again."
+    }
+    .to_owned();
+    let name = failed_part_name(frozen, &question.artifact_id, part);
+    let own_mod = run_mod_name(frozen, &part.run_id, &question.artifact_id);
+    let numbers = part
+        .left_out()
+        .iter()
+        .map(u32::to_string)
+        .collect::<Vec<_>>()
+        .join(", ");
+    let mut details = vec![format!("Run {}, component {numbers}", part.run_id)];
+    if let Some(error) = &part.error {
+        details.push(format!("The installer said: {error}"));
+    }
+    let Some(closure) = &question.leave_out else {
+        if let Some(required) = &part.required {
+            details.push(required.clone());
+        }
+        return QuestionTexts {
+            message: format!(
+                "{name} could not be installed, and the installation can't go on without it. Try again?"
+            ),
+            details,
+            answers: vec![retry, stop],
+            focus: Answer::Retry,
+            after_no,
+        };
+    };
+    let own_parts = parts_leaving_with(
+        frozen,
+        &question.artifact_id,
+        part,
+        &closure.removed_runs,
+        |run_id| {
+            closure
+                .changed_runs
+                .iter()
+                .find(|run| run.run_id == run_id)
+                .map(|run| run.components.clone())
+        },
+    );
+    let reduced = reduced
+        .iter()
+        .filter(|name| **name != own_mod)
+        .cloned()
+        .collect::<Vec<_>>();
+    let it = if part.left_out().len() > 1 {
+        "them"
+    } else {
+        "it"
+    };
+    let mut message = format!("{name} could not be installed. Leave {it} out and continue?");
+    if !part.can_retry() {
+        details.push(format!(
+            "The installer went on after the error, so trying again would install {it} out of order."
+        ));
+    }
+    if !own_parts.is_empty() {
+        message.push_str(&format!(
+            " The parts of {own_mod} that need {it} are left out too: {}.",
+            short_list(&own_parts)
+        ));
+        details.push(format!(
+            "Also left out of {own_mod}: {}",
+            own_parts.join(", ")
+        ));
+    }
+    if !dependents.is_empty() {
+        message.push_str(&format!(
+            " The mods that depend on {it} are left out too: {}.",
+            short_list(dependents)
+        ));
+    }
+    if !reduced.is_empty() {
+        message.push_str(&format!(
+            " Installed without the parts that need {it}: {}.",
+            short_list(&reduced)
+        ));
+    }
+    let mut answers = vec![AnswerText {
+        answer: Answer::LeaveOut,
+        label: format!("Leave {it} out and continue"),
+    }];
+    if part.can_retry() {
+        answers.push(retry);
+    }
+    answers.push(stop);
+    QuestionTexts {
+        message,
+        details,
+        answers,
+        focus: Answer::LeaveOut,
+        after_no,
     }
 }
 
@@ -2092,7 +2412,7 @@ pub fn report_managed_install(managed_root: &Path) -> Result<ManagedReport, CliE
         )
     })?;
     let recovery = recovery::report_recovery(&managed_root, &receipt, &frozen)?;
-    let notes = receipt_notes(&receipt, &frozen);
+    let notes = receipt_notes(&receipt, &frozen, &replay.records);
     Ok(ManagedReport {
         managed_root,
         receipt,
@@ -2103,8 +2423,27 @@ pub fn report_managed_install(managed_root: &Path) -> Result<ManagedReport, CliE
 
 /// End-summary lines, in English, for what a receipt records about changed downloads: one per
 /// answer that took effect, and the earlier generic lines for whatever no answer covers.
-fn receipt_notes(receipt: &InstallReceipt, frozen: &FrozenCliRecipe) -> Vec<String> {
+fn receipt_notes(
+    receipt: &InstallReceipt,
+    frozen: &FrozenCliRecipe,
+    records: &[crate::session::LedgerRecord],
+) -> Vec<String> {
     let artifact_name = |id: &str| frozen_artifact_name(frozen, id);
+    // A later answer can take the rest of a run, so the installed plan cannot say what an
+    // earlier one left out of it. Its question recorded what each run kept.
+    let kept_after = answered_decisions(records)
+        .into_iter()
+        .map(|decision| {
+            let kept = decision
+                .question
+                .leave_out
+                .iter()
+                .flat_map(|closure| &closure.changed_runs)
+                .map(|run| (run.run_id.clone(), run.components.clone()))
+                .collect::<BTreeMap<_, _>>();
+            (decision.decision_id, kept)
+        })
+        .collect::<BTreeMap<_, _>>();
     // A mod still installed with other runs lost only parts; one without runs was left out.
     let remaining = receipt
         .effective_plan()
@@ -2123,9 +2462,10 @@ fn receipt_notes(receipt: &InstallReceipt, frozen: &FrozenCliRecipe) -> Vec<Stri
                 && decision.answer != Answer::No
         })
         .collect::<Vec<_>>();
-    let answered_leave_out = |id: &str| {
+    let answered_leave_out = |left_out: &crate::receipt::LeftOutReceipt| {
         effective.iter().any(|decision| {
-            decision.artifact_id == id
+            decision.artifact_id == left_out.artifact_id
+                && decision.failed.as_ref().map(|part| &part.run_id) == left_out.failed_run.as_ref()
                 && match decision.kind {
                     QuestionKind::UnusableDownload => decision.answer == Answer::Yes,
                     _ => decision.answer == Answer::LeaveOut,
@@ -2140,6 +2480,8 @@ fn receipt_notes(receipt: &InstallReceipt, frozen: &FrozenCliRecipe) -> Vec<Stri
         })
     };
     let mut notes = Vec::new();
+    // The parts of a mod that a line named already: answers add up, each names its own.
+    let mut named_parts = BTreeSet::new();
     let left_out_in_the_end = |id: &str| {
         receipt
             .left_out
@@ -2155,6 +2497,68 @@ fn receipt_notes(receipt: &InstallReceipt, frozen: &FrozenCliRecipe) -> Vec<Stri
                 .unwrap_or_else(|| format!("{} bytes", served.length))
         });
         match (decision.kind, decision.answer) {
+            // Trying again changes nothing by itself: what became of the part has its own line.
+            (_, Answer::Retry) => {}
+            (QuestionKind::FailedComponent, _) => {
+                let Some(part) = &decision.failed else {
+                    continue;
+                };
+                let mut note = format!(
+                    "You chose to continue without {}: its installer stopped with an error.",
+                    failed_part_name(frozen, &decision.artifact_id, part)
+                );
+                let own_mod = run_mod_name(frozen, &part.run_id, &decision.artifact_id);
+                let own_parts = parts_leaving_with(
+                    frozen,
+                    &decision.artifact_id,
+                    part,
+                    &decision.removed_runs,
+                    |run_id| {
+                        kept_after
+                            .get(&decision.decision_id)
+                            .and_then(|kept| kept.get(run_id))
+                            .cloned()
+                    },
+                )
+                .into_iter()
+                .filter(|title| named_parts.insert((decision.artifact_id.clone(), title.clone())))
+                .collect::<Vec<_>>();
+                if !own_parts.is_empty() {
+                    note.push_str(&format!(
+                        " Also left out of {own_mod}: {}.",
+                        own_parts.join(", ")
+                    ));
+                }
+                let (mut dependents, changed) = affected(
+                    &decision.artifact_id,
+                    &decision.removed_runs,
+                    &decision.changed_runs,
+                );
+                for name in mods_gone_later(
+                    frozen,
+                    &decision.artifact_id,
+                    &decision.changed_runs,
+                    &remaining,
+                ) {
+                    if !dependents.contains(&name) {
+                        dependents.push(name);
+                    }
+                }
+                if !dependents.is_empty() {
+                    note.push_str(&format!(" Also left out: {}.", dependents.join(", ")));
+                }
+                let changed = changed
+                    .into_iter()
+                    .filter(|name| *name != own_mod)
+                    .collect::<Vec<_>>();
+                if !changed.is_empty() {
+                    note.push_str(&format!(
+                        " Installed without the parts that need it: {}.",
+                        changed.join(", ")
+                    ));
+                }
+                notes.push(note);
+            }
             // A newer download that was installed, then left out after all, as when placing
             // its files met another mod's, has only its leave-out line.
             (QuestionKind::ChangedDownload | QuestionKind::UnreviewedTool, Answer::Yes)
@@ -2213,7 +2617,7 @@ fn receipt_notes(receipt: &InstallReceipt, frozen: &FrozenCliRecipe) -> Vec<Stri
     for left_out in receipt
         .left_out
         .iter()
-        .filter(|left_out| !answered_leave_out(&left_out.artifact_id))
+        .filter(|left_out| !answered_leave_out(left_out))
     {
         let name = artifact_name(&left_out.artifact_id);
         let mut note = match &left_out.failed_run {
@@ -2458,6 +2862,7 @@ fn validate_report_receipt(
         crate::receipt::validate_run_attempt_sequence(
             run,
             planned.expect("matching planned run was established above"),
+            &receipt.plan,
             succeeded,
         )?;
     }
@@ -4411,6 +4816,15 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         )
     }
 
+    /// The record of attempt `attempt` of run `run_id`, when one was published.
+    fn published_run_attempt(
+        &self,
+        run_id: &str,
+        attempt: u32,
+    ) -> Result<Option<RunAttemptReceipt>, StepFailure> {
+        read_optional_json(&self.run_attempt_path(run_id, attempt)?)
+    }
+
     fn load_run_receipt(&self, run: &PlannedRun) -> Result<RunReceipt, StepFailure> {
         let Some(directory) = self.run_evidence_directory(&run.run_id, false)? else {
             return Ok(RunReceipt {
@@ -4676,6 +5090,7 @@ impl<S: EventSink> ArtifactAcquirer for GuardedCliDependencies<'_, S> {
         plan: &InstallPlan,
         left_out: &[String],
         failed: &[(String, Vec<u32>)],
+        in_game: &[(String, Vec<u32>)],
     ) -> Result<InstallPlan, StepFailure> {
         let manifest = Manifest {
             root: self
@@ -4688,25 +5103,29 @@ impl<S: EventSink> ArtifactAcquirer for GuardedCliDependencies<'_, S> {
             mods: self.frozen.mods.clone(),
             presets: self.frozen.presets.clone(),
         };
-        let mut parts = BTreeSet::new();
-        for (planned_run_id, components) in failed {
-            let run_id =
-                crate::recipe_view::recipe_run_id(&manifest, planned_run_id).ok_or_else(|| {
-                    StepFailure::new(format!(
-                        "planned run {planned_run_id:?} is not in the frozen recipe"
-                    ))
-                })?;
-            parts.extend(components.iter().map(|component| ComponentRef {
-                run_id: run_id.clone(),
-                component: *component,
-            }));
-        }
+        let recipe_parts = |planned: &[(String, Vec<u32>)]| {
+            let mut parts = BTreeSet::new();
+            for (planned_run_id, components) in planned {
+                let run_id = crate::recipe_view::recipe_run_id(&manifest, planned_run_id)
+                    .ok_or_else(|| {
+                        StepFailure::new(format!(
+                            "planned run {planned_run_id:?} is not in the frozen recipe"
+                        ))
+                    })?;
+                parts.extend(components.iter().map(|component| ComponentRef {
+                    run_id: run_id.clone(),
+                    component: *component,
+                }));
+            }
+            Ok::<_, StepFailure>(parts)
+        };
         crate::recipe_view::plan_without_parts(
             &manifest,
             &self.frozen.normalized_selection,
             plan,
             &left_out.iter().cloned().collect(),
-            &parts,
+            &recipe_parts(failed)?,
+            &recipe_parts(in_game)?,
         )
         .map_err(step_error)
     }
@@ -5094,6 +5513,7 @@ impl<S: EventSink> StagingService for GuardedCliDependencies<'_, S> {
             served: None,
             reason: None,
             leave_out: None,
+            failed: None,
         }))
     }
 
@@ -5613,75 +6033,98 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
             && process
                 .as_ref()
                 .is_some_and(|process| process.terminal != ProcessTerminal::Exited);
-        let reconciliation =
-            if prompts.iter().any(|prompt| !prompt.matched) && !proven_no_process_change {
+        let reconciliation = if proven_no_process_change {
+            InstallReconciliation::Retry {
+                remaining: prepared.components.clone(),
+            }
+        } else {
+            let exit_code = process
+                .as_ref()
+                .map(|evidence| evidence.exit_code)
+                .or_else(|| observed_result.map(|result| result.exit_code))
+                .or_else(|| inferred_success_exit_code(&statuses))
+                .unwrap_or(-1);
+            let verdict = match reconcile_weidu(
+                &String::from_utf8_lossy(&before),
+                &String::from_utf8_lossy(&after),
+                &String::from_utf8_lossy(terminal_evidence),
+                &ExpectedRun {
+                    tp2: self
+                        .frozen
+                        .mods
+                        .get(&run.mod_id)
+                        .ok_or_else(|| {
+                            StepFailure::new(format!(
+                                "frozen installer {:?} is missing",
+                                run.mod_id
+                            ))
+                        })?
+                        .tp2
+                        .clone(),
+                    language: self.frozen.mods[&run.mod_id].language,
+                    components: prepared.components.clone(),
+                    exit_code,
+                },
+            ) {
+                Reconciliation::ProvenDone => InstallReconciliation::ProvenDone,
+                Reconciliation::PartialPrefix { remaining } => {
+                    InstallReconciliation::PartialPrefix { remaining }
+                }
+                Reconciliation::UnchangedRetryable => InstallReconciliation::Retry {
+                    remaining: prepared.components.clone(),
+                },
+                Reconciliation::FailedAmong {
+                    failed,
+                    installed_after,
+                } => InstallReconciliation::FailedAmong {
+                    failed,
+                    installed_after,
+                },
+                Reconciliation::StackDisturbed => stack_disturbed_reconciliation(
+                    &String::from_utf8_lossy(&before),
+                    &String::from_utf8_lossy(&after),
+                    &run.run_id,
+                    &run.mod_id,
+                    &self.frozen.mods[&run.mod_id].tp2,
+                    self.frozen.mods[&run.mod_id].language,
+                    &prepared.components,
+                ),
+                Reconciliation::Ambiguous => InstallReconciliation::FreshCopyRequired {
+                    reason: "WeiDU debug/log/exit evidence is incomplete or contradictory"
+                        .to_owned(),
+                },
+            };
+            // What the installer did not install it never asked about: only a prompt of a
+            // component it installed must have been answered.
+            let uninstalled = match &verdict {
+                InstallReconciliation::Retry { remaining }
+                | InstallReconciliation::PartialPrefix { remaining } => remaining.as_slice(),
+                InstallReconciliation::FailedAmong { failed, .. } => failed.as_slice(),
+                _ => &[],
+            };
+            if installed_prompts_answered(run, &prepared.components, uninstalled, &prompts) {
+                verdict
+            } else {
                 InstallReconciliation::FreshCopyRequired {
                     reason: "WeiDU did not durably receive every authored prompt answer".to_owned(),
                 }
-            } else if proven_no_process_change {
-                InstallReconciliation::Retry {
-                    remaining: prepared.components.clone(),
-                }
-            } else {
-                let exit_code = process
-                    .as_ref()
-                    .map(|evidence| evidence.exit_code)
-                    .or_else(|| observed_result.map(|result| result.exit_code))
-                    .or_else(|| inferred_success_exit_code(&statuses))
-                    .unwrap_or(-1);
-                match reconcile_weidu(
-                    &String::from_utf8_lossy(&before),
-                    &String::from_utf8_lossy(&after),
-                    &String::from_utf8_lossy(terminal_evidence),
-                    &ExpectedRun {
-                        tp2: self
-                            .frozen
-                            .mods
-                            .get(&run.mod_id)
-                            .ok_or_else(|| {
-                                StepFailure::new(format!(
-                                    "frozen installer {:?} is missing",
-                                    run.mod_id
-                                ))
-                            })?
-                            .tp2
-                            .clone(),
-                        language: self.frozen.mods[&run.mod_id].language,
-                        components: prepared.components.clone(),
-                        exit_code,
-                    },
-                ) {
-                    Reconciliation::ProvenDone => InstallReconciliation::ProvenDone,
-                    Reconciliation::PartialPrefix { remaining } => {
-                        InstallReconciliation::PartialPrefix { remaining }
-                    }
-                    Reconciliation::UnchangedRetryable => InstallReconciliation::Retry {
-                        remaining: prepared.components.clone(),
-                    },
-                    Reconciliation::StackDisturbed => stack_disturbed_reconciliation(
-                        &String::from_utf8_lossy(&before),
-                        &String::from_utf8_lossy(&after),
-                        &run.run_id,
-                        &run.mod_id,
-                        &self.frozen.mods[&run.mod_id].tp2,
-                        self.frozen.mods[&run.mod_id].language,
-                        &prepared.components,
-                    ),
-                    Reconciliation::Ambiguous => InstallReconciliation::FreshCopyRequired {
-                        reason: "WeiDU debug/log/exit evidence is incomplete or contradictory"
-                            .to_owned(),
-                    },
-                }
-            };
+            }
+        };
 
         if !matches!(
             reconciliation,
             InstallReconciliation::FreshCopyRequired { .. }
         ) {
             let recovered_process = if process.is_none() && !statuses.is_empty() {
+                // Reconciling an attempt again reads the same evidence and must publish the
+                // same record, so the end time of its first recovery stands.
+                let published = self.published_run_attempt(&run.run_id, attempt.attempt)?;
                 Some(ProcessEvidence {
                     started_at_millis: prepared.prepared_at_millis,
-                    completed_at_millis: unix_millis()?,
+                    completed_at_millis: match published {
+                        Some(published) => published.timing.completed_at_millis,
+                        None => unix_millis()?,
+                    },
                     exit_code: observed_result.map_or(-1, |result| result.exit_code),
                     // This in-memory value supplies conservative timing/unknown-exit receipt
                     // evidence only; it is never persisted as process-result.json.
@@ -5795,10 +6238,14 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
         }
         let bytes = read_direct_file(&attempt.evidence_root.join(PROMPT_RESULTS_FILE_NAME))?;
         let answered = parse_prompt_results(&bytes).map_err(step_error)?;
-        if answered.len() > prepared.prompt_identities.len()
-            || answered.iter().enumerate().any(|(index, found)| {
-                found.index != index || found != &prepared.prompt_identities[index]
-            })
+        // A component that failed may not have asked: the answers can leave gaps, but each is
+        // the authored one of its place, in order.
+        if answered
+            .windows(2)
+            .any(|pair| pair[0].index >= pair[1].index)
+            || answered
+                .iter()
+                .any(|found| prepared.prompt_identities.get(found.index) != Some(found))
         {
             return Err(StepFailure::new(
                 "runner prompt evidence differs from the prepared authored sequence",
@@ -5810,7 +6257,7 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
             .cloned()
             .enumerate()
             .map(|(index, mut prompt)| {
-                prompt.matched = index < answered.len();
+                prompt.matched = answered.iter().any(|found| found.index == index);
                 prompt
             })
             .collect())
@@ -5973,6 +6420,22 @@ impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
             sync_direct_file(&attempt.evidence_root.join(name))?;
         }
         self.reconcile_install_attempt(run, attempt, Some(result))
+    }
+
+    fn failure_message(&mut self, attempt: &StepAttempt) -> Option<String> {
+        let debug = read_direct_file(&attempt.evidence_root.join(DEBUG_LOG_FILE)).ok()?;
+        let stdout = read_direct_file(&attempt.evidence_root.join(STDOUT_FILE)).ok()?;
+        crate::weidu::log::failure_message(&String::from_utf8_lossy(select_terminal_evidence(
+            &debug, &stdout,
+        )))
+    }
+
+    fn attempt_left_evidence(&mut self, attempt: &StepAttempt) -> Result<bool, StepFailure> {
+        match fs::symlink_metadata(&attempt.evidence_root) {
+            Ok(_) => Ok(true),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
+            Err(error) => Err(step_error(error)),
+        }
     }
 
     fn verify_final(&mut self, plan: &InstallPlan) -> Result<(), StepFailure> {
@@ -6568,6 +7031,32 @@ fn non_prefix_component_diagnostic(
         ));
     }
     Some(detail)
+}
+
+/// Whether every prompt of `requested`, the components of an attempt at `run`, was answered,
+/// apart from those of `uninstalled`, which it did not install. `prompts` follow the order in
+/// which the attempt prepared them, the order of the run's scripts.
+fn installed_prompts_answered(
+    run: &PlannedRun,
+    requested: &[u32],
+    uninstalled: &[u32],
+    prompts: &[PromptReceipt],
+) -> bool {
+    let mut prompts = prompts.iter();
+    for script in run
+        .prompt_scripts
+        .iter()
+        .filter(|script| requested.contains(&script.component.component))
+    {
+        let installed = !uninstalled.contains(&script.component.component);
+        for _ in &script.steps {
+            match prompts.next() {
+                Some(prompt) if prompt.matched || !installed => {}
+                _ => return false,
+            }
+        }
+    }
+    prompts.next().is_none()
 }
 
 fn stack_disturbed_reconciliation(
@@ -7371,6 +7860,7 @@ mod tests {
                 changed_runs: changed.iter().map(|id| run(id, "tweaks")).collect(),
                 plan_sha256: "33".repeat(32),
             }),
+            failed: None,
         };
         let base = "A newer version of snowytoes was found. The reviewed version is no longer available at this link. Install it anyway?";
         let dependents =
@@ -7402,6 +7892,324 @@ mod tests {
             assert_eq!(texts.message, expected);
             assert_eq!(texts.focus, Answer::Yes);
         }
+    }
+
+    /// When WeiDU went on after the failure, each component it reports as failed is named, and
+    /// "Try again" is not offered, because that would install them out of order.
+    #[test]
+    fn components_weidu_went_past_are_named_together_and_cannot_be_tried_again() {
+        let mut frozen = frozen_recipe_fixture();
+        frozen.plan.runs = vec![crate::resolve::PlannedRun {
+            run_id: "tweaks-bg2".to_owned(),
+            mod_id: "tweaks".to_owned(),
+            target: GameRoot::Bg2,
+            phase: crate::manifest::Phase::Main,
+            components: vec![1, 2, 3],
+            args: Vec::new(),
+            postconditions: Vec::new(),
+            artifact_id: "tweaks".to_owned(),
+            weidu_artifact_id: "weidu".to_owned(),
+            prompt_scripts: Vec::new(),
+        }];
+        let question = Question {
+            kind: QuestionKind::FailedComponent,
+            artifact_id: "tweaks".to_owned(),
+            artifact_kind: ArtifactKind::Payload,
+            reviewed: FrozenIdentity {
+                id: "tweaks".to_owned(),
+                version: "1".to_owned(),
+                sha256: "11".repeat(32),
+                length: 10,
+            },
+            served: None,
+            reason: None,
+            leave_out: Some(crate::decision::LeaveOutClosure {
+                removed_runs: Vec::new(),
+                changed_runs: Vec::new(),
+                plan_sha256: "33".repeat(32),
+            }),
+            failed: Some(crate::decision::FailedPart {
+                run_id: "tweaks-bg2".to_owned(),
+                components: vec![1, 3],
+                installed_after: vec![2],
+                continues_with: Vec::new(),
+                required: None,
+                error: None,
+                evidence_attempt: None,
+            }),
+        };
+
+        let texts = render_question(&frozen, &question, &std::collections::BTreeSet::new());
+
+        assert_eq!(
+            texts.message,
+            "Component 1 and Component 3 (tweaks) could not be installed. Leave them out and continue?"
+        );
+        assert_eq!(
+            texts
+                .answers
+                .iter()
+                .map(|answer| (answer.answer, answer.label.as_str()))
+                .collect::<Vec<_>>(),
+            [
+                (Answer::LeaveOut, "Leave them out and continue"),
+                (Answer::No, "Stop the installation"),
+            ]
+        );
+        assert_eq!(texts.details[0], "Run tweaks-bg2, component 1, 3");
+        assert_eq!(
+            texts.details[1],
+            "The installer went on after the error, so trying again would install them out of order."
+        );
+        assert_eq!(
+            texts.after_no,
+            "You chose to stop. Resume this installation to answer again."
+        );
+    }
+
+    /// The question uses the names the player knows from the app: the source name of the mod
+    /// and the feature's title, with its choice for an option of a choice.
+    #[test]
+    fn a_failed_component_is_named_as_the_app_names_it() {
+        let mut frozen = frozen_recipe_fixture();
+        let feature = |id: &str, title: &str, component: u32, choice: bool| {
+            let mut feature = serde_json::json!({
+                "id": id,
+                "title": title,
+                "description": "",
+                "category": "rules",
+                "source_label": "The Tweaks Anthology",
+                "group_label": "Higher HP on Level Up",
+                "decision": "default",
+                "readiness": "ready",
+                "components": [{ "run_id": "cdtweaks-bg2", "component": component }],
+            });
+            if choice {
+                feature["choice_group"] = serde_json::json!("hp-on-level-up");
+            }
+            serde_json::from_value::<crate::manifest::Feature>(feature).unwrap()
+        };
+        frozen.collection.features = vec![
+            feature("tweaks-hp", "Maximum", 3000, true),
+            feature("tweaks-fog", "Disable Fog", 1000, false),
+        ];
+        frozen.collection.runs = vec![serde_json::from_value(serde_json::json!({
+            "run_id": "cdtweaks-bg2",
+            "mod_id": "cdtweaks",
+            "phase": "main",
+            "components": [3000, 1000],
+            "args": [],
+        }))
+        .unwrap()];
+
+        assert_eq!(
+            crate::cli::component_title(&frozen, "cdtweaks-bg2", 3000),
+            "Higher HP on Level Up: Maximum"
+        );
+        assert_eq!(
+            crate::cli::component_title(&frozen, "cdtweaks-bg2--manual-1", 1000),
+            "Disable Fog"
+        );
+        assert_eq!(
+            crate::cli::component_title(&frozen, "cdtweaks-bg2", 7),
+            "Component 7"
+        );
+        assert_eq!(
+            crate::cli::mod_display_name(&frozen, "cdtweaks"),
+            "The Tweaks Anthology"
+        );
+        assert_eq!(crate::cli::mod_display_name(&frozen, "unknown"), "unknown");
+    }
+
+    /// A component that fails before a later component's prompt leaves that prompt unanswered,
+    /// which says nothing about what was installed. A prompt of an installed component that was
+    /// not answered does: that installation cannot be trusted.
+    #[test]
+    fn only_the_prompts_of_installed_components_must_have_been_answered() {
+        let script = |component: u32, steps: usize| crate::recipe_view::PromptScript {
+            component: crate::manifest::ComponentRef {
+                run_id: "bardic-bg2".to_owned(),
+                component,
+            },
+            steps: (0..steps)
+                .map(|step| crate::recipe_view::RenderedPromptStep {
+                    expected_output: format!("question {step}"),
+                    answer: "1".to_owned(),
+                })
+                .collect(),
+        };
+        let run = crate::resolve::PlannedRun {
+            run_id: "bardic-bg2".to_owned(),
+            mod_id: "bardic".to_owned(),
+            target: GameRoot::Bg2,
+            phase: crate::manifest::Phase::Main,
+            components: vec![1, 2, 3],
+            args: Vec::new(),
+            postconditions: Vec::new(),
+            artifact_id: "bardic".to_owned(),
+            weidu_artifact_id: "weidu".to_owned(),
+            prompt_scripts: vec![script(1, 1), script(3, 2)],
+        };
+        let prompts = |matched: &[bool]| {
+            matched
+                .iter()
+                .map(|matched| crate::receipt::PromptReceipt {
+                    expected_output: "question".to_owned(),
+                    answer: "1".to_owned(),
+                    matched: *matched,
+                })
+                .collect::<Vec<_>>()
+        };
+        let all = [1, 2, 3];
+
+        // Everything was installed: every prompt must have been answered.
+        assert!(crate::cli::installed_prompts_answered(
+            &run,
+            &all,
+            &[],
+            &prompts(&[true, true, true])
+        ));
+        assert!(!crate::cli::installed_prompts_answered(
+            &run,
+            &all,
+            &[],
+            &prompts(&[true, true, false])
+        ));
+        // The installer stopped at 2 and never reached the prompts of 3.
+        assert!(crate::cli::installed_prompts_answered(
+            &run,
+            &all,
+            &[2, 3],
+            &prompts(&[true, false, false])
+        ));
+        // But 1 was installed without its answer.
+        assert!(!crate::cli::installed_prompts_answered(
+            &run,
+            &all,
+            &[2, 3],
+            &prompts(&[false, false, false])
+        ));
+        // 1 failed before its prompt, and the installer went on to ask those of 3.
+        assert!(crate::cli::installed_prompts_answered(
+            &run,
+            &all,
+            &[1],
+            &prompts(&[false, true, true])
+        ));
+        // The attempt's own components count, and its record must fit them.
+        assert!(crate::cli::installed_prompts_answered(
+            &run,
+            &[3],
+            &[3],
+            &prompts(&[false, false])
+        ));
+        assert!(!crate::cli::installed_prompts_answered(
+            &run,
+            &[3],
+            &[3],
+            &prompts(&[false])
+        ));
+        assert!(!crate::cli::installed_prompts_answered(
+            &run,
+            &all,
+            &[2, 3],
+            &prompts(&[true, false, false, false])
+        ));
+    }
+
+    /// A failed component is named with its mod. What leaves with it is named too, and a long
+    /// list of its mod's parts is cut short in the question but kept whole in its details. The
+    /// failed mod itself is never among the mods that lose parts.
+    #[test]
+    fn a_failed_component_question_names_the_mod_the_component_and_what_leaves_with_it() {
+        let mut frozen = frozen_recipe_fixture();
+        let run = |run_id: &str, mod_id: &str, components: Vec<u32>| crate::resolve::PlannedRun {
+            run_id: run_id.to_owned(),
+            mod_id: mod_id.to_owned(),
+            target: GameRoot::Bg2,
+            phase: crate::manifest::Phase::Main,
+            components,
+            args: Vec::new(),
+            postconditions: Vec::new(),
+            artifact_id: mod_id.to_owned(),
+            weidu_artifact_id: "weidu".to_owned(),
+            prompt_scripts: Vec::new(),
+        };
+        frozen.plan.runs = vec![
+            run("tweaks-bg2", "tweaks", (1..=10).collect()),
+            run("snowfall-bg2", "snowfall", vec![0]),
+            run("rules-bg2", "rules", vec![0, 1]),
+        ];
+        let question = |continues_with: Vec<u32>| Question {
+            kind: QuestionKind::FailedComponent,
+            artifact_id: "tweaks".to_owned(),
+            artifact_kind: ArtifactKind::Payload,
+            reviewed: FrozenIdentity {
+                id: "tweaks".to_owned(),
+                version: "1".to_owned(),
+                sha256: "11".repeat(32),
+                length: 10,
+            },
+            served: None,
+            reason: None,
+            leave_out: Some(crate::decision::LeaveOutClosure {
+                removed_runs: vec!["snowfall-bg2".to_owned()],
+                changed_runs: vec![
+                    run("tweaks-bg2", "tweaks", continues_with.clone()),
+                    run("rules-bg2", "rules", vec![0]),
+                ],
+                plan_sha256: "33".repeat(32),
+            }),
+            failed: Some(crate::decision::FailedPart {
+                run_id: "tweaks-bg2".to_owned(),
+                components: (1..=10).collect(),
+                installed_after: Vec::new(),
+                continues_with,
+                required: None,
+                error: Some("cannot convert a variable".to_owned()),
+                evidence_attempt: None,
+            }),
+        };
+
+        let texts = render_question(
+            &frozen,
+            &question((2..=10).collect()),
+            &std::collections::BTreeSet::new(),
+        );
+        assert_eq!(
+            texts.message,
+            "Component 1 (tweaks) could not be installed. Leave it out and continue? The mods that depend on it are left out too: snowfall. Installed without the parts that need it: rules."
+        );
+        assert_eq!(
+            texts
+                .answers
+                .iter()
+                .map(|answer| answer.answer)
+                .collect::<Vec<_>>(),
+            [Answer::LeaveOut, Answer::Retry, Answer::No]
+        );
+        assert_eq!(texts.focus, Answer::LeaveOut);
+        assert_eq!(
+            texts.details,
+            [
+                "Run tweaks-bg2, component 1",
+                "The installer said: cannot convert a variable"
+            ]
+        );
+
+        let texts = render_question(
+            &frozen,
+            &question(vec![10]),
+            &std::collections::BTreeSet::new(),
+        );
+        assert_eq!(
+            texts.message,
+            "Component 1 (tweaks) could not be installed. Leave it out and continue? The parts of tweaks that need it are left out too: Component 2, Component 3, Component 4, Component 5, Component 6, Component 7 and 2 more. The mods that depend on it are left out too: snowfall. Installed without the parts that need it: rules."
+        );
+        assert_eq!(
+            texts.details[2],
+            "Also left out of tweaks: Component 2, Component 3, Component 4, Component 5, Component 6, Component 7, Component 8, Component 9"
+        );
     }
 
     /// A mod that loses one of its runs, such as Modpack's interface compatibility run for a
@@ -7450,6 +8258,7 @@ mod tests {
                 changed_runs: Vec::new(),
                 plan_sha256: "33".repeat(32),
             }),
+            failed: None,
         };
         let texts = render_question(&frozen, &question, &std::collections::BTreeSet::new());
         assert_eq!(
@@ -7497,6 +8306,13 @@ mod tests {
             super::affected_mods(&frozen, "snowy", &removed, &changed, &gone_later),
             (Vec::<String>::new(), Vec::<String>::new())
         );
+        // After a failed component its later line names only what failed then.
+        assert_eq!(
+            super::mods_gone_later(&frozen, "snowy", &changed, &gone_later),
+            vec!["tweaks".to_owned()]
+        );
+        assert!(super::mods_gone_later(&frozen, "snowy", &changed, &still_there).is_empty());
+        assert!(super::mods_gone_later(&frozen, "tweaks", &changed, &gone_later).is_empty());
     }
 
     #[test]

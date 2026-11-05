@@ -392,6 +392,10 @@ fn answering<'a>(mut args: Vec<&'a str>, answers: &[&'a str]) -> Vec<&'a str> {
 const INSTALL_CHANGED: &str = "changed-download=yes";
 /// Continues without a mod whose download cannot be used, as "Continue without them" does.
 const CONTINUE_WITHOUT: &str = "unusable-download=yes";
+/// Stops at a component whose installer failed, as "Stop the installation" does.
+const STOP_AT_FAILED_COMPONENT: &str = "failed-component=no";
+/// Leaves out a component whose installer failed, as "Leave it out and continue" does.
+const LEAVE_OUT_FAILED_COMPONENT: &str = "failed-component=leave-out";
 
 fn install_request(fixture: &ExecutableFixture) -> InstallCommandRequest {
     InstallCommandRequest {
@@ -507,9 +511,9 @@ fn display_name_cli_default_is_exact_and_custom_name_reaches_the_registry() {
     );
 }
 
-/// Makes the fixture's BG1 EE Fixpack part a fixed part of the collection, so that a run
-/// failing there (`CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE`) stops the installation, as these resume
-/// tests need. An optional part that fails is left out instead.
+/// Makes the fixture's BG1 EE Fixpack part a fixed part of the collection, as these resume tests
+/// need: a run failing there (`CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE`) can only be tried again or
+/// stopped, and they stop at it ([`STOP_AT_FAILED_COMPONENT`]).
 fn fail_once_at_a_fixed_part(fixture: &ExecutableFixture) {
     let collection = fixture.recipe.join("collection.toml");
     let text = fs::read_to_string(&collection)
@@ -2539,21 +2543,24 @@ fn a_modded_source_game_asks_first_and_installs_after_yes() {
     ));
 }
 
-/// A failed optional run once stopped the installation. Now it is left out, with everything
-/// that needs it, and the installation completes; the receipt names the failed run.
+/// A failed optional run once stopped the installation. A preset answer leaves it out, with
+/// everything that needs it, and the installation completes; the receipt names the failed run.
 #[test]
-fn a_failed_optional_run_is_left_out_and_the_installation_completes() {
+fn a_preset_answer_leaves_a_failed_optional_run_out_and_the_installation_completes() {
     let fixture = executable_fixture();
     let marker = fixture._temp.path().join("mock-weidu-failed-once");
     let mut command = executable_command(&fixture);
     command
         .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
-        .args(install_args(
-            &fixture.recipe,
-            &fixture.bg1,
-            &fixture.bg2,
-            &fixture.managed,
-            &fixture.cache,
+        .args(answering(
+            install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ),
+            &[LEAVE_OUT_FAILED_COMPONENT],
         ));
 
     let output = command.output().expect("execute synthetic install");
@@ -2588,6 +2595,1210 @@ fn a_failed_optional_run_is_left_out_and_the_installation_completes() {
         .output()
         .expect("run report");
     assert!(report.status.success(), "{}", stderr(&report));
+}
+
+/// Gives each component of the BG1 run its own feature, so that one can fail without the other.
+fn split_bg1_fixes(fixture: &ExecutableFixture) {
+    let collection = fixture.recipe.join("collection.toml");
+    let text = fs::read_to_string(&collection)
+        .unwrap()
+        .replace("\r\n", "\n");
+    let shared = r#"components = [
+  { run_id = "eefixpack-bg1", component = 0 },
+  { run_id = "eefixpack-bg1", component = 2 },
+]
+"#;
+    assert!(text.contains(shared));
+    let split = r#"components = [{ run_id = "eefixpack-bg1", component = 0 }]
+
+[[features]]
+id = "eefix-bg1-text"
+title = "BG1 text fixes"
+description = "Fixture BG1 text fixes"
+category = "foundation"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "eefixpack-bg1", component = 2 }]
+"#;
+    fs::write(collection, text.replace(shared, split)).unwrap();
+}
+
+/// The installation of the fixture with component `component` of its mod failing, and WeiDU
+/// skipping what follows it; the answer to it comes later. Returns the question, as
+/// `check-decision` shows it.
+#[cfg(windows)]
+fn install_until_component_fails(fixture: &ExecutableFixture, component: &str) -> Value {
+    let (code, response) = run_installer_with(
+        fixture,
+        None,
+        &[
+            (
+                "CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT",
+                std::ffi::OsStr::new(component),
+            ),
+            (
+                "CHRIZ_TEST_MOCK_WEIDU_SKIP_AFTER_FAILURE",
+                std::ffi::OsStr::new("1"),
+            ),
+        ],
+        &install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ),
+    );
+    waiting_for(code, &response, "install:eefixpack-bg1");
+    check_decision(fixture, response["install_id"].as_str().unwrap())
+}
+
+/// A component that fails before it asks its prompt gets its question like any other, and the
+/// prompt of the component after it is answered, or the installer would wait for ever.
+#[cfg(windows)]
+#[test]
+fn a_component_that_fails_before_its_prompt_is_asked_about_at_once() {
+    let fixture = executable_fixture();
+    split_bg1_fixes(&fixture);
+    let prompt = |expected: &str| {
+        format!("prompts = [{{ expected_output = \"{expected}\", answer = {{ kind = \"literal\", value = {{ kind = \"boolean\", value = true }} }} }}]")
+    };
+    let mod_file = fixture.recipe.join("mods/eefixpack.toml");
+    let text = fs::read_to_string(&mod_file).unwrap();
+    assert!(text.contains("stdin = \"1\\n\""), "{text}");
+    fs::write(
+        &mod_file,
+        text.replace(
+            "name = \"Core fixes\"",
+            &format!(
+                "name = \"Core fixes\"\n{}",
+                prompt("Question of component 0: ")
+            ),
+        )
+        .replace("stdin = \"1\\n\"", &prompt("Question of component 2: ")),
+    )
+    .unwrap();
+
+    let (code, response) = run_installer_with(
+        &fixture,
+        None,
+        &[
+            (
+                "CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT",
+                std::ffi::OsStr::new("0"),
+            ),
+            (
+                "CHRIZ_TEST_MOCK_WEIDU_ASKING_COMPONENT",
+                std::ffi::OsStr::new("2"),
+            ),
+        ],
+        &install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ),
+    );
+
+    waiting_for(code, &response, "install:eefixpack-bg1");
+    let decision = check_decision(&fixture, response["install_id"].as_str().unwrap());
+    assert_eq!(decision["question"]["kind"], "failed_component");
+    assert_eq!(
+        decision["texts"]["message"],
+        "BG1 fixes (EE Fixpack) could not be installed. Leave it out and continue?"
+    );
+    assert_eq!(
+        labels(&decision),
+        vec!["Leave it out and continue", "Stop the installation"]
+    );
+
+    decide(&fixture, &decision, "leave-out");
+    // The BG2 run has a component 0 of its own, which asks and does not fail.
+    let (code, resumed) = run_installer_with(
+        &fixture,
+        None,
+        &[(
+            "CHRIZ_TEST_MOCK_WEIDU_ASKING_COMPONENT",
+            std::ffi::OsStr::new("0"),
+        )],
+        &["--json", "resume", fixture.managed.to_str().unwrap()],
+    );
+
+    assert_eq!(code, Some(0), "{resumed:#}");
+    assert_eq!(resumed["status"]["status"], "complete", "{resumed:#}");
+    let receipt = read_install_receipt(&fixture);
+    let installed = receipt.installed_plan.as_ref().unwrap();
+    assert_eq!(installed.components_for("eefixpack-bg1"), Some(&[2][..]));
+    let answers = receipt.runs[0].attempts[0]
+        .prompts
+        .iter()
+        .map(|prompt| prompt.matched)
+        .collect::<Vec<_>>();
+    assert_eq!(answers, vec![false, true]);
+    assert_eq!(receipt.runs[0].attempts[0].exit_code, 2);
+}
+
+/// `resume` of the fixture, with its failing component failing still.
+#[cfg(windows)]
+fn resume_with_failing_component(fixture: &ExecutableFixture, component: &str) -> Value {
+    let (code, response) = run_installer_with(
+        fixture,
+        None,
+        &[(
+            "CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT",
+            std::ffi::OsStr::new(component),
+        )],
+        &["--json", "resume", fixture.managed.to_str().unwrap()],
+    );
+    assert_eq!(code, Some(0), "{response:#}");
+    response
+}
+
+/// The end-summary lines of the finished installation, as the app shows them.
+#[cfg(windows)]
+fn end_summary(fixture: &ExecutableFixture) -> Vec<String> {
+    report_json(fixture)["notes"]
+        .as_array()
+        .map(|notes| {
+            notes
+                .iter()
+                .map(|note| note.as_str().unwrap().to_owned())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// A component's installer fails: the installation stops with a question naming the mod and the
+/// component, and nothing is left out until the player answers. "Leave it out" continues with
+/// the run's other components, which WeiDU never reached, and the end summary names it.
+#[cfg(windows)]
+#[test]
+fn a_failed_component_is_asked_about_and_its_run_goes_on_without_it() {
+    let fixture = executable_fixture();
+    split_bg1_fixes(&fixture);
+
+    let decision = install_until_component_fails(&fixture, "0");
+
+    assert_eq!(decision["question"]["kind"], "failed_component");
+    assert_eq!(
+        decision["texts"]["message"],
+        "BG1 fixes (EE Fixpack) could not be installed. Leave it out and continue?"
+    );
+    assert_eq!(
+        labels(&decision),
+        vec![
+            "Leave it out and continue",
+            "Try again",
+            "Stop the installation"
+        ]
+    );
+    assert_eq!(decision["texts"]["focus"], "leave_out");
+    assert!(decision["texts"]["details"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|detail| detail == "The installer said: synthetic failure of component 0"));
+    assert_eq!(decision["question"]["failed"]["continues_with"][0], 2);
+
+    decide(&fixture, &decision, "leave-out");
+    // The BG2 run has a component 0 of its own, which does not fail.
+    let (code, resumed) = run_installer(
+        &fixture,
+        None,
+        &["--json", "resume", fixture.managed.to_str().unwrap()],
+    );
+
+    assert_eq!(code, Some(0), "{resumed:#}");
+    assert_eq!(resumed["status"]["status"], "complete", "{resumed:#}");
+    let receipt = read_install_receipt(&fixture);
+    let installed = receipt.installed_plan.as_ref().unwrap();
+    assert_eq!(installed.components_for("eefixpack-bg1"), Some(&[2][..]));
+    assert_eq!(receipt.left_out.len(), 1, "{:?}", receipt.left_out);
+    assert_eq!(receipt.decisions.len(), 1);
+    let log = fs::read_to_string(fixture.managed.join("bg1/WeiDU.log")).unwrap();
+    assert!(log.contains("Synthetic component 2"), "{log}");
+    assert!(!log.contains("Synthetic component 0"), "{log}");
+    assert_eq!(
+        end_summary(&fixture),
+        vec![
+            "You chose to continue without BG1 fixes (EE Fixpack): its installer stopped with an error."
+                .to_owned(),
+            "If something does not work as expected, please report it so the collection can be fixed."
+                .to_owned(),
+        ]
+    );
+}
+
+/// The usual case: WeiDU goes on after the failed component and installs the next one. The
+/// question comes all the same, without "Try again", because that would install the failed
+/// component out of order. "Stop" keeps the question for the next resume, however often, and
+/// nothing runs again; leaving it out keeps what WeiDU installed after it.
+#[cfg(windows)]
+#[test]
+fn a_component_weidu_went_past_is_asked_about_and_stays_asked_after_a_stop() {
+    let fixture = executable_fixture();
+    split_bg1_fixes(&fixture);
+    let (code, response) = run_installer_with(
+        &fixture,
+        None,
+        &[(
+            "CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT",
+            std::ffi::OsStr::new("0"),
+        )],
+        &install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ),
+    );
+    waiting_for(code, &response, "install:eefixpack-bg1");
+    let install_id = response["install_id"].as_str().unwrap().to_owned();
+    let mut decision = check_decision(&fixture, &install_id);
+    assert_eq!(
+        decision["texts"]["message"],
+        "BG1 fixes (EE Fixpack) could not be installed. Leave it out and continue?"
+    );
+    assert_eq!(
+        labels(&decision),
+        vec!["Leave it out and continue", "Stop the installation"]
+    );
+    assert_eq!(decision["question"]["failed"]["installed_after"][0], 2);
+    let (code, refused) = decide_with(
+        &fixture,
+        &decision,
+        decision["token"].as_str().unwrap(),
+        "retry",
+    );
+    assert_ne!(code, Some(0), "{refused:#}");
+
+    for _ in 0..2 {
+        decide(&fixture, &decision, "no");
+        let (code, stopped) = run_installer(
+            &fixture,
+            None,
+            &["--json", "resume", fixture.managed.to_str().unwrap()],
+        );
+        assert_eq!(code, Some(1), "{stopped:#}");
+        assert_eq!(stopped["error"]["code"], "campaign_failed", "{stopped:#}");
+        assert_eq!(
+            stopped["status"]["reason"],
+            "You chose to stop: BG1 fixes (EE Fixpack) could not be installed.",
+            "{stopped:#}"
+        );
+        let (code, asked) = run_installer(
+            &fixture,
+            None,
+            &["--json", "resume", fixture.managed.to_str().unwrap()],
+        );
+        waiting_for(code, &asked, "install:eefixpack-bg1");
+        decision = check_decision(&fixture, &install_id);
+        assert_eq!(decision["question"]["failed"]["evidence_attempt"], 1);
+    }
+
+    decide(&fixture, &decision, "leave-out");
+    let (code, resumed) = run_installer(
+        &fixture,
+        None,
+        &["--json", "resume", fixture.managed.to_str().unwrap()],
+    );
+
+    assert_eq!(code, Some(0), "{resumed:#}");
+    assert_eq!(resumed["status"]["status"], "complete", "{resumed:#}");
+    let receipt = read_install_receipt(&fixture);
+    let installed = receipt.installed_plan.as_ref().unwrap();
+    assert_eq!(installed.components_for("eefixpack-bg1"), Some(&[2][..]));
+    let attempts = &receipt
+        .runs
+        .iter()
+        .find(|run| run.run_id == "eefixpack-bg1")
+        .unwrap()
+        .attempts;
+    assert_eq!(attempts.len(), 1, "only one attempt ran: {attempts:?}");
+    assert_eq!(attempts[0].components, vec![0, 2]);
+    let log = fs::read_to_string(fixture.managed.join("bg1/WeiDU.log")).unwrap();
+    assert!(log.contains("Synthetic component 2"), "{log}");
+    assert!(!log.contains("Synthetic component 0"), "{log}");
+    assert_eq!(
+        end_summary(&fixture)[0],
+        "You chose to continue without BG1 fixes (EE Fixpack): its installer stopped with an error."
+    );
+}
+
+/// A fixed part WeiDU went past can neither be left out nor tried again: there is nothing to
+/// ask, and the installation needs a fresh copy, as it did before. The reason says why.
+#[cfg(windows)]
+#[test]
+fn a_fixed_part_weidu_went_past_needs_a_fresh_copy_and_says_why() {
+    let fixture = executable_fixture();
+    fail_once_at_a_fixed_part(&fixture);
+    let (code, response) = run_installer_with(
+        &fixture,
+        None,
+        &[(
+            "CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT",
+            std::ffi::OsStr::new("0"),
+        )],
+        &install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ),
+    );
+
+    assert_eq!(code, Some(1), "{response:#}");
+    assert_eq!(
+        response["error"]["code"], "fresh_copy_required",
+        "{response:#}"
+    );
+    let reason = response["status"]["reason"].as_str().unwrap();
+    assert_eq!(
+        reason,
+        "Core fixes (EE Fixpack) could not be installed. BG1 fixes is a fixed part of this collection, so the installation cannot continue without it. Its installer went on after the error, so this copy cannot try it again."
+    );
+}
+
+/// A component that fails after others keeps those: WeiDU tries it once more on its own, the
+/// player is asked then, and the receipt of the shortened run verifies against its attempts.
+#[cfg(windows)]
+#[test]
+fn a_component_that_fails_after_others_keeps_them_and_the_receipt_verifies() {
+    let fixture = executable_fixture();
+    split_bg1_fixes(&fixture);
+
+    let decision = install_until_component_fails(&fixture, "2");
+
+    assert_eq!(
+        decision["texts"]["message"],
+        "BG1 text fixes (EE Fixpack) could not be installed. Leave it out and continue?"
+    );
+    decide(&fixture, &decision, "leave-out");
+    let resumed = resume_with_failing_component(&fixture, "2");
+
+    assert_eq!(resumed["status"]["status"], "complete", "{resumed:#}");
+    let receipt = read_install_receipt(&fixture);
+    let installed = receipt.installed_plan.as_ref().unwrap();
+    assert_eq!(installed.components_for("eefixpack-bg1"), Some(&[0][..]));
+    let attempts = &receipt
+        .runs
+        .iter()
+        .find(|run| run.run_id == "eefixpack-bg1")
+        .unwrap()
+        .attempts;
+    assert_eq!(attempts.len(), 2, "{attempts:?}");
+    assert_eq!(attempts[0].components, vec![0, 2]);
+    assert_eq!(attempts[1].components, vec![2]);
+    assert_eq!(end_summary(&fixture).len(), 2);
+}
+
+/// What needs the failed component leaves with it, in the same question.
+#[cfg(windows)]
+#[test]
+fn the_question_names_what_leaves_with_the_failed_component() {
+    let fixture = executable_fixture();
+    split_bg1_fixes(&fixture);
+    let collection = fixture.recipe.join("collection.toml");
+    let text = fs::read_to_string(&collection)
+        .unwrap()
+        .replace("\r\n", "\n");
+    let feature = "id = \"eefix-bg2\"\n";
+    assert!(text.contains(feature));
+    fs::write(
+        collection,
+        text.replace(
+            "components = [{ run_id = \"eefixpack-bg2\", component = 0 }]\n",
+            "components = [{ run_id = \"eefixpack-bg2\", component = 0 }]\nrequires = [\"eefix-bg1-text\"]\n",
+        ),
+    )
+    .unwrap();
+
+    let decision = install_until_component_fails(&fixture, "2");
+
+    assert_eq!(
+        decision["texts"]["message"],
+        "BG1 text fixes (EE Fixpack) could not be installed. Leave it out and continue? The parts of EE Fixpack that need it are left out too: BG2 fixes."
+    );
+    decide(&fixture, &decision, "leave-out");
+    let resumed = resume_with_failing_component(&fixture, "2");
+
+    assert_eq!(resumed["status"]["status"], "complete", "{resumed:#}");
+    let receipt = read_install_receipt(&fixture);
+    let installed = receipt.installed_plan.as_ref().unwrap();
+    assert!(installed.components_for("eefixpack-bg2").is_none());
+    assert_eq!(installed.components_for("eefixpack-bg1"), Some(&[0][..]));
+    assert_eq!(
+        end_summary(&fixture)[0],
+        "You chose to continue without BG1 text fixes (EE Fixpack): its installer stopped with an error. Also left out of EE Fixpack: BG2 fixes."
+    );
+}
+
+/// A later failure can take the rest of a run that an earlier answer only shortened. The end
+/// summary still names what the earlier answer left out, as its question did.
+#[cfg(windows)]
+#[test]
+fn the_end_summary_keeps_what_an_answer_left_out_of_a_run_that_leaves_later() {
+    let fixture = executable_fixture();
+    let mod_file = fixture.recipe.join("mods/eefixpack.toml");
+    let mut installer = fs::read_to_string(&mod_file).unwrap().replace("\r\n", "\n");
+    installer.push_str("\n[[components]]\nid = 3\nname = \"BG2 extras\"\n");
+    fs::write(&mod_file, installer).unwrap();
+    let collection = fixture.recipe.join("collection.toml");
+    let text = fs::read_to_string(&collection)
+        .unwrap()
+        .replace("\r\n", "\n");
+    let bg1_feature = r#"components = [
+  { run_id = "eefixpack-bg1", component = 0 },
+  { run_id = "eefixpack-bg1", component = 2 },
+]
+"#;
+    let bg2_feature = "components = [{ run_id = \"eefixpack-bg2\", component = 0 }]\n";
+    assert!(text.contains(bg1_feature) && text.contains(bg2_feature));
+    let extras = r#"
+[[features]]
+id = "eefix-bg2-extras"
+title = "BG2 extras"
+description = "Fixture BG2 extras"
+category = "foundation"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "eefixpack-bg2", component = 3 }]
+"#;
+    fs::write(
+        collection,
+        text.replace("components = [0, 2]\n", "components = [0]\n")
+            .replace(
+                "phase = \"bg2-preparation\"\ncomponents = [0]\n",
+                "phase = \"bg2-preparation\"\ncomponents = [2, 3]\n",
+            )
+            .replace(
+                bg1_feature,
+                "components = [{ run_id = \"eefixpack-bg1\", component = 0 }]\n",
+            )
+            .replace(
+                bg2_feature,
+                "components = [{ run_id = \"eefixpack-bg2\", component = 2 }]\nrequires = [\"eefix-bg1\"]\n",
+            )
+            + extras,
+    )
+    .unwrap();
+
+    let decision = install_until_component_fails(&fixture, "0");
+    assert_eq!(
+        decision["texts"]["message"],
+        "BG1 fixes (EE Fixpack) could not be installed. Leave it out and continue? The parts of EE Fixpack that need it are left out too: BG2 fixes."
+    );
+    decide(&fixture, &decision, "leave-out");
+    let (code, response) = run_installer_with(
+        &fixture,
+        None,
+        &[(
+            "CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT",
+            std::ffi::OsStr::new("3"),
+        )],
+        &["--json", "resume", fixture.managed.to_str().unwrap()],
+    );
+    waiting_for(code, &response, "install:eefixpack-bg2");
+    let decision = check_decision(&fixture, response["install_id"].as_str().unwrap());
+    decide(&fixture, &decision, "leave-out");
+    let resumed = resume_with_failing_component(&fixture, "3");
+
+    assert_eq!(resumed["status"]["status"], "complete", "{resumed:#}");
+    assert_eq!(
+        end_summary(&fixture)[..2],
+        [
+            "You chose to continue without BG1 fixes (EE Fixpack): its installer stopped with an error. Also left out of EE Fixpack: BG2 fixes.",
+            "You chose to continue without BG2 extras (EE Fixpack): its installer stopped with an error.",
+        ]
+    );
+}
+
+/// What needs another part of a feature stays when one part of it fails: only what failed
+/// leaves.
+#[cfg(windows)]
+#[test]
+fn what_needs_another_part_of_a_feature_stays_when_one_part_fails() {
+    let fixture = executable_fixture();
+    let collection = fixture.recipe.join("collection.toml");
+    let text = fs::read_to_string(&collection)
+        .unwrap()
+        .replace("\r\n", "\n");
+    let bg2_feature = "components = [{ run_id = \"eefixpack-bg2\", component = 0 }]\n";
+    assert!(text.contains(bg2_feature));
+    let needs = r#"
+[[component_needs]]
+component = { run_id = "eefixpack-bg2", component = 0 }
+needs = [{ run_id = "eefixpack-bg1", component = 0 }]
+"#;
+    fs::write(
+        collection,
+        text.replace(
+            bg2_feature,
+            "components = [{ run_id = \"eefixpack-bg2\", component = 0 }]\nrequires = [\"eefix-bg1\"]\n",
+        )
+        .replace(
+            "components = [\n  { run_id = \"eefixpack-bg1\", component = 0 },\n",
+            "core_components = []\ncomponents = [\n  { run_id = \"eefixpack-bg1\", component = 0 },\n",
+        ) + needs,
+    )
+    .unwrap();
+
+    let decision = install_until_component_fails(&fixture, "2");
+
+    assert_eq!(
+        decision["texts"]["message"],
+        "BG1 preparation fixes (EE Fixpack) could not be installed. Leave it out and continue?"
+    );
+    decide(&fixture, &decision, "leave-out");
+    let resumed = resume_with_failing_component(&fixture, "2");
+
+    assert_eq!(resumed["status"]["status"], "complete", "{resumed:#}");
+    let receipt = read_install_receipt(&fixture);
+    let installed = receipt.installed_plan.as_ref().unwrap();
+    assert_eq!(installed.components_for("eefixpack-bg1"), Some(&[0][..]));
+    assert_eq!(installed.components_for("eefixpack-bg2"), Some(&[0][..]));
+}
+
+/// The last record of the ledger of `fixture`, which a crash just before it was written would
+/// not have left: removes it and says what it was.
+#[cfg(windows)]
+fn lose_last_ledger_record(fixture: &ExecutableFixture) -> Value {
+    let ledger = fixture.managed.join(".chriz/ledger");
+    let last = fs::read_dir(&ledger)
+        .unwrap()
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .max()
+        .unwrap();
+    let record = serde_json::from_slice(&fs::read(&last).unwrap()).unwrap();
+    fs::remove_file(last).unwrap();
+    record
+}
+
+/// What the installation of an earlier version left behind stays readable: the receipt is
+/// compared with what the ledger says, so an answer may not gain anything that an old ledger
+/// yields and an old receipt lacks. Here an answer goes on without a mod and a run only loses a
+/// part. The report and the check before a game update read that, and the end summary names it.
+#[cfg(windows)]
+#[test]
+fn a_receipt_of_an_earlier_version_still_fits_its_ledger() {
+    let fixture = executable_fixture();
+    let mod_file = fixture.recipe.join("mods/eefixpack.toml");
+    let mut installer = fs::read_to_string(&mod_file).unwrap().replace("\r\n", "\n");
+    installer.push_str("\n[[components]]\nid = 3\nname = \"Snowy fixes\"\n");
+    fs::write(&mod_file, installer).unwrap();
+    let collection = fixture.recipe.join("collection.toml");
+    let text = fs::read_to_string(&collection)
+        .unwrap()
+        .replace("\r\n", "\n");
+    let run = "phase = \"bg2-preparation\"\ncomponents = [0]\n";
+    assert_eq!(text.matches(run).count(), 1);
+    fs::write(
+        &collection,
+        text.replace(run, "phase = \"bg2-preparation\"\ncomponents = [0, 3]\n")
+            + r#"
+[[features]]
+id = "eefix-bg2-snow"
+title = "Snowy fixes"
+description = "Fixture snowy fixes"
+category = "foundation"
+decision = "default"
+readiness = "ready"
+requires = ["snowytoes"]
+components = [{ run_id = "eefixpack-bg2", component = 3 }]
+"#,
+    )
+    .unwrap();
+    add_snowytoes(&fixture, &snowytoes_release("1.6"));
+    let link = ArtifactServer::start_answering(
+        BTreeMap::from([(
+            "/snowytoes.zip".to_owned(),
+            vec![Answer::status("410 Gone")],
+        )]),
+        |_| {},
+    );
+
+    let (code, response) = install_answering(&fixture, &link, &[CONTINUE_WITHOUT]);
+
+    assert_eq!(code, Some(0), "{response:#}");
+    let stable = fixture.managed.join(".chriz/install-receipt.json");
+    let mut receipts = fs::read_dir(fixture.managed.join(".chriz/attempts"))
+        .unwrap()
+        .map(|entry| entry.unwrap().path().join("receipt.json"))
+        .filter(|path| path.is_file())
+        .collect::<Vec<_>>();
+    receipts.push(stable.clone());
+    for path in receipts {
+        let receipt: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        let decision = receipt["decisions"][0].as_object().unwrap();
+        assert_eq!(
+            decision["changed_runs"][0], "eefixpack-bg2",
+            "{decision:#?}"
+        );
+        // What 0.1.1 wrote about an answer.
+        let earlier = [
+            "decision_id",
+            "step_id",
+            "kind",
+            "artifact_id",
+            "answer",
+            "source",
+            "answered_at",
+            "served",
+            "hosts",
+            "unreviewed_hosts",
+            "reason",
+            "removed_runs",
+            "changed_runs",
+            "outcome",
+        ];
+        assert!(
+            decision.keys().all(|key| earlier.contains(&key.as_str())),
+            "{decision:#?}"
+        );
+    }
+
+    let summary = end_summary(&fixture);
+    assert!(
+        summary.iter().any(|line| line.contains("Snowytoes")),
+        "{summary:#?}"
+    );
+    let record =
+        ManagedInstallRegistry::open_or_create(&fixture.app_data.join("Chriz BG Collection"))
+            .unwrap()
+            .list()
+            .unwrap()
+            .remove(0)
+            .record;
+    let error = bg_engine::cli::inspect_installed_update(&record, &fixture.recipe).unwrap_err();
+    assert!(
+        error.to_string().contains("Some mods were left out"),
+        "{error}"
+    );
+}
+
+/// The attempt that goes on after a left-out component is recorded before it does anything. A
+/// crash right after that record leaves an attempt that ran nothing, so the next resume runs
+/// what it was to run, and no fresh copy is needed.
+#[cfg(windows)]
+#[test]
+fn a_crash_as_a_run_goes_on_after_a_left_out_component_runs_the_rest() {
+    let fixture = executable_fixture();
+    split_bg1_fixes(&fixture);
+    let decision = install_until_component_fails(&fixture, "0");
+    assert_eq!(decision["question"]["failed"]["continues_with"][0], 2);
+    decide(&fixture, &decision, "leave-out");
+    let resume = ["--json", "resume", fixture.managed.to_str().unwrap()];
+    // A guard stops the attempt before WeiDU. A crash right after its start leaves neither the
+    // record of that failure, nor the attempt's folder, nor the receipt of the stop.
+    let (code, stopped) = run_installer_with(
+        &fixture,
+        None,
+        &[(
+            "CHRIZ_BG_COLLECTION_TEST_FAIL_RECHECK",
+            std::ffi::OsStr::new("invocation-build:install:eefixpack-bg1"),
+        )],
+        &resume,
+    );
+    assert_eq!(code, Some(1), "{stopped:#}");
+    let lost = lose_last_ledger_record(&fixture);
+    assert_eq!(lost["event"]["type"], "step_failed", "{lost:#}");
+    for entry in fs::read_dir(fixture.managed.join(".chriz/attempts")).unwrap() {
+        let path = entry.unwrap().path();
+        if path
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .starts_with("terminal-")
+        {
+            fs::remove_dir_all(path).unwrap();
+        } else {
+            for step in fs::read_dir(path.join("steps")).unwrap() {
+                let attempt = step.unwrap().path().join("attempt-0002");
+                if attempt.is_dir() {
+                    fs::remove_dir_all(attempt).unwrap();
+                }
+            }
+        }
+    }
+
+    let (code, resumed) = run_installer(&fixture, None, &resume);
+
+    assert_eq!(code, Some(0), "{resumed:#}");
+    assert_eq!(resumed["status"]["status"], "complete", "{resumed:#}");
+    let receipt = read_install_receipt(&fixture);
+    let installed = receipt.installed_plan.as_ref().unwrap();
+    assert_eq!(installed.components_for("eefixpack-bg1"), Some(&[2][..]));
+}
+
+/// A campaign frozen on a recipe that does not say what a feature of several components exists
+/// for: leaving out one part could leave the rest without what it needs, and nothing can tell.
+/// The player can only try again or stop.
+#[cfg(windows)]
+#[test]
+fn a_recipe_that_says_nothing_about_a_feature_keeps_it_whole() {
+    let fixture = executable_fixture();
+
+    let decision = install_until_component_fails(&fixture, "2");
+
+    let replay = SessionStore::open(&fixture.managed)
+        .unwrap()
+        .replay()
+        .unwrap();
+    let frozen: Value = serde_json::from_slice(&replay.created().recipe_payload).unwrap();
+    assert!(frozen["collection"]["features"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|feature| feature.get("core_components").is_none()));
+    assert_eq!(
+        labels(&decision),
+        vec!["Try again", "Stop the installation"]
+    );
+    assert!(decision["question"]["leave_out"].is_null(), "{decision:#}");
+    assert!(
+        decision["texts"]["details"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|detail| detail
+                == "BG1 fixes is installed only in part, and it can't stay that way"),
+        "{decision:#}"
+    );
+}
+
+/// The part a feature exists for cannot leave once another part of its core is in the game: mods
+/// would take the feature for installed. The player can only try again or stop.
+#[cfg(windows)]
+#[test]
+fn half_of_a_core_in_the_game_offers_only_to_try_again_or_stop() {
+    let fixture = executable_fixture();
+    let collection = fixture.recipe.join("collection.toml");
+    let text = fs::read_to_string(&collection)
+        .unwrap()
+        .replace("\r\n", "\n");
+    let bg1_feature = "id = \"eefix-bg1\"\n";
+    assert!(text.contains(bg1_feature));
+    fs::write(
+        collection,
+        text.replace(
+            "components = [\n  { run_id = \"eefixpack-bg1\", component = 0 },\n",
+            "core_components = [\n  { run_id = \"eefixpack-bg1\", component = 0 },\n  { run_id = \"eefixpack-bg1\", component = 2 },\n]\ncomponents = [\n  { run_id = \"eefixpack-bg1\", component = 0 },\n",
+        ),
+    )
+    .unwrap();
+
+    let decision = install_until_component_fails(&fixture, "2");
+
+    assert_eq!(
+        decision["texts"]["message"],
+        "BG1 preparation fixes (EE Fixpack) could not be installed, and the installation can't go on without it. Try again?"
+    );
+    assert_eq!(
+        labels(&decision),
+        vec!["Try again", "Stop the installation"]
+    );
+    assert!(
+        decision["texts"]["details"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|detail| detail
+                == "BG1 fixes is installed only in part, and it can't stay that way"),
+        "{decision:#}"
+    );
+}
+
+/// The attempt that asks again after a stop is recorded before its question. A crash between
+/// the two leaves an attempt that ran nothing: nothing in the game changed, and the evidence of
+/// the attempt that ran is whole, so the next resume asks the question.
+#[cfg(windows)]
+#[test]
+fn a_crash_while_asking_again_after_a_stop_only_asks_again() {
+    let fixture = executable_fixture();
+    split_bg1_fixes(&fixture);
+    let (code, response) = run_installer_with(
+        &fixture,
+        None,
+        &[(
+            "CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT",
+            std::ffi::OsStr::new("0"),
+        )],
+        &install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ),
+    );
+    waiting_for(code, &response, "install:eefixpack-bg1");
+    let install_id = response["install_id"].as_str().unwrap().to_owned();
+    let mut decision = check_decision(&fixture, &install_id);
+    let resume = ["--json", "resume", fixture.managed.to_str().unwrap()];
+    // The second round has the evidence two attempts back.
+    for _ in 0..2 {
+        decide(&fixture, &decision, "no");
+        let (code, stopped) = run_installer(&fixture, None, &resume);
+        assert_eq!(code, Some(1), "{stopped:#}");
+        let (code, asked) = run_installer(&fixture, None, &resume);
+        waiting_for(code, &asked, "install:eefixpack-bg1");
+        let log = fs::read(fixture.managed.join("bg1/WeiDU.log")).unwrap();
+
+        let lost = lose_last_ledger_record(&fixture);
+        assert_eq!(lost["event"]["type"], "decision_required", "{lost:#}");
+
+        let (code, asked) = run_installer(&fixture, None, &resume);
+        waiting_for(code, &asked, "install:eefixpack-bg1");
+        decision = check_decision(&fixture, &install_id);
+        assert_eq!(decision["question"]["failed"]["evidence_attempt"], 1);
+        assert_eq!(
+            fs::read(fixture.managed.join("bg1/WeiDU.log")).unwrap(),
+            log
+        );
+    }
+
+    decide(&fixture, &decision, "leave-out");
+    let (code, resumed) = run_installer(&fixture, None, &resume);
+    assert_eq!(code, Some(0), "{resumed:#}");
+    assert_eq!(resumed["status"]["status"], "complete", "{resumed:#}");
+}
+
+/// The game changed behind the installation's back while a question stood, after it was asked
+/// a second time. The evidence belongs to the first attempt, the last failure to the second:
+/// the copy is sealed all the same.
+#[cfg(windows)]
+#[test]
+fn a_game_that_changed_after_two_stops_needs_a_fresh_copy() {
+    let fixture = executable_fixture();
+    split_bg1_fixes(&fixture);
+    let (code, response) = run_installer_with(
+        &fixture,
+        None,
+        &[(
+            "CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT",
+            std::ffi::OsStr::new("0"),
+        )],
+        &install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ),
+    );
+    waiting_for(code, &response, "install:eefixpack-bg1");
+    let install_id = response["install_id"].as_str().unwrap().to_owned();
+    let resume = ["--json", "resume", fixture.managed.to_str().unwrap()];
+    decide(&fixture, &check_decision(&fixture, &install_id), "no");
+    let (code, stopped) = run_installer(&fixture, None, &resume);
+    assert_eq!(code, Some(1), "{stopped:#}");
+    let (code, asked) = run_installer(&fixture, None, &resume);
+    waiting_for(code, &asked, "install:eefixpack-bg1");
+    decide(&fixture, &check_decision(&fixture, &install_id), "no");
+    let (code, stopped) = run_installer(&fixture, None, &resume);
+    assert_eq!(code, Some(1), "{stopped:#}");
+    let log = fixture.managed.join("bg1/WeiDU.log");
+    let mut text = fs::read_to_string(&log).unwrap();
+    text.push_str("~OTHER/SETUP-OTHER.TP2~ #0 #0 // Installed by hand\n");
+    fs::write(&log, text).unwrap();
+
+    let (code, sealed) = run_installer(&fixture, None, &resume);
+
+    assert_eq!(code, Some(1), "{sealed:#}");
+    assert_eq!(
+        sealed["status"]["status"], "fresh_copy_required",
+        "{sealed:#}"
+    );
+}
+
+/// WeiDU finished a run with a failed component, and the installer never recorded its end. The
+/// resume that proves what happened publishes the attempt's record. A stop and another resume
+/// read the same evidence and must come to the same record. The first case is a crash, which
+/// leaves the attempt open; in the second the installer still recorded that the attempt failed.
+#[cfg(windows)]
+#[test]
+fn stopping_at_a_question_after_a_crash_keeps_the_question() {
+    for crashed in [true, false] {
+        let fixture = executable_fixture();
+        split_bg1_fixes(&fixture);
+        let (code, interrupted) = run_installer_with(
+            &fixture,
+            None,
+            &[
+                (
+                    "CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT",
+                    std::ffi::OsStr::new("0"),
+                ),
+                (
+                    "CHRIZ_BG_COLLECTION_TEST_INTERRUPT_AFTER_WEIDU",
+                    std::ffi::OsStr::new("1"),
+                ),
+            ],
+            &install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ),
+        );
+        assert_eq!(code, Some(1), "{interrupted:#}");
+        let install_id = interrupted["install_id"].as_str().unwrap().to_owned();
+        if crashed {
+            let lost = lose_last_ledger_record(&fixture);
+            assert_eq!(lost["event"]["type"], "step_failed", "{lost:#}");
+        }
+        let resume = ["--json", "resume", fixture.managed.to_str().unwrap()];
+        let (code, asked) = run_installer(&fixture, None, &resume);
+        waiting_for(code, &asked, "install:eefixpack-bg1");
+        let decision = check_decision(&fixture, &install_id);
+        assert_eq!(decision["question"]["failed"]["installed_after"][0], 2);
+        decide(&fixture, &decision, "no");
+        let (code, stopped) = run_installer(&fixture, None, &resume);
+        assert_eq!(code, Some(1), "{stopped:#}");
+
+        let (code, asked) = run_installer(&fixture, None, &resume);
+
+        waiting_for(code, &asked, "install:eefixpack-bg1");
+        decide(
+            &fixture,
+            &check_decision(&fixture, &install_id),
+            "leave-out",
+        );
+        let (code, resumed) = run_installer(&fixture, None, &resume);
+        assert_eq!(code, Some(0), "{resumed:#}");
+        assert_eq!(resumed["status"]["status"], "complete", "{resumed:#}");
+        assert_eq!(read_install_receipt(&fixture).runs[0].attempts.len(), 1);
+    }
+}
+
+/// A run that is in the game stays in the plan, even when it needs the failed component of a
+/// later run: the installer never uninstalls, so that is no reason to give up on the copy.
+#[cfg(windows)]
+#[test]
+fn an_installed_run_that_needs_the_failed_component_stays_installed() {
+    let fixture = executable_fixture();
+    let collection = fixture.recipe.join("collection.toml");
+    let text = fs::read_to_string(&collection)
+        .unwrap()
+        .replace("\r\n", "\n");
+    let bg1_feature = r#"components = [
+  { run_id = "eefixpack-bg1", component = 0 },
+  { run_id = "eefixpack-bg1", component = 2 },
+]
+"#;
+    let bg2_feature = "components = [{ run_id = \"eefixpack-bg2\", component = 0 }]\n";
+    assert!(text.contains(bg1_feature) && text.contains(bg2_feature));
+    fs::write(
+        collection,
+        text.replace("components = [0, 2]\n", "components = [0]\n")
+            .replace(
+                "phase = \"bg2-preparation\"\ncomponents = [0]\n",
+                "phase = \"bg2-preparation\"\ncomponents = [2]\n",
+            )
+            .replace(
+                bg1_feature,
+                "components = [{ run_id = \"eefixpack-bg1\", component = 0 }]\nrequires = [\"eefix-bg2\"]\n",
+            )
+            .replace(
+                bg2_feature,
+                "components = [{ run_id = \"eefixpack-bg2\", component = 2 }]\n",
+            ),
+    )
+    .unwrap();
+
+    let (code, response) = run_installer_with(
+        &fixture,
+        None,
+        &[(
+            "CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT",
+            std::ffi::OsStr::new("2"),
+        )],
+        &install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ),
+    );
+
+    waiting_for(code, &response, "install:eefixpack-bg2");
+    let decision = check_decision(&fixture, response["install_id"].as_str().unwrap());
+    assert_eq!(
+        decision["texts"]["message"],
+        "BG2 fixes (EE Fixpack) could not be installed. Leave it out and continue?"
+    );
+    decide(&fixture, &decision, "leave-out");
+    let resumed = resume_with_failing_component(&fixture, "2");
+
+    assert_eq!(resumed["status"]["status"], "complete", "{resumed:#}");
+    let receipt = read_install_receipt(&fixture);
+    let installed = receipt.installed_plan.as_ref().unwrap();
+    assert_eq!(installed.components_for("eefixpack-bg1"), Some(&[0][..]));
+    assert!(installed.components_for("eefixpack-bg2").is_none());
+    let log = fs::read_to_string(fixture.managed.join("bg1/WeiDU.log")).unwrap();
+    assert!(log.contains("Synthetic component 0"), "{log}");
+}
+
+/// "Try again" runs the component again, and what the player fixed meanwhile can succeed.
+#[cfg(windows)]
+#[test]
+fn trying_a_failed_component_again_can_succeed() {
+    let fixture = executable_fixture();
+    split_bg1_fixes(&fixture);
+    let fixed = fixture._temp.path().join("mock-weidu-fixed");
+    let (code, response) = run_installer_with(
+        &fixture,
+        None,
+        &[
+            (
+                "CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT",
+                std::ffi::OsStr::new("2"),
+            ),
+            (
+                "CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT_UNTIL",
+                fixed.as_os_str(),
+            ),
+        ],
+        &install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ),
+    );
+    waiting_for(code, &response, "install:eefixpack-bg1");
+    let decision = check_decision(&fixture, response["install_id"].as_str().unwrap());
+    decide(&fixture, &decision, "retry");
+    fs::write(&fixed, b"fixed").unwrap();
+
+    let (code, resumed) = run_installer_with(
+        &fixture,
+        None,
+        &[
+            (
+                "CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT",
+                std::ffi::OsStr::new("2"),
+            ),
+            (
+                "CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT_UNTIL",
+                fixed.as_os_str(),
+            ),
+        ],
+        &["--json", "resume", fixture.managed.to_str().unwrap()],
+    );
+
+    assert_eq!(code, Some(0), "{resumed:#}");
+    assert_eq!(resumed["status"]["status"], "complete", "{resumed:#}");
+    let receipt = read_install_receipt(&fixture);
+    assert!(receipt.left_out.is_empty(), "{:?}", receipt.left_out);
+    assert_eq!(receipt.installed_plan, None);
+    assert!(end_summary(&fixture).is_empty());
+}
+
+/// A fixed part of the collection cannot be left out: the question says so and offers only to
+/// try again or stop. A run without an answer, or with one that does not fit, ends with the
+/// question open and does not wait for anyone.
+#[cfg(windows)]
+#[test]
+fn a_failed_fixed_part_offers_only_to_try_again_or_stop() {
+    let fixture = executable_fixture();
+    fail_once_at_a_fixed_part(&fixture);
+    let (code, response) = run_installer_with(
+        &fixture,
+        None,
+        &[
+            (
+                "CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT",
+                std::ffi::OsStr::new("0"),
+            ),
+            (
+                "CHRIZ_TEST_MOCK_WEIDU_SKIP_AFTER_FAILURE",
+                std::ffi::OsStr::new("1"),
+            ),
+        ],
+        &answering(
+            install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ),
+            &[LEAVE_OUT_FAILED_COMPONENT],
+        ),
+    );
+
+    waiting_for(code, &response, "install:eefixpack-bg1");
+    let decision = check_decision(&fixture, response["install_id"].as_str().unwrap());
+    assert_eq!(
+        decision["texts"]["message"],
+        "Core fixes (EE Fixpack) could not be installed, and the installation can't go on without it. Try again?"
+    );
+    assert_eq!(
+        labels(&decision),
+        vec!["Try again", "Stop the installation"]
+    );
+    assert_eq!(decision["texts"]["focus"], "retry");
+    let (code, refused) = decide_with(
+        &fixture,
+        &decision,
+        decision["token"].as_str().unwrap(),
+        "leave-out",
+    );
+    assert_ne!(code, Some(0), "{refused:#}");
+    decide(&fixture, &decision, "no");
+    let (code, stopped) = run_installer_with(
+        &fixture,
+        None,
+        &[
+            (
+                "CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT",
+                std::ffi::OsStr::new("0"),
+            ),
+            (
+                "CHRIZ_TEST_MOCK_WEIDU_SKIP_AFTER_FAILURE",
+                std::ffi::OsStr::new("1"),
+            ),
+        ],
+        &["--json", "resume", fixture.managed.to_str().unwrap()],
+    );
+    assert_eq!(code, Some(1), "{stopped:#}");
+    assert!(
+        stopped["status"]["reason"]
+            .as_str()
+            .unwrap()
+            .starts_with("You chose to stop: Core fixes (EE Fixpack) could not be installed."),
+        "{stopped:#}"
+    );
+}
+
+/// A script cannot run "Try again" in a loop: a preset answer takes only leave-out or no.
+#[test]
+fn trying_again_is_no_preset_answer() {
+    let fixture = executable_fixture();
+    let output = cli()
+        .args(answering(
+            install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ),
+            &["failed-component=retry"],
+        ))
+        .output()
+        .expect("run install");
+
+    assert!(!output.status.success(), "{}", stdout(&output));
+    assert_eq!(json_stdout(&output)["error"]["code"], "invalid_answer");
 }
 
 #[test]
@@ -2784,12 +3995,15 @@ fn display_name_and_recipe_are_both_frozen_across_a_failed_install_resume() {
     let mut install = executable_command(&fixture);
     install
         .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
-        .args(install_args(
-            &fixture.recipe,
-            &fixture.bg1,
-            &fixture.bg2,
-            &fixture.managed,
-            &fixture.cache,
+        .args(answering(
+            install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ),
+            &[STOP_AT_FAILED_COMPONENT],
         ))
         .args(["--name", "Resumed BG"]);
 
@@ -2923,12 +4137,15 @@ fn resume_retains_first_acquisition_after_a_lost_cache_is_redownloaded_via_a_new
     fail_once_at_a_fixed_part(&fixture);
     let failed = executable_command(&fixture)
         .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
-        .args(install_args(
-            &fixture.recipe,
-            &fixture.bg1,
-            &fixture.bg2,
-            &fixture.managed,
-            &fixture.cache,
+        .args(answering(
+            install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ),
+            &[STOP_AT_FAILED_COMPONENT],
         ))
         .output()
         .expect("execute first synthetic attempt");
@@ -3033,12 +4250,15 @@ fn resume_recreates_a_deleted_download_cache() {
     fail_once_at_a_fixed_part(&fixture);
     let failed = executable_command(&fixture)
         .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
-        .args(install_args(
-            &fixture.recipe,
-            &fixture.bg1,
-            &fixture.bg2,
-            &fixture.managed,
-            &fixture.cache,
+        .args(answering(
+            install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ),
+            &[STOP_AT_FAILED_COMPONENT],
         ))
         .output()
         .expect("execute first synthetic attempt");
@@ -3401,7 +4621,7 @@ fn a_mod_whose_changed_download_cannot_be_used_is_left_out_and_named_in_the_end_
                 &fixture.managed,
                 &fixture.cache,
             ),
-            &[CONTINUE_WITHOUT],
+            &[STOP_AT_FAILED_COMPONENT, CONTINUE_WITHOUT],
         ))
         .output()
         .expect("start the installation");
@@ -3488,7 +4708,12 @@ fn a_mod_whose_changed_download_cannot_be_used_is_left_out_and_named_in_the_end_
         report["notes"][0],
         "You chose to continue without Snowytoes (the newer download is packed in a way the installer can't read)."
     );
-    let decision = &receipt.decisions[..];
+    // Besides the answer that stopped at the failed run, which the test uses to resume.
+    let decision = receipt
+        .decisions
+        .iter()
+        .filter(|decision| decision.kind != bg_engine::decision::QuestionKind::FailedComponent)
+        .collect::<Vec<_>>();
     assert_eq!(decision.len(), 1, "{decision:#?}");
     assert_eq!(
         decision[0].kind,
@@ -3628,12 +4853,15 @@ fn a_changed_archive_that_would_overwrite_another_mods_file_is_left_out() {
         .env(DOWNLOAD_ORIGIN, &link.base_url)
         .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
         .args(answering(
-            install_args(
-                &fixture.recipe,
-                &fixture.bg1,
-                &fixture.bg2,
-                &fixture.managed,
-                &fixture.cache,
+            answering(
+                install_args(
+                    &fixture.recipe,
+                    &fixture.bg1,
+                    &fixture.bg2,
+                    &fixture.managed,
+                    &fixture.cache,
+                ),
+                &[STOP_AT_FAILED_COMPONENT],
             ),
             &[INSTALL_CHANGED, CONTINUE_WITHOUT],
         ))
@@ -4456,12 +5684,15 @@ fn resume_rebuilds_a_partially_deleted_extraction_and_records_the_repair() {
     fail_once_at_a_fixed_part(&fixture);
     let failed = executable_command(&fixture)
         .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
-        .args(install_args(
-            &fixture.recipe,
-            &fixture.bg1,
-            &fixture.bg2,
-            &fixture.managed,
-            &fixture.cache,
+        .args(answering(
+            install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ),
+            &[STOP_AT_FAILED_COMPONENT],
         ))
         .output()
         .expect("execute first synthetic attempt");

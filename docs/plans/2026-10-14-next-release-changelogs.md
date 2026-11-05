@@ -33,6 +33,12 @@ is described in [`docs/release-notes-0.1.1.md`](../release-notes-0.1.1.md).
   (Maximum) and Maximum HP Creatures (For all creatures in game) are now **Optional** (were
   **Default**), unchecked in Chris's Recommended. Both stay available under Customize. Max HP
   at Level One stays **Default**. (Tweaks Anthology)
+- **The installer asks when a single part fails.** When the installer of one component stops
+  with an error, the installation pauses and names the mod and the part, instead of needing a
+  fresh start. You choose to leave it out and continue or to stop, and to try it again when
+  nothing was installed after it. Only that part leaves, with what needs it; the mod's other
+  parts stay, and the end of the installation names everything left out. A part the collection
+  cannot do without is not left out.
 
 These changes apply to new installations; existing games and saves are unchanged.
 
@@ -54,6 +60,15 @@ These changes apply to new installations; existing games and saves are unchanged
   are unchecked options. The Recommended plan loses both components (468 to 466), and its 69
   runs and their order stay. The 0.1.2 update ledger needs an entry that covers
   `feature:feature:cdtweaks:component-3000` and `feature:feature:cdtweaks:component-3010`.
+- **A failed component** (Christopher, 2026-11-04: "Er soll nachfragen") is a question of its
+  own now, `failed_component`, in the ledger, `check-decision`, `decide` and the app's dialog.
+  It replaces the automatic leave-out of 0.1.1. A script that wants the old behaviour passes
+  `--answer failed-component=leave-out`; without an answer a run ends with the question open.
+  The recipe gains `core_components` and `[[component_needs]]`, which only decide what leaves
+  with a failed part: plans and selections stay the same. A feature of several components says
+  what it exists for, and a dependent that needs one part of it gets a row in
+  `manifest/collection.toml`, read from its own installer. Campaigns frozen before 0.1.2 have
+  neither, so their features of several components only leave whole.
 
 ## Installer changelog
 

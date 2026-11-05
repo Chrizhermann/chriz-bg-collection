@@ -2,9 +2,9 @@ use std::path::PathBuf;
 
 use bg_engine::error::EngineError;
 use bg_engine::manifest::{
-    AcquisitionPolicy, Component, ComponentRef, ConfigFile, Conflict, Decision, Feature,
-    FeatureInputRef, InputOption, InputSpec, InvocationMode, Phase, Postcondition, PromptAnswer,
-    PromptStep, Readiness, Run, SourceKind,
+    AcquisitionPolicy, Component, ComponentNeeds, ComponentRef, ConfigFile, Conflict, Decision,
+    Feature, FeatureInputRef, InputOption, InputSpec, InvocationMode, Phase, Postcondition,
+    PromptAnswer, PromptStep, Readiness, Run, SourceKind,
 };
 use bg_engine::validate::{check, validate, Finding, Severity};
 use bg_engine::Manifest;
@@ -43,6 +43,7 @@ fn feature(id: &str, decision: Decision) -> Feature {
         requires_any: Vec::new(),
         conflicts: Vec::new(),
         inputs: Vec::new(),
+        core_components: None,
     }
 }
 
@@ -908,6 +909,124 @@ fn input_defaults_and_bounds_are_validated() {
     let findings = validate(&manifest);
 
     assert_has_error(&findings, "feature-inputs");
+}
+
+/// A fixture whose two features own the two components of the BG1 run, the second requiring
+/// the first.
+fn manifest_with_needs() -> Manifest {
+    let mut manifest = good();
+    manifest.collection.features = vec![
+        Feature {
+            components: vec![ComponentRef {
+                run_id: "eefixpack-bg1".to_owned(),
+                component: 0,
+            }],
+            ..feature("first", Decision::Default)
+        },
+        Feature {
+            requires: vec!["first".to_owned()],
+            components: vec![ComponentRef {
+                run_id: "eefixpack-bg1".to_owned(),
+                component: 2,
+            }],
+            ..feature("second", Decision::Default)
+        },
+    ];
+    manifest
+}
+
+fn needs_findings(manifest: &Manifest) -> Vec<String> {
+    validate(manifest)
+        .into_iter()
+        .filter(|finding| finding.rule == bg_engine::validate::RULE_COMPONENT_NEEDS)
+        .map(|finding| finding.message)
+        .collect()
+}
+
+#[test]
+fn component_needs_must_name_what_their_feature_requires() {
+    let first = ComponentRef {
+        run_id: "eefixpack-bg1".to_owned(),
+        component: 0,
+    };
+    let second = ComponentRef {
+        run_id: "eefixpack-bg1".to_owned(),
+        component: 2,
+    };
+    let entry = |component: &ComponentRef, needs: &[&ComponentRef]| ComponentNeeds {
+        component: component.clone(),
+        needs: needs.iter().map(|part| (*part).clone()).collect(),
+        needs_any: Vec::new(),
+    };
+    let mut manifest = manifest_with_needs();
+    manifest.collection.component_needs = vec![entry(&second, &[&first])];
+    assert!(needs_findings(&manifest).is_empty());
+
+    // The first feature requires nothing, so it cannot need anything of the second.
+    manifest.collection.component_needs = vec![entry(&first, &[&second])];
+    assert!(needs_findings(&manifest)[0].contains("no feature it requires owns"));
+
+    manifest.collection.component_needs = vec![entry(&second, &[])];
+    assert!(needs_findings(&manifest)[0].contains("names nothing"));
+
+    manifest.collection.component_needs =
+        vec![entry(&second, &[&first]), entry(&second, &[&first])];
+    assert!(needs_findings(&manifest)[0].contains("more than one entry"));
+
+    let unowned = ComponentRef {
+        run_id: "eefixpack-bg2".to_owned(),
+        component: 0,
+    };
+    manifest.collection.component_needs = vec![entry(&unowned, &[&first])];
+    assert!(needs_findings(&manifest)[0].contains("no feature owns it"));
+}
+
+/// Every feature of `requires` must hold on its own, so alternatives cannot reach across them.
+/// Of `requires_any` one is enough, so there they mean what they say.
+#[test]
+fn alternatives_of_a_component_cannot_reach_across_what_it_requires() {
+    let part = |run_id: &str, component: u32| ComponentRef {
+        run_id: run_id.to_owned(),
+        component,
+    };
+    let mut manifest = manifest_with_needs();
+    manifest.collection.features.push(Feature {
+        components: vec![part("eefixpack-bg2", 0)],
+        ..feature("third", Decision::Default)
+    });
+    let second = manifest
+        .collection
+        .features
+        .iter_mut()
+        .find(|feature| feature.id == "second")
+        .unwrap();
+    second.requires = vec!["first".to_owned(), "third".to_owned()];
+    manifest.collection.component_needs = vec![ComponentNeeds {
+        component: part("eefixpack-bg1", 2),
+        needs: Vec::new(),
+        needs_any: vec![part("eefixpack-bg1", 0), part("eefixpack-bg2", 0)],
+    }];
+    assert!(needs_findings(&manifest)[0].contains("every feature it requires must hold"));
+
+    let second = manifest
+        .collection
+        .features
+        .iter_mut()
+        .find(|feature| feature.id == "second")
+        .unwrap();
+    second.requires_any = std::mem::take(&mut second.requires);
+    assert!(needs_findings(&manifest).is_empty());
+}
+
+#[test]
+fn core_components_must_be_components_of_their_feature() {
+    let mut manifest = manifest_with_needs();
+    manifest.collection.features[0].core_components = Some(vec![ComponentRef {
+        run_id: "eefixpack-bg1".to_owned(),
+        component: 2,
+    }]);
+
+    assert!(needs_findings(&manifest)[0].contains("is not a component of feature"));
 }
 
 #[test]

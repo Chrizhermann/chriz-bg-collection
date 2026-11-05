@@ -3,6 +3,8 @@ use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
+#[cfg(windows)]
+use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -397,14 +399,22 @@ fn describe_start(start: &[u8]) -> String {
     format!("the bytes {}", bytes.join(" "))
 }
 
-/// An open UnRAR archive, closed when dropped.
+/// Held while an archive is open: UnRAR keeps its error state per process, so what one archive
+/// reports could answer for another opened meanwhile.
 #[cfg(windows)]
-struct RarHandle(*const unrar_sys::Handle);
+static RAR_IN_USE: Mutex<()> = Mutex::new(());
+
+/// An open UnRAR archive, closed when dropped. A thread can hold only one.
+#[cfg(windows)]
+struct RarHandle {
+    pointer: *const unrar_sys::Handle,
+    _in_use: MutexGuard<'static, ()>,
+}
 
 #[cfg(windows)]
 impl Drop for RarHandle {
     fn drop(&mut self) {
-        unsafe { unrar_sys::RARCloseArchive(self.0) };
+        unsafe { unrar_sys::RARCloseArchive(self.pointer) };
     }
 }
 
@@ -415,11 +425,15 @@ impl Drop for RarHandle {
 fn open_rar(path: &Path, mode: u32) -> Result<(RarHandle, unrar_sys::OpenArchiveDataEx), u32> {
     let path = WideCString::from_os_str(path).map_err(|_| unrar_sys::ERAR_EOPEN as u32)?;
     let mut open = unrar_sys::OpenArchiveDataEx::new(path.as_ptr().cast(), mode);
+    let in_use = RAR_IN_USE.lock().unwrap_or_else(PoisonError::into_inner);
     let handle = unsafe { unrar_sys::RAROpenArchiveEx(std::ptr::from_mut(&mut open).cast_const()) };
     if handle.is_null() {
         return Err(open.open_result);
     }
-    let handle = RarHandle(handle);
+    let handle = RarHandle {
+        pointer: handle,
+        _in_use: in_use,
+    };
     if open.open_result != unrar_sys::ERAR_SUCCESS as u32 {
         return Err(open.open_result);
     }
@@ -527,7 +541,7 @@ fn rar_container_problem(
         }
         let mut header = unrar_sys::HeaderDataEx::default();
         let code = unsafe {
-            unrar_sys::RARReadHeaderEx(handle.0, std::ptr::from_mut(&mut header).cast_const())
+            unrar_sys::RARReadHeaderEx(handle.pointer, std::ptr::from_mut(&mut header).cast_const())
         };
         if code == unrar_sys::ERAR_END_ARCHIVE {
             return Ok(None);
@@ -584,20 +598,20 @@ fn rar_container_problem(
         };
         unsafe {
             unrar_sys::RARSetCallback(
-                handle.0,
+                handle.pointer,
                 Some(rar_test_callback),
                 std::ptr::from_mut(&mut tested) as unrar_sys::LPARAM,
             )
         };
         let process = unsafe {
             unrar_sys::RARProcessFileW(
-                handle.0,
+                handle.pointer,
                 unrar_sys::RAR_TEST,
                 std::ptr::null(),
                 std::ptr::null(),
             )
         };
-        unsafe { unrar_sys::RARSetCallback(handle.0, None, 0) };
+        unsafe { unrar_sys::RARSetCallback(handle.pointer, None, 0) };
         if tested.stopped {
             return Err(stopped());
         }
@@ -1192,7 +1206,7 @@ fn validate_rar_entries(
     rule: LayoutRule,
 ) -> Result<(Vec<ValidatedEntry>, Option<String>), AcquireError> {
     let (rar, open) = open_rar_archive(archive_path, unrar_sys::RAR_OM_LIST_INCSPLIT)?;
-    let handle = rar.0;
+    let handle = rar.pointer;
     if open.flags & (unrar_sys::ROADF_VOLUME | unrar_sys::ROADF_FIRSTVOLUME) != 0 {
         return Err(AcquireError::ArchiveFormat {
             path: archive_path.to_path_buf(),
@@ -1996,7 +2010,7 @@ fn extract_rar_entries(
     identity: &ExtractionIdentity<'_>,
 ) -> Result<(), AcquireError> {
     let (rar, open) = open_rar_archive(archive_path, unrar_sys::RAR_OM_EXTRACT)?;
-    let handle = rar.0;
+    let handle = rar.pointer;
     if open.flags
         & (unrar_sys::ROADF_VOLUME
             | unrar_sys::ROADF_FIRSTVOLUME
@@ -3481,6 +3495,34 @@ mod served_container_tests {
             None
         );
         assert!(open_rar_archive(&path, unrar_sys::RAR_OM_EXTRACT).is_ok());
+    }
+
+    /// UnRAR's error state belongs to the whole process, so a file it cannot read must not
+    /// answer for a program opened at the same moment, or the other way round: one reads as a
+    /// failure of this computer and the other as no archive, and they are handled differently.
+    #[cfg(windows)]
+    #[test]
+    fn what_unrar_finds_stays_with_the_file_it_opened() {
+        let archive = rar4_sfx("evandra/setup-evandra.tp2", b"BACKUP ~evandra/backup~");
+        let temporary = tempfile::TempDir::new().unwrap();
+        let locked = temporary.path().join("locked.exe");
+        let program = temporary.path().join("program.exe");
+        fs::write(&locked, &archive).unwrap();
+        fs::write(&program, b"MZ\x90\x00 just a program").unwrap();
+        let holder = File::open(&locked).unwrap();
+        holder.lock().unwrap();
+        let open = |path: &Path, expected: i32| {
+            for _ in 0..500 {
+                let opened = open_rar(path, unrar_sys::RAR_OM_EXTRACT).map(|_| ());
+                assert_eq!(opened, Err(expected as u32), "{}", path.display());
+            }
+        };
+
+        std::thread::scope(|scope| {
+            let unreadable = scope.spawn(|| open(&locked, unrar_sys::ERAR_EREAD));
+            open(&program, unrar_sys::ERAR_BAD_ARCHIVE);
+            unreadable.join().unwrap();
+        });
     }
 
     /// A stop ends the check of a changed self-extractor, before a file is tested or while one

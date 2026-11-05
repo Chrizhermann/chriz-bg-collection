@@ -548,7 +548,10 @@ pub fn run<S: EventSink>(
     {
         supervision_failed = true;
     }
-    if !cancelled && !matcher.complete() {
+    // A component can fail before it asks, and WeiDU then exits with an error: what its missing
+    // answers mean is for the run's evidence to say. Only a success needs every answer here.
+    let exited_with_failure = exit_status.is_some_and(|status| !status.success());
+    if !cancelled && !exited_with_failure && !matcher.complete() {
         emit_error(
             &sink,
             &request.step_id,
@@ -692,9 +695,13 @@ fn remember_output(tail: &mut Vec<u8>, bytes: &[u8]) {
     }
 }
 
+/// Answers the authored prompts in their order. WeiDU goes on after a failed component, so a
+/// prompt can come while one before it never will; that one stays unanswered, and the run's
+/// evidence says whether that was right.
 struct PromptMatcher<'a> {
     prompts: &'a [ResolvedPrompt],
     next: usize,
+    answered: usize,
     stdout: Vec<u8>,
     stderr: Vec<u8>,
 }
@@ -704,6 +711,7 @@ impl<'a> PromptMatcher<'a> {
         Self {
             prompts,
             next: 0,
+            answered: 0,
             stdout: Vec::new(),
             stderr: Vec::new(),
         }
@@ -715,7 +723,12 @@ impl<'a> PromptMatcher<'a> {
         bytes: &[u8],
         stdin: &mut Option<ChildStdin>,
     ) -> io::Result<Option<PromptAnswerEvidence>> {
-        let Some(prompt) = self.prompts.get(self.next) else {
+        let waiting = &self.prompts[self.next..];
+        let Some(longest) = waiting
+            .iter()
+            .map(|prompt| prompt.expected_output.len())
+            .max()
+        else {
             return Ok(None);
         };
         let buffer = match stream {
@@ -724,18 +737,24 @@ impl<'a> PromptMatcher<'a> {
         };
         buffer.extend_from_slice(bytes);
 
-        if contains(buffer, &prompt.expected_output) {
+        let asked = waiting
+            .iter()
+            .position(|prompt| contains(buffer, &prompt.expected_output));
+        if let Some(offset) = asked {
+            let index = self.next + offset;
+            let prompt = &self.prompts[index];
             let writer = stdin
                 .as_mut()
                 .ok_or_else(|| io::Error::new(io::ErrorKind::BrokenPipe, "child stdin closed"))?;
             writer.write_all(&prompt.answer)?;
             writer.flush()?;
             let answered = PromptAnswerEvidence {
-                index: self.next,
+                index,
                 expected_output_sha256: sha256_bytes(&prompt.expected_output),
                 answer_sha256: sha256_bytes(&prompt.answer),
             };
-            self.next += 1;
+            self.next = index + 1;
+            self.answered += 1;
             self.stdout.clear();
             self.stderr.clear();
             if self.next == self.prompts.len() {
@@ -743,7 +762,7 @@ impl<'a> PromptMatcher<'a> {
             }
             return Ok(Some(answered));
         } else {
-            let keep = prompt.expected_output.len().saturating_sub(1);
+            let keep = longest.saturating_sub(1);
             if buffer.len() > keep {
                 buffer.drain(..buffer.len() - keep);
             }
@@ -752,11 +771,11 @@ impl<'a> PromptMatcher<'a> {
     }
 
     fn complete(&self) -> bool {
-        self.next == self.prompts.len()
+        self.answered == self.prompts.len()
     }
 
     fn remaining(&self) -> usize {
-        self.prompts.len() - self.next
+        self.prompts.len() - self.answered
     }
 }
 

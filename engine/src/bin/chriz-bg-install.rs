@@ -46,11 +46,13 @@ enum Command {
         managed_root: PathBuf,
         /// Answer a question for this run only, for tests and automation:
         /// changed-download=yes|no|leave-out, unusable-download=yes|no,
-        /// unreviewed-tool=yes|no|leave-out or modded-source=yes|no. Repeat for several questions.
+        /// unreviewed-tool=yes|no|leave-out, modded-source=yes|no or
+        /// failed-component=leave-out|no. Repeat for several questions. Without an answer the
+        /// run ends with the question open instead of waiting.
         #[arg(long = "answer")]
         answers: Vec<String>,
     },
-    /// Show the question about a download that an installation waits for, with its token.
+    /// Show the question that an installation waits for, with its token.
     CheckDecision {
         managed_root: PathBuf,
         #[arg(long)]
@@ -65,7 +67,7 @@ enum Command {
         decision: String,
         #[arg(long)]
         token: String,
-        /// yes, no or leave-out.
+        /// yes, no, leave-out or retry.
         #[arg(long, value_parser = parse_answer)]
         answer: Answer,
     },
@@ -270,7 +272,9 @@ struct InstallArgs {
     manual_breakpoints: Vec<bg_engine::manual_checkpoint::ManualBreakpoint>,
     /// Answer a question for this run only, for tests and automation:
     /// changed-download=yes|no|leave-out, unusable-download=yes|no,
-    /// unreviewed-tool=yes|no|leave-out or modded-source=yes|no. Repeat for several questions.
+    /// unreviewed-tool=yes|no|leave-out, modded-source=yes|no or
+    /// failed-component=leave-out|no. Repeat for several questions. Without an answer the run
+    /// ends with the question open instead of waiting.
     #[arg(long = "answer")]
     answers: Vec<String>,
 }
@@ -754,7 +758,7 @@ fn finish_human_campaign(report: bg_engine::cli::CampaignReport) -> Result<(), C
     }
 }
 
-/// Prints a question about a download and the exact command lines that answer it.
+/// Prints a question and the exact command lines that answer it.
 fn print_decision(managed_root: &std::path::Path, decision: &bg_engine::cli::DecisionStatus) {
     println!("The installation waits for your answer:");
     println!("{}", decision.texts.message);

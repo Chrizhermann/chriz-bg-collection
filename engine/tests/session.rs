@@ -601,6 +601,8 @@ fn a_failed_run_left_out_must_end_its_own_install_step() {
         failed_run: Some(bg_engine::session::FailedRun {
             run_id: "tweaks-bg2".to_owned(),
             components,
+            left_out: Vec::new(),
+            continues_with: Vec::new(),
         }),
     };
     for (step_id, components, accepted) in [
@@ -623,5 +625,61 @@ fn a_failed_run_left_out_must_end_its_own_install_step() {
             accepted,
             "{step_id} {components:?}: {result:?}"
         );
+    }
+}
+
+/// A failed component the player left out is the first one the run did not install, and the
+/// run goes on only with components after it. A step that goes on starts its next attempt.
+#[test]
+fn a_run_that_goes_on_leaves_out_its_first_uninstalled_component() {
+    let left_out = |left_out: Vec<u32>, continues_with: Vec<u32>| SessionEvent::ArtifactLeftOut {
+        step_id: "install:tweaks-bg2".to_owned(),
+        attempt: 1,
+        artifact_id: "tweaks".to_owned(),
+        detail: "its installer stopped with an error".to_owned(),
+        plan_sha256: "77".repeat(32),
+        removed_runs: Vec::new(),
+        changed_runs: Vec::new(),
+        failed_run: Some(bg_engine::session::FailedRun {
+            run_id: "tweaks-bg2".to_owned(),
+            components: vec![1, 2, 3],
+            left_out,
+            continues_with,
+        }),
+    };
+    for (event, accepted) in [
+        (left_out(vec![1], vec![2, 3]), true),
+        (left_out(vec![1], vec![3]), true),
+        (left_out(vec![1], Vec::new()), true),
+        // WeiDU went on after the failure: each of them failed.
+        (left_out(vec![1, 2, 3], Vec::new()), true),
+        // A record of an earlier version names none.
+        (left_out(Vec::new(), Vec::new()), true),
+        (left_out(vec![2], vec![3]), false),
+        (left_out(vec![1], vec![1, 2]), false),
+        (left_out(vec![1], vec![3, 2]), false),
+        (left_out(vec![1], vec![4]), false),
+        (left_out(vec![1, 2], vec![2]), false),
+        (left_out(vec![1, 4], Vec::new()), false),
+        (left_out(Vec::new(), vec![2]), false),
+    ] {
+        let fixture = campaign_fixture();
+        let store = create_store(&fixture);
+        store
+            .append(SessionEvent::StepStarted {
+                step_id: "install:tweaks-bg2".to_owned(),
+                attempt: 1,
+            })
+            .unwrap();
+        let result = store.append(event.clone());
+        assert_eq!(result.is_ok(), accepted, "{event:?}: {result:?}");
+        if accepted {
+            store
+                .append(SessionEvent::StepStarted {
+                    step_id: "install:tweaks-bg2".to_owned(),
+                    attempt: 2,
+                })
+                .unwrap();
+        }
     }
 }

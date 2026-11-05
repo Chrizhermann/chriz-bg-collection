@@ -153,8 +153,10 @@ Cross-repository status. Component detail stays in the sections below and in the
     the newest release with Undo and Restore, and mods after it stay as they are. Chriz Easy IWD has
     it since 0.1.7; Chriz Easy BG in [PR #115](https://github.com/Chrizhermann/chriz-bg-collection/pull/115),
     lab on a fresh 0.1.1 game green.
-  - **A single failed component** (Christopher, 2026-11-04): the installer should ask the
-    player instead of deciding by itself. Not built yet, open for 0.1.2.
+  - **A single failed component** (Christopher, 2026-11-04): the installer asks the player
+    instead of deciding by itself. Built for Chriz Easy BG on `main`
+    (`docs/handover.md`, November 5). Chriz Easy IWD does not have it: `claude/iwdee-app` has
+    none of the question system yet (it branched on 2026-10-24, before #69, #80 and #89–#93).
   - **Recommended: rolled HP and no Maximum HP Creatures** (Christopher, 2026-11-04): done.
     Tweaks Anthology `3000` and `3010` are unchecked options, the way the fight-AI labs run
     it; `docs/curation/components/CDTWEAKS.md` has the details.

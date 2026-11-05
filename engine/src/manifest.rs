@@ -534,6 +534,13 @@ pub struct Feature {
     /// Exact component ownership in authored recipe runs.
     #[serde(default)]
     pub components: Vec<ComponentRef>,
+    /// The components this feature exists for, when it has several. What requires the feature
+    /// needs these, and the others are extras. The game must not hold only some of them: EEex's
+    /// marker tells other mods that its runtime is there. An empty list says that its components
+    /// stand alone. Without a list nothing says what can go, as in the recipes of earlier
+    /// versions, and all of the feature counts as its core.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub core_components: Option<Vec<ComponentRef>>,
     /// Other features that must be effective first.
     #[serde(default)]
     pub requires: Vec<String>,
@@ -546,6 +553,22 @@ pub struct Feature {
     /// Typed configuration owned by this feature.
     #[serde(default)]
     pub inputs: Vec<InputSpec>,
+}
+
+/// What one component really needs of the features its feature requires, as its own installer
+/// checks it, when that is less than all of those features. A required feature that is a bundle
+/// of independent components can lose one, and what needs another one stays.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ComponentNeeds {
+    /// The component with these needs.
+    pub component: ComponentRef,
+    /// Components it needs, all of them.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub needs: Vec<ComponentRef>,
+    /// Components of which it needs at least one.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub needs_any: Vec<ComponentRef>,
 }
 
 /// A player-facing group of optional features that can be switched together.
@@ -617,4 +640,8 @@ pub struct Collection {
     /// serialize, and therefore freeze and digest, exactly as before groups existed.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub feature_groups: Vec<FeatureGroup>,
+    /// What components need of the features they require, where that is less than all of them.
+    /// Omitted when empty, as `feature_groups`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub component_needs: Vec<ComponentNeeds>,
 }
