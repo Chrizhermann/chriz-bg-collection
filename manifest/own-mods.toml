@@ -100,3 +100,4 @@ mod = "buffbot"
 release = "v1.16.0"
 reason = "Chriz Easy BG 0.1.1 ships v1.12.6, the version Christopher tested it with; newer BuffBot releases go into both installers for 0.1.2."
 decided = "2026-11-04"
+installers = { chriz-easy-bg = "v1.16.0", chriz-easy-iwd = "v1.12.6" }
