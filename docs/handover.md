@@ -11,6 +11,7 @@ prepares its pull requests there. Chriz Easy IWD stays on `claude/iwdee-app` for
 
 Open for 0.1.2:
 - BG Rebalance v0.8.10 is pinned ([PR #103](https://github.com/Chrizhermann/chriz-bg-collection/pull/103), merged).
+- The BuffBot update for existing games: [PR #115](https://github.com/Chrizhermann/chriz-bg-collection/pull/115).
 - BuffBot v1.16.0 waits for 0.1.2 under the hold in `manifest/own-mods.toml`; the daily
   job's drafts are [#106](https://github.com/Chrizhermann/chriz-bg-collection/pull/106) (Chriz Easy BG) and
   [#107](https://github.com/Chrizhermann/chriz-bg-collection/pull/107) (Chriz Easy IWD).

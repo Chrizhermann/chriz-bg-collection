@@ -149,6 +149,10 @@ Cross-repository status. Component detail stays in the sections below and in the
     v1.15.0). Both wait for 0.1.2 (Christopher, 2026-11-04); the hold in
     `manifest/own-mods.toml` names v1.16.0 since 2026-11-04. The pin PR removes the hold,
     and Chriz Easy IWD needs its own version bump for it.
+  - **BuffBot update in existing games** (Christopher, 2026-11-04): Updates → BuffBot brings it to
+    the newest release with Undo and Restore, and mods after it stay as they are. Chriz Easy IWD has
+    it since 0.1.7; Chriz Easy BG in [PR #115](https://github.com/Chrizhermann/chriz-bg-collection/pull/115),
+    lab on a fresh 0.1.1 game green.
   - **A single failed component** (Christopher, 2026-11-04): the installer should ask the
     player instead of deciding by itself. Not built yet, open for 0.1.2.
   - **Recommended: rolled HP and no Maximum HP Creatures** (Christopher, 2026-11-04): done.
