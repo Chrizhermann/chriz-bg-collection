@@ -6,8 +6,8 @@ use bg_engine::cli::{
     answer_decision, diagnostics_for_managed_install, discover_games, human_plan_lines,
     inspect_decision, inspect_game, install_campaign_with_answers, install_interrupt_handler,
     parse_preset_answers, plan_recipe, report_managed_install, resume_campaign_with_answers,
-    validate_recipe, CampaignStatus, CliError, InstallCommandRequest, SelectionOverrides,
-    ValidationProfile,
+    validate_recipe, CampaignStatus, CliError, HotpatchAction, InstallCommandRequest,
+    ModUpdateAction, SelectionOverrides, ValidationProfile,
 };
 use bg_engine::decision::Answer;
 use bg_engine::events::{ConsoleSink, EngineEvent, EventSink};
@@ -71,6 +71,8 @@ enum Command {
         #[arg(long, value_parser = parse_answer)]
         answer: Answer,
     },
+    /// Check, update, undo or restore one mod of a completed installation, such as BuffBot.
+    Hotpatch(HotpatchArgs),
     /// Inspect append-only additions at a declared manual installation pause.
     CheckManualCheckpoint {
         managed_root: PathBuf,
@@ -94,6 +96,62 @@ enum Command {
         managed_root: PathBuf,
         #[arg(long)]
         output: PathBuf,
+    },
+}
+
+#[derive(Debug, Args)]
+struct HotpatchArgs {
+    #[command(subcommand)]
+    command: HotpatchCommand,
+    /// Catalog folder, such as `hotpatches/bg`.
+    #[arg(long, global = true)]
+    catalog: Option<PathBuf>,
+    /// Download cache for packages and WeiDU.
+    #[arg(long, global = true)]
+    cache: Option<PathBuf>,
+}
+
+#[derive(Debug, Subcommand)]
+enum HotpatchCommand {
+    /// Show whether a hotpatch is offered, and why not. Never changes the game.
+    Check { managed_root: PathBuf },
+    /// Apply the hotpatch that a check offered.
+    Apply {
+        managed_root: PathBuf,
+        #[arg(long)]
+        review_token: String,
+        /// Also copy the whole game folder first.
+        #[arg(long)]
+        full_backup: bool,
+        /// Also copy the saves first.
+        #[arg(long)]
+        save_backup: bool,
+    },
+    /// Undo the latest applied hotpatch or mod update.
+    Undo { managed_root: PathBuf },
+    /// Finish restoring a hotpatch or mod update that did not finish.
+    Restore { managed_root: PathBuf },
+    /// Show whether an update of one installed mod, such as BuffBot, is offered, and why not.
+    /// Never changes the game.
+    UpdateCheck {
+        managed_root: PathBuf,
+        /// The mod's id in the recipe, such as `buffbot`.
+        #[arg(long = "mod")]
+        mod_id: String,
+    },
+    /// Apply the mod update that a check offered.
+    UpdateApply {
+        managed_root: PathBuf,
+        #[arg(long = "mod")]
+        mod_id: String,
+        #[arg(long)]
+        review_token: String,
+        /// Also copy the whole game folder first.
+        #[arg(long)]
+        full_backup: bool,
+        /// Also copy the saves first.
+        #[arg(long)]
+        save_backup: bool,
     },
 }
 
@@ -252,6 +310,71 @@ fn main() -> ExitCode {
 
 fn execute(cli: &Cli) -> Result<(), CliError> {
     match &cli.command {
+        Command::Hotpatch(args) => {
+            let (Some(catalog), Some(cache)) = (&args.catalog, &args.cache) else {
+                return Err(CliError::invalid_arguments(
+                    "hotpatch needs --catalog and --cache",
+                ));
+            };
+            let (managed_root, action) = match &args.command {
+                HotpatchCommand::UpdateCheck {
+                    managed_root,
+                    mod_id,
+                } => {
+                    let preview = bg_engine::cli::mod_update_managed_install(
+                        managed_root,
+                        catalog,
+                        cache,
+                        mod_id,
+                        &ModUpdateAction::Check,
+                    )?;
+                    print_json(&json!({ "command": "hotpatch", "ok": true, "update": preview }));
+                    return Ok(());
+                }
+                HotpatchCommand::UpdateApply {
+                    managed_root,
+                    mod_id,
+                    review_token,
+                    full_backup,
+                    save_backup,
+                } => {
+                    let preview = bg_engine::cli::mod_update_managed_install(
+                        managed_root,
+                        catalog,
+                        cache,
+                        mod_id,
+                        &ModUpdateAction::Apply {
+                            review_token: review_token.clone(),
+                            full_backup: *full_backup,
+                            save_backup: *save_backup,
+                        },
+                    )?;
+                    print_json(&json!({ "command": "hotpatch", "ok": true, "update": preview }));
+                    return Ok(());
+                }
+                HotpatchCommand::Check { managed_root } => (managed_root, HotpatchAction::Check),
+                HotpatchCommand::Apply {
+                    managed_root,
+                    review_token,
+                    full_backup,
+                    save_backup,
+                } => (
+                    managed_root,
+                    HotpatchAction::Apply {
+                        review_token: review_token.clone(),
+                        full_backup: *full_backup,
+                        save_backup: *save_backup,
+                    },
+                ),
+                HotpatchCommand::Undo { managed_root } => (managed_root, HotpatchAction::Undo),
+                HotpatchCommand::Restore { managed_root } => {
+                    (managed_root, HotpatchAction::Restore)
+                }
+            };
+            let preview =
+                bg_engine::cli::hotpatch_managed_install(managed_root, catalog, cache, &action)?;
+            print_json(&json!({ "command": "hotpatch", "ok": true, "hotpatch": preview }));
+        }
         Command::CheckManualCheckpoint {
             managed_root,
             install_id,
@@ -534,6 +657,7 @@ fn command_name(command: &Command) -> &'static str {
             command: GamesCommand::Inspect { .. },
         }) => "games inspect",
         Command::Install(_) => "install",
+        Command::Hotpatch(_) => "hotpatch",
         Command::Resume { .. } => "resume",
         Command::CheckManualCheckpoint { .. } => "check-manual-checkpoint",
         Command::AcceptManualCheckpoint { .. } => "accept-manual-checkpoint",
