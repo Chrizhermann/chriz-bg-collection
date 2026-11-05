@@ -148,6 +148,28 @@ pub fn parse_terminal_statuses(debug: &str) -> Vec<DebugStatus> {
         .collect()
 }
 
+/// The installer's own error for the component that failed: the last `ERROR:` line before the
+/// first `NOT INSTALLED DUE TO ERRORS` marker, shortened to one readable line. `None` when the
+/// transcript has neither.
+pub fn failure_message(debug: &str) -> Option<String> {
+    const LIMIT: usize = 300;
+    let failed = debug
+        .lines()
+        .position(|line| line.trim_start().starts_with("NOT INSTALLED DUE TO ERRORS"))?;
+    let message = debug
+        .lines()
+        .take(failed)
+        .filter_map(|line| line.trim().strip_prefix("ERROR:"))
+        .map(str::trim)
+        .filter(|message| !message.is_empty())
+        .last()?;
+    Some(if message.chars().count() > LIMIT {
+        format!("{}…", message.chars().take(LIMIT).collect::<String>())
+    } else {
+        message.to_owned()
+    })
+}
+
 pub(crate) fn has_new_uninstall_comment(before: &str, after: &str) -> bool {
     use std::collections::BTreeMap;
 

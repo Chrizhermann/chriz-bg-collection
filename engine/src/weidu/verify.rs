@@ -32,6 +32,14 @@ pub enum Reconciliation {
     },
     /// The active stack is unchanged and debug evidence proves no component committed.
     UnchangedRetryable,
+    /// WeiDU went on after a failed component, as it does: the components it reports as
+    /// installed are exactly the new log rows, in order, and at least one came after a failure.
+    FailedAmong {
+        /// Requested components not installed, in authored order.
+        failed: Vec<u32>,
+        /// Components installed after the first failure, in authored order.
+        installed_after: Vec<u32>,
+    },
     /// Existing entries changed, an unexpected entry appeared, or an uninstall was introduced.
     StackDisturbed,
     /// Evidence is malformed, incomplete, or internally contradictory.
@@ -69,15 +77,25 @@ pub fn reconcile(before: &str, after: &str, debug: &str, expected: &ExpectedRun)
         return Reconciliation::StackDisturbed;
     }
     let tp2_key = normalize_tp2_key(&expected.tp2);
-    if appended.iter().enumerate().any(|(index, entry)| {
-        entry.tp2_key != tp2_key
-            || entry.language != expected.language
-            || entry.component != expected.components[index]
-    }) {
+    if appended
+        .iter()
+        .any(|entry| entry.tp2_key != tp2_key || entry.language != expected.language)
+    {
         return Reconciliation::StackDisturbed;
     }
 
     let statuses = parse_terminal_statuses(debug);
+    if let Some(verdict) = failed_among(appended, &statuses, expected) {
+        return verdict;
+    }
+    if appended
+        .iter()
+        .enumerate()
+        .any(|(index, entry)| entry.component != expected.components[index])
+    {
+        return Reconciliation::StackDisturbed;
+    }
+
     if statuses.len() != expected.components.len() {
         return Reconciliation::Ambiguous;
     }
@@ -109,6 +127,44 @@ pub fn reconcile(before: &str, after: &str, debug: &str, expected: &ExpectedRun)
             remaining: expected.components[completed..].to_vec(),
         }
     }
+}
+
+/// The verdict when the evidence shows WeiDU going on after a failed component: one status per
+/// requested component, a failing exit code, and new log rows that are exactly the components
+/// reported as installed, in order, with at least one after a failure.
+fn failed_among(
+    appended: &[LogEntry],
+    statuses: &[DebugStatus],
+    expected: &ExpectedRun,
+) -> Option<Reconciliation> {
+    if statuses.len() != expected.components.len() || expected.exit_code == 0 {
+        return None;
+    }
+    let reported = expected.components.iter().zip(statuses);
+    let installed = reported
+        .clone()
+        .filter(|(_, status)| status.is_success())
+        .map(|(component, _)| *component)
+        .collect::<Vec<_>>();
+    let failed = reported
+        .clone()
+        .filter(|(_, status)| status.is_failure())
+        .map(|(component, _)| *component)
+        .collect::<Vec<_>>();
+    let first_failed = statuses.iter().position(|status| status.is_failure())?;
+    let installed_after = reported
+        .skip(first_failed)
+        .filter(|(_, status)| status.is_success())
+        .map(|(component, _)| *component)
+        .collect::<Vec<_>>();
+    let recorded = appended
+        .iter()
+        .map(|entry| entry.component)
+        .collect::<Vec<_>>();
+    (!installed_after.is_empty() && recorded == installed).then_some(Reconciliation::FailedAmong {
+        failed,
+        installed_after,
+    })
 }
 
 impl DebugStatus {

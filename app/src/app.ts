@@ -127,7 +127,7 @@ class AppController implements AppHandle {
   #manualCheckpointBusy = false;
   #manualCheckpointError: string | undefined;
   #manualCheckpointRevision = 0;
-  // A question about a download that the installation waits for.
+  // A question that the installation waits for.
   #decision: PendingDecision | null = null;
   #decisionExpected = false;
   #decisionBusy = false;
@@ -1644,7 +1644,7 @@ class AppController implements AppHandle {
     this.#retryAvailable = false;
     this.#dispatch({ type: "build-updated", build: {
       ...(this.#state.build ?? this.#initialNativeBuild()), state: "decision", headline: WAITING_FOR_ANSWER,
-      detail: "Your progress is saved. The installation continues after you answer the question about a download.",
+      detail: "Your progress is saved. The installation continues after you answer the question.",
       progress: undefined, failureReason: undefined, commandError: undefined, recoveryAction: undefined, stoppedByAnswer: undefined,
     } });
   }

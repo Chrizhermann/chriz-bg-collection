@@ -51,6 +51,25 @@ const moddedSource: PendingDecision = {
   focus: "no", afterNo: "You chose to stop. Restore a clean game, or resume this installation to be asked again.",
 };
 
+const failedComponent: PendingDecision = {
+  ...changedOptional, kind: "failed_component", stepId: "install:tweaks-bg2", artifactId: "tweaks",
+  message: "Rolled HP (Tweaks Anthology) could not be installed. Leave it out and continue?"
+    + " The mods that depend on it are left out too: Frostbite.",
+  details: ["Run tweaks-bg2, component 3000", "The installer said: cannot convert a variable"],
+  answers: [
+    { answer: "leave_out", label: "Leave it out and continue" },
+    { answer: "retry", label: "Try again" },
+    { answer: "no", label: "Stop the installation" },
+  ],
+  focus: "leave_out", afterNo: "You chose to stop. Resume this installation to try this part again.",
+};
+const failedFixedPart: PendingDecision = {
+  ...failedComponent,
+  message: "EET core import (Enhanced Edition Trilogy) could not be installed, and the collection can't be installed without it. Try again?",
+  answers: [{ answer: "retry", label: "Try again" }, { answer: "no", label: "Stop the installation" }],
+  focus: "retry",
+};
+
 function buttonLabels(container: HTMLElement): string[] {
   return [...container.querySelectorAll(".decision-dialog button")].map(button => button.textContent ?? "");
 }
@@ -99,6 +118,24 @@ describe("download question dialog", () => {
     expect(document.activeElement?.textContent).toBe("Continue without them");
     await userEvent.setup().click(getByRole(root, "button", { name: "Stop the installation" }));
     expect(answer).toHaveBeenCalledWith("no");
+  });
+
+  it("asks about a failed component with leave out first, and offers to try again", async () => {
+    const { root, answer } = shown(failedComponent);
+    const dialog = getByRole(root, "dialog", { name: "A mod needs your answer" });
+    expect(getByText(dialog, failedComponent.message)).toBeTruthy();
+    expect(buttonLabels(root)).toEqual(["Leave it out and continue", "Try again", "Stop the installation"]);
+    expect(document.activeElement?.textContent).toBe("Leave it out and continue");
+    await userEvent.setup().click(getByRole(dialog, "button", { name: "Try again" }));
+    expect(answer).toHaveBeenCalledWith("retry");
+  });
+
+  it("offers only to try again or stop for a fixed part of the collection", () => {
+    const { root } = shown(failedFixedPart);
+    expect(getByText(root, failedFixedPart.message)).toBeTruthy();
+    expect(buttonLabels(root)).toEqual(["Try again", "Stop the installation"]);
+    expect(root.textContent).not.toContain("Leave it out");
+    expect(document.activeElement?.textContent).toBe("Try again");
   });
 
   it("(c) names the unreviewed host, advises stopping and focuses Stop", () => {

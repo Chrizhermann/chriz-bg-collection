@@ -1116,6 +1116,10 @@ group_label = "Engine"
 decision = "mandatory"
 readiness = "ready"
 parent = "mod:eeex"
+core_components = [
+  { run_id = "eeex-bg2", component = 0 },
+  { run_id = "eeex-bg2", component = 1 },
+]
 components = [
   { run_id = "eeex-bg2", component = 0 },
   { run_id = "eeex-bg2", component = 1 },
@@ -3458,6 +3462,7 @@ group_label = "Tougher Throne of Bhaal battles"
 decision = "mandatory"
 readiness = "ready"
 parent = "mod:ascension"
+core_components = []
 components = [
   { run_id = "ascension-bg2", component = 1000 },
   { run_id = "ascension-bg2", component = 1100 },
@@ -4552,6 +4557,7 @@ group_label = "Spell system revisions and new spells / Gameplay tweaks / AI enha
 decision = "mandatory"
 readiness = "ready"
 parent = "mod:stratagems"
+core_components = []
 components = [
   { run_id = "stratagems-bg2", component = 2000 },
   { run_id = "stratagems-bg2", component = 2500 },
@@ -5303,6 +5309,7 @@ group_label = "SoD remix: treasure from removed content"
 decision = "mandatory"
 readiness = "ready"
 parent = "mod:chriz-sod-remix"
+core_components = []
 components = [
   { run_id = "chriz-sod-remix-bg2", component = 100 },
   { run_id = "chriz-sod-remix-bg2", component = 110 },
@@ -5368,6 +5375,7 @@ decision = "mandatory"
 readiness = "ready"
 parent = "mod:chriz-bg-rebalance"
 requires = ["feature:stratagems:mandatory-components", "feature:spell-rev:mandatory-components"]
+core_components = []
 components = [
   { run_id = "chriz-bg-rebalance-bg2", component = 100 },
   { run_id = "chriz-bg-rebalance-bg2", component = 120 },
@@ -5646,6 +5654,7 @@ decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-rebalance"
 requires = ["feature:eeex:mandatory-components"]
+core_components = []
 components = [
   { run_id = "chriz-bg-rebalance-bg2", component = 420 },
   { run_id = "chriz-bg-rebalance-bg2", component = 421 },
@@ -5687,6 +5696,7 @@ decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-rebalance"
 requires = ["mod:artisanskitpack", "feature:eeex:mandatory-components"]
+core_components = []
 components = [
   { run_id = "chriz-bg-rebalance-bg2", component = 400 },
   { run_id = "chriz-bg-rebalance-bg2", component = 401 },
@@ -6202,6 +6212,7 @@ group_label = "Buff automation"
 decision = "mandatory"
 readiness = "ready"
 parent = "mod:buffbot"
+core_components = [{ run_id = "buffbot-bg2", component = 0 }]
 components = [
   { run_id = "buffbot-bg2", component = 1 },
   { run_id = "buffbot-bg2", component = 0 },
@@ -6824,6 +6835,7 @@ group_label = "Additional Spells"
 decision = "mandatory"
 readiness = "ready"
 parent = "mod:iwdification"
+core_components = []
 components = [
   { run_id = "iwdification-bg2", component = 30 },
   { run_id = "iwdification-bg2", component = 40 },
@@ -8477,7 +8489,7 @@ category = "convenience"
 source_label = "The Tweaks Anthology"
 group_label = "Higher HP on Level Up"
 choice_group = "choice:cdtweaks:higher-hp-on-level-up"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 conflicts = [{ feature_id = "feature:cdtweaks:component-3001", reason = "Choose at most one option for Higher HP on Level Up." }, { feature_id = "feature:cdtweaks:component-3002", reason = "Choose at most one option for Higher HP on Level Up." }]
 components = [{ run_id = "cdtweaks-bg2", component = 3000 }]
@@ -8527,7 +8539,7 @@ category = "convenience"
 source_label = "The Tweaks Anthology"
 group_label = "Maximum HP Creatures [the bigg]"
 choice_group = "choice:cdtweaks:maximum-hp-creatures-the-bigg"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 conflicts = [{ feature_id = "feature:cdtweaks:component-3011", reason = "Choose at most one option for Maximum HP Creatures [the bigg]." }, { feature_id = "feature:cdtweaks:component-3012", reason = "Choose at most one option for Maximum HP Creatures [the bigg]." }]
 components = [{ run_id = "cdtweaks-bg2", component = 3010 }]
@@ -9869,3 +9881,68 @@ group_label = "NPC Tweaks"
 decision = "optional"
 readiness = "ready"
 components = [{ run_id = "cdtweaks-bg2", component = 4140 }]
+
+# What a component really needs of the features it requires, as its own installer checks it,
+# when that is less than all of those features: bundles such as the SCS core hold independent
+# components. Without an entry a component needs the core_components of a required feature, or
+# all of it. A failed component leaves what does not need it in the plan.
+
+[[component_needs]]
+component = { run_id = "chriz-bg-rebalance-bg2", component = 100 }
+needs = [{ run_id = "stratagems-bg2", component = 2500 }]
+
+[[component_needs]]
+component = { run_id = "chriz-bg-rebalance-bg2", component = 101 }
+needs_any = [{ run_id = "stratagems-bg2", component = 2000 }, { run_id = "stratagems-bg2", component = 5900 }]
+
+[[component_needs]]
+component = { run_id = "chriz-bg-rebalance-bg2", component = 110 }
+needs = [{ run_id = "stratagems-bg2", component = 6540 }]
+
+[[component_needs]]
+component = { run_id = "chriz-bg-rebalance-bg2", component = 111 }
+needs = [{ run_id = "stratagems-bg2", component = 6540 }]
+
+[[component_needs]]
+component = { run_id = "chriz-bg-rebalance-bg2", component = 120 }
+needs = [{ run_id = "stratagems-bg2", component = 6030 }]
+
+[[component_needs]]
+component = { run_id = "chriz-bg-rebalance-bg2", component = 121 }
+needs = [{ run_id = "stratagems-bg2", component = 6030 }]
+
+[[component_needs]]
+component = { run_id = "chriz-bg-rebalance-bg2", component = 130 }
+needs = [{ run_id = "stratagems-bg2", component = 2000 }]
+
+[[component_needs]]
+component = { run_id = "chriz-bg-modpack-bg2", component = 130 }
+needs = [{ run_id = "stratagems-bg2", component = 5900 }]
+
+[[component_needs]]
+component = { run_id = "chriz-bg-modpack-bg2", component = 440 }
+needs = [{ run_id = "ascension-bg2", component = 50 }]
+
+[[component_needs]]
+component = { run_id = "chriz-bg-modpack-bg2", component = 450 }
+needs = [{ run_id = "stratagems-bg2", component = 2000 }]
+
+[[component_needs]]
+component = { run_id = "chriz-sod-remix-bg2", component = 257 }
+needs = [{ run_id = "chriz-sod-remix-bg2", component = 256 }]
+
+[[component_needs]]
+component = { run_id = "chriz-sod-remix-bg2", component = 292 }
+needs = [{ run_id = "chriz-sod-remix-bg2", component = 160 }, { run_id = "chriz-sod-remix-bg2", component = 290 }]
+
+[[component_needs]]
+component = { run_id = "chriz-sod-remix-bg2", component = 293 }
+needs = [{ run_id = "chriz-sod-remix-bg2", component = 160 }, { run_id = "chriz-sod-remix-bg2", component = 290 }]
+
+[[component_needs]]
+component = { run_id = "chriz-sod-remix-bg2", component = 294 }
+needs = [{ run_id = "chriz-sod-remix-bg2", component = 160 }, { run_id = "chriz-sod-remix-bg2", component = 290 }]
+
+[[component_needs]]
+component = { run_id = "bardicwonders-progression-bg2", component = 3010 }
+needs = [{ run_id = "chriz-bg-rebalance-bg2", component = 420 }]

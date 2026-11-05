@@ -400,6 +400,7 @@ fn a_failed_component_is_left_out_like_unticking_its_feature() {
                 &evaluation.plan,
                 &BTreeSet::new(),
                 &BTreeSet::from([failed.clone()]),
+                &BTreeSet::new(),
             )
             .unwrap_or_else(|error| panic!("{}: {error}", feature.id));
             let mut unticked_selection = selection.clone();
@@ -433,6 +434,7 @@ fn a_failed_fixed_component_cannot_be_left_out() {
             run_id: "dlcmerger-bg1".to_owned(),
             component: 1,
         }]),
+        &BTreeSet::new(),
     )
     .unwrap_err();
     assert!(matches!(error, LeaveOutError::Required { .. }), "{error}");

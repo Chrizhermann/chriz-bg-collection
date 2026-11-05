@@ -8,6 +8,9 @@ Read `docs/handover.md` first — it is the live entry point (status, guardrails
 
 ## Rules
 
+- Chriz Easy BG work goes to `main` (Christopher, 2026-11-04). The old next-release
+  branch `claude/cebg-installer-fixes-20261014` is retired; Chriz Easy IWD still lives on
+  `claude/iwdee-app`.
 - Game dir `C:\Games\Baldur's Gate II Enhanced Edition modded\` = READ-ONLY reference.
   Never write/install/test there. Mod archive `C:\Games\Baldurs Gate 1 and 2 mods\` is also
   read-only reference.

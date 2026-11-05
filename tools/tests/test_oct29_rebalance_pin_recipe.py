@@ -9,8 +9,9 @@ decision changes (Christopher took v0.8.7 into alpha.22 on 2026-10-28).
 Static pin, evidence, component, selection and order checks for both recipe profiles only.
 Nothing here is a game installation or gameplay acceptance. BG Rebalance v0.8.8 (October 29,
 test_oct29_rebalance_088_pin_recipe) supersedes this pin and adds 410 and 411, and v0.8.9
-(November 2, test_nov02_kitpack_rebalance_fix_pins_recipe) supersedes v0.8.8 in turn; the
-v0.8.7 record and artifacts stay as verified here.
+(November 2, test_nov02_kitpack_rebalance_fix_pins_recipe) supersedes v0.8.8 in turn, and
+v0.8.10 (November 3, test_nov03_rebalance_0810_pin_recipe) v0.8.9; the v0.8.7 record and
+artifacts stay as verified here.
 """
 
 from pathlib import Path
@@ -47,9 +48,9 @@ RECOMMENDED = {100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 
                310, 130, 220, 320, 331, 332, 340, 360}
 # The v0.8.8 intake (test_oct29_rebalance_088_pin_recipe) replaces this pin and declares
 # Druid weapons 410 and Alaghor of Clangeddin weapons 411, both defaults, which are checked
-# against its own record; the November 2 intake replaces v0.8.8 with v0.8.9, which changes
-# no component.
-SUCCESSOR = "chriz-bg-rebalance-0.8.9"
+# against its own record; the November 2 intake replaces v0.8.8 with v0.8.9, and the
+# November 3 intake v0.8.9 with v0.8.10; neither changes a component.
+SUCCESSOR = "chriz-bg-rebalance-0.8.10"
 LATER = {410, 411}
 
 

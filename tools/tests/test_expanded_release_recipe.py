@@ -142,8 +142,9 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # removes its 8 defaults, its bg1npc-bg1 run and the Kivan quest guard Modpack 130.
         # November 3: the Modpack alpha.15 pin adds default Marek's Boomerang Dagger 670 to
         # the main post-EET_end Modpack run.
-        self.assertEqual(len(without_controls), 467)
-        self.assertEqual(len(selected), 468)
+        # November 4: Tweaks 3000 and 3010 are no longer defaults (Christopher, 2026-11-04).
+        self.assertEqual(len(without_controls), 465)
+        self.assertEqual(len(selected), 466)
         self.assertEqual(len({run for run, _ in selected}), 69)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
@@ -246,7 +247,8 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # Rebalance 410 and 411 (v0.8.8 pin) and Artisan tweak 7205 (chriz.5 pin).
         # November 3: BG1 NPC Project's 8 defaults and Modpack 130 are not; Modpack 670
         # (alpha.15 pin) is.
-        self.assertEqual(len(baseline), 468)
+        # November 4: Tweaks 3000 and 3010 are no longer selected by default.
+        self.assertEqual(len(baseline), 466)
         self.assertEqual(self.selected({feature_id: "off"}), baseline)
         baeloth = "feature:chriz-bg-modpack:component-235"
         self.assertEqual(self.features[baeloth]["decision"], "optional")

@@ -91,6 +91,12 @@ what changed since v18 and Christopher's decisions.
   level 22 instead of 15. In his playthrough that came far too early and made druids too
   strong. Unticked, druids keep the game's druid XP table, which default `2090` extends
   to level 50. The other options of this choice stay unoffered.
+- `3000` (Higher HP on Level Up -> Maximum) and `3010` (Maximum HP Creatures, for all
+  creatures in game) are **optional** (Christopher, 2026-11-04, for Chriz Easy BG 0.1.2).
+  Recommended now uses rolled HP on level-up and drops Maximum HP Creatures, the way the
+  fight-AI labs run it. Both stay available as unchecked options. Nothing else in these two
+  choices changes: `2999` (Max HP at Level One) stays a default, and `3001`, `3002`, `3008`,
+  `3011` and `3012` stay unchecked.
 - `260` was unavailable with SCS (a known invisible-hostile/save failure path); the
   snapshot withdraws it upstream.
 - **Optional expansion screened 2026-09-11:** 44 additional choices are exposed
@@ -350,11 +356,11 @@ what changed since v18 and Christopher's decisions.
 | 2770 | Standardize buying/selling markups for all stores [Luke] | Rule Changes |  |  |  |
 | 2780 | P&P Free Action | Rule Changes |  |  |  |
 | 2999 | Max HP at Level One | Convenience Tweaks/Cheats |  | ✓ | default |
-| 3000 | Maximum | Convenience Tweaks/Cheats | Higher HP on Level Up | ✓ | default |
+| 3000 | Maximum | Convenience Tweaks/Cheats | Higher HP on Level Up | ✓ | optional |
 | 3001 | NWN-style | Convenience Tweaks/Cheats | Higher HP on Level Up |  | optional |
 | 3002 | Average rolls | Convenience Tweaks/Cheats | Higher HP on Level Up |  | optional |
 | 3008 | Allow HP Rolls Through Level 20 [Angel] | Convenience Tweaks/Cheats |  | ✓ | optional |
-| 3010 | For all creatures in game | Convenience Tweaks/Cheats | Maximum HP Creatures [the bigg] | ✓ | default |
+| 3010 | For all creatures in game | Convenience Tweaks/Cheats | Maximum HP Creatures [the bigg] | ✓ | optional |
 | 3011 | For non-party-joinable NPCs only | Convenience Tweaks/Cheats | Maximum HP Creatures [the bigg] |  | optional |
 | 3012 | For party-joinable NPCs only | Convenience Tweaks/Cheats | Maximum HP Creatures [the bigg] |  | optional |
 | 3020 | Identify All Items | Convenience Tweaks/Cheats |  |  | |

@@ -75,7 +75,9 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         // November 3 removes BG1 NPC Project's 8 defaults and the Kivan quest guard
         // Modpack 130 that follows them; the Modpack alpha.15 pin adds default Marek's
         // Boomerang Dagger 670.
-        468
+        // November 4: Tweaks 3000 (maximum HP on level-up) and 3010 (Maximum HP Creatures)
+        // become unchecked options.
+        466
     );
     // Scroll policy 430 hashes the final scrolls and spells, so it follows BuffBot.
     let (tail, rest) = result.plan.runs.split_last().unwrap();
@@ -120,7 +122,7 @@ fn emotion_exclusivity_is_a_ready_optional_choice_with_an_independent_opt_in() {
     assert_eq!(feature.parent.as_deref(), Some("mod:chriz-bg-rebalance"));
     assert_eq!(
         manifest.mods["chriz-bg-rebalance"].artifact_id,
-        "chriz-bg-rebalance-0.8.9"
+        "chriz-bg-rebalance-0.8.10"
     );
     assert_eq!(
         baseline.plan.components_for("chriz-bg-rebalance-bg2"),

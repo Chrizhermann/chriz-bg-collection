@@ -80,6 +80,7 @@ docs/curation/components/
                         Human curation decisions and follow-ups per mod
 docs/handover.md         Live agent/developer entry point
 docs/BUILDING.md         Windows build and release-provenance guide
+docs/mod-link-check.md   Nightly check that pinned mod downloads still serve the reviewed file
 ```
 
 ## Development guardrails

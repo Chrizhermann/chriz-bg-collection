@@ -1,0 +1,89 @@
+name: Mod link check
+
+# Every night: does each pinned mod download link still serve the reviewed file? One issue,
+# "Mod link check", lists what does not; it closes itself when everything is the same again.
+# No AI and no secrets: tools/check_mod_links.py, stdlib only (docs/mod-link-check.md).
+# GitHub runs scheduled workflows only from the default branch, so this file lives on main and
+# reads the recipes from the branches that ship them: the repository variable
+# CEBG_NEXT_RELEASE_BRANCH (Chriz Easy BG, the same variable as the own-mod pin job) and
+# CEBG_IWD_BRANCH (Chriz Easy IWD; claude/iwdee-app until that branch joins the release branch).
+on:
+  schedule:
+    - cron: '41 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read  # check out the recipes
+  issues: write   # open, update and close the one issue
+
+concurrency:
+  group: mod-link-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check the pinned mod download links
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      BG_BRANCH: ${{ vars.CEBG_NEXT_RELEASE_BRANCH }}
+      IWD_BRANCH: ${{ vars.CEBG_IWD_BRANCH || 'claude/iwdee-app' }}
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Require the next-release branch
+        run: |
+          if [ -z "$BG_BRANCH" ]; then
+            echo '::error title=Mod link check::Set the repository variable CEBG_NEXT_RELEASE_BRANCH to the next-release branch.'
+            exit 1
+          fi
+
+      - name: Check out the check
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Check out the Chriz Easy BG recipes
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ vars.CEBG_NEXT_RELEASE_BRANCH }}
+          path: recipes-bg
+          persist-credentials: false
+
+      - name: Check out the Chriz Easy IWD recipes
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ vars.CEBG_IWD_BRANCH || 'claude/iwdee-app' }}
+          path: recipes-iwd
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.11'
+
+      # What earlier nights learned: which links failed (a link is reported unreachable only
+      # from the second night on) and the hashes of archives that tell their size only by ETag.
+      # Each night saves a new entry and restores the newest one.
+      - name: Restore what earlier nights learned
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: link-state.json
+          key: mod-link-state-never-matches
+          restore-keys: mod-link-state-
+
+      - name: Check the links
+        run: |
+          python -I tools/check_mod_links.py check \
+            --installer "Chriz Easy BG" recipes-bg manifest recipes/curated-full-current \
+            --installer "Chriz Easy IWD" recipes-iwd recipes/iwd-current \
+            --state link-state.json --report link-report.json --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Save what this night learned
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: link-state.json
+          key: mod-link-state-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Open, update or close the issue
+        run: python -I tools/check_mod_links.py issue --report link-report.json --repo "$GITHUB_REPOSITORY"

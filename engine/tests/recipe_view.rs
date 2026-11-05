@@ -2,14 +2,14 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
 use bg_engine::manifest::{
-    Component, ComponentRef, Conflict, Decision, Feature, FeatureGroup, FeatureGroupVariant,
-    FeatureInputRef, InputOption, InputSpec, InputValue, InvocationMode, ModFile, Phase,
-    Postcondition, PromptAnswer, PromptStep, Readiness, Run,
+    Component, ComponentNeeds, ComponentRef, Conflict, Decision, Feature, FeatureGroup,
+    FeatureGroupVariant, FeatureInputRef, InputOption, InputSpec, InputValue, InvocationMode,
+    ModFile, Phase, Postcondition, PromptAnswer, PromptStep, Readiness, Run,
 };
 use bg_engine::manual_checkpoint::{split_plan, ManualBreakpoint};
 use bg_engine::recipe_view::{
-    evaluate, evaluate_preset, feature_group_changes, plan_without_artifacts, render_prompt_script,
-    FeatureGroupTarget, LeaveOutError,
+    evaluate, evaluate_preset, feature_group_changes, plan_without_artifacts, plan_without_parts,
+    render_prompt_script, FeatureGroupTarget, LeaveOutError,
 };
 use bg_engine::resolve::Selection;
 use bg_engine::validate::check;
@@ -78,6 +78,7 @@ fn feature(id: &str, decision: Decision, components: Vec<ComponentRef>) -> Featu
         requires_any: Vec::new(),
         conflicts: Vec::new(),
         inputs: Vec::new(),
+        core_components: None,
     }
 }
 
@@ -964,6 +965,431 @@ fn conditional_prompt_is_omitted_when_all_conditions_are_effectively_off() {
 
     assert_eq!(run.components, [10]);
     assert!(run.prompt_scripts.is_empty());
+}
+
+/// A mod asks by what the game holds. A feature in the game that lost a requirement leaves the
+/// plan, and the prompt that depends on it stays all the same.
+#[test]
+fn a_prompt_stays_for_a_feature_in_the_game_that_lost_its_requirement() {
+    let mut manifest = conditional_prompt_manifest();
+    add_run(&mut manifest, "condition-mod", &[1]);
+    add_run(&mut manifest, "needed-mod", &[2]);
+    manifest.collection.features.push(feature(
+        "needed",
+        Decision::Default,
+        component_refs("needed-mod", &[2]),
+    ));
+    let condition = manifest
+        .collection
+        .features
+        .iter_mut()
+        .find(|feature| feature.id == "condition-a")
+        .unwrap();
+    condition.components = component_refs("condition-mod", &[1]);
+    condition.requires = vec!["needed".to_owned()];
+    let mut selection = Selection::defaults("windows");
+    selection.set_feature("condition-a", true);
+    let evaluation = evaluate(&manifest, &selection).unwrap();
+
+    let remaining = plan_without_parts(
+        &manifest,
+        &evaluation.normalized_selection,
+        &evaluation.plan,
+        &BTreeSet::new(),
+        &component_refs("needed-mod", &[2]).into_iter().collect(),
+        &component_refs("condition-mod", &[1]).into_iter().collect(),
+    )
+    .unwrap();
+
+    let run = remaining
+        .runs
+        .iter()
+        .find(|run| run.run_id == "conditional-prompt-mod")
+        .unwrap();
+    assert_eq!(run.prompt_scripts.len(), 1);
+    assert!(remaining.components_for("needed-mod").is_none());
+}
+
+/// A manifest with a bundle of components 1 to 3 and one dependent for each kind of need: of
+/// component 1 only, of 1 or 2, and of the feature as such.
+fn bundle_manifest() -> Manifest {
+    let mut manifest = semantic_manifest();
+    add_run(&mut manifest, "bundle-mod", &[1, 2, 3]);
+    add_run(&mut manifest, "later-mod", &[4, 5, 6]);
+    let dependent = |id: &str, component: u32| Feature {
+        requires: vec!["bundle".to_owned()],
+        ..feature(
+            id,
+            Decision::Default,
+            component_refs("later-mod", &[component]),
+        )
+    };
+    manifest.collection.features.extend([
+        Feature {
+            core_components: Some(Vec::new()),
+            ..feature(
+                "bundle",
+                Decision::Default,
+                component_refs("bundle-mod", &[1, 2, 3]),
+            )
+        },
+        dependent("needs-one", 4),
+        dependent("needs-either", 5),
+        dependent("needs-all", 6),
+    ]);
+    manifest.collection.component_needs = vec![
+        ComponentNeeds {
+            component: component_refs("later-mod", &[4]).remove(0),
+            needs: component_refs("bundle-mod", &[1]),
+            needs_any: Vec::new(),
+        },
+        ComponentNeeds {
+            component: component_refs("later-mod", &[5]).remove(0),
+            needs: Vec::new(),
+            needs_any: component_refs("bundle-mod", &[1, 2]),
+        },
+    ];
+    manifest
+}
+
+fn later_mod_without(manifest: &Manifest, failed: &[u32], in_game: &[u32]) -> Vec<u32> {
+    let evaluation = evaluate(manifest, &Selection::defaults("windows")).unwrap();
+    plan_without_parts(
+        manifest,
+        &evaluation.normalized_selection,
+        &evaluation.plan,
+        &BTreeSet::new(),
+        &component_refs("bundle-mod", failed).into_iter().collect(),
+        &component_refs("bundle-mod", in_game).into_iter().collect(),
+    )
+    .unwrap()
+    .components_for("later-mod")
+    .unwrap_or(&[])
+    .to_vec()
+}
+
+/// A dependent goes by what it needs of a bundle: its entry says so, and without one it needs
+/// all of it.
+#[test]
+fn what_needs_part_of_a_bundle_goes_by_that_part() {
+    let manifest = bundle_manifest();
+
+    assert_eq!(later_mod_without(&manifest, &[3], &[1, 2]), [4, 5]);
+    assert_eq!(later_mod_without(&manifest, &[2], &[1, 3]), [4, 5]);
+    assert_eq!(later_mod_without(&manifest, &[1], &[2, 3]), [5]);
+    assert!(later_mod_without(&manifest, &[1, 2], &[3]).is_empty());
+}
+
+/// Alternatives in different features of `requires_any`: the one that stays is enough, and the
+/// component leaves with the last of them.
+#[test]
+fn alternatives_across_requires_any_need_only_one_of_them() {
+    let mut manifest = semantic_manifest();
+    add_run(&mut manifest, "one-mod", &[1]);
+    add_run(&mut manifest, "other-mod", &[2]);
+    add_run(&mut manifest, "later-mod", &[4]);
+    manifest.collection.features.extend([
+        feature("one", Decision::Default, component_refs("one-mod", &[1])),
+        feature(
+            "other",
+            Decision::Default,
+            component_refs("other-mod", &[2]),
+        ),
+        Feature {
+            requires_any: vec!["one".to_owned(), "other".to_owned()],
+            ..feature(
+                "needs-either",
+                Decision::Default,
+                component_refs("later-mod", &[4]),
+            )
+        },
+    ]);
+    let mut alternatives = component_refs("one-mod", &[1]);
+    alternatives.extend(component_refs("other-mod", &[2]));
+    manifest.collection.component_needs = vec![ComponentNeeds {
+        component: component_refs("later-mod", &[4]).remove(0),
+        needs: Vec::new(),
+        needs_any: alternatives,
+    }];
+    check(&manifest).unwrap();
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    let later_mod_stays = |failed: Vec<ComponentRef>| {
+        plan_without_parts(
+            &manifest,
+            &evaluation.normalized_selection,
+            &evaluation.plan,
+            &BTreeSet::new(),
+            &failed.into_iter().collect(),
+            &BTreeSet::new(),
+        )
+        .unwrap()
+        .components_for("later-mod")
+        .is_some()
+    };
+
+    assert!(later_mod_stays(component_refs("one-mod", &[1])));
+    assert!(later_mod_stays(component_refs("other-mod", &[2])));
+    let mut both = component_refs("one-mod", &[1]);
+    both.extend(component_refs("other-mod", &[2]));
+    assert!(!later_mod_stays(both));
+}
+
+/// What was never selected did not leave: what names it stays while its mod does. It does not
+/// stand in for what was selected and left, and it does not hold up a mod that is gone.
+#[test]
+fn a_need_that_was_never_selected_takes_nothing_along() {
+    let mut manifest = semantic_manifest();
+    add_run(&mut manifest, "split-mod", &[1, 2, 3]);
+    add_run(&mut manifest, "later-mod", &[4, 5]);
+    let part = |id: &str, decision: Decision, component: u32| Feature {
+        parent: Some("split".to_owned()),
+        ..feature(id, decision, component_refs("split-mod", &[component]))
+    };
+    let dependent = |id: &str, component: u32| Feature {
+        requires: vec!["split".to_owned()],
+        ..feature(
+            id,
+            Decision::Default,
+            component_refs("later-mod", &[component]),
+        )
+    };
+    manifest.collection.features.extend([
+        feature("split", Decision::Default, Vec::new()),
+        part("split-core", Decision::Mandatory, 1),
+        part("split-extra", Decision::Default, 2),
+        part("split-off", Decision::Optional, 3),
+        dependent("names-the-one-off", 4),
+        dependent("names-either", 5),
+    ]);
+    manifest.collection.component_needs = vec![
+        ComponentNeeds {
+            component: component_refs("later-mod", &[4]).remove(0),
+            needs: component_refs("split-mod", &[3]),
+            needs_any: Vec::new(),
+        },
+        ComponentNeeds {
+            component: component_refs("later-mod", &[5]).remove(0),
+            needs: Vec::new(),
+            needs_any: component_refs("split-mod", &[1, 3]),
+        },
+    ];
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    let later_mod = |failed: &[u32], in_game: &[u32]| {
+        plan_without_parts(
+            &manifest,
+            &evaluation.normalized_selection,
+            &evaluation.plan,
+            &BTreeSet::new(),
+            &component_refs("split-mod", failed).into_iter().collect(),
+            &component_refs("split-mod", in_game).into_iter().collect(),
+        )
+        .unwrap()
+        .components_for("later-mod")
+        .unwrap_or(&[])
+        .to_vec()
+    };
+
+    assert_eq!(later_mod(&[2], &[1]), [4, 5]);
+    assert_eq!(later_mod(&[1], &[2]), [4]);
+    assert!(later_mod(&[1], &[]).is_empty());
+}
+
+/// A mod is gone once all that was chosen of it left, and what needs it leaves too. A mod with
+/// nothing chosen of it has lost nothing.
+#[test]
+fn a_mod_that_lost_all_its_parts_takes_along_what_needs_it() {
+    let mut manifest = semantic_manifest();
+    add_run(&mut manifest, "split-mod", &[1, 2]);
+    add_run(&mut manifest, "other-mod", &[3]);
+    add_run(&mut manifest, "later-mod", &[4]);
+    let part = |id: &str, decision: Decision, component: u32| Feature {
+        parent: Some("split".to_owned()),
+        ..feature(id, decision, component_refs("split-mod", &[component]))
+    };
+    manifest.collection.features.extend([
+        feature("split", Decision::Default, Vec::new()),
+        part("split-one", Decision::Default, 1),
+        part("split-other", Decision::Optional, 2),
+        feature(
+            "other",
+            Decision::Default,
+            component_refs("other-mod", &[3]),
+        ),
+        Feature {
+            requires: vec!["split".to_owned()],
+            ..feature(
+                "needs-mod",
+                Decision::Default,
+                component_refs("later-mod", &[4]),
+            )
+        },
+    ]);
+    let later_mod_stays = |selection: &Selection, failed: Vec<ComponentRef>| {
+        let evaluation = evaluate(&manifest, selection).unwrap();
+        plan_without_parts(
+            &manifest,
+            &evaluation.normalized_selection,
+            &evaluation.plan,
+            &BTreeSet::new(),
+            &failed.into_iter().collect(),
+            &BTreeSet::new(),
+        )
+        .unwrap()
+        .components_for("later-mod")
+        .is_some()
+    };
+
+    let chosen = Selection::defaults("windows");
+    assert!(!later_mod_stays(&chosen, component_refs("split-mod", &[1])));
+
+    let mut nothing_of_it = Selection::defaults("windows");
+    nothing_of_it.set_feature("split-one", false);
+    assert!(later_mod_stays(
+        &nothing_of_it,
+        component_refs("other-mod", &[3])
+    ));
+}
+
+/// A recipe that does not say what a feature of several components exists for cannot vouch for
+/// part of it: with something of it in the game none of it can leave, and with nothing of it in
+/// the game it leaves whole.
+#[test]
+fn a_feature_that_says_nothing_about_its_parts_cannot_stay_in_part() {
+    let mut manifest = bundle_manifest();
+    manifest
+        .collection
+        .features
+        .iter_mut()
+        .find(|feature| feature.id == "bundle")
+        .unwrap()
+        .core_components = None;
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    let without = |failed: &[u32], in_game: &[u32]| {
+        plan_without_parts(
+            &manifest,
+            &evaluation.normalized_selection,
+            &evaluation.plan,
+            &BTreeSet::new(),
+            &component_refs("bundle-mod", failed).into_iter().collect(),
+            &component_refs("bundle-mod", in_game).into_iter().collect(),
+        )
+    };
+
+    assert!(matches!(
+        without(&[2], &[1]),
+        Err(LeaveOutError::Incomplete { .. })
+    ));
+    assert!(without(&[1], &[])
+        .unwrap()
+        .components_for("bundle-mod")
+        .is_none());
+}
+
+/// What a feature exists for: what requires it needs its core, not its extras, and the game
+/// must not hold only part of that core.
+#[test]
+fn a_core_decides_what_needs_a_bundle_and_cannot_stay_in_part() {
+    let mut manifest = bundle_manifest();
+    manifest.collection.component_needs.clear();
+    manifest
+        .collection
+        .features
+        .iter_mut()
+        .find(|feature| feature.id == "bundle")
+        .unwrap()
+        .core_components = Some(component_refs("bundle-mod", &[1, 2]));
+
+    assert_eq!(later_mod_without(&manifest, &[3], &[1, 2]), [4, 5, 6]);
+
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    let without = |failed: &[u32], in_game: &[u32]| {
+        plan_without_parts(
+            &manifest,
+            &evaluation.normalized_selection,
+            &evaluation.plan,
+            &BTreeSet::new(),
+            &component_refs("bundle-mod", failed).into_iter().collect(),
+            &component_refs("bundle-mod", in_game).into_iter().collect(),
+        )
+    };
+    assert!(matches!(
+        without(&[2], &[1]),
+        Err(LeaveOutError::Incomplete { .. })
+    ));
+    let gone = without(&[1], &[]).unwrap();
+    assert!(gone.components_for("bundle-mod").is_none());
+    assert!(gone.components_for("later-mod").is_none());
+}
+
+/// What the game holds decides what stays: the parent of what is in the game is there, so a
+/// mandatory part that failed leaves alone, and what needs a part that is in the game stays.
+/// Without anything in the game the whole mod leaves, as when it is unticked.
+#[test]
+fn what_is_in_the_game_keeps_its_mod_and_what_needs_it() {
+    let mut manifest = semantic_manifest();
+    add_run(&mut manifest, "split-mod", &[1, 2, 3]);
+    add_run(&mut manifest, "later-mod", &[4]);
+    manifest.collection.features.extend([
+        feature("split", Decision::Default, Vec::new()),
+        Feature {
+            parent: Some("split".to_owned()),
+            ..feature(
+                "split-core",
+                Decision::Mandatory,
+                component_refs("split-mod", &[1]),
+            )
+        },
+        Feature {
+            parent: Some("split".to_owned()),
+            ..feature(
+                "split-extra",
+                Decision::Mandatory,
+                component_refs("split-mod", &[2]),
+            )
+        },
+        Feature {
+            parent: Some("split".to_owned()),
+            ..feature(
+                "split-more",
+                Decision::Default,
+                component_refs("split-mod", &[3]),
+            )
+        },
+        Feature {
+            requires: vec!["split-core".to_owned()],
+            ..feature(
+                "needs-core",
+                Decision::Default,
+                component_refs("later-mod", &[4]),
+            )
+        },
+    ]);
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    let without = |failed: &[u32], in_game: &[u32]| {
+        plan_without_parts(
+            &manifest,
+            &evaluation.normalized_selection,
+            &evaluation.plan,
+            &BTreeSet::new(),
+            &component_refs("split-mod", failed).into_iter().collect(),
+            &component_refs("split-mod", in_game).into_iter().collect(),
+        )
+        .unwrap()
+    };
+
+    let kept = without(&[2], &[1]);
+    assert_eq!(kept.components_for("split-mod"), Some(&[1, 3][..]));
+    assert_eq!(kept.components_for("later-mod"), Some(&[4][..]));
+
+    let gone = without(&[1], &[]);
+    assert!(gone.components_for("split-mod").is_none());
+    assert!(gone.components_for("later-mod").is_none());
+
+    // The parent is there through what the failed feature has nothing to do with: only what
+    // needs the failed part leaves.
+    let failed_core = without(&[1], &[3]);
+    assert_eq!(failed_core.components_for("split-mod"), Some(&[2, 3][..]));
+    assert!(failed_core.components_for("later-mod").is_none());
 }
 
 #[test]

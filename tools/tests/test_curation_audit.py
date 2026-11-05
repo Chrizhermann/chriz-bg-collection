@@ -167,7 +167,8 @@ class CatalogParserTests(unittest.TestCase):
                 # and so is Modpack chapter XP caps 652, which needs 650.
                 # October 27: Tweaks 2292 (druids level on the cleric XP table) is optional.
                 # October 29: Sirene BG1's alternate classes 7, 8 and 9 are optional.
-                Decision.OPTIONAL: 335,
+                # November 4: Tweaks 3000 and 3010 are optional (Christopher, 2026-11-04).
+                Decision.OPTIONAL: 337,
                 # Approved Rebalance 111/302 defaults; Artisan 51010 is optional.
                 # October 13: bard ceilings Rebalance 420/421 and Bardic 3010 are defaults;
                 # EET 100 (desktop shortcut) leaves the defaults.
@@ -192,7 +193,8 @@ class CatalogParserTests(unittest.TestCase):
                 # and so is Artisan tweak 7205 (Christopher, 2026-10-29).
                 # November 3: Modpack 670 (Marek's Boomerang Dagger) is a default
                 # (Christopher, 2026-11-03).
-                Decision.DEFAULT: 336,
+                # November 4: Tweaks 3000 and 3010 leave the defaults (Christopher, 2026-11-04).
+                Decision.DEFAULT: 334,
                 # October 13 intake: SoD 177/198/285 join the mandatory bundle (430 left it).
                 Decision.MANDATORY: 154,
             },
@@ -440,8 +442,10 @@ default = "none"
         # October 27: the Tweaks Anthology druid level choice (2292) has none preselected.
         # October 29: Sirene BG1's class choice (True Paladin preselected) and its
         # single portrait option as a fixed group.
+        # November 4: the Tweaks Anthology Higher HP on Level Up and Maximum HP Creatures
+        # choices have none preselected.
         self.assertEqual(result.choice_groups, 88)
-        self.assertEqual(result.optional_none_groups, 31)
+        self.assertEqual(result.optional_none_groups, 33)
         self.assertEqual(result.fixed_groups, 12)
         self.assertIn("rows=1352", coverage_report(rows, result))
 

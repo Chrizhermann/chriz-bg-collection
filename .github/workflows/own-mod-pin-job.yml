@@ -1,0 +1,105 @@
+name: Own mod pin job
+
+# Once a day, and on demand: for each new release of one of our own mods, prepare the pin
+# in every installer that ships it and open draft pull requests for Christopher's test
+# (docs/own-mod-pins.md on the next-release branch). It never merges, closes or approves.
+# GitHub runs scheduled workflows only from the default branch, so this file lives on
+# main; the job and its tools come from the branch that the repository variable
+# CEBG_NEXT_RELEASE_BRANCH names.
+on:
+  schedule:
+    - cron: '23 4 * * *'
+  workflow_dispatch:
+    inputs:
+      mod:
+        description: Only this mod (its id in manifest/own-mods.toml)
+        type: string
+        required: false
+      dry_run:
+        description: Prepare and report, but push, open and start nothing
+        type: boolean
+        default: false
+
+permissions:
+  contents: write       # push the pin branches
+  pull-requests: write  # open the draft pull requests
+  issues: write         # an issue for a release that needs an agent
+  actions: write        # start the checks of each new pull request
+
+concurrency:
+  group: own-mod-pin-job
+  cancel-in-progress: false
+
+jobs:
+  pin:
+    name: Prepare pins of new releases of our own mods
+    runs-on: windows-2022
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      NEXT_RELEASE_BRANCH: ${{ vars.CEBG_NEXT_RELEASE_BRANCH }}
+      GH_TOKEN: ${{ github.token }}
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: '0'
+
+    steps:
+      - name: Require the next-release branch
+        run: |
+          if (-not $env:NEXT_RELEASE_BRANCH) {
+            Write-Output '::error title=Own mod pin job::Set the repository variable CEBG_NEXT_RELEASE_BRANCH to the next-release branch.'
+            exit 1
+          }
+
+      # The job pushes its pin branches with these credentials.
+      - name: Check out the next-release branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ vars.CEBG_NEXT_RELEASE_BRANCH }}
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.11'
+
+      - name: Plan
+        id: plan
+        env:
+          ONLY_MOD: ${{ inputs.mod }}
+        run: |
+          if (-not (Test-Path -LiteralPath tools/own_mod_pin_job.py)) {
+            Write-Output "::notice title=Own mod pin job::tools/own_mod_pin_job.py is not on $env:NEXT_RELEASE_BRANCH yet."
+            'work=false' | Add-Content -LiteralPath $env:GITHUB_OUTPUT -Encoding utf8
+            exit 0
+          }
+          $jobArgs = @('plan', '--next-release-branch', $env:NEXT_RELEASE_BRANCH, '--fetch-depth', '1', '--summary', $env:GITHUB_STEP_SUMMARY, '--github-output', $env:GITHUB_OUTPUT)
+          if ($env:ONLY_MOD) { $jobArgs += @('--mod', $env:ONLY_MOD) }
+          python -I tools/own_mod_pin_job.py @jobArgs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Install the repository's Rust toolchain
+        if: steps.plan.outputs.work == 'true'
+        run: |
+          $cebgToolchain = python -c "import tomllib; print(tomllib.load(open('rust-toolchain.toml', 'rb'))['toolchain']['channel'])"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          rustup toolchain install $cebgToolchain --profile minimal --component clippy --component rustfmt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build the author CLI
+        if: steps.plan.outputs.work == 'true'
+        run: |
+          cargo build --locked -p chriz-bg-engine --bin chriz-bg-author
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Prepare the pins and open draft pull requests
+        if: steps.plan.outputs.work == 'true'
+        env:
+          ONLY_MOD: ${{ inputs.mod }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          $jobArgs = @('run', '--next-release-branch', $env:NEXT_RELEASE_BRANCH, '--fetch-depth', '1', '--summary', $env:GITHUB_STEP_SUMMARY)
+          if ($env:ONLY_MOD) { $jobArgs += @('--mod', $env:ONLY_MOD) }
+          if ($env:DRY_RUN -eq 'true') { $jobArgs += '--dry-run' }
+          python -I tools/own_mod_pin_job.py @jobArgs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

@@ -1,0 +1,44 @@
+Installing [First]
+Saving This Log:
+TESTMOD/SETUP-TESTMOD.TP2  0  0 Installed ~First~
+
+
+
+Installing [Second fails]
+Saving This Log:
+TESTMOD/SETUP-TESTMOD.TP2  0  0 Installed ~First~
+TESTMOD/SETUP-TESTMOD.TP2  0  1 Installed ~Second fails~
+FAILURE:
+synthetic failure of the second component
+Stopping installation because of error.
+Stopping installation because of error.
+
+ERROR Installing [Second fails], rolling back to previous state
+Unable to Unlink [testmod/backup/1/OTHER.1]: Unix.Unix_error(1, "unlink", "testmod/backup/1/OTHER.1")
+[testmod/backup/1/UNSETSTR.1] SET_STRING uninstall info not found
+Will uninstall   0 files for [testmod/setup-testmod.tp2] component 1.
+Uninstalled      0 files for [testmod/setup-testmod.tp2] component 1.
+Unable to Unlink [testmod/backup/1/READLN.1]: Unix.Unix_error(20, "unlink", "testmod/backup/1/READLN.1")
+Unable to Unlink [testmod/backup/1/READLN.1.TEXT]: Unix.Unix_error(20, "unlink", "testmod/backup/1/READLN.1.TEXT")
+TESTMOD/SETUP-TESTMOD.TP2  0  0 Installed ~First~
+Saving This Log:
+TESTMOD/SETUP-TESTMOD.TP2  0  0 Installed ~First~
+ERROR: Failure("synthetic failure of the second component")
+Please make a backup of the file: first.debug and look for support at: test
+Automatically Skipping [Second fails] because of error.
+
+Installing [Third]
+Saving This Log:
+TESTMOD/SETUP-TESTMOD.TP2  0  0 Installed ~First~
+TESTMOD/SETUP-TESTMOD.TP2  0  2 Installed ~Third~
+
+
+Saving This Log:
+TESTMOD/SETUP-TESTMOD.TP2  0  0 Installed ~First~
+TESTMOD/SETUP-TESTMOD.TP2  0  2 Installed ~Third~
+
+SUCCESSFULLY INSTALLED      First
+
+NOT INSTALLED DUE TO ERRORS Second fails
+
+SUCCESSFULLY INSTALLED      Third

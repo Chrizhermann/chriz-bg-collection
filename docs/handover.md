@@ -2,6 +2,121 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 5 — the installer asks when a single component fails (for 0.1.2)
+
+Christopher, 2026-11-04: when one component fails, the installer "soll nachfragen" instead
+of leaving it out by itself, as 0.1.1 did for optional runs, or stopping, as it did for
+everything else.
+
+**WeiDU goes on after a failed component.** With `--force-install-list` it prints
+"Automatically Skipping [X] because of error", installs the components after it and exits
+with 2 (checked with WeiDU 249; `engine/tests/fixtures/weidu/debug-went-past.log` is its
+transcript, and the r5 failure of `docs/curated-full-acceptance-2026-09-05.md` was this case).
+It goes through them in TP2 order, whatever the order of the list: `tools/check_native_component_order.py`
+holds recipe runs to that order, and a list in another order stays a fresh-copy case. The
+ignored test `weidu_goes_on_after_a_failed_component_and_the_evidence_says_so` runs this
+through the real runner and verdict. Until now that non-prefix result sealed the installation
+as needing a fresh copy. So a failed component comes in two shapes, and both now stop with a
+`failed_component` question, as for the questions of PR 80. It names the component by its
+feature title and its mod.
+
+- **Nothing was installed after it** (the `Retry` verdict, after the one automatic retry for a
+  failure behind other components, as before): **Leave it out and continue**, **Try again**,
+  **Stop the installation**. Trying again is honest here: the verdict proves the attempt left
+  nothing of it behind. If WeiDU skipped what follows it, those components that do not need it
+  are installed in a new attempt of the same step (`FailedRun::continues_with`).
+- **Later components were installed** (the new `FailedAmong` verdict: the log rows are exactly
+  the components reported as installed, in order, and the exit code says it failed):
+  **Leave it out and continue** and **Stop the installation**. "Try again" would install the
+  component out of the planned order, so it is not offered. All that failed is named in one
+  question. "Stop" keeps the question: every resume asks again and runs nothing, reading the
+  evidence of the attempt that ran (`FailedPart::evidence_attempt`).
+
+Leaving out goes by what is in the game, because the installer never uninstalls.
+`plan_without_parts` gets the components installed so far and works on components. A feature with
+one of them, and the features above it, count as there: such a feature only loses what failed.
+What else leaves goes by what it really needs, and the recipe says that:
+
+- **`core_components` of a feature** are what it exists for. What requires the feature needs
+  these; its other components are extras. The game must not hold only part of a core
+  (`LeaveOutError::Incomplete`): the question then offers only to try again or to stop, and a
+  copy with later components installed needs a fresh start. EEex is the case. Mods check only its
+  marker, component `0`, and component `1` is the runtime they build on, so the marker alone would
+  be a lie; its modules are extras. EEex is not a fixed part: the player can untick it, and it
+  leaves whole while nothing of it is in the game. An empty list says that the components stand
+  alone, as those of the SCS core do. A feature of several components without the key has no word
+  on it, so all of it counts as its core. That is every such feature of a campaign frozen before
+  0.1.2, which a newer app resumes: nothing can tell whether part of it would work, so it is not
+  left in part. A new bundle in a recipe needs the key, or the sweep names it.
+- **`[[component_needs]]` of the collection** say what one component needs of a feature it
+  requires: all of `needs`, one of `needs_any`. They come from that component's installer. They
+  live in `manifest/collection.toml`, and `tools/curated_full_recipe.py` adds the rows of what
+  only the curated recipe has, so both shipped recipes answer alike. SCS is the case: BG
+  Rebalance `100` needs SCS `2500`, and SCS `8190` leaves alone. Alternatives cannot reach across
+  the features of `requires`, which must all hold; across `requires_any` they can.
+- **Without either** a requirement needs all of the feature. A mod without components of its own
+  stands for the cores of its mandatory parts. Without one it is enough that the mod is there, and
+  a mod is gone once all that was chosen of it left.
+
+What was never selected did not leave: a need the player unticked takes nothing along while its
+feature stands. A feature of which nothing is in the game leaves as when it is unticked, with what
+needs it, and one question covers them all. That can be a lot: the recipe has SCS require
+Ascension's first component, so that one takes SCS along, 84 other components. What is in the game
+stays even when it lost a requirement. Prompts follow what is there, because mods ask by what the
+game holds. A preset `retry` is refused, because it could repeat without end.
+
+**The mandatory line is the recipe's own:** a feature with `decision = "mandatory"` and only
+mandatory parents is a fixed part (`LeaveOutError::Required`). In `curated-full-current` these
+are DLC Merger, the EE Fixpack core, EET core import, EET finalization and Modpack `640`. A
+mandatory feature under an optional parent can leave, with that parent. The question for a
+fixed part offers only to try again or to stop, and says why. When later components were
+installed there is nothing to offer, so that copy needs a fresh start, as before, and the
+reason says so in plain words. On the recommended setup that leaves 7 of 466 planned components
+fixed (454 without Spell Revisions), and all others can leave at the point where they fail;
+`every_planned_component_can_leave_where_it_fails_or_is_a_fixed_part` holds the recipe to it.
+
+A run without an answer, or with a preset that does not fit, ends with status
+`decision_required` and the question open; `--answer failed-component=leave-out` or `=no`
+answers for one run. The end summary and the receipt name every part left out, also when an
+earlier answer left out a part of a run that left later: the question in the ledger recorded
+what each run kept. A receipt is compared with what the ledger yields, field by field, so an
+answer's receipt must not gain what an older ledger yields and an older receipt lacks.
+
+A question survives crashes around it. An attempt recovered without its process result keeps the
+end time of its first recovery, so reconciling it again publishes the same record. The attempt
+that asks again after a stop is recorded before its question: an attempt without evidence after
+one that went past a failure ran nothing and only asks (`question_left_unasked`). The attempt
+that goes on after a left-out component is the same: without evidence it simply runs
+(`continuation_not_begun`). The ledger can only seal the attempt that failed last, not the one
+with the evidence.
+
+Two fixes came with it. A run that lost components could not pass the receipt check, because
+its first attempt names more than the run keeps: that check now knows what left, and accepts
+additions that skip a failed component in an attempt that failed. And a component can fail
+before it asks its prompt. The runner took that for a lost process ("WeiDU could not be
+supervised") and kept waiting for the prompt, so the prompt of a later component was never
+answered and WeiDU would have waited for ever. Now a failing exit leaves unanswered prompts to
+the run's evidence, the runner answers a later prompt in its authored place, and only a prompt
+of an installed component must have been answered. A success without every answer stays
+refused, and an installed component without its answer still needs a fresh copy.
+
+Chriz Easy IWD does not have this yet. `claude/iwdee-app` branched on 2026-10-24 and has none
+of the question system; [PR #70](https://github.com/Chrizhermann/chriz-bg-collection/pull/70),
+which would bring its first part, conflicts.
+
+## November 4 — everything on `main`
+
+Christopher retired the release line on 2026-11-04: [PR #101](https://github.com/Chrizhermann/chriz-bg-collection/pull/101)
+merged `claude/cebg-installer-fixes-20261014` into `main`, and all work goes to `main` from
+now on. The repository variable `CEBG_NEXT_RELEASE_BRANCH` is `main`, so the daily pin job
+prepares its pull requests there. Chriz Easy IWD stays on `claude/iwdee-app` for now.
+
+Open for 0.1.2:
+- BG Rebalance v0.8.10 is pinned ([PR #103](https://github.com/Chrizhermann/chriz-bg-collection/pull/103), merged).
+- BuffBot v1.16.0 waits for 0.1.2 under the hold in `manifest/own-mods.toml`; the daily
+  job's drafts are [#106](https://github.com/Chrizhermann/chriz-bg-collection/pull/106) (Chriz Easy BG) and
+  [#107](https://github.com/Chrizhermann/chriz-bg-collection/pull/107) (Chriz Easy IWD).
+
 ## November 3 — 0.1.1 published
 
 **Published** on 2026-11-03 at 18:29:55 UTC, with Christopher's OK of 2026-11-04 (03:12
@@ -13,13 +128,12 @@ KST):
 
 Details: [Publication](package-acceptance-0.1.1-2026-11-03.md#publication).
 
-- **BuffBot v1.15.0 is held for 0.1.2** (Christopher, 2026-11-04), recorded in
-  `manifest/own-mods.toml`. 0.1.1 ships the tested v1.12.6.
+- **BuffBot waits for 0.1.2** (Christopher, 2026-11-04): first v1.15.0, then v1.16.0
+  (released 2026-11-03 21:02 UTC), which the hold in `manifest/own-mods.toml` names since
+  2026-11-04. 0.1.1 ships the tested v1.12.6.
 - **Known issue:** without Spell Revisions, a new installation stops at BG Rebalance
-  `302`. BG Rebalance v0.8.10 fixes it, for 0.1.2.
-- **Next:**
-  - pin BG Rebalance v0.8.10 and BuffBot v1.15.0 for 0.1.2;
-  - the release line goes back into `main`, which Christopher decides.
+  `302`. BG Rebalance v0.8.10 fixes it, for 0.1.2; its pin
+  [PR #103](https://github.com/Chrizhermann/chriz-bg-collection/pull/103) is merged (2026-11-04).
 
 ### The candidate
 
@@ -125,7 +239,7 @@ earlier that day (`1101253f…`,
 
 Not in 0.1.0: the open PRs against the next-release branch, #69 (install what a mod's
 official link serves when it differs from the pin) and #53 (own-mod pin check). The
-next-release branch has not been merged back into `main` yet; Christopher decides when.
+next-release branch went back into `main` on 2026-11-04 (#101).
 
 ## November 1 — download drift fixes (PR 69)
 

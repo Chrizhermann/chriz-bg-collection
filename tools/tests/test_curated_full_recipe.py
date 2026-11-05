@@ -9,7 +9,7 @@ from pathlib import Path
 
 from tools.curated_full_recipe import (
     CURATED_GROUP_MEMBERS, _add_curated_group_members, _curated_feature_groups, _effective_features,
-    _preserve_native_run_orders, _validate_feature_groups, _validate_game_interface_order, build_recipe,
+    CURATED_COMPONENT_NEEDS, _preserve_native_run_orders, _validate_feature_groups, _validate_game_interface_order, build_recipe,
 )
 from tools.public_component_credits import build_public_component_credits
 
@@ -17,6 +17,16 @@ from tools.public_component_credits import build_public_component_credits
 class CuratedFullRecipeTests(unittest.TestCase):
     def setUp(self) -> None:
         self.root = Path(__file__).resolve().parents[2]
+
+    def test_the_curated_recipe_has_the_component_needs_of_the_bundled_one(self) -> None:
+        shipped = tomllib.loads(
+            (self.root / "recipes/curated-full-current/collection.toml").read_text(encoding="utf-8")
+        )
+        bundled = tomllib.loads((self.root / "manifest/collection.toml").read_text(encoding="utf-8"))
+        self.assertEqual(
+            shipped["component_needs"],
+            bundled["component_needs"] + tomllib.loads(CURATED_COMPONENT_NEEDS)["component_needs"],
+        )
 
     def test_evandra_uses_official_windows_archive_without_private_aggregate(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -429,7 +439,11 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # 2026-11-03); without its feature, run component and preset entry the BG1 NPC
                 # Project digest 53944ad6b3baa0eb92482b4ff17f8f6247ac2226f9b6d53556db73459ff1562a
                 # returns.
-                "e43f6d204b3b98c491e290050d065173287082b3717972346e44535528a7fb2d",
+                # November 4: Tweaks 3000 (maximum HP on level-up) and 3010 (Maximum HP
+                # Creatures) become optional and off, for 0.1.2 (Christopher, 2026-11-04);
+                # with both back on, the alpha.15 pin digest
+                # e43f6d204b3b98c491e290050d065173287082b3717972346e44535528a7fb2d returns.
+                "d5086af1d90ea7199bc4da012f9d745608f6e32fb6cb1637d3481742ebca68f3",
             )
 
             legacy_bg1npc_groups = {
@@ -747,20 +761,22 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertLess(order.index("cdtweaks-spell-save-penalties-bg2"), order.index("spell-rev-npc-spellbooks-bg2"))
             self.assertEqual(preset["selections"]["feature:evandra:component-1"], "on")
             bg_mod = tomllib.loads((output / "mods/chriz-bg-rebalance.toml").read_text(encoding="utf-8"))
-            # November 2: v0.8.9 (texts of 210/211) replaces v0.8.8, whose artifact stays.
-            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.8.9")
+            # November 2: v0.8.9 (texts of 210/211) replaced v0.8.8; November 3 intake: v0.8.10
+            # (Flail of the Ages 302 without Spell Revisions) replaces v0.8.9. Both artifacts stay.
+            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.8.10")
             bg_artifact = tomllib.loads(
-                (output / "artifacts/chriz-bg-rebalance-0.8.9.toml").read_text(encoding="utf-8")
+                (output / "artifacts/chriz-bg-rebalance-0.8.10.toml").read_text(encoding="utf-8")
             )
+            self.assertTrue((output / "artifacts/chriz-bg-rebalance-0.8.9.toml").exists())
             self.assertTrue((output / "artifacts/chriz-bg-rebalance-0.8.8.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.3.1.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.4.0.toml").exists())
-            self.assertEqual(bg_artifact["version"], "0.8.9")
-            self.assertEqual(bg_artifact["source"]["reference"], "v0.8.9")
-            self.assertEqual(bg_artifact["source"]["expected_length"], 1844195)
+            self.assertEqual(bg_artifact["version"], "0.8.10")
+            self.assertEqual(bg_artifact["source"]["reference"], "v0.8.10")
+            self.assertEqual(bg_artifact["source"]["expected_length"], 1848783)
             self.assertEqual(
                 bg_artifact["source"]["sha256"],
-                "da03fe9e2a36f5af155311197e68d6f82ead270426015363fa161ad56e8ea6f2",
+                "40be063d26d531f3355022f7ab822e0b2018f00d99ecfd0d493913ffc4f68826",
             )
             self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.1")
             for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14", "0.1.0-alpha.15", "0.1.0-alpha.16", "0.1.0-alpha.17", "0.1.0-alpha.18", "0.1.0-alpha.19", "0.1.0-alpha.20", "0.1.0", "0.1.1"):
