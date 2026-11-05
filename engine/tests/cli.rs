@@ -2958,7 +2958,7 @@ fn a_fixed_part_weidu_went_past_needs_a_fresh_copy_and_says_why() {
     let reason = response["status"]["reason"].as_str().unwrap();
     assert_eq!(
         reason,
-        "BG1 fixes (EE Fixpack) could not be installed. BG1 fixes is a fixed part of this collection, so the installation cannot continue without it. Its installer went on after the error, so this copy cannot try it again."
+        "Core fixes (EE Fixpack) could not be installed. BG1 fixes is a fixed part of this collection, so the installation cannot continue without it. Its installer went on after the error, so this copy cannot try it again."
     );
 }
 
@@ -3000,6 +3000,7 @@ fn a_component_that_fails_after_others_keeps_them_and_the_receipt_verifies() {
 #[test]
 fn the_question_names_what_leaves_with_the_failed_component() {
     let fixture = executable_fixture();
+    split_bg1_fixes(&fixture);
     let collection = fixture.recipe.join("collection.toml");
     let text = fs::read_to_string(&collection)
         .unwrap()
@@ -3010,7 +3011,7 @@ fn the_question_names_what_leaves_with_the_failed_component() {
         collection,
         text.replace(
             "components = [{ run_id = \"eefixpack-bg2\", component = 0 }]\n",
-            "components = [{ run_id = \"eefixpack-bg2\", component = 0 }]\nrequires = [\"eefix-bg1\"]\n",
+            "components = [{ run_id = \"eefixpack-bg2\", component = 0 }]\nrequires = [\"eefix-bg1-text\"]\n",
         ),
     )
     .unwrap();
@@ -3019,7 +3020,7 @@ fn the_question_names_what_leaves_with_the_failed_component() {
 
     assert_eq!(
         decision["texts"]["message"],
-        "BG1 fixes (EE Fixpack) could not be installed. Leave it out and continue? The parts of EE Fixpack that need it are left out too: BG2 fixes."
+        "BG1 text fixes (EE Fixpack) could not be installed. Leave it out and continue? The parts of EE Fixpack that need it are left out too: BG2 fixes."
     );
     decide(&fixture, &decision, "leave-out");
     let resumed = resume_with_failing_component(&fixture, "2");
@@ -3031,7 +3032,7 @@ fn the_question_names_what_leaves_with_the_failed_component() {
     assert_eq!(installed.components_for("eefixpack-bg1"), Some(&[0][..]));
     assert_eq!(
         end_summary(&fixture)[0],
-        "You chose to continue without BG1 fixes (EE Fixpack): its installer stopped with an error. Also left out of EE Fixpack: BG2 fixes."
+        "You chose to continue without BG1 text fixes (EE Fixpack): its installer stopped with an error. Also left out of EE Fixpack: BG2 fixes."
     );
 }
 
@@ -3410,7 +3411,7 @@ fn a_failed_fixed_part_offers_only_to_try_again_or_stop() {
     let decision = check_decision(&fixture, response["install_id"].as_str().unwrap());
     assert_eq!(
         decision["texts"]["message"],
-        "BG1 fixes (EE Fixpack) could not be installed, and the collection can't be installed without it. Try again?"
+        "Core fixes (EE Fixpack) could not be installed, and the collection can't be installed without it. Try again?"
     );
     assert_eq!(
         labels(&decision),
@@ -3445,7 +3446,7 @@ fn a_failed_fixed_part_offers_only_to_try_again_or_stop() {
         stopped["status"]["reason"]
             .as_str()
             .unwrap()
-            .starts_with("You chose to stop: BG1 fixes (EE Fixpack) could not be installed."),
+            .starts_with("You chose to stop: Core fixes (EE Fixpack) could not be installed."),
         "{stopped:#}"
     );
 }

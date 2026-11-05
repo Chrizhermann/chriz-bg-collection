@@ -242,6 +242,8 @@ struct FakeDeps {
     recovered_attempts: Vec<u32>,
     /// Every `plan_without_parts` request, to see replays not recompute it.
     plan_without_parts_calls: Vec<Vec<(String, Vec<u32>)>>,
+    /// What each `plan_without_parts` request said was in the game.
+    in_game_at_questions: Vec<Vec<(String, Vec<u32>)>>,
     /// Source games that look modded, with the question to ask before copying them.
     source_questions: BTreeMap<GameRole, Question>,
 }
@@ -412,8 +414,10 @@ impl ArtifactAcquirer for FakeDeps {
         plan: &InstallPlan,
         left_out: &[String],
         failed: &[(String, Vec<u32>)],
+        in_game: &[(String, Vec<u32>)],
     ) -> Result<InstallPlan, StepFailure> {
         self.plan_without_parts_calls.push(failed.to_vec());
+        self.in_game_at_questions.push(in_game.to_vec());
         for (run_id, _) in failed {
             if let Some(run) = plan.runs.iter().find(|run| &run.run_id == run_id) {
                 if self.essential.contains(&run.artifact_id) {
@@ -3857,6 +3861,9 @@ fn a_run_in_the_game_stays_when_a_part_it_needs_fails_later() {
     assert!(installed.components_for("eefix-bg1").is_some());
     let planned = fixture.request.plan.components_for("tweaks-bg2").unwrap();
     assert_eq!(installed.components_for("tweaks-bg2"), Some(&planned[1..]));
+    let in_game = &deps.in_game_at_questions[0];
+    assert!(in_game.iter().any(|(run, _)| run == "eefix-bg1"));
+    assert!(in_game.contains(&("tweaks-bg2".to_owned(), Vec::new())));
 }
 
 fn modded_bg1_question() -> Question {

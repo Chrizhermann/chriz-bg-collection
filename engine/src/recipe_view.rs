@@ -1221,7 +1221,14 @@ pub fn plan_without_artifacts(
     plan: &InstallPlan,
     unusable: &BTreeSet<String>,
 ) -> std::result::Result<InstallPlan, LeaveOutError> {
-    plan_without_parts(manifest, selection, plan, unusable, &BTreeSet::new())
+    plan_without_parts(
+        manifest,
+        selection,
+        plan,
+        unusable,
+        &BTreeSet::new(),
+        &BTreeSet::new(),
+    )
 }
 
 /// The recipe run a planned run comes from: the run of that id, or the run that a manual pause
@@ -1249,12 +1256,20 @@ pub fn recipe_run_in<'a>(collection: &'a Collection, planned_run_id: &str) -> Op
 /// could not install: every selected feature with such a component is switched off as when its
 /// mod is left out, together with everything that depends on it. A component is named by its
 /// recipe run, as features name it; a run split at a manual pause names its recipe run.
+///
+/// `in_game` are the components installed so far, named the same way. The installer never
+/// uninstalls, so what depends on them stays: a feature with such a component, and the features
+/// above it, count as there. Such a feature only loses its failed components, and whatever
+/// needs it stays. A dependent that really needs the failed part fails on its own and is asked
+/// about then. A feature that lost a requirement loses its other components, but still counts
+/// as there for what needs it.
 pub fn plan_without_parts(
     manifest: &Manifest,
     selection: &NormalizedSelection,
     plan: &InstallPlan,
     unusable: &BTreeSet<String>,
     failed: &BTreeSet<ComponentRef>,
+    in_game: &BTreeSet<ComponentRef>,
 ) -> std::result::Result<InstallPlan, LeaveOutError> {
     let features = manifest
         .collection
@@ -1284,21 +1299,26 @@ pub fn plan_without_parts(
         })
     };
     let is_on = |map: &BTreeMap<String, bool>, id: &str| map.get(id).copied().unwrap_or(false);
+    let there = features_in_game(&features, in_game);
 
-    let mut desired = selection.features.clone();
+    // Leaving out only removes, so whatever a removed feature held off stays off.
+    let mut kept = effective.clone();
     for feature in manifest
         .collection
         .features
         .iter()
         .filter(|feature| is_on(&effective, &feature.id) && uses_blocked(feature))
     {
-        // Switch off the feature itself, or its nearest ancestor the selection can switch off.
+        // Switch off the feature itself, or its nearest ancestor the selection can switch off,
+        // with what lies between them, up to the first that is in the game.
         let mut current = feature;
+        let mut leaving = vec![feature];
         let mut depth = 0_usize;
         while current.decision == Decision::Mandatory {
             match current.parent.as_deref().and_then(|id| features.get(id)) {
                 Some(parent) if depth <= features.len() => {
                     current = parent;
+                    leaving.push(parent);
                     depth += 1;
                 }
                 _ => {
@@ -1309,26 +1329,17 @@ pub fn plan_without_parts(
                 }
             }
         }
-        desired.insert(current.id.clone(), false);
-    }
-    let reduced = effective_features(manifest, &base_effective_features(manifest, &desired));
-    // Removing a feature can let an alternative it held off become effective in `reduced`;
-    // the intersection drops that alternative again, since leaving out never adds a part. A
-    // feature that `reduced` kept only through it would then stay without support, so the
-    // dependency relations are applied once more, removing only.
-    let kept = without_unsupported_features(
-        manifest,
-        effective
+        for feature in leaving
             .iter()
-            .map(|(id, selected)| (id.clone(), *selected && is_on(&reduced, id)))
-            .collect::<BTreeMap<_, _>>(),
-    );
-    if let Some(feature) = manifest
-        .collection
-        .features
-        .iter()
-        .find(|feature| is_on(&kept, &feature.id) && uses_blocked(feature))
-    {
+            .take_while(|feature| !there.contains(feature.id.as_str()))
+        {
+            kept.insert(feature.id.clone(), false);
+        }
+    }
+    let kept = without_unsupported_features(manifest, kept, &there);
+    if let Some(feature) = manifest.collection.features.iter().find(|feature| {
+        is_on(&kept, &feature.id) && uses_blocked(feature) && !there.contains(feature.id.as_str())
+    }) {
         return Err(LeaveOutError::Invalid(format!(
             "feature {:?} still installs a left-out mod",
             feature.id
@@ -1340,7 +1351,13 @@ pub fn plan_without_parts(
         .iter()
         .filter(|feature| is_on(&kept, &feature.id))
         .flat_map(|feature| feature.components.iter().cloned())
+        .filter(|component| !failed.contains(component))
         .collect::<BTreeSet<_>>();
+    // A mod's prompt depends on what the game holds, whatever left the plan.
+    let asked_about = kept
+        .iter()
+        .map(|(id, on)| (id.clone(), *on || there.contains(id.as_str())))
+        .collect::<BTreeMap<_, _>>();
 
     let mut runs = Vec::new();
     for run in &plan.runs {
@@ -1378,7 +1395,7 @@ pub fn plan_without_parts(
                 manifest,
                 &component_ref(*component),
                 selection,
-                &kept,
+                &asked_about,
             )
             .map_err(|error| LeaveOutError::Invalid(error.to_string()))?;
             if !script.steps.is_empty() {
@@ -1396,21 +1413,51 @@ pub fn plan_without_parts(
     Ok(InstallPlan { runs })
 }
 
+/// The features with a component in `in_game`, and the features above them.
+fn features_in_game<'a>(
+    features: &BTreeMap<&'a str, &'a Feature>,
+    in_game: &BTreeSet<ComponentRef>,
+) -> BTreeSet<&'a str> {
+    let mut there = BTreeSet::new();
+    for feature in features.values().filter(|feature| {
+        feature
+            .components
+            .iter()
+            .any(|component| in_game.contains(component))
+    }) {
+        // A feature seen before ends the walk, so a malformed parent chain stays finite.
+        let mut current = Some(*feature);
+        while let Some(feature) = current.filter(|feature| there.insert(feature.id.as_str())) {
+            current = feature
+                .parent
+                .as_deref()
+                .and_then(|id| features.get(id).copied());
+        }
+    }
+    there
+}
+
 /// Switches off, until nothing changes, every feature that `kept` has on although its parent, a
-/// `requires` feature or every `requires_any` feature is off in `kept`. It only removes: a
-/// feature that is off stays off, so no conflict can arise.
+/// `requires` feature or every `requires_any` feature is neither on in `kept` nor in `there`,
+/// the features in the game. It only removes: a feature that is off stays off, so no conflict
+/// can arise.
 fn without_unsupported_features(
     manifest: &Manifest,
     mut kept: BTreeMap<String, bool>,
+    there: &BTreeSet<&str>,
 ) -> BTreeMap<String, bool> {
     loop {
         let mut removed = false;
         for feature in &manifest.collection.features {
             let on = |id: &str| kept.get(id).copied().unwrap_or(false);
-            let supported = feature.parent.as_deref().is_none_or(on)
-                && feature.requires.iter().all(|required| on(required))
+            let available = |id: &str| on(id) || there.contains(id);
+            let supported = feature.parent.as_deref().is_none_or(available)
+                && feature.requires.iter().all(|required| available(required))
                 && (feature.requires_any.is_empty()
-                    || feature.requires_any.iter().any(|required| on(required)));
+                    || feature
+                        .requires_any
+                        .iter()
+                        .any(|required| available(required)));
             if on(&feature.id) && !supported {
                 kept.insert(feature.id.clone(), false);
                 removed = true;

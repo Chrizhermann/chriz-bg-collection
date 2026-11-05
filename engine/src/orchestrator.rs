@@ -449,19 +449,21 @@ pub trait ArtifactAcquirer {
     }
 
     /// [`Self::plan_without`], leaving out also `failed`: components, by planned run, that an
-    /// installer could not install, together with everything that depends on them. Fails when
+    /// installer could not install, together with everything that depends on them. What
+    /// depends on `in_game`, the components installed so far by planned run, stays. Fails when
     /// the installation cannot continue without them, for example because the recipe always
     /// installs one of them.
     ///
-    /// Called only when a run's installer failed without a durable change. The ledger records
-    /// the result with the question that offers it, as for [`Self::plan_without`].
+    /// Called only when a run's installer failed. The ledger records the result with the
+    /// question that offers it, as for [`Self::plan_without`].
     fn plan_without_parts(
         &mut self,
         plan: &InstallPlan,
         left_out: &[String],
         failed: &[(String, Vec<u32>)],
+        in_game: &[(String, Vec<u32>)],
     ) -> Result<InstallPlan, StepFailure> {
-        let _ = (plan, left_out, failed);
+        let _ = (plan, left_out, failed, in_game);
         Err(StepFailure::new(
             "This installer cannot continue without a part whose installer failed.",
         ))
@@ -1501,6 +1503,16 @@ impl Progress {
     }
 }
 
+/// What a question that a crash kept from being recorded asks about.
+struct UnaskedQuestion {
+    /// The attempt that ran the installer.
+    ran: u32,
+    /// What it did not install.
+    failed: Vec<u32>,
+    /// What it installed after the failure.
+    installed_after: Vec<u32>,
+}
+
 /// `reduced` with every run in `installed` exactly as `previous` has it, even one it left out:
 /// those runs are in the game already, so leaving out a later failed part never changes them.
 fn adopt_installed_runs(
@@ -2357,14 +2369,13 @@ where
 
     /// The question that `attempt` was about to ask again after a stop, when a crash came
     /// before it was recorded: `attempt` left no evidence, so it ran nothing, and the attempt
-    /// that ran the installer still shows that it went past a failure. Gives that attempt's
-    /// number, what it did not install and what it installed after the failure.
+    /// that ran the installer still shows that it went past a failure.
     fn question_left_unasked(
         &mut self,
         step: &PipelineStep,
         attempt: &StepAttempt,
         run: &PlannedRun,
-    ) -> Result<Option<(u32, Vec<u32>, Vec<u32>)>, StepFailure> {
+    ) -> Result<Option<UnaskedQuestion>, StepFailure> {
         let Some(failed) = self.progress.last_failed.get(&step.id).copied() else {
             return Ok(None);
         };
@@ -2382,7 +2393,11 @@ where
             InstallReconciliation::FailedAmong {
                 failed,
                 installed_after,
-            } => Some((ran, failed, installed_after)),
+            } => Some(UnaskedQuestion {
+                ran,
+                failed,
+                installed_after,
+            }),
             _ => None,
         })
     }
@@ -2408,14 +2423,31 @@ where
                 not_installed.to_vec()
             },
         ));
+        let installed = self.progress.installed_runs(&self.schedule);
+        let mut in_game = self
+            .progress
+            .effective_plan
+            .runs
+            .iter()
+            .filter(|before| installed.contains(&before.run_id))
+            .map(|before| (before.run_id.clone(), before.components.clone()))
+            .collect::<Vec<_>>();
+        in_game.push((
+            run.run_id.clone(),
+            run.components
+                .iter()
+                .copied()
+                .filter(|component| !not_installed.contains(component))
+                .collect(),
+        ));
         let reduced = self
             .dependencies
-            .plan_without_parts(&self.request.plan, &ids, &parts)
+            .plan_without_parts(&self.request.plan, &ids, &parts, &in_game)
             .map_err(StepFailure::into_message)?;
         plan_keeping_installed(
             &self.progress.effective_plan,
             reduced,
-            &self.progress.installed_runs(&self.schedule),
+            &installed,
             &ids,
             run,
             not_installed,
@@ -3049,14 +3081,14 @@ where
             let attempt = self.attempt(step, *attempt);
             emit_started(self.sink, &step.id, &format!("Resume {}", step.label));
             match self.question_left_unasked(step, &attempt, &run) {
-                Ok(Some((ran, failed, installed_after))) => {
+                Ok(Some(question)) => {
                     return self.ask_failed_component(
                         step,
                         &attempt,
                         &run,
-                        &failed,
-                        &installed_after,
-                        Some(ran),
+                        &question.failed,
+                        &question.installed_after,
+                        Some(question.ran),
                     );
                 }
                 Ok(None) => {}
@@ -3936,114 +3968,207 @@ fn friendly_phase(phase: Phase) -> &'static str {
 mod tests {
     use super::*;
     use crate::manifest::ComponentRef;
-    use crate::recipe_view::{evaluate, plan_without_parts, recipe_run_id, LeaveOutError};
+    use crate::recipe_view::{
+        evaluate, plan_without_parts, recipe_run_id, LeaveOutError, SelectionEvaluation,
+    };
     use crate::resolve::Selection;
     use crate::Manifest;
 
-    /// SCS's last component fails after the rest of SCS was installed: what needs SCS stays,
-    /// such as BG Rebalance's repairs of the spells SCS installed.
-    #[test]
-    fn the_repairs_of_an_installed_mod_stay_when_its_last_component_fails() {
-        let recipe = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../recipes/curated-full-current");
-        let manifest = Manifest::load(&recipe).unwrap();
+    fn recommended(manifest: &Manifest, spell_revisions: bool) -> SelectionEvaluation {
         let mut selection = Selection {
             platform: "windows".to_owned(),
             choices: manifest.presets["chris-recommended"].selections.clone(),
         };
-        selection.set_feature("mod:spell-rev", true);
-        let evaluation = evaluate(&manifest, &selection).unwrap();
+        selection.set_feature("mod:spell-rev", spell_revisions);
+        evaluate(manifest, &selection).unwrap()
+    }
+
+    fn curated() -> Manifest {
+        Manifest::load(
+            &std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../recipes/curated-full-current"),
+        )
+        .unwrap()
+    }
+
+    /// `components` of the planned `run`, as the recipe names them.
+    fn recipe_parts<'a>(
+        manifest: &'a Manifest,
+        run: &'a PlannedRun,
+        components: impl IntoIterator<Item = &'a u32> + 'a,
+    ) -> impl Iterator<Item = ComponentRef> + 'a {
+        let run_id = recipe_run_id(manifest, &run.run_id).unwrap();
+        components.into_iter().map(move |component| ComponentRef {
+            run_id: run_id.clone(),
+            component: *component,
+        })
+    }
+
+    /// What the plan would be when `not_installed` of `run`, the first of them failed, are not
+    /// in the game, with the runs before it. `Ok(None)` when the failed one is a fixed part.
+    fn plan_after_failure(
+        manifest: &Manifest,
+        evaluation: &SelectionEvaluation,
+        position: usize,
+        not_installed: &[u32],
+        goes_on: bool,
+    ) -> Result<(InstallPlan, BTreeSet<ComponentRef>), LeaveOutError> {
+        let plan = &evaluation.plan;
+        let run = &plan.runs[position];
+        let mut in_game = BTreeSet::new();
+        for before in &plan.runs[..position] {
+            in_game.extend(recipe_parts(manifest, before, &before.components));
+        }
+        let done = run
+            .components
+            .iter()
+            .filter(|component| !not_installed.contains(component));
+        in_game.extend(recipe_parts(manifest, run, done));
+        let failed = recipe_parts(manifest, run, &not_installed[..1]).collect();
+        let reduced = plan_without_parts(
+            manifest,
+            &evaluation.normalized_selection,
+            plan,
+            &BTreeSet::new(),
+            &failed,
+            &in_game,
+        )?;
+        let installed = plan.runs[..position]
+            .iter()
+            .map(|run| run.run_id.clone())
+            .collect();
+        let (kept, _) =
+            plan_keeping_installed(plan, reduced, &installed, &[], run, not_installed, goes_on)
+                .unwrap_or_else(|error| panic!("{}: {error}", run.run_id));
+        Ok((kept, in_game))
+    }
+
+    /// Everything that leaves `plan` with `failed` has a reason in what is gone: it is `failed`
+    /// or belongs to its feature, or its feature needs something of which nothing remains.
+    /// Nothing leaves that needs only what is in the game or still planned.
+    fn assert_only_what_needs_it_leaves(
+        manifest: &Manifest,
+        plan: &InstallPlan,
+        kept: &InstallPlan,
+        in_game: &BTreeSet<ComponentRef>,
+        failed: &ComponentRef,
+    ) {
+        let parts = |plan: &InstallPlan| {
+            plan.runs
+                .iter()
+                .flat_map(|run| recipe_parts(manifest, run, &run.components).collect::<Vec<_>>())
+                .collect::<BTreeSet<_>>()
+        };
+        let planned = parts(plan);
+        let mut remaining = parts(kept);
+        remaining.extend(in_game.iter().cloned());
+        let features = &manifest.collection.features;
+        let selected = |id: &str| {
+            features
+                .iter()
+                .find(|feature| feature.id == id)
+                .unwrap()
+                .components
+                .iter()
+                .any(|part| remaining.contains(part))
+        };
+        // A feature without components, a mod, is there when something below it is.
+        let there = |id: &str| {
+            selected(id)
+                || features
+                    .iter()
+                    .any(|feature| feature.parent.as_deref() == Some(id) && selected(&feature.id))
+        };
+        for feature in features {
+            let lost = feature
+                .components
+                .iter()
+                .any(|part| planned.contains(part) && !remaining.contains(part) && part != failed);
+            if !lost || feature.components.contains(failed) {
+                continue;
+            }
+            let needs_what_is_gone = feature.parent.as_deref().is_some_and(|id| !there(id))
+                || feature.requires.iter().any(|id| !there(id))
+                || (!feature.requires_any.is_empty()
+                    && !feature.requires_any.iter().any(|id| there(id)));
+            assert!(
+                needs_what_is_gone,
+                "{} left with {failed:?} although all it needs is there",
+                feature.id
+            );
+        }
+    }
+
+    /// SCS's last component fails after the rest of SCS was installed: only it leaves, and what
+    /// needs SCS stays, such as BG Rebalance's repairs of the spells SCS installed.
+    #[test]
+    fn the_repairs_of_an_installed_mod_stay_when_its_last_component_fails() {
+        let manifest = curated();
+        let evaluation = recommended(&manifest, true);
         let plan = &evaluation.plan;
         let position = plan
             .runs
             .iter()
             .position(|run| run.run_id == "stratagems-bg2")
             .unwrap();
-        let run = &plan.runs[position];
-        assert_eq!(run.components.last(), Some(&8190));
-        let reduced = plan_without_parts(
-            &manifest,
-            &evaluation.normalized_selection,
-            plan,
-            &BTreeSet::new(),
-            &BTreeSet::from([ComponentRef {
-                run_id: run.run_id.clone(),
-                component: 8190,
-            }]),
-        )
-        .unwrap();
-        let installed = plan.runs[..position]
-            .iter()
-            .map(|run| run.run_id.clone())
-            .collect();
+        assert_eq!(plan.runs[position].components.last(), Some(&8190));
 
         let (kept, _) =
-            plan_keeping_installed(plan, reduced, &installed, &[], run, &[8190], true).unwrap();
+            plan_after_failure(&manifest, &evaluation, position, &[8190], true).unwrap();
 
         let repairs = kept.components_for("chriz-bg-rebalance-bg2").unwrap();
         assert!(
             repairs.contains(&100) && repairs.contains(&120),
             "{repairs:?}"
         );
+        let mut expected = plan.clone();
+        expected.runs[position].components.pop();
+        expected.runs[position].postconditions.clear();
+        let parts = |plan: &InstallPlan| {
+            plan.runs
+                .iter()
+                .map(|run| (run.run_id.clone(), run.components.clone()))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(parts(&kept), parts(&expected));
     }
 
     /// Whichever component of the recommended setup fails, the question has an answer at the
     /// point where it fails, whether WeiDU went on or stopped there: the component leaves with
     /// what needs it, or it is one of the fixed parts. Nothing else may come of it, with or
-    /// without Spell Revisions.
+    /// without Spell Revisions, and nothing leaves that needs only what is there.
     #[test]
     fn every_planned_component_can_leave_where_it_fails_or_is_a_fixed_part() {
-        let recipe = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../recipes/curated-full-current");
-        let manifest = Manifest::load(&recipe).unwrap();
+        let manifest = curated();
         for spell_revisions in [true, false] {
-            let mut selection = Selection {
-                platform: "windows".to_owned(),
-                choices: manifest.presets["chris-recommended"].selections.clone(),
-            };
-            selection.set_feature("mod:spell-rev", spell_revisions);
-            let evaluation = evaluate(&manifest, &selection).unwrap();
+            let evaluation = recommended(&manifest, spell_revisions);
             let plan = &evaluation.plan;
             let mut fixed = BTreeSet::new();
-            let mut installed = BTreeSet::new();
-            for run in &plan.runs {
+            for (position, run) in plan.runs.iter().enumerate() {
                 for (index, component) in run.components.iter().enumerate() {
-                    let failed = ComponentRef {
-                        run_id: recipe_run_id(&manifest, &run.run_id).unwrap(),
-                        component: *component,
-                    };
-                    let reduced = match plan_without_parts(
-                        &manifest,
-                        &evaluation.normalized_selection,
-                        plan,
-                        &BTreeSet::new(),
-                        &BTreeSet::from([failed.clone()]),
-                    ) {
-                        Ok(reduced) => reduced,
-                        Err(LeaveOutError::Required { title, .. }) => {
-                            fixed.insert(title);
-                            continue;
-                        }
-                        Err(error) => panic!("{failed:?}: {error}"),
-                    };
                     let last = index + 1 == run.components.len();
+                    let failed = recipe_parts(&manifest, run, [component]).next().unwrap();
                     for (not_installed, goes_on) in [
                         (std::slice::from_ref(component), last),
                         (&run.components[index..], true),
                     ] {
-                        plan_keeping_installed(
-                            plan,
-                            reduced.clone(),
-                            &installed,
-                            &[],
-                            run,
+                        match plan_after_failure(
+                            &manifest,
+                            &evaluation,
+                            position,
                             not_installed,
                             goes_on,
-                        )
-                        .unwrap_or_else(|error| panic!("{failed:?}: {error}"));
+                        ) {
+                            Ok((kept, in_game)) => assert_only_what_needs_it_leaves(
+                                &manifest, plan, &kept, &in_game, &failed,
+                            ),
+                            Err(LeaveOutError::Required { title, .. }) => {
+                                fixed.insert(title);
+                            }
+                            Err(error) => panic!("{failed:?}: {error}"),
+                        }
                     }
                 }
-                installed.insert(run.run_id.clone());
             }
             assert_eq!(
                 fixed.iter().map(String::as_str).collect::<Vec<_>>(),

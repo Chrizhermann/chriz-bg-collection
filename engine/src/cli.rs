@@ -1639,11 +1639,33 @@ fn run_mod_name(frozen: &FrozenCliRecipe, run_id: &str, artifact_id: &str) -> St
         )
 }
 
+/// What the player knows the failed `component` of planned run `run_id` by: as
+/// [`component_title`], or by its own name when its feature installs more than this component,
+/// because the rest of that feature may stay.
+fn failed_component_title(frozen: &FrozenCliRecipe, run_id: &str, component: u32) -> String {
+    crate::recipe_view::recipe_run_in(&frozen.collection, run_id)
+        .filter(|run| {
+            frozen.collection.features.iter().any(|feature| {
+                feature.components.len() > 1
+                    && feature
+                        .components
+                        .iter()
+                        .any(|part| part.run_id == run.run_id && part.component == component)
+            })
+        })
+        .and_then(|run| frozen.mods.get(&run.mod_id))
+        .and_then(|installer| installer.components.iter().find(|own| own.id == component))
+        .map_or_else(
+            || component_title(frozen, run_id, component),
+            |own| own.name.clone(),
+        )
+}
+
 /// The titles of what failed in `part`, each once.
 fn failed_titles(frozen: &FrozenCliRecipe, part: &FailedPart) -> Vec<String> {
     let mut titles = Vec::<String>::new();
     for component in part.left_out() {
-        let title = component_title(frozen, &part.run_id, component);
+        let title = failed_component_title(frozen, &part.run_id, component);
         if !titles.contains(&title) {
             titles.push(title);
         }
@@ -4866,6 +4888,7 @@ impl<S: EventSink> ArtifactAcquirer for GuardedCliDependencies<'_, S> {
         plan: &InstallPlan,
         left_out: &[String],
         failed: &[(String, Vec<u32>)],
+        in_game: &[(String, Vec<u32>)],
     ) -> Result<InstallPlan, StepFailure> {
         let manifest = Manifest {
             root: self
@@ -4878,25 +4901,29 @@ impl<S: EventSink> ArtifactAcquirer for GuardedCliDependencies<'_, S> {
             mods: self.frozen.mods.clone(),
             presets: self.frozen.presets.clone(),
         };
-        let mut parts = BTreeSet::new();
-        for (planned_run_id, components) in failed {
-            let run_id =
-                crate::recipe_view::recipe_run_id(&manifest, planned_run_id).ok_or_else(|| {
-                    StepFailure::new(format!(
-                        "planned run {planned_run_id:?} is not in the frozen recipe"
-                    ))
-                })?;
-            parts.extend(components.iter().map(|component| ComponentRef {
-                run_id: run_id.clone(),
-                component: *component,
-            }));
-        }
+        let recipe_parts = |planned: &[(String, Vec<u32>)]| {
+            let mut parts = BTreeSet::new();
+            for (planned_run_id, components) in planned {
+                let run_id = crate::recipe_view::recipe_run_id(&manifest, planned_run_id)
+                    .ok_or_else(|| {
+                        StepFailure::new(format!(
+                            "planned run {planned_run_id:?} is not in the frozen recipe"
+                        ))
+                    })?;
+                parts.extend(components.iter().map(|component| ComponentRef {
+                    run_id: run_id.clone(),
+                    component: *component,
+                }));
+            }
+            Ok::<_, StepFailure>(parts)
+        };
         crate::recipe_view::plan_without_parts(
             &manifest,
             &self.frozen.normalized_selection,
             plan,
             &left_out.iter().cloned().collect(),
-            &parts,
+            &recipe_parts(failed)?,
+            &recipe_parts(in_game)?,
         )
         .map_err(step_error)
     }

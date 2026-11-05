@@ -32,10 +32,15 @@ feature title and its mod.
   question. "Stop" keeps the question: every resume asks again and runs nothing, reading the
   evidence of the attempt that ran (`FailedPart::evidence_attempt`).
 
-Leaving out goes by the same closure as unticking the feature, so one question covers what
-needs it. Whatever WeiDU installed stays, even when the recipe says it needs the failed part,
-and that goes for whole runs that are in the game already: the installer never uninstalls. A
-preset `retry` is refused, because it could repeat without end.
+Leaving out goes by what is in the game, because the installer never uninstalls.
+`plan_without_parts` gets the components installed so far. A feature with one of them, and the
+features above it, count as there: such a feature only loses what failed, and whatever needs it
+stays, so SCS failing at its last component keeps BG Rebalance's repairs of its spells. A feature
+of which nothing is in the game leaves as when it is unticked, with what needs it, and one
+question covers them all. A dependent that really needs the failed part fails on its own and gets
+its own question. A feature that lost a requirement keeps what is in the game, loses the rest
+and still counts as there; prompts follow what is there, because mods ask by what the game
+holds. A preset `retry` is refused, because it could repeat without end.
 
 **The mandatory line is the recipe's own:** a feature with `decision = "mandatory"` and only
 mandatory parents is a fixed part (`LeaveOutError::Required`). In `curated-full-current` these
@@ -50,6 +55,12 @@ fixed (454 without Spell Revisions), and all others can leave at the point where
 A run without an answer, or with a preset that does not fit, ends with status
 `decision_required` and the question open; `--answer failed-component=leave-out` or `=no`
 answers for one run. The end summary and the receipt name every part left out.
+
+A question survives crashes around it. An attempt recovered without its process result keeps the
+end time of its first recovery, so reconciling it again publishes the same record. The attempt
+that asks again after a stop is recorded before its question: an attempt without evidence after
+one that went past a failure ran nothing and only asks (`question_left_unasked`). The ledger can
+only seal the attempt that failed last, not the one with the evidence.
 
 Two fixes came with it. A run that lost components could not pass the receipt check, because
 its first attempt names more than the run keeps: that check now knows what left, and accepts
