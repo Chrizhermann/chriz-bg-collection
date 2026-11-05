@@ -1827,6 +1827,34 @@ fn affected_mods(
     (left_out, reduced)
 }
 
+/// The other mods that a leaving out of `artifact_id` shortened and that left the plan later:
+/// a later failure names only what failed then, so this answer names them.
+fn mods_gone_later(
+    frozen: &FrozenCliRecipe,
+    artifact_id: &str,
+    changed: &[String],
+    remaining: &BTreeSet<String>,
+) -> Vec<String> {
+    let mut names = Vec::<String>::new();
+    for run in frozen
+        .plan
+        .runs
+        .iter()
+        .filter(|run| changed.contains(&run.run_id) && run.artifact_id != artifact_id)
+    {
+        let still_installed = frozen
+            .plan
+            .runs
+            .iter()
+            .any(|other| other.mod_id == run.mod_id && remaining.contains(&other.run_id));
+        let name = mod_display_name(frozen, &run.mod_id);
+        if !still_installed && !names.contains(&name) {
+            names.push(name);
+        }
+    }
+    names
+}
+
 /// The game a [`QuestionKind::ModdedSource`] question is about, and its frozen source.
 fn source_of_question<'a>(
     frozen: &'a FrozenCliRecipe,
@@ -2426,6 +2454,8 @@ fn receipt_notes(receipt: &InstallReceipt, frozen: &FrozenCliRecipe) -> Vec<Stri
         })
     };
     let mut notes = Vec::new();
+    // The parts of a mod that a line named already: answers add up, each names its own.
+    let mut named_parts = BTreeSet::new();
     let left_out_in_the_end = |id: &str| {
         receipt
             .left_out
@@ -2458,23 +2488,41 @@ fn receipt_notes(receipt: &InstallReceipt, frozen: &FrozenCliRecipe) -> Vec<Stri
                     part,
                     &decision.removed_runs,
                     |run_id| {
-                        receipt
-                            .effective_plan()
-                            .components_for(run_id)
-                            .map(<[u32]>::to_vec)
+                        // A receipt of an earlier version records only the installed plan.
+                        if decision.kept_components.is_empty() && !decision.changed_runs.is_empty()
+                        {
+                            return receipt
+                                .effective_plan()
+                                .components_for(run_id)
+                                .map(<[u32]>::to_vec);
+                        }
+                        decision.kept_components.get(run_id).cloned()
                     },
-                );
+                )
+                .into_iter()
+                .filter(|title| named_parts.insert((decision.artifact_id.clone(), title.clone())))
+                .collect::<Vec<_>>();
                 if !own_parts.is_empty() {
                     note.push_str(&format!(
                         " Also left out of {own_mod}: {}.",
                         own_parts.join(", ")
                     ));
                 }
-                let (dependents, changed) = affected(
+                let (mut dependents, changed) = affected(
                     &decision.artifact_id,
                     &decision.removed_runs,
                     &decision.changed_runs,
                 );
+                for name in mods_gone_later(
+                    frozen,
+                    &decision.artifact_id,
+                    &decision.changed_runs,
+                    &remaining,
+                ) {
+                    if !dependents.contains(&name) {
+                        dependents.push(name);
+                    }
+                }
                 if !dependents.is_empty() {
                     note.push_str(&format!(" Also left out: {}.", dependents.join(", ")));
                 }
@@ -8104,6 +8152,13 @@ mod tests {
             super::affected_mods(&frozen, "snowy", &removed, &changed, &gone_later),
             (Vec::<String>::new(), Vec::<String>::new())
         );
+        // After a failed component its later line names only what failed then.
+        assert_eq!(
+            super::mods_gone_later(&frozen, "snowy", &changed, &gone_later),
+            vec!["tweaks".to_owned()]
+        );
+        assert!(super::mods_gone_later(&frozen, "snowy", &changed, &still_there).is_empty());
+        assert!(super::mods_gone_later(&frozen, "tweaks", &changed, &gone_later).is_empty());
     }
 
     #[test]

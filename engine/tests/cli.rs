@@ -3036,6 +3036,86 @@ fn the_question_names_what_leaves_with_the_failed_component() {
     );
 }
 
+/// A later failure can take the rest of a run that an earlier answer only shortened. The end
+/// summary still names what the earlier answer left out, as its question did.
+#[cfg(windows)]
+#[test]
+fn the_end_summary_keeps_what_an_answer_left_out_of_a_run_that_leaves_later() {
+    let fixture = executable_fixture();
+    let mod_file = fixture.recipe.join("mods/eefixpack.toml");
+    let mut installer = fs::read_to_string(&mod_file).unwrap().replace("\r\n", "\n");
+    installer.push_str("\n[[components]]\nid = 3\nname = \"BG2 extras\"\n");
+    fs::write(&mod_file, installer).unwrap();
+    let collection = fixture.recipe.join("collection.toml");
+    let text = fs::read_to_string(&collection)
+        .unwrap()
+        .replace("\r\n", "\n");
+    let bg1_feature = r#"components = [
+  { run_id = "eefixpack-bg1", component = 0 },
+  { run_id = "eefixpack-bg1", component = 2 },
+]
+"#;
+    let bg2_feature = "components = [{ run_id = \"eefixpack-bg2\", component = 0 }]\n";
+    assert!(text.contains(bg1_feature) && text.contains(bg2_feature));
+    let extras = r#"
+[[features]]
+id = "eefix-bg2-extras"
+title = "BG2 extras"
+description = "Fixture BG2 extras"
+category = "foundation"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "eefixpack-bg2", component = 3 }]
+"#;
+    fs::write(
+        collection,
+        text.replace("components = [0, 2]\n", "components = [0]\n")
+            .replace(
+                "phase = \"bg2-preparation\"\ncomponents = [0]\n",
+                "phase = \"bg2-preparation\"\ncomponents = [2, 3]\n",
+            )
+            .replace(
+                bg1_feature,
+                "components = [{ run_id = \"eefixpack-bg1\", component = 0 }]\n",
+            )
+            .replace(
+                bg2_feature,
+                "components = [{ run_id = \"eefixpack-bg2\", component = 2 }]\nrequires = [\"eefix-bg1\"]\n",
+            )
+            + extras,
+    )
+    .unwrap();
+
+    let decision = install_until_component_fails(&fixture, "0");
+    assert_eq!(
+        decision["texts"]["message"],
+        "BG1 fixes (EE Fixpack) could not be installed. Leave it out and continue? The parts of EE Fixpack that need it are left out too: BG2 fixes."
+    );
+    decide(&fixture, &decision, "leave-out");
+    let (code, response) = run_installer_with(
+        &fixture,
+        None,
+        &[(
+            "CHRIZ_TEST_MOCK_WEIDU_FAIL_COMPONENT",
+            std::ffi::OsStr::new("3"),
+        )],
+        &["--json", "resume", fixture.managed.to_str().unwrap()],
+    );
+    waiting_for(code, &response, "install:eefixpack-bg2");
+    let decision = check_decision(&fixture, response["install_id"].as_str().unwrap());
+    decide(&fixture, &decision, "leave-out");
+    let resumed = resume_with_failing_component(&fixture, "3");
+
+    assert_eq!(resumed["status"]["status"], "complete", "{resumed:#}");
+    assert_eq!(
+        end_summary(&fixture)[..2],
+        [
+            "You chose to continue without BG1 fixes (EE Fixpack): its installer stopped with an error. Also left out of EE Fixpack: BG2 fixes.",
+            "You chose to continue without BG2 extras (EE Fixpack): its installer stopped with an error.",
+        ]
+    );
+}
+
 /// What needs a feature stays when part of that feature is in the game: only what failed leaves.
 #[cfg(windows)]
 #[test]

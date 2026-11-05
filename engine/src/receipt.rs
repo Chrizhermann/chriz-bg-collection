@@ -1,6 +1,6 @@
 //! Create-once machine-readable receipts for managed installation attempts.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 #[cfg(not(windows))]
 use std::fs::File;
 use std::fs::{self, OpenOptions};
@@ -260,6 +260,10 @@ pub struct DecisionReceipt {
     /// Runs installed with fewer parts because the answer left the mod out.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub changed_runs: Vec<String>,
+    /// What each of `changed_runs` kept right after the answer. A later answer can take the
+    /// rest of a run, so the installed plan cannot say what this answer left out of it.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub kept_components: BTreeMap<String, Vec<u32>>,
     /// What failed, for a failed component.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub failed: Option<FailedPart>,
@@ -305,6 +309,15 @@ impl From<&AnsweredDecision> for DecisionReceipt {
                         .changed_runs
                         .iter()
                         .map(|run| run.run_id.clone())
+                        .collect()
+                })
+                .unwrap_or_default(),
+            kept_components: closure
+                .map(|closure| {
+                    closure
+                        .changed_runs
+                        .iter()
+                        .map(|run| (run.run_id.clone(), run.components.clone()))
                         .collect()
                 })
                 .unwrap_or_default(),
