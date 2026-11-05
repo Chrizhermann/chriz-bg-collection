@@ -2,9 +2,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
 use bg_engine::manifest::{
-    Component, ComponentRef, Conflict, Decision, Feature, FeatureGroup, FeatureGroupVariant,
-    FeatureInputRef, InputOption, InputSpec, InputValue, InvocationMode, ModFile, Phase,
-    Postcondition, PromptAnswer, PromptStep, Readiness, Run,
+    Component, ComponentNeeds, ComponentRef, Conflict, Decision, Feature, FeatureGroup,
+    FeatureGroupVariant, FeatureInputRef, InputOption, InputSpec, InputValue, InvocationMode,
+    ModFile, Phase, Postcondition, PromptAnswer, PromptStep, Readiness, Run,
 };
 use bg_engine::manual_checkpoint::{split_plan, ManualBreakpoint};
 use bg_engine::recipe_view::{
@@ -78,6 +78,7 @@ fn feature(id: &str, decision: Decision, components: Vec<ComponentRef>) -> Featu
         requires_any: Vec::new(),
         conflicts: Vec::new(),
         inputs: Vec::new(),
+        core_components: Vec::new(),
     }
 }
 
@@ -1007,7 +1008,109 @@ fn a_prompt_stays_for_a_feature_in_the_game_that_lost_its_requirement() {
         .unwrap();
     assert_eq!(run.prompt_scripts.len(), 1);
     assert!(remaining.components_for("needed-mod").is_none());
-    assert!(remaining.components_for("condition-mod").is_none());
+}
+
+/// A manifest with a bundle of components 1 to 3 and one dependent for each kind of need: of
+/// component 1 only, of 1 or 2, and of the feature as such.
+fn bundle_manifest() -> Manifest {
+    let mut manifest = semantic_manifest();
+    add_run(&mut manifest, "bundle-mod", &[1, 2, 3]);
+    add_run(&mut manifest, "later-mod", &[4, 5, 6]);
+    let dependent = |id: &str, component: u32| Feature {
+        requires: vec!["bundle".to_owned()],
+        ..feature(
+            id,
+            Decision::Default,
+            component_refs("later-mod", &[component]),
+        )
+    };
+    manifest.collection.features.extend([
+        feature(
+            "bundle",
+            Decision::Default,
+            component_refs("bundle-mod", &[1, 2, 3]),
+        ),
+        dependent("needs-one", 4),
+        dependent("needs-either", 5),
+        dependent("needs-all", 6),
+    ]);
+    manifest.collection.component_needs = vec![
+        ComponentNeeds {
+            component: component_refs("later-mod", &[4]).remove(0),
+            needs: component_refs("bundle-mod", &[1]),
+            needs_any: Vec::new(),
+        },
+        ComponentNeeds {
+            component: component_refs("later-mod", &[5]).remove(0),
+            needs: Vec::new(),
+            needs_any: component_refs("bundle-mod", &[1, 2]),
+        },
+    ];
+    manifest
+}
+
+fn later_mod_without(manifest: &Manifest, failed: &[u32], in_game: &[u32]) -> Vec<u32> {
+    let evaluation = evaluate(manifest, &Selection::defaults("windows")).unwrap();
+    plan_without_parts(
+        manifest,
+        &evaluation.normalized_selection,
+        &evaluation.plan,
+        &BTreeSet::new(),
+        &component_refs("bundle-mod", failed).into_iter().collect(),
+        &component_refs("bundle-mod", in_game).into_iter().collect(),
+    )
+    .unwrap()
+    .components_for("later-mod")
+    .unwrap_or(&[])
+    .to_vec()
+}
+
+/// A dependent goes by what it needs of a bundle: its entry says so, and without one it needs
+/// all of it.
+#[test]
+fn what_needs_part_of_a_bundle_goes_by_that_part() {
+    let manifest = bundle_manifest();
+
+    assert_eq!(later_mod_without(&manifest, &[3], &[1, 2]), [4, 5]);
+    assert_eq!(later_mod_without(&manifest, &[2], &[1, 3]), [4, 5]);
+    assert_eq!(later_mod_without(&manifest, &[1], &[2, 3]), [5]);
+    assert!(later_mod_without(&manifest, &[1, 2], &[3]).is_empty());
+}
+
+/// What a feature exists for: what requires it needs its core, not its extras, and the game
+/// must not hold only part of that core.
+#[test]
+fn a_core_decides_what_needs_a_bundle_and_cannot_stay_in_part() {
+    let mut manifest = bundle_manifest();
+    manifest.collection.component_needs.clear();
+    manifest
+        .collection
+        .features
+        .iter_mut()
+        .find(|feature| feature.id == "bundle")
+        .unwrap()
+        .core_components = component_refs("bundle-mod", &[1, 2]);
+
+    assert_eq!(later_mod_without(&manifest, &[3], &[1, 2]), [4, 5, 6]);
+
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    let without = |failed: &[u32], in_game: &[u32]| {
+        plan_without_parts(
+            &manifest,
+            &evaluation.normalized_selection,
+            &evaluation.plan,
+            &BTreeSet::new(),
+            &component_refs("bundle-mod", failed).into_iter().collect(),
+            &component_refs("bundle-mod", in_game).into_iter().collect(),
+        )
+    };
+    assert!(matches!(
+        without(&[2], &[1]),
+        Err(LeaveOutError::Incomplete { .. })
+    ));
+    let gone = without(&[1], &[]).unwrap();
+    assert!(gone.components_for("bundle-mod").is_none());
+    assert!(gone.components_for("later-mod").is_none());
 }
 
 /// What the game holds decides what stays: the parent of what is in the game is there, so a

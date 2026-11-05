@@ -52,6 +52,7 @@ fn feature(id: &str, decision: Decision, component: u32) -> Feature {
         requires_any: Vec::new(),
         conflicts: Vec::new(),
         inputs: Vec::new(),
+        core_components: Vec::new(),
     }
 }
 
@@ -413,10 +414,15 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
             "{dir}"
         );
         assert_eq!(plan_digest(&evaluation.plan).unwrap(), plan_sha, "{dir}");
-        // The group is the only change to the frozen collection.
+        // The group and what says what components need are the only changes to the frozen
+        // collection.
         let mut without_groups: Collection = manifest.collection.clone();
         assert_eq!(without_groups.feature_groups.len(), 1, "{dir}");
         without_groups.feature_groups.clear();
+        without_groups.component_needs.clear();
+        for feature in &mut without_groups.features {
+            feature.core_components.clear();
+        }
         assert_eq!(
             sha256_bytes(&serde_json::to_vec(&without_groups).unwrap()),
             collection_sha,

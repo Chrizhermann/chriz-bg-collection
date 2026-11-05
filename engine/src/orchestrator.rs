@@ -3967,7 +3967,7 @@ fn friendly_phase(phase: Phase) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::manifest::ComponentRef;
+    use crate::manifest::{ComponentNeeds, ComponentRef, Decision, Feature};
     use crate::recipe_view::{
         evaluate, plan_without_parts, recipe_run_id, LeaveOutError, SelectionEvaluation,
     };
@@ -4043,60 +4043,198 @@ mod tests {
         Ok((kept, in_game))
     }
 
-    /// Everything that leaves `plan` with `failed` has a reason in what is gone: it is `failed`
-    /// or belongs to its feature, or its feature needs something of which nothing remains.
-    /// Nothing leaves that needs only what is in the game or still planned.
-    fn assert_only_what_needs_it_leaves(
+    /// The components of `plan`, as the recipe names them.
+    fn plan_parts(manifest: &Manifest, plan: &InstallPlan) -> BTreeSet<ComponentRef> {
+        plan.runs
+            .iter()
+            .flat_map(|run| recipe_parts(manifest, run, &run.components).collect::<Vec<_>>())
+            .collect()
+    }
+
+    /// What the recipe says components need, read straight from its data.
+    struct Needs<'a> {
+        features: BTreeMap<&'a str, &'a Feature>,
+        /// The feature that owns each component and the features above it.
+        owners: BTreeMap<&'a ComponentRef, Vec<&'a str>>,
+        entries: BTreeMap<&'a ComponentRef, &'a ComponentNeeds>,
+        planned: BTreeSet<ComponentRef>,
+    }
+
+    impl<'a> Needs<'a> {
+        fn new(manifest: &'a Manifest, plan: &InstallPlan) -> Self {
+            let features = manifest
+                .collection
+                .features
+                .iter()
+                .map(|feature| (feature.id.as_str(), feature))
+                .collect::<BTreeMap<_, _>>();
+            let mut owners = BTreeMap::new();
+            for feature in features.values() {
+                let mut chain = vec![feature.id.as_str()];
+                let mut parent = feature.parent.as_deref();
+                while let Some(id) = parent {
+                    chain.push(id);
+                    parent = features[id].parent.as_deref();
+                }
+                for part in &feature.components {
+                    owners.insert(part, chain.clone());
+                }
+            }
+            Self {
+                features,
+                owners,
+                entries: manifest
+                    .collection
+                    .component_needs
+                    .iter()
+                    .map(|entry| (&entry.component, entry))
+                    .collect(),
+                planned: plan_parts(manifest, plan),
+            }
+        }
+
+        fn is_below(&self, part: &ComponentRef, id: &str) -> bool {
+            self.owners
+                .get(part)
+                .is_some_and(|chain| chain.contains(&id))
+        }
+
+        /// What `part` needs of feature `required`: the components of which all must be there,
+        /// and those of which one must be.
+        fn of(
+            &self,
+            part: Option<&ComponentRef>,
+            required: &str,
+        ) -> (Vec<&'a ComponentRef>, Vec<&'a ComponentRef>) {
+            if let Some(entry) = part.and_then(|part| self.entries.get(part)) {
+                let below = |need: &&'a ComponentRef| self.is_below(need, required);
+                let all = entry.needs.iter().filter(below).collect::<Vec<_>>();
+                let any = entry.needs_any.iter().filter(below).collect::<Vec<_>>();
+                if !all.is_empty() || !any.is_empty() {
+                    return (all, any);
+                }
+            }
+            let wanted = self.features[required];
+            if !wanted.core_components.is_empty() {
+                return (wanted.core_components.iter().collect(), Vec::new());
+            }
+            if !wanted.components.is_empty() {
+                return (wanted.components.iter().collect(), Vec::new());
+            }
+            let parts = self
+                .features
+                .values()
+                .filter(|child| {
+                    child.parent.as_deref() == Some(required)
+                        && child.decision == Decision::Mandatory
+                        && child
+                            .components
+                            .iter()
+                            .any(|part| self.planned.contains(part))
+                })
+                .flat_map(|child| child.core_components.iter())
+                .collect();
+            (parts, Vec::new())
+        }
+
+        /// Whether all that `part` of `owner` needs is in `there`. A mod that names no core is
+        /// enough by being there, in `features_there`.
+        fn met(
+            &self,
+            there: &BTreeSet<ComponentRef>,
+            features_there: &BTreeSet<&str>,
+            owner: &Feature,
+            part: Option<&ComponentRef>,
+        ) -> bool {
+            let holds = |required: &String| {
+                let (all, any) = self.of(part, required);
+                if all.is_empty() && any.is_empty() {
+                    return features_there.contains(required.as_str());
+                }
+                all.iter().all(|need| there.contains(*need))
+                    && (any.is_empty() || any.iter().any(|need| there.contains(*need)))
+            };
+            owner.requires.iter().all(holds)
+                && (owner.requires_any.is_empty() || owner.requires_any.iter().any(holds))
+        }
+    }
+
+    /// Both directions of leaving out `failed`, by the recipe's data. Nothing leaves that has
+    /// all it needs, unless it goes with its whole feature or mod, and nothing stays that lost
+    /// something it needs.
+    fn assert_the_right_parts_leave(
         manifest: &Manifest,
-        plan: &InstallPlan,
+        needs: &Needs<'_>,
         kept: &InstallPlan,
         in_game: &BTreeSet<ComponentRef>,
         failed: &ComponentRef,
     ) {
-        let parts = |plan: &InstallPlan| {
-            plan.runs
-                .iter()
-                .flat_map(|run| recipe_parts(manifest, run, &run.components).collect::<Vec<_>>())
-                .collect::<BTreeSet<_>>()
-        };
-        let planned = parts(plan);
-        let mut remaining = parts(kept);
-        remaining.extend(in_game.iter().cloned());
-        let features = &manifest.collection.features;
-        let selected = |id: &str| {
-            features
-                .iter()
-                .find(|feature| feature.id == id)
-                .unwrap()
+        let mut there = plan_parts(manifest, kept);
+        there.extend(in_game.iter().cloned());
+        let features_there = there
+            .iter()
+            .filter_map(|part| needs.owners.get(part))
+            .flatten()
+            .copied()
+            .collect::<BTreeSet<_>>();
+        for owner in &manifest.collection.features {
+            let parent_there = owner
+                .parent
+                .as_deref()
+                .is_none_or(|id| features_there.contains(id));
+            for part in owner
                 .components
                 .iter()
-                .any(|part| remaining.contains(part))
-        };
-        // A feature without components, a mod, is there when something below it is.
-        let there = |id: &str| {
-            selected(id)
-                || features
-                    .iter()
-                    .any(|feature| feature.parent.as_deref() == Some(id) && selected(&feature.id))
-        };
-        for feature in features {
-            let lost = feature
-                .components
-                .iter()
-                .any(|part| planned.contains(part) && !remaining.contains(part) && part != failed);
-            if !lost || feature.components.contains(failed) {
-                continue;
+                .filter(|part| needs.planned.contains(*part) && !in_game.contains(*part))
+            {
+                let has_it = needs.met(&there, &features_there, owner, Some(part));
+                if there.contains(part) {
+                    assert!(
+                        parent_there && has_it,
+                        "{part:?} stays with {failed:?} gone although it lost what it needs"
+                    );
+                } else if part != failed {
+                    let whole_feature = owner.components.contains(failed)
+                        && !owner.components.iter().any(|part| in_game.contains(part));
+                    assert!(
+                        whole_feature || !parent_there || !has_it,
+                        "{part:?} left with {failed:?} although all it needs is there"
+                    );
+                }
             }
-            let needs_what_is_gone = feature.parent.as_deref().is_some_and(|id| !there(id))
-                || feature.requires.iter().any(|id| !there(id))
-                || (!feature.requires_any.is_empty()
-                    && !feature.requires_any.iter().any(|id| there(id)));
-            assert!(
-                needs_what_is_gone,
-                "{} left with {failed:?} although all it needs is there",
-                feature.id
-            );
         }
+    }
+
+    /// `run_id`'s position in `plan`.
+    fn position_of(plan: &InstallPlan, run_id: &str) -> usize {
+        plan.runs
+            .iter()
+            .position(|run| run.run_id == run_id)
+            .unwrap()
+    }
+
+    /// What leaves `plan` when `component` of `run_id` fails and WeiDU goes on past it, as
+    /// `(run, component)` pairs, without the failed one.
+    fn what_leaves_with(
+        manifest: &Manifest,
+        evaluation: &SelectionEvaluation,
+        run_id: &str,
+        component: u32,
+    ) -> BTreeSet<(String, u32)> {
+        let plan = &evaluation.plan;
+        let position = position_of(plan, run_id);
+        let last = plan.runs[position].components.last() == Some(&component);
+        let (kept, _) =
+            plan_after_failure(manifest, evaluation, position, &[component], last).unwrap();
+        let mut leaving = plan_parts(manifest, plan);
+        for part in plan_parts(manifest, &kept) {
+            leaving.remove(&part);
+        }
+        leaving
+            .into_iter()
+            .map(|part| (part.run_id, part.component))
+            .filter(|part| part != &(run_id.to_owned(), component))
+            .collect()
     }
 
     /// SCS's last component fails after the rest of SCS was installed: only it leaves, and what
@@ -4133,17 +4271,127 @@ mod tests {
         assert_eq!(parts(&kept), parts(&expected));
     }
 
+    /// A part of a bundle takes along what its own installer checks for, and nothing else.
+    #[test]
+    fn a_part_of_a_bundle_takes_only_what_needs_it() {
+        let manifest = curated();
+        let evaluation = recommended(&manifest, true);
+        let rebalance = "chriz-bg-rebalance-bg2";
+        for (failed, expected) in [
+            (2500, vec![(rebalance, 100)]),
+            (6030, vec![(rebalance, 120), (rebalance, 121)]),
+            (6540, vec![(rebalance, 111)]),
+            (2000, vec![(rebalance, 130), ("chriz-bg-modpack-bg2", 450)]),
+            // Freedom scrolls need 2000 or 5900, and Modpack 130 is not in the recommended setup.
+            (5900, vec![]),
+        ] {
+            let expected = expected
+                .into_iter()
+                .map(|(run, component)| (run.to_owned(), component))
+                .collect::<BTreeSet<_>>();
+            assert_eq!(
+                what_leaves_with(&manifest, &evaluation, "stratagems-bg2", failed),
+                expected,
+                "SCS component {failed}"
+            );
+        }
+    }
+
+    /// EEex's marker tells other mods that EEex is there, and several check nothing else. With
+    /// the marker in the game its runtime cannot leave: mods would build on a runtime that is
+    /// not there, and the game could not start through the loader.
+    #[test]
+    fn the_runtime_of_eeex_cannot_leave_once_its_marker_is_in_the_game() {
+        let manifest = curated();
+        let evaluation = recommended(&manifest, true);
+        let position = position_of(&evaluation.plan, "eeex-bg2");
+        let waiting = &evaluation.plan.runs[position].components[1..];
+        assert_eq!(waiting[0], 1);
+
+        let result = plan_after_failure(&manifest, &evaluation, position, waiting, true);
+
+        assert!(
+            matches!(result, Err(LeaveOutError::Incomplete { .. })),
+            "{result:?}"
+        );
+    }
+
+    /// With nothing of EEex in the game, EEex leaves whole, with all that needs it.
+    #[test]
+    fn eeex_leaves_whole_when_nothing_of_it_is_in_the_game() {
+        let manifest = curated();
+        let evaluation = recommended(&manifest, true);
+        let position = position_of(&evaluation.plan, "eeex-bg2");
+        let waiting = &evaluation.plan.runs[position].components;
+
+        let (kept, _) =
+            plan_after_failure(&manifest, &evaluation, position, waiting, true).unwrap();
+
+        assert!(kept.components_for("eeex-bg2").is_none());
+        assert!(kept.components_for("buffbot-bg2").is_none());
+        let kits = kept.components_for("artisanskitpack-main-bg2").unwrap();
+        assert!(!kits.contains(&8004), "{kits:?}");
+    }
+
+    /// The modules of EEex are extras: what requires EEex needs its runtime.
+    #[test]
+    fn a_module_of_eeex_leaves_alone() {
+        let manifest = curated();
+        let evaluation = recommended(&manifest, true);
+
+        assert!(what_leaves_with(&manifest, &evaluation, "eeex-bg2", 5).is_empty());
+    }
+
+    /// Whatever requires a feature of several components must say what it needs of it, or a
+    /// failed extra would take it along: by its own entry, or by the feature's core.
+    #[test]
+    fn what_requires_a_bundle_says_what_it_needs_of_it() {
+        let manifest = curated();
+        let evaluation = recommended(&manifest, true);
+        let needs = Needs::new(&manifest, &evaluation.plan);
+        for dependent in &manifest.collection.features {
+            for required in dependent.requires.iter().chain(&dependent.requires_any) {
+                for part in dependent
+                    .components
+                    .iter()
+                    .filter(|part| needs.planned.contains(*part))
+                {
+                    let (all, any) = needs.of(Some(part), required);
+                    let of_core = all.iter().all(|need| {
+                        needs.owners.get(*need).is_some_and(|chain| {
+                            needs.features[chain[0]].core_components.contains(*need)
+                        })
+                    });
+                    let own_entry = needs.entries.get(part).is_some_and(|entry| {
+                        entry
+                            .needs
+                            .iter()
+                            .chain(&entry.needs_any)
+                            .any(|need| needs.is_below(need, required))
+                    });
+                    assert!(
+                        all.len() + any.len() <= 1 || of_core || own_entry,
+                        "{part:?} does not say what it needs of {required}"
+                    );
+                }
+            }
+        }
+    }
+
     /// Whichever component of the recommended setup fails, the question has an answer at the
     /// point where it fails, whether WeiDU went on or stopped there: the component leaves with
-    /// what needs it, or it is one of the fixed parts. Nothing else may come of it, with or
-    /// without Spell Revisions, and nothing leaves that needs only what is there.
+    /// what needs it, it is one of the fixed parts, or it would leave half of a feature's core
+    /// in the game. Nothing else may come of it, with or without Spell Revisions, and both
+    /// directions hold: nothing leaves that has all it needs, and nothing stays that lost it.
     #[test]
     fn every_planned_component_can_leave_where_it_fails_or_is_a_fixed_part() {
         let manifest = curated();
         for spell_revisions in [true, false] {
             let evaluation = recommended(&manifest, spell_revisions);
             let plan = &evaluation.plan;
+            let needs = Needs::new(&manifest, plan);
             let mut fixed = BTreeSet::new();
+            let mut incomplete = BTreeSet::new();
             for (position, run) in plan.runs.iter().enumerate() {
                 for (index, component) in run.components.iter().enumerate() {
                     let last = index + 1 == run.components.len();
@@ -4159,11 +4407,14 @@ mod tests {
                             not_installed,
                             goes_on,
                         ) {
-                            Ok((kept, in_game)) => assert_only_what_needs_it_leaves(
-                                &manifest, plan, &kept, &in_game, &failed,
+                            Ok((kept, in_game)) => assert_the_right_parts_leave(
+                                &manifest, &needs, &kept, &in_game, &failed,
                             ),
                             Err(LeaveOutError::Required { title, .. }) => {
                                 fixed.insert(title);
+                            }
+                            Err(LeaveOutError::Incomplete { title, .. }) => {
+                                incomplete.insert(title);
                             }
                             Err(error) => panic!("{failed:?}: {error}"),
                         }
@@ -4178,6 +4429,10 @@ mod tests {
                     "Merge Siege of Dragonspear DLC",
                     "Standard EET finalization"
                 ]
+            );
+            assert_eq!(
+                incomplete.iter().map(String::as_str).collect::<Vec<_>>(),
+                ["EEex full runtime with LuaJIT"]
             );
         }
     }

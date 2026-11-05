@@ -453,6 +453,74 @@ args = []
 }
 
 
+COMPONENT_NEEDS = """
+# What a component really needs of the features it requires, as its own installer checks it,
+# when that is less than all of those features: bundles such as the SCS core hold independent
+# components. Without an entry a component needs the core_components of a required feature, or
+# all of it. A failed component leaves what does not need it in the plan.
+
+[[component_needs]]
+component = { run_id = "chriz-bg-rebalance-bg2", component = 100 }
+needs = [{ run_id = "stratagems-bg2", component = 2500 }]
+
+[[component_needs]]
+component = { run_id = "chriz-bg-rebalance-bg2", component = 101 }
+needs_any = [{ run_id = "stratagems-bg2", component = 2000 }, { run_id = "stratagems-bg2", component = 5900 }]
+
+[[component_needs]]
+component = { run_id = "chriz-bg-rebalance-bg2", component = 110 }
+needs = [{ run_id = "stratagems-bg2", component = 6540 }]
+
+[[component_needs]]
+component = { run_id = "chriz-bg-rebalance-bg2", component = 111 }
+needs = [{ run_id = "stratagems-bg2", component = 6540 }]
+
+[[component_needs]]
+component = { run_id = "chriz-bg-rebalance-bg2", component = 120 }
+needs = [{ run_id = "stratagems-bg2", component = 6030 }]
+
+[[component_needs]]
+component = { run_id = "chriz-bg-rebalance-bg2", component = 121 }
+needs = [{ run_id = "stratagems-bg2", component = 6030 }]
+
+[[component_needs]]
+component = { run_id = "chriz-bg-rebalance-bg2", component = 130 }
+needs = [{ run_id = "stratagems-bg2", component = 2000 }]
+
+[[component_needs]]
+component = { run_id = "chriz-bg-modpack-bg2", component = 130 }
+needs = [{ run_id = "stratagems-bg2", component = 5900 }]
+
+[[component_needs]]
+component = { run_id = "chriz-bg-modpack-bg2", component = 440 }
+needs = [{ run_id = "ascension-bg2", component = 0 }]
+
+[[component_needs]]
+component = { run_id = "chriz-bg-modpack-bg2", component = 450 }
+needs = [{ run_id = "stratagems-bg2", component = 2000 }]
+
+[[component_needs]]
+component = { run_id = "chriz-sod-remix-bg2", component = 257 }
+needs = [{ run_id = "chriz-sod-remix-bg2", component = 256 }]
+
+[[component_needs]]
+component = { run_id = "chriz-sod-remix-bg2", component = 292 }
+needs = [{ run_id = "chriz-sod-remix-bg2", component = 160 }, { run_id = "chriz-sod-remix-bg2", component = 290 }]
+
+[[component_needs]]
+component = { run_id = "chriz-sod-remix-bg2", component = 293 }
+needs = [{ run_id = "chriz-sod-remix-bg2", component = 160 }, { run_id = "chriz-sod-remix-bg2", component = 290 }]
+
+[[component_needs]]
+component = { run_id = "chriz-sod-remix-bg2", component = 294 }
+needs = [{ run_id = "chriz-sod-remix-bg2", component = 160 }, { run_id = "chriz-sod-remix-bg2", component = 290 }]
+
+[[component_needs]]
+component = { run_id = "bardicwonders-progression-bg2", component = 3010 }
+needs = [{ run_id = "chriz-bg-rebalance-bg2", component = 420 }]
+"""
+
+
 def _q(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)
 
@@ -1215,6 +1283,7 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
     _validate_game_interface_order(base_collection)
     base_collection = _add_curated_group_members(base_collection, base)
     _validate_feature_groups(base, tomllib.loads(base_collection))
+    base_collection = base_collection.rstrip("\n") + "\n" + COMPONENT_NEEDS
     (destination / "collection.toml").write_text(base_collection, encoding="utf-8", newline="\n")
 
     preset_path = destination / "presets/chris-recommended.toml"

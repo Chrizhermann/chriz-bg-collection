@@ -3116,10 +3116,11 @@ components = [{ run_id = "eefixpack-bg2", component = 3 }]
     );
 }
 
-/// What needs a feature stays when part of that feature is in the game: only what failed leaves.
+/// What needs another part of a feature stays when one part of it fails: only what failed
+/// leaves.
 #[cfg(windows)]
 #[test]
-fn what_needs_a_feature_stays_when_part_of_it_is_in_the_game() {
+fn what_needs_another_part_of_a_feature_stays_when_one_part_fails() {
     let fixture = executable_fixture();
     let collection = fixture.recipe.join("collection.toml");
     let text = fs::read_to_string(&collection)
@@ -3127,12 +3128,17 @@ fn what_needs_a_feature_stays_when_part_of_it_is_in_the_game() {
         .replace("\r\n", "\n");
     let bg2_feature = "components = [{ run_id = \"eefixpack-bg2\", component = 0 }]\n";
     assert!(text.contains(bg2_feature));
+    let needs = r#"
+[[component_needs]]
+component = { run_id = "eefixpack-bg2", component = 0 }
+needs = [{ run_id = "eefixpack-bg1", component = 0 }]
+"#;
     fs::write(
         collection,
         text.replace(
             bg2_feature,
             "components = [{ run_id = \"eefixpack-bg2\", component = 0 }]\nrequires = [\"eefix-bg1\"]\n",
-        ),
+        ) + needs,
     )
     .unwrap();
 
@@ -3166,6 +3172,48 @@ fn lose_last_ledger_record(fixture: &ExecutableFixture) -> Value {
     let record = serde_json::from_slice(&fs::read(&last).unwrap()).unwrap();
     fs::remove_file(last).unwrap();
     record
+}
+
+/// The part a feature exists for cannot leave once another part of its core is in the game: mods
+/// would take the feature for installed. The player can only try again or stop.
+#[cfg(windows)]
+#[test]
+fn half_of_a_core_in_the_game_offers_only_to_try_again_or_stop() {
+    let fixture = executable_fixture();
+    let collection = fixture.recipe.join("collection.toml");
+    let text = fs::read_to_string(&collection)
+        .unwrap()
+        .replace("\r\n", "\n");
+    let bg1_feature = "id = \"eefix-bg1\"\n";
+    assert!(text.contains(bg1_feature));
+    fs::write(
+        collection,
+        text.replace(
+            "components = [\n  { run_id = \"eefixpack-bg1\", component = 0 },\n",
+            "core_components = [\n  { run_id = \"eefixpack-bg1\", component = 0 },\n  { run_id = \"eefixpack-bg1\", component = 2 },\n]\ncomponents = [\n  { run_id = \"eefixpack-bg1\", component = 0 },\n",
+        ),
+    )
+    .unwrap();
+
+    let decision = install_until_component_fails(&fixture, "2");
+
+    assert_eq!(
+        decision["texts"]["message"],
+        "BG1 preparation fixes (EE Fixpack) could not be installed, and the installation can't go on without it. Try again?"
+    );
+    assert_eq!(
+        labels(&decision),
+        vec!["Try again", "Stop the installation"]
+    );
+    assert!(
+        decision["texts"]["details"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|detail| detail
+                == "BG1 fixes is installed only in part, and it cannot work that way"),
+        "{decision:#}"
+    );
 }
 
 /// The attempt that asks again after a stop is recorded before its question. A crash between
@@ -3495,7 +3543,7 @@ fn a_failed_fixed_part_offers_only_to_try_again_or_stop() {
     let decision = check_decision(&fixture, response["install_id"].as_str().unwrap());
     assert_eq!(
         decision["texts"]["message"],
-        "Core fixes (EE Fixpack) could not be installed, and the collection can't be installed without it. Try again?"
+        "Core fixes (EE Fixpack) could not be installed, and the installation can't go on without it. Try again?"
     );
     assert_eq!(
         labels(&decision),

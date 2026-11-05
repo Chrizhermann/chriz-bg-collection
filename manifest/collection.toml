@@ -956,6 +956,10 @@ category = "engine"
 decision = "mandatory"
 readiness = "ready"
 parent = "mod:eeex"
+core_components = [
+  { run_id = "eeex-bg2", component = 0 },
+  { run_id = "eeex-bg2", component = 1 },
+]
 components = [
   { run_id = "eeex-bg2", component = 0 },
   { run_id = "eeex-bg2", component = 1 },

@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{EngineError, Result};
 use crate::manifest::{
-    Collection, ComponentRef, Decision, Feature, FeatureGroup, FeatureGroupVariant, InputSpec,
-    InputValue, PromptAnswer, Readiness, Run,
+    Collection, ComponentNeeds, ComponentRef, Decision, Feature, FeatureGroup, FeatureGroupVariant,
+    InputSpec, InputValue, PromptAnswer, Readiness, Run,
 };
 use crate::resolve::{InstallPlan, PlannedRun, Selection};
 use crate::Manifest;
@@ -1198,6 +1198,14 @@ pub enum LeaveOutError {
         /// Its display title.
         title: String,
     },
+    /// Leaving out would keep only part of what a feature exists for in the game.
+    #[error("{title} is installed only in part, and it cannot work that way")]
+    Incomplete {
+        /// The feature that would stay in part.
+        feature_id: String,
+        /// Its display title.
+        title: String,
+    },
     /// The frozen recipe, selection and plan do not fit together.
     #[error("the remaining plan cannot be built: {0}")]
     Invalid(String),
@@ -1258,11 +1266,11 @@ pub fn recipe_run_in<'a>(collection: &'a Collection, planned_run_id: &str) -> Op
 /// recipe run, as features name it; a run split at a manual pause names its recipe run.
 ///
 /// `in_game` are the components installed so far, named the same way. The installer never
-/// uninstalls, so what depends on them stays: a feature with such a component, and the features
-/// above it, count as there. Such a feature only loses its failed components, and whatever
-/// needs it stays. A dependent that really needs the failed part fails on its own and is asked
-/// about then. A feature that lost a requirement loses its other components, but still counts
-/// as there for what needs it.
+/// uninstalls, so a feature with such a component, and the features above it, count as there:
+/// such a feature only loses its failed components. What leaves with them goes by what each
+/// component really needs: its `component_needs` entry, or else the `core_components` of what it
+/// requires, or else all of that. So an extra of a bundle leaves alone, and the part a feature
+/// exists for takes what needs it along. Fails when only part of a feature's core would stay.
 pub fn plan_without_parts(
     manifest: &Manifest,
     selection: &NormalizedSelection,
@@ -1302,7 +1310,26 @@ pub fn plan_without_parts(
     let there = features_in_game(&features, in_game);
 
     // Leaving out only removes, so whatever a removed feature held off stays off.
-    let mut kept = effective.clone();
+    let mut remaining = Remaining {
+        features: &features,
+        owners: manifest
+            .collection
+            .features
+            .iter()
+            .flat_map(|feature| feature.components.iter().map(move |part| (part, feature)))
+            .collect(),
+        needs: manifest
+            .collection
+            .component_needs
+            .iter()
+            .map(|entry| (&entry.component, entry))
+            .collect(),
+        effective: &effective,
+        in_game,
+        there: &there,
+        kept: effective.clone(),
+        gone: failed.clone(),
+    };
     for feature in manifest
         .collection
         .features
@@ -1333,10 +1360,17 @@ pub fn plan_without_parts(
             .iter()
             .take_while(|feature| !there.contains(feature.id.as_str()))
         {
-            kept.insert(feature.id.clone(), false);
+            remaining.kept.insert(feature.id.clone(), false);
         }
     }
-    let kept = without_unsupported_features(manifest, kept, &there);
+    remaining.settle(manifest);
+    if let Some(feature) = remaining.incomplete(manifest) {
+        return Err(LeaveOutError::Incomplete {
+            feature_id: feature.id.clone(),
+            title: feature.title.clone(),
+        });
+    }
+    let Remaining { kept, gone, .. } = remaining;
     if let Some(feature) = manifest.collection.features.iter().find(|feature| {
         is_on(&kept, &feature.id) && uses_blocked(feature) && !there.contains(feature.id.as_str())
     }) {
@@ -1351,7 +1385,7 @@ pub fn plan_without_parts(
         .iter()
         .filter(|feature| is_on(&kept, &feature.id))
         .flat_map(|feature| feature.components.iter().cloned())
-        .filter(|component| !failed.contains(component))
+        .filter(|component| !gone.contains(component))
         .collect::<BTreeSet<_>>();
     // A mod's prompt depends on what the game holds, whatever left the plan.
     let asked_about = kept
@@ -1437,35 +1471,175 @@ fn features_in_game<'a>(
     there
 }
 
-/// Switches off, until nothing changes, every feature that `kept` has on although its parent, a
-/// `requires` feature or every `requires_any` feature is neither on in `kept` nor in `there`,
-/// the features in the game. It only removes: a feature that is off stays off, so no conflict
-/// can arise.
-fn without_unsupported_features(
-    manifest: &Manifest,
-    mut kept: BTreeMap<String, bool>,
-    there: &BTreeSet<&str>,
-) -> BTreeMap<String, bool> {
-    loop {
-        let mut removed = false;
-        for feature in &manifest.collection.features {
-            let on = |id: &str| kept.get(id).copied().unwrap_or(false);
-            let available = |id: &str| on(id) || there.contains(id);
-            let supported = feature.parent.as_deref().is_none_or(available)
-                && feature.requires.iter().all(|required| available(required))
-                && (feature.requires_any.is_empty()
-                    || feature
-                        .requires_any
-                        .iter()
-                        .any(|required| available(required)));
-            if on(&feature.id) && !supported {
-                kept.insert(feature.id.clone(), false);
-                removed = true;
+/// What stays of the recipe while parts leave it: features by `kept`, components by `gone`.
+struct Remaining<'a> {
+    features: &'a BTreeMap<&'a str, &'a Feature>,
+    /// The feature that owns each component.
+    owners: BTreeMap<&'a ComponentRef, &'a Feature>,
+    needs: BTreeMap<&'a ComponentRef, &'a ComponentNeeds>,
+    effective: &'a BTreeMap<String, bool>,
+    in_game: &'a BTreeSet<ComponentRef>,
+    /// The features in the game.
+    there: &'a BTreeSet<&'a str>,
+    kept: BTreeMap<String, bool>,
+    gone: BTreeSet<ComponentRef>,
+}
+
+impl<'a> Remaining<'a> {
+    fn is_kept(&self, id: &str) -> bool {
+        self.kept.get(id).copied().unwrap_or(false)
+    }
+
+    /// Whether `part` is in the game or still comes.
+    fn available(&self, part: &ComponentRef) -> bool {
+        self.in_game.contains(part)
+            || (!self.gone.contains(part)
+                && self
+                    .owners
+                    .get(part)
+                    .is_some_and(|owner| self.is_kept(&owner.id)))
+    }
+
+    /// Whether `part` belongs to feature `id` or to a feature below it.
+    fn belongs_to(&self, part: &ComponentRef, id: &str) -> bool {
+        let mut current = self.owners.get(part).copied();
+        for _ in 0..=self.features.len() {
+            let Some(feature) = current else {
+                return false;
+            };
+            if feature.id == id {
+                return true;
+            }
+            current = feature
+                .parent
+                .as_deref()
+                .and_then(|parent| self.features.get(parent).copied());
+        }
+        false
+    }
+
+    /// What needs `feature` needs of it without saying more: its core, or else all of it. A mod
+    /// without components of its own stands for the cores among its mandatory parts; without
+    /// one, it is enough that the mod is there.
+    fn core_of(&self, feature: &'a Feature) -> Vec<&'a ComponentRef> {
+        if !feature.core_components.is_empty() {
+            return feature.core_components.iter().collect();
+        }
+        if !feature.components.is_empty() {
+            return feature.components.iter().collect();
+        }
+        self.features
+            .values()
+            .filter(|child| {
+                child.parent.as_deref() == Some(feature.id.as_str())
+                    && child.decision == Decision::Mandatory
+                    && self.effective.get(&child.id).copied().unwrap_or(false)
+            })
+            .flat_map(|child| child.core_components.iter())
+            .collect()
+    }
+
+    /// Whether what `part` needs of feature `id` is there. Without a component, as for a mod,
+    /// whether that feature's core is.
+    fn requirement_holds(&self, part: Option<&ComponentRef>, id: &str) -> bool {
+        let Some(required) = self.features.get(id).copied() else {
+            return false;
+        };
+        if let Some(entry) = part.and_then(|part| self.needs.get(part)) {
+            let all = entry
+                .needs
+                .iter()
+                .filter(|need| self.belongs_to(need, id))
+                .collect::<Vec<_>>();
+            let any = entry
+                .needs_any
+                .iter()
+                .filter(|need| self.belongs_to(need, id))
+                .collect::<Vec<_>>();
+            if !all.is_empty() || !any.is_empty() {
+                return all.iter().all(|need| self.available(need))
+                    && (any.is_empty() || any.iter().any(|need| self.available(need)));
             }
         }
-        if !removed {
-            return kept;
+        let core = self.core_of(required);
+        if core.is_empty() {
+            return self.is_kept(id) || self.there.contains(id);
         }
+        core.iter().all(|need| self.available(need))
+    }
+
+    fn supported(&self, feature: &Feature, part: Option<&ComponentRef>) -> bool {
+        feature
+            .requires
+            .iter()
+            .all(|required| self.requirement_holds(part, required))
+            && (feature.requires_any.is_empty()
+                || feature
+                    .requires_any
+                    .iter()
+                    .any(|required| self.requirement_holds(part, required)))
+    }
+
+    /// Takes out, until nothing changes, every feature whose parent is gone and every component
+    /// that lost what it needs. It only removes: what is off stays off, so no conflict can
+    /// arise, and what is in the game stays.
+    fn settle(&mut self, manifest: &Manifest) {
+        loop {
+            let mut changed = false;
+            for feature in &manifest.collection.features {
+                if !self.is_kept(&feature.id) {
+                    continue;
+                }
+                let has_parent = feature
+                    .parent
+                    .as_deref()
+                    .is_none_or(|id| self.is_kept(id) || self.there.contains(id));
+                if !has_parent || (feature.components.is_empty() && !self.supported(feature, None))
+                {
+                    self.kept.insert(feature.id.clone(), false);
+                    changed = true;
+                    continue;
+                }
+                let leaving = feature
+                    .components
+                    .iter()
+                    .filter(|part| {
+                        !self.in_game.contains(*part)
+                            && !self.gone.contains(*part)
+                            && !self.supported(feature, Some(part))
+                    })
+                    .cloned()
+                    .collect::<Vec<_>>();
+                changed |= !leaving.is_empty();
+                self.gone.extend(leaving);
+                if !feature.components.is_empty()
+                    && feature
+                        .components
+                        .iter()
+                        .all(|part| self.gone.contains(part))
+                {
+                    self.kept.insert(feature.id.clone(), false);
+                    changed = true;
+                }
+            }
+            if !changed {
+                return;
+            }
+        }
+    }
+
+    /// A feature whose core would stay in the game in part.
+    fn incomplete(&self, manifest: &'a Manifest) -> Option<&'a Feature> {
+        manifest.collection.features.iter().find(|feature| {
+            feature
+                .core_components
+                .iter()
+                .any(|part| self.in_game.contains(part))
+                && feature
+                    .core_components
+                    .iter()
+                    .any(|part| self.gone.contains(part))
+        })
     }
 }
 

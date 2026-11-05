@@ -2089,7 +2089,7 @@ fn render_failed_component(
         }
         return QuestionTexts {
             message: format!(
-                "{name} could not be installed, and the collection can't be installed without it. Try again?"
+                "{name} could not be installed, and the installation can't go on without it. Try again?"
             ),
             details,
             answers: vec![retry, stop],

@@ -9,7 +9,7 @@ from pathlib import Path
 
 from tools.curated_full_recipe import (
     CURATED_GROUP_MEMBERS, _add_curated_group_members, _curated_feature_groups, _effective_features,
-    _preserve_native_run_orders, _validate_feature_groups, _validate_game_interface_order, build_recipe,
+    COMPONENT_NEEDS, _preserve_native_run_orders, _validate_feature_groups, _validate_game_interface_order, build_recipe,
 )
 from tools.public_component_credits import build_public_component_credits
 
@@ -17,6 +17,12 @@ from tools.public_component_credits import build_public_component_credits
 class CuratedFullRecipeTests(unittest.TestCase):
     def setUp(self) -> None:
         self.root = Path(__file__).resolve().parents[2]
+
+    def test_component_needs_are_the_ones_the_shipped_recipe_has(self) -> None:
+        shipped = tomllib.loads(
+            (self.root / "recipes/curated-full-current/collection.toml").read_text(encoding="utf-8")
+        )
+        self.assertEqual(shipped["component_needs"], tomllib.loads(COMPONENT_NEEDS)["component_needs"])
 
     def test_evandra_uses_official_windows_archive_without_private_aggregate(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

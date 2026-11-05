@@ -79,6 +79,7 @@ fn select_buffbot(manifest: &mut Manifest) {
         requires_any: vec![],
         conflicts: vec![],
         inputs: vec![],
+        core_components: vec![],
     }];
 }
 
