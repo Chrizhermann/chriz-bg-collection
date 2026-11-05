@@ -3174,6 +3174,108 @@ fn lose_last_ledger_record(fixture: &ExecutableFixture) -> Value {
     record
 }
 
+/// What the installation of an earlier version left behind stays readable: the receipt is
+/// compared with what the ledger says, so an answer may not gain anything that an old ledger
+/// yields and an old receipt lacks. Here an answer goes on without a mod and a run only loses a
+/// part. The report and the check before a game update read that, and the end summary names it.
+#[cfg(windows)]
+#[test]
+fn a_receipt_of_an_earlier_version_still_fits_its_ledger() {
+    let fixture = executable_fixture();
+    let mod_file = fixture.recipe.join("mods/eefixpack.toml");
+    let mut installer = fs::read_to_string(&mod_file).unwrap().replace("\r\n", "\n");
+    installer.push_str("\n[[components]]\nid = 3\nname = \"Snowy fixes\"\n");
+    fs::write(&mod_file, installer).unwrap();
+    let collection = fixture.recipe.join("collection.toml");
+    let text = fs::read_to_string(&collection)
+        .unwrap()
+        .replace("\r\n", "\n");
+    let run = "phase = \"bg2-preparation\"\ncomponents = [0]\n";
+    assert_eq!(text.matches(run).count(), 1);
+    fs::write(
+        &collection,
+        text.replace(run, "phase = \"bg2-preparation\"\ncomponents = [0, 3]\n")
+            + r#"
+[[features]]
+id = "eefix-bg2-snow"
+title = "Snowy fixes"
+description = "Fixture snowy fixes"
+category = "foundation"
+decision = "default"
+readiness = "ready"
+requires = ["snowytoes"]
+components = [{ run_id = "eefixpack-bg2", component = 3 }]
+"#,
+    )
+    .unwrap();
+    add_snowytoes(&fixture, &snowytoes_release("1.6"));
+    let link = ArtifactServer::start_answering(
+        BTreeMap::from([(
+            "/snowytoes.zip".to_owned(),
+            vec![Answer::status("410 Gone")],
+        )]),
+        |_| {},
+    );
+
+    let (code, response) = install_answering(&fixture, &link, &[CONTINUE_WITHOUT]);
+
+    assert_eq!(code, Some(0), "{response:#}");
+    let stable = fixture.managed.join(".chriz/install-receipt.json");
+    let mut receipts = fs::read_dir(fixture.managed.join(".chriz/attempts"))
+        .unwrap()
+        .map(|entry| entry.unwrap().path().join("receipt.json"))
+        .filter(|path| path.is_file())
+        .collect::<Vec<_>>();
+    receipts.push(stable.clone());
+    for path in receipts {
+        let receipt: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        let decision = receipt["decisions"][0].as_object().unwrap();
+        assert_eq!(
+            decision["changed_runs"][0], "eefixpack-bg2",
+            "{decision:#?}"
+        );
+        // What 0.1.1 wrote about an answer.
+        let earlier = [
+            "decision_id",
+            "step_id",
+            "kind",
+            "artifact_id",
+            "answer",
+            "source",
+            "answered_at",
+            "served",
+            "hosts",
+            "unreviewed_hosts",
+            "reason",
+            "removed_runs",
+            "changed_runs",
+            "outcome",
+        ];
+        assert!(
+            decision.keys().all(|key| earlier.contains(&key.as_str())),
+            "{decision:#?}"
+        );
+    }
+
+    let summary = end_summary(&fixture);
+    assert!(
+        summary.iter().any(|line| line.contains("Snowytoes")),
+        "{summary:#?}"
+    );
+    let record =
+        ManagedInstallRegistry::open_or_create(&fixture.app_data.join("Chriz BG Collection"))
+            .unwrap()
+            .list()
+            .unwrap()
+            .remove(0)
+            .record;
+    let error = bg_engine::cli::inspect_installed_update(&record, &fixture.recipe).unwrap_err();
+    assert!(
+        error.to_string().contains("Some mods were left out"),
+        "{error}"
+    );
+}
+
 /// The part a feature exists for cannot leave once another part of its core is in the game: mods
 /// would take the feature for installed. The player can only try again or stop.
 #[cfg(windows)]

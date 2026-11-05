@@ -3622,6 +3622,68 @@ fn a_run_that_failed_after_installing_some_parts_keeps_them_and_resumes_with_the
     assert!(receipt.left_out[0].runs.is_empty());
 }
 
+/// An earlier version left the rest of a failed run out without asking, in a record that names
+/// neither what was left out by name nor what went on. A campaign with such a record resumes
+/// with it, and it reaches the receipt.
+#[test]
+fn a_failed_run_recorded_by_an_earlier_version_still_replays() {
+    let sink = RecordingSink::default();
+    let probe = Fixture::with_dependents();
+    let mut failing = FakeDeps {
+        after_results: tweaks_fail_at_their_first_component(),
+        ..FakeDeps::default()
+    };
+    run_campaign(&probe.request, &mut failing, &sink).unwrap();
+    let completed = completed_step_ids(&probe.request.created.managed_root);
+
+    let fixture = Fixture::with_dependents();
+    let root = &fixture.request.created.managed_root;
+    let mut tweaks = fixture.request.plan.runs[3].clone();
+    tweaks.components = vec![1];
+    let mut remaining = fixture.request.plan.clone();
+    remaining.runs[3] = tweaks.clone();
+    remaining.runs.remove(4);
+    seed_unresolved(
+        &fixture.request,
+        &completed.iter().map(String::as_str).collect::<Vec<_>>(),
+        "install:tweaks-bg2",
+    );
+    let event = SessionEvent::ArtifactLeftOut {
+        step_id: "install:tweaks-bg2".to_owned(),
+        attempt: 1,
+        artifact_id: "tweaks".to_owned(),
+        detail: "its installer stopped with an error".to_owned(),
+        plan_sha256: plan_digest(&remaining).unwrap(),
+        removed_runs: vec!["needs-eefix".to_owned()],
+        changed_runs: vec![tweaks],
+        failed_run: Some(bg_engine::session::FailedRun {
+            run_id: "tweaks-bg2".to_owned(),
+            components: vec![2],
+            left_out: Vec::new(),
+            continues_with: Vec::new(),
+        }),
+    };
+    let record = serde_json::to_value(&event).unwrap();
+    let failed_run = record["data"]["failed_run"].as_object().unwrap();
+    assert_eq!(failed_run.len(), 2, "{failed_run:#?}");
+    SessionStore::open(root).unwrap().append(event).unwrap();
+
+    let mut resumed = FakeDeps::default();
+    assert_eq!(
+        run_campaign(&fixture.request, &mut resumed, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+
+    assert!(builds(&resumed).is_empty(), "{:?}", resumed.trace);
+    assert_eq!(resumed.verified_plans, vec![remaining.clone()]);
+    let receipt = resumed.receipts.last().unwrap();
+    assert_eq!(receipt.installed_plan.as_ref(), Some(&remaining));
+    assert_eq!(
+        receipt.left_out[0].failed_run.as_deref(),
+        Some("tweaks-bg2")
+    );
+}
+
 /// What WeiDU reports when component 1 of `tweaks-bg2` fails and it goes on with component 2.
 fn went_past_the_first_tweak() -> InstallReconciliation {
     InstallReconciliation::FailedAmong {

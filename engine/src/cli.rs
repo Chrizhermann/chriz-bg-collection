@@ -2405,7 +2405,7 @@ pub fn report_managed_install(managed_root: &Path) -> Result<ManagedReport, CliE
         )
     })?;
     let recovery = recovery::report_recovery(&managed_root, &receipt, &frozen)?;
-    let notes = receipt_notes(&receipt, &frozen);
+    let notes = receipt_notes(&receipt, &frozen, &replay.records);
     Ok(ManagedReport {
         managed_root,
         receipt,
@@ -2416,8 +2416,27 @@ pub fn report_managed_install(managed_root: &Path) -> Result<ManagedReport, CliE
 
 /// End-summary lines, in English, for what a receipt records about changed downloads: one per
 /// answer that took effect, and the earlier generic lines for whatever no answer covers.
-fn receipt_notes(receipt: &InstallReceipt, frozen: &FrozenCliRecipe) -> Vec<String> {
+fn receipt_notes(
+    receipt: &InstallReceipt,
+    frozen: &FrozenCliRecipe,
+    records: &[crate::session::LedgerRecord],
+) -> Vec<String> {
     let artifact_name = |id: &str| frozen_artifact_name(frozen, id);
+    // A later answer can take the rest of a run, so the installed plan cannot say what an
+    // earlier one left out of it. Its question recorded what each run kept.
+    let kept_after = answered_decisions(records)
+        .into_iter()
+        .map(|decision| {
+            let kept = decision
+                .question
+                .leave_out
+                .iter()
+                .flat_map(|closure| &closure.changed_runs)
+                .map(|run| (run.run_id.clone(), run.components.clone()))
+                .collect::<BTreeMap<_, _>>();
+            (decision.decision_id, kept)
+        })
+        .collect::<BTreeMap<_, _>>();
     // A mod still installed with other runs lost only parts; one without runs was left out.
     let remaining = receipt
         .effective_plan()
@@ -2488,15 +2507,10 @@ fn receipt_notes(receipt: &InstallReceipt, frozen: &FrozenCliRecipe) -> Vec<Stri
                     part,
                     &decision.removed_runs,
                     |run_id| {
-                        // A receipt of an earlier version records only the installed plan.
-                        if decision.kept_components.is_empty() && !decision.changed_runs.is_empty()
-                        {
-                            return receipt
-                                .effective_plan()
-                                .components_for(run_id)
-                                .map(<[u32]>::to_vec);
-                        }
-                        decision.kept_components.get(run_id).cloned()
+                        kept_after
+                            .get(&decision.decision_id)
+                            .and_then(|kept| kept.get(run_id))
+                            .cloned()
                     },
                 )
                 .into_iter()
