@@ -568,6 +568,59 @@ fn bg1_mod_log_drift_is_checked_too() {
     assert!(error.to_string().contains("outside CEBG"));
 }
 
+/// Christopher, 2026-11-04: voice packs and other mods players add after installing must not
+/// stop hotpatches; game updates, which reinstall mods in place, still need the exact list.
+#[test]
+fn hotpatch_baselines_allow_mods_the_player_added_but_not_removed_or_moved_installer_mods() {
+    let fixture = Fixture::with_buffbot(true);
+    let log = fixture.record.managed_root.join("game/WeiDU.log");
+    let voices = "~VOICEPACK/VOICEPACK.TP2~ #0 #0 // Voice pack: 1.0\n";
+    fs::write(&log, format!("{}{voices}", buffbot_log(OLD_BUFFBOT))).unwrap();
+    let error = verify_installed_baseline(&fixture.record, PlayerMods::Refused)
+        .err()
+        .unwrap();
+    assert!(error.to_string().contains("outside CEBG"), "{error}");
+    let baseline = verify_installed_baseline(&fixture.record, PlayerMods::Allowed).unwrap();
+    assert_eq!(baseline.receipt.plan.runs[0].components, vec![1, 0]);
+    // Between the installer's rows, too, as long as they keep their order.
+    let rows = buffbot_log(OLD_BUFFBOT);
+    let (first, second) = rows.split_at(rows.find('\n').unwrap() + 1);
+    fs::write(&log, format!("{first}{voices}{second}")).unwrap();
+    verify_installed_baseline(&fixture.record, PlayerMods::Allowed).unwrap();
+
+    for changed in [
+        // A component the installer put in was uninstalled.
+        format!("{first}{voices}"),
+        // The installer's rows no longer stand in their order.
+        format!("{second}{first}{voices}"),
+    ] {
+        fs::write(&log, changed).unwrap();
+        let error = verify_installed_baseline(&fixture.record, PlayerMods::Allowed)
+            .err()
+            .unwrap();
+        assert!(error.to_string().contains("installer put in"), "{error}");
+    }
+}
+
+/// A whole-mod update touches one mod's own rows and reads them itself, so the mod list is not
+/// compared for it at all.
+#[test]
+fn whole_mod_update_baselines_do_not_compare_the_mod_list() {
+    let fixture = Fixture::with_buffbot(true);
+    let log = fixture.record.managed_root.join("game/WeiDU.log");
+    let rows = buffbot_log(OLD_BUFFBOT);
+    let (first, second) = rows.split_at(rows.find('\n').unwrap() + 1);
+    let voices = "~VOICEPACK/VOICEPACK.TP2~ #0 #0 // Voice pack: 1.0\n";
+    for changed in [
+        format!("{rows}{voices}"),
+        format!("{second}{first}{voices}"),
+        voices.to_owned(),
+    ] {
+        fs::write(&log, changed).unwrap();
+        verify_installed_baseline(&fixture.record, PlayerMods::Unchecked).unwrap();
+    }
+}
+
 #[test]
 fn older_bundled_collection_does_not_look_like_an_upgrade() {
     let fixture = Fixture::new();
