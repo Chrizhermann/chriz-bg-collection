@@ -26,6 +26,7 @@ fn feature(id: &str, decision: Decision) -> Feature {
         requires_any: vec![],
         conflicts: vec![],
         inputs: vec![],
+        core_components: None,
     }
 }
 

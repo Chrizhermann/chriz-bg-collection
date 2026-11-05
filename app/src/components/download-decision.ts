@@ -3,8 +3,8 @@ import { actionButton, element } from "./app-shell";
 import { persistDisclosure } from "./disclosure";
 
 /**
- * The modal question about a download that an installation waits for. The engine renders
- * the question, its details, the offered answers and their order; this component only shows
+ * The modal question that an installation waits for. The engine renders the question, its
+ * details, the offered answers and their order; this component only shows
  * them, puts the initial focus on the engine's chosen answer and keeps the focus inside the
  * dialog until the player answers or chooses to decide later. It names no product, so both
  * app flavors share it.
@@ -24,6 +24,14 @@ export function decisionAnswerId(answer: DecisionAnswer): string {
   return `decision-answer-${answer.replaceAll("_", "-")}`;
 }
 
+function decisionTitle(kind: PendingDecision["kind"]): string {
+  switch (kind) {
+    case "modded_source": return "Your game needs your answer";
+    case "failed_component": return "A mod needs your answer";
+    default: return "A download needs your answer";
+  }
+}
+
 export function downloadDecisionDialog(model: DownloadDecisionModel): HTMLElement {
   const { decision } = model;
   const overlay = element("div", "dialog-overlay");
@@ -33,7 +41,7 @@ export function downloadDecisionDialog(model: DownloadDecisionModel): HTMLElemen
   dialog.setAttribute("aria-labelledby", "decision-title");
   dialog.setAttribute("aria-describedby", "decision-message");
   dialog.setAttribute("aria-busy", String(model.busy));
-  const title = element("h2", undefined, model.decision.kind === "modded_source" ? "Your game needs your answer" : "A download needs your answer");
+  const title = element("h2", undefined, decisionTitle(decision.kind));
   title.id = "decision-title";
   const message = element("p", undefined, decision.message);
   message.id = "decision-message";

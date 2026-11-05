@@ -28,7 +28,7 @@ export interface BuildActions {
   readonly decision?: DecisionWaitActions;
 }
 
-/** The card behind the question about a download, which the app shows as a modal dialog. */
+/** The card behind the question, which the app shows as a modal dialog. */
 export interface DecisionWaitActions {
   readonly busy: boolean;
   /** Whether the dialog with the question is open. */

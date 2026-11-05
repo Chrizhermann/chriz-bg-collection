@@ -149,8 +149,10 @@ Cross-repository status. Component detail stays in the sections below and in the
     v1.15.0). Both wait for 0.1.2 (Christopher, 2026-11-04); the hold in
     `manifest/own-mods.toml` names v1.16.0 since 2026-11-04. The pin PR removes the hold,
     and Chriz Easy IWD needs its own version bump for it.
-  - **A single failed component** (Christopher, 2026-11-04): the installer should ask the
-    player instead of deciding by itself. Not built yet, open for 0.1.2.
+  - **A single failed component** (Christopher, 2026-11-04): the installer asks the player
+    instead of deciding by itself. Built for Chriz Easy BG on `main`
+    (`docs/handover.md`, November 5). Chriz Easy IWD does not have it: `claude/iwdee-app` has
+    none of the question system yet (it branched on 2026-10-24, before #69, #80 and #89–#93).
   - **Recommended: rolled HP and no Maximum HP Creatures** (Christopher, 2026-11-04): done.
     Tweaks Anthology `3000` and `3010` are unchecked options, the way the fight-AI labs run
     it; `docs/curation/components/CDTWEAKS.md` has the details.
