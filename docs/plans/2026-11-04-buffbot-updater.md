@@ -144,7 +144,7 @@ compared the game folder (165,371 files, 12 GB) after every step.
 - A hard stop while WeiDU ran was not repeated here: it is the same code as in the Chriz Easy IWD
   lab below, and nothing in it depends on the game.
 
-## Lab check (2026-11-05)
+## Lab check in Chriz Easy IWD (2026-11-05)
 
 The final version, on the lab installation of 2026-11-04 (Chriz Easy IWD 0.1.5 from the Steam
 IWD:EE 2.7.3.0, in its own application data folder), put back to its installed state. Behind
