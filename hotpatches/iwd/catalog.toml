@@ -81,6 +81,12 @@ label = "Chriz Easy IWD 0.1.6"
 recipe_version = "0.1.6"
 content_sha256 = "8e988385fb500f4efd6463bb391ca37a82c2187037bd1ce8742696899ee233ad"
 
+[[bases]]
+id = "iwd-0.1.8"
+label = "Chriz Easy IWD 0.1.8"
+recipe_version = "0.1.8"
+content_sha256 = "411a6d57c2e09ffebbaf38ca8d22434b6f6cecba1c8829dc0a6a990f6dff800b"
+
 # Christopher's twelve boss fights (Chriz IWD Encounters 0.2.0, 2026-11-04) for installations of
 # the releases before 0.1.6, which install them itself. Each fight takes effect where the party
 # has not been yet; the orog raid's changes also while the raid has not happened.
@@ -177,3 +183,21 @@ title = "BuffBot"
 summary = "Brings BuffBot in this game to its newest release. Your saves, BuffBot settings and exported presets stay as they are, and so do mods you added."
 repository = "Chrizhermann/bg-eeex-buffbot"
 asset = "buffbot-{tag}.zip"
+
+# Stops the crash when banter picks a dead party member (Chriz IWD Encounters 0.2.1, Christopher,
+# 2026-11-05) for installations of the releases before 0.1.8, which installs it itself. Its own
+# package, so the fights above keep the one they were tested with. Without the Crossmod Banter
+# Pack's banter the component changes nothing.
+[[hotpatches]]
+id = "chriz-iwd-encounters-0.2.1-banter-guard"
+title = "No more crash with banter"
+summary = "The Crossmod Banter Pack could start banter with a dead party member, which crashes the game. Banter now starts only between living party members in one area; its chances and timers stay as they were."
+bases = ["iwd-0.1.1", "iwd-0.1.2", "iwd-0.1.3", "iwd-0.1.4", "iwd-0.1.5", "iwd-0.1.6"]
+artifact = "chriz-iwd-encounters-0.2.1"
+mod = "chriz-iwd-encounters-0.2.1"
+components = [110]
+
+[[hotpatches.changes]]
+title = "Banter only between living party members"
+summary = "Banter starts only when both partners live and are in the same area."
+save_applicability = "current-save"
