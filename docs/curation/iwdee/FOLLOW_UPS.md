@@ -16,7 +16,8 @@ user's decisions. Started 2026-09-10.
 - [ ] Review any new quest/item candidates; Frostforged remains deferred.
 - [ ] The recipe generator does not know what was added to `collection.toml` by hand: Chriz IWD
   Encounters' fights 300-410, its banter guard 110 and Arszyk's Wonderful Decay. Add them before
-  it regenerates the recipe.- [ ] Create the explicit IWD curation map and reconcile every catalog row to an outcome.
+  it regenerates the recipe.
+- [ ] Create the explicit IWD curation map and reconcile every catalog row to an outcome.
 
 ## SCS enhancement research
 

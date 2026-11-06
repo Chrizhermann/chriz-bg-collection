@@ -49,11 +49,13 @@ therefore never installed as an update of the other (`app/src-tauri/tests/packag
 and `updater_download_acceptance.rs` check this).
 
 - The public key is `plugins.updater.pubkey` in `tauri.iwd.conf.json`; it is public by design.
-- The private key is kept outside every repository at
-  `%LOCALAPPDATA%\Chriz Easy IWD Developer\signing\chriz-easy-iwd-updater.key`, without a
-  password, so a release session can sign unattended. Never commit, upload, paste or print it;
-  pass only its path. Christopher keeps the backup copy; the OneDrive backups skip `*.key`
-  files on purpose.
+- The private key is stored as the `chriz-easy-iwd-updater.key` attachment in Christopher's
+  vault entry **Chriz Easy IWD updater signing key**, without a password. The formerly
+  documented `%LOCALAPPDATA%\Chriz Easy IWD Developer\signing\` copy was absent during
+  the 0.1.8 release. Retrieve a temporary local copy outside every repository, build output
+  and diagnostic archive; pass only its path to the signer and remove the temporary copy
+  afterwards. Never commit, upload, paste or print its contents. The OneDrive backups skip
+  `*.key` files on purpose.
 - If the key is lost or exposed, generate a new pair, put the new public key in
   `tauri.iwd.conf.json` and ship it in a new version. Installed copies cannot verify a setup
   signed with the new key, so every player installs that version by hand once, as with the
@@ -90,7 +92,7 @@ The example version is `0.1.7`; use the real one throughout.
 
    ```powershell
    $iwdSigner = (Resolve-Path 'app/node_modules/@tauri-apps/cli/tauri.js').Path
-   $iwdSigningKey = (Resolve-Path "$env:LOCALAPPDATA\Chriz Easy IWD Developer\signing\chriz-easy-iwd-updater.key").Path
+   $iwdSigningKey = (Resolve-Path '<temporary key file retrieved from the vault>').Path
    $iwdSetup = (Resolve-Path 'target/x86_64-pc-windows-msvc/release/bundle/nsis/Chriz Easy IWD_0.1.7_x64-setup.exe').Path
    $iwdSign = @'
    const { spawnSync } = require('node:child_process');
