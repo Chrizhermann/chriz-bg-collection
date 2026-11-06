@@ -248,6 +248,17 @@ scope = "Static recipe source, component, order and recommended-plan assertions 
 
 [[evidence]]
 subject_kind = "run"
+subject_id = "arszyk-main"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "4201b25a0739914742e9e90e2ae4fa79729fb265"
+test_artifact = "engine/tests/production_recipe_iwd.rs"
+date = "2026-11-07"
+status = "accepted"
+scope = "Static recipe source, component, order and recommended-plan assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
 subject_id = "iwdcrossmodpack-main"
 kind = "static-test"
 repository = "Chrizhermann/chriz-bg-collection"
@@ -317,9 +328,9 @@ subject_kind = "run"
 subject_id = "chriz-iwd-encounters-main"
 kind = "static-test"
 repository = "Chrizhermann/chriz-bg-collection"
-commit = "d7b2e8248429cd57da294316d958f7d366bce4b4"
+commit = "4201b25a0739914742e9e90e2ae4fa79729fb265"
 test_artifact = "engine/tests/production_recipe_iwd.rs"
-date = "2026-11-04"
+date = "2026-11-07"
 status = "accepted"
 scope = "Static recipe source, component, order and recommended-plan assertions only; not live game acceptance."
 
