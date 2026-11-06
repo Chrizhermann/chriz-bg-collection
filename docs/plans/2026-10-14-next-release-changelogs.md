@@ -39,12 +39,47 @@ is described in [`docs/release-notes-0.1.1.md`](../release-notes-0.1.1.md).
   nothing was installed after it. Only that part leaves, with what needs it; the mod's other
   parts stay, and the end of the installation names everything left out. A part the collection
   cannot do without is not left out.
+- **BuffBot's party table** (Default):
+  - New: the panel can show the whole party at once. A button beside the character tabs
+    switches between By caster, as before, and By recipient, with one row per buff and
+    everybody who gets it. A character's name in the search box shows what they receive.
+    (BuffBot v1.12.8)
+  - New: you choose buffs in that table. Every buff anybody in the party can cast has a row
+    and every character a box to tick, and the box says whether somebody will really cast
+    it, only some of the repeats are covered, or nobody can. A box that cannot be ticked
+    says why. A filter shows all, planned, not chosen or problems, and clicking a character
+    shows what they receive. (BuffBot v1.13.0)
+  - New: the table can list buffs in cast order instead of A-Z, and Up, Down and Sort work
+    there for every character who casts the buff; A-Z stays the default. (BuffBot v1.15.0)
+    Repeat and Variant work there too. (BuffBot v1.16.0)
+- **BuffBot plans your clones and buffs your summons** (Default):
+  - New: a Project Image or Simulacrum can be set up before you conjure it. As soon as a
+    preset creates one, it gets a tab in the Summons view with the spells it will have. A
+    Project Image shares its owner's spells, so the plan does not hand out the same Haste
+    twice; a Simulacrum has its own. (BuffBot v1.14.0)
+  - New: the Clones switch in the table's footer (off, image, simulacrum, both; off by
+    default) plans casts from a clone. The plan also shows which casts a Project Image takes
+    from its owner, so you can move a buff in front of it. (BuffBot v1.15.0)
+  - New: a summon or clone can receive buffs, so a cleric can put Stoneskin on the Planetar
+    next to him. The target list scrolls and has no limit of six rows any more. A cast at a
+    summon cannot be interrupted and does not wait for an aura; items refuse a summon as
+    target and say so in the log. (BuffBot v1.16.0)
+- **Smaller BuffBot changes** (Default):
+  - New: five text sizes instead of three. Tiny and Huge join Small, Medium and Large, and
+    your setting stays. Large and Huge change only the title and the button captions.
+    (BuffBot v1.12.9, v1.13.0)
+  - Changed: Uses shows how many of a buff you have, not how many are left over after the
+    preset. Delete Preset sits with Rename and New. (BuffBot v1.12.8, v1.12.9)
+  - Fixed: a pressed button no longer stays bright after you let go. (BuffBot v1.12.7)
+  - Fixed: the parchment colour scheme is readable again, Reset no longer sits on the
+    panel's corner, and the frame meets its corners. (BuffBot v1.12.8, v1.12.9)
 
 These changes apply to new installations; existing games and saves are unchanged.
 
 ### Mod versions
 
 - BG Rebalance v0.8.10 (was v0.8.9)
+- BuffBot v1.16.0 (was v1.12.6)
 
 ### Notes for the release integrator
 
@@ -69,6 +104,20 @@ These changes apply to new installations; existing games and saves are unchanged
   what it exists for, and a dependent that needs one part of it gets a row in
   `manifest/collection.toml`, read from its own installer. Campaigns frozen before 0.1.2 have
   neither, so their features of several components only leave whole.
+- **BuffBot v1.16.0** (with v1.12.7 to v1.15.0; Christopher, 2026-11-04: newer BuffBot releases
+  go into both installers for 0.1.2) keeps components `1` and `0`, their order and the
+  Recommended selection. Its TP2 adds `BfBotSum.lua`, and component `0` now installs without
+  the LuaJIT loader instead of stopping, which is what `core_components` already says of `1`.
+  Save data stays at schema 10, and the panel opens as before: By caster, the A-Z list, Clones
+  off. Its owner suite (2,122 tests; in-game 909 checks, 31 phases) passed; the only in-game
+  setup its notes name is BG2:EE 2.7.3.0, so BG:EE, SoD, EET and IWD:EE are not recorded as
+  checked for the new views, and its README still calls the configuration with Modpack `430`
+  not accepted. Its
+  v1.15.0 and v1.16.0 notes say EEex v1.3.1 or newer; new installations get EEex v1.3.1. The
+  hold in `manifest/own-mods.toml` records the split until Chriz Easy IWD pins it
+  ([PR #107](https://github.com/Chrizhermann/chriz-bg-collection/pull/107)), and the PR that
+  completes it removes the hold. The 0.1.2 update ledger needs an entry that covers
+  `artifact:buffbot-1.16.0`.
 
 ## Installer changelog
 

@@ -7,8 +7,9 @@ the TP2 adds no component and keeps the declaration order, so no decision change
 
 Static pin, evidence, component, selection and order checks for both recipe profiles only.
 Nothing here is a game installation or gameplay acceptance. The November 1 intake
-(test_nov01_buffbot_pin_recipe) supersedes this pin with v1.12.6, which keeps both
-components and their order; the v1.12.1 record and artifacts stay as verified here.
+(test_nov01_buffbot_pin_recipe) supersedes this pin with v1.12.6, and the November 4 intake
+(test_nov04_buffbot_pin_recipe) v1.12.6 with v1.16.0; both keep the two components and their
+order, and the v1.12.1 record and artifacts stay as verified here.
 """
 
 from pathlib import Path
@@ -27,8 +28,9 @@ PROFILES = ["manifest", "recipes/curated-full-current"]
 MOD = "buffbot"
 PIN = "buffbot-1.12.1"
 PREVIOUS = "buffbot-1.11.0"
-# The November 1 intake (test_nov01_buffbot_pin_recipe) moves both profiles to v1.12.6.
-SUCCESSOR = "buffbot-1.12.6"
+# The November 1 intake (test_nov01_buffbot_pin_recipe) moved both profiles to v1.12.6, and
+# the November 4 intake (test_nov04_buffbot_pin_recipe) to v1.16.0.
+SUCCESSOR = "buffbot-1.16.0"
 TAG = "v1.12.1"
 FILENAME = "buffbot-v1.12.1.zip"
 SHA256 = "7ab5f040b05d474edfb846b11bff5fda134ee468e3e3a289e6f788f33e34ed22"

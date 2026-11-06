@@ -45,7 +45,7 @@ fn recipe() -> Manifest {
 #[test]
 fn freezes_the_reviewed_scs_randomiser_and_buffbot_artifacts() {
     let manifest = recipe();
-    assert_eq!(manifest.mods["buffbot"].artifact_id, "buffbot-1.12.6");
+    assert_eq!(manifest.mods["buffbot"].artifact_id, "buffbot-1.16.0");
     let expected = [
         (
             "stratagems-35.21",
@@ -70,13 +70,13 @@ fn freezes_the_reviewed_scs_randomiser_and_buffbot_artifacts() {
             "randomiser/randomiser.tp2",
         ),
         (
-            "buffbot-1.12.6",
-            "1.12.6",
-            "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.12.6/buffbot-v1.12.6.zip",
-            "v1.12.6",
-            "buffbot-v1.12.6.zip",
-            5_713_218,
-            "f99781368d64a419a567f48767728a600b8e81e203946217228ee9d61bc8b534",
+            "buffbot-1.16.0",
+            "1.16.0",
+            "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.16.0/buffbot-v1.16.0.zip",
+            "v1.16.0",
+            "buffbot-v1.16.0.zip",
+            5_797_041,
+            "ce38d81102f717acf709cc8a7827586f8ab6ff5ff450aaca42f0b5d513da0082",
             "buffbot",
             "buffbot/setup-buffbot.tp2",
         ),

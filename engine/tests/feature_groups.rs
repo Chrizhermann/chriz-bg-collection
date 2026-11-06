@@ -392,18 +392,22 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // curated recipe changes: the two features' decisions, their preset entries and both
     // components in the cdtweaks-bg2 run of the plan. With both restored as defaults, the
     // previous curated digests return (28812dc1…, 7a1ba97d…, 3cd844e7…).
+    // Re-pinned on November 6 for BuffBot v1.16.0, which goes into 0.1.2 (Christopher,
+    // 2026-11-04): in both recipes only the Recommended plan changes, in the buffbot-bg2 run's
+    // artifact id; components, order and the selection stay. With v1.12.6 restored, the
+    // previous plan digests return (manifest d5629b56…, curated 8256bb6f…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
             "c90f8f1b57deda983af1eafb2ffdd987eba60c253907f14972d10c3fd144b855",
             "253015344c72b69bd35011cb03f9dbf8ad395999deb9fa5a3278ed7baa943c1e",
-            "d5629b5664620b43b1b21f5eb6f00b444173204b61d31dd4bd2dde4ac0e6b2eb",
+            "457e662404d88bcc7428c55d132473da14ef44867aa06b37130f6ae5ad8a7391",
         ),
         (
             "../recipes/curated-full-current",
             "4dcb1fd4fccc2609a013e458d1ddb1434be2dfc0ee9ea7d04544dbb73649a47f",
             "999046f16958aecc0b39f4e9540ec03e5a2d510d81c871368d50f627f12e3fcb",
-            "8256bb6fd6c84d624985df3819bf2783c53b4b51aee679f789232f382f35623f",
+            "186a31088e14cd104fdc29845181c687831641038262fc674100116b030c3f35",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();
