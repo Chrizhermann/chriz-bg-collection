@@ -17,8 +17,13 @@ curated per mod.
 | In, off by default | EEex Remote Console; LeUI-IWDEE and Infinity UI++ (alternatives, so the installer offers at most one); Lava's quests Below & Below Inn, Night of the Blinking Dead, Snowytoes Hamlet, Tale of Our Lady Dreamless, Terror of the Skineater, The Rediscovery of Kuldahar, The War of Bloom and Rot, Will of the Wisps |
 | In, default open | Hidden Gameplay Options |
 | Later | Frostforged and The Artisan's Armory ("look at it later"); IWDEE Tweaks and Fixes (wants a closer look) |
-| Out | Artisan's Kitpack and Bardic Wonders (changed from the September "if compatible"); Spell Revisions; all other inventory entries, including Kulyok's IWD NPC Project, Tipps and Geomantic Sorcerer, Talents of Faerûn, the subtledoctor and argent77 kit mods, Deities of Faerûn, Afaaq, Turald, Arszyk, Xikâsz, HoWMod, IWD:EE Reborn, the item mods, EEUITweaks, the lighting pack, the font pack and Premade Party Adder |
+| Out | Artisan's Kitpack and Bardic Wonders (changed from the September "if compatible"); Spell Revisions; all other inventory entries, including Kulyok's IWD NPC Project, Tipps and Geomantic Sorcerer, Talents of Faerûn, the subtledoctor and argent77 kit mods, Deities of Faerûn, Afaaq, Turald, Xikâsz, HoWMod, IWD:EE Reborn, the item mods, EEUITweaks, the lighting pack, the font pack and Premade Party Adder |
 | Stream rule only | Reroll limit (at most 10 rerolls, 2 stored rolls); no installer feature |
+
+Added later:
+- Arszyk's Wonderful Decay, 2026-11-07, for the next version and not for his stream game
+  ("Kannst du es noch hinzufügen für die nächste Version?"). On by default, as the other
+  companions. It is a beta, and its quest also works without recruiting him.
 
 Notes from the selection:
 - The quest mods' compatibility with each other can be tested later; Christopher said

@@ -209,6 +209,14 @@ phase = "main"
 components = [0]
 args = []
 
+# Companion with a late-game quest, added 2026-11-07 (Christopher).
+[[runs]]
+run_id = "arszyk-main"
+mod_id = "arszyk"
+phase = "main"
+components = [0]
+args = []
+
 # Quest mod, after IWDGO.
 [[runs]]
 run_id = "innbb-main"
@@ -293,11 +301,12 @@ args = []
 # (its caster scripts and its record of melee scripts). It repairs SCS caster AI that misses
 # some IWD:EE casters (#100) and lets enemy priests prepare when they first see the party (#200).
 # Since 0.2.0 (2026-11-04) also twelve boss fights, #300 to #410, on by default (Christopher).
+# Since 0.2.1 (2026-11-07) #110, which needs the banter of the Crossmod Banter Pack before it.
 [[runs]]
 run_id = "chriz-iwd-encounters-main"
 mod_id = "chriz-iwd-encounters"
 phase = "main"
-components = [100, 200, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410]
+components = [100, 110, 200, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410]
 args = []
 
 # HGO readme: after Tweaks Anthology and any interface mods.
@@ -867,6 +876,19 @@ readiness = "ready"
 parent = "mod:chriz-iwd-encounters"
 components = [{ run_id = "chriz-iwd-encounters-main", component = 100 }]
 requires_any = ["feature:stratagems:component-6030", "feature:stratagems:component-6040"]
+
+# Stops a crash with the Crossmod Banter Pack (Christopher, 2026-11-05), on by default. It needs
+# nothing else and changes nothing without that banter.
+[[features]]
+id = "feature:chriz-iwd-encounters:component-110"
+title = "Party banter starts only between living party members in one area"
+description = "Stops a crash with the Crossmod Banter Pack: its banter could pick a dead partner. Each pair now checks both partners; the chances of the banter and its timers stay as they were."
+category = "combat"
+source_label = "Chriz IWD Encounters"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-iwd-encounters"
+components = [{ run_id = "chriz-iwd-encounters-main", component = 110 }]
 
 [[features]]
 id = "feature:chriz-iwd-encounters:component-200"
@@ -4088,6 +4110,26 @@ decision = "mandatory"
 readiness = "ready"
 parent = "mod:vito"
 components = [{ run_id = "vito-main", component = 0 }]
+
+[[features]]
+id = "mod:arszyk"
+title = "Arszyk's Wonderful Decay"
+description = "Adds the companion Arszyk and a late-game quest, which also works without him. Beta."
+category = "companions"
+source_label = "Arszyk's Wonderful Decay"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:arszyk:component-0"
+title = "Arszyk's Wonderful Decay - NPC and a late-game quest for IWD EE"
+description = "Arszyk's Wonderful Decay - NPC and a late-game quest for IWD EE"
+category = "companions"
+source_label = "Arszyk's Wonderful Decay"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:arszyk"
+components = [{ run_id = "arszyk-main", component = 0 }]
 
 [[features]]
 id = "mod:iwdcrossmodpack"

@@ -77,6 +77,7 @@ const RUNS: &[(&str, &str, Phase, &[u32])] = &[
     ("tviy-main", "tviy", Phase::Main, &[0]),
     ("urchin-main", "urchin", Phase::Main, &[0]),
     ("vito-main", "vito", Phase::Main, &[0]),
+    ("arszyk-main", "arszyk", Phase::Main, &[0]),
     ("innbb-main", "innbb", Phase::Main, &[0]),
     ("blinkingdead-main", "blinkingdead", Phase::Main, &[0]),
     ("snowytoes-main", "snowytoes", Phase::Main, &[0]),
@@ -126,7 +127,7 @@ const RUNS: &[(&str, &str, Phase, &[u32])] = &[
         "chriz-iwd-encounters",
         Phase::Main,
         &[
-            100, 200, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410,
+            100, 110, 200, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410,
         ],
     ),
     (
@@ -150,6 +151,11 @@ const RUNS: &[(&str, &str, Phase, &[u32])] = &[
 
 /// Every installer: id, payload artifact, and TP2 path inside that artifact.
 const INSTALLERS: &[(&str, &str, &str)] = &[
+    (
+        "arszyk",
+        "arszyk-beta1.4",
+        "ArszyksWonderfulDecay/ArszyksWonderfulDecay.tp2",
+    ),
     (
         "athanasiosnpc",
         "athanasiosnpc-035784ef834a5ae8d89addd1cab12d98e0089af6",
@@ -179,7 +185,7 @@ const INSTALLERS: &[(&str, &str, &str)] = &[
     ),
     (
         "chriz-iwd-encounters",
-        "chriz-iwd-encounters-0.2.0",
+        "chriz-iwd-encounters-0.2.1",
         "chriz-iwd-encounters/setup-chriz-iwd-encounters.tp2",
     ),
     ("dendjelion", "dendjelion-2.1", "dendjelion/Dendjelion.tp2"),
@@ -254,6 +260,16 @@ const INSTALLERS: &[(&str, &str, &str)] = &[
 /// Every artifact file of the recipe with its exact upstream identity and integrity pin.
 const ARTIFACTS: &[Pin] = &[
     Pin {
+        id: "arszyk-beta1.4",
+        version: "BETA1.4",
+        kind: SourceKind::WeaselmodsDownload,
+        url: "https://downloads.weaselmods.net/download/arszyk/?wpdmdl=815",
+        reference: "BETA1.4",
+        filename: "ArszyksWonderfulDecay-vBETA1.4.zip",
+        length: 6_293_349,
+        sha256: "dac219f197ed8acdf53fa4db779704880dbd7ad0d0279b143cf5855ef8c4cc59",
+    },
+    Pin {
         id: "athanasiosnpc-035784ef834a5ae8d89addd1cab12d98e0089af6",
         version: "035784ef834a5ae8d89addd1cab12d98e0089af6",
         kind: SourceKind::GithubCommitZip,
@@ -324,14 +340,14 @@ const ARTIFACTS: &[Pin] = &[
         sha256: "117cd79cb5187640a5efd6c1d19181b43bcfa7381161df2f88db055d3af075f7",
     },
     Pin {
-        id: "chriz-iwd-encounters-0.2.0",
-        version: "0.2.0",
+        id: "chriz-iwd-encounters-0.2.1",
+        version: "0.2.1",
         kind: SourceKind::GithubRelease,
-        url: "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/download/v0.2.0/chriz-iwd-encounters-v0.2.0.zip",
-        reference: "v0.2.0",
-        filename: "chriz-iwd-encounters-v0.2.0.zip",
-        length: 314_026,
-        sha256: "bb228245c7f26b8a92945fb9634ea9814031527bbd6ae4b65cc72524b398b76e",
+        url: "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/download/v0.2.1/chriz-iwd-encounters-v0.2.1.zip",
+        reference: "v0.2.1",
+        filename: "chriz-iwd-encounters-v0.2.1.zip",
+        length: 331_725,
+        sha256: "a4899e731f6d7f0fe157dba5c810f233ac3146ada1aa84fc4ee8ffd58271f031",
     },
     Pin {
         id: "dendjelion-2.1",
@@ -690,6 +706,7 @@ const RECOMMENDED: &[(&str, &[u32])] = &[
     ("tviy-main", &[0]),
     ("urchin-main", &[0]),
     ("vito-main", &[0]),
+    ("arszyk-main", &[0]),
     ("iwdcrossmodpack-main", &[13, 30]),
     (
         "cdtweaks-main",
@@ -709,7 +726,7 @@ const RECOMMENDED: &[(&str, &[u32])] = &[
     (
         "chriz-iwd-encounters-main",
         &[
-            100, 200, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410,
+            100, 110, 200, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410,
         ],
     ),
     (
@@ -740,7 +757,7 @@ fn declares_a_standalone_iwdee_collection_with_its_own_data_folder() {
             .collect::<Vec<_>>(),
         [PRESET]
     );
-    assert_eq!(manifest.collection.features.len(), 316);
+    assert_eq!(manifest.collection.features.len(), 319);
     assert!(
         validate(&manifest).is_empty(),
         "authoring validation findings: {:?}",
@@ -801,7 +818,12 @@ fn pins_the_exact_ordered_runs_and_component_lists() {
     }
     // Will of the Wisps before Bethany; the banter pack after every companion.
     assert!(position(&manifest, "willowisp-main") < position(&manifest, "bethany-main"));
-    for companion in ["minervanpc-main", "cassianpc-main", "vito-main"] {
+    for companion in [
+        "minervanpc-main",
+        "cassianpc-main",
+        "vito-main",
+        "arszyk-main",
+    ] {
         assert!(
             position(&manifest, companion) < position(&manifest, "iwdcrossmodpack-main"),
             "{companion}"
@@ -817,7 +839,12 @@ fn pins_the_exact_ordered_runs_and_component_lists() {
     assert!(
         position(&manifest, "cdtweaks-main") < position(&manifest, "hidden-gameplay-options-main")
     );
-    // Chriz IWD Encounters reads what SCS built, so it runs directly after SCS.
+    // Chriz IWD Encounters reads what SCS built, so it runs directly after SCS; its banter guard
+    // patches the Crossmod Banter Pack's blocks, so it runs after them.
+    assert!(
+        position(&manifest, "iwdcrossmodpack-main")
+            < position(&manifest, "chriz-iwd-encounters-main")
+    );
     assert_eq!(
         position(&manifest, "stratagems-main") + 1,
         position(&manifest, "chriz-iwd-encounters-main")
@@ -963,7 +990,7 @@ fn resolves_the_exact_recommended_plan() {
         .iter()
         .map(|run| run.components.len())
         .sum::<usize>();
-    assert_eq!(components, 137);
+    assert_eq!(components, 139);
 }
 
 #[test]
@@ -1250,7 +1277,10 @@ fn chriz_iwd_encounters_is_on_by_default_and_each_part_needs_its_scs_ai() {
         ]
     );
     assert_eq!(priests.requires, ["feature:stratagems:component-6040"]);
-    let all: Vec<u32> = [100, 200].into_iter().chain(ENCOUNTERS_FIGHTS).collect();
+    let all: Vec<u32> = [100, 110, 200]
+        .into_iter()
+        .chain(ENCOUNTERS_FIGHTS)
+        .collect();
     assert_eq!(
         evaluation.plan.components_for("chriz-iwd-encounters-main"),
         Some(&all[..])
@@ -1259,7 +1289,7 @@ fn chriz_iwd_encounters_is_on_by_default_and_each_part_needs_its_scs_ai() {
     let mut selection = Selection::defaults("windows");
     selection.set_feature("feature:chriz-iwd-encounters:component-200", false);
     let without_priests = evaluate(&manifest, &selection).unwrap();
-    let expected: Vec<u32> = [100].into_iter().chain(ENCOUNTERS_FIGHTS).collect();
+    let expected: Vec<u32> = [100, 110].into_iter().chain(ENCOUNTERS_FIGHTS).collect();
     assert_eq!(
         without_priests
             .plan
@@ -1267,14 +1297,47 @@ fn chriz_iwd_encounters_is_on_by_default_and_each_part_needs_its_scs_ai() {
         Some(&expected[..])
     );
 
-    // Without SCS only its two AI parts go: the fights work without it.
+    // Without SCS only its two AI parts go: the banter guard and the fights work without it.
     let mut selection = Selection::defaults("windows");
     selection.set_feature("mod:stratagems", false);
     let without_scs = evaluate(&manifest, &selection).unwrap();
+    let expected: Vec<u32> = [110].into_iter().chain(ENCOUNTERS_FIGHTS).collect();
     assert_eq!(
         without_scs.plan.components_for("chriz-iwd-encounters-main"),
-        Some(&ENCOUNTERS_FIGHTS[..])
+        Some(&expected[..])
     );
+}
+
+#[test]
+fn the_banter_guard_is_on_by_default_and_needs_no_other_mod() {
+    // Christopher, 2026-11-05: banter starts only between living party members in one area.
+    let manifest = recipe();
+    let evaluation = recommended(&manifest);
+    let id = "feature:chriz-iwd-encounters:component-110";
+    let control = evaluation.view.control(id).unwrap();
+    assert_eq!(control.decision, Decision::Default);
+    assert!(control.selected);
+    assert_eq!(control.parent.as_deref(), Some("mod:chriz-iwd-encounters"));
+    assert!(control.requires.is_empty() && control.requires_any.is_empty());
+}
+
+#[test]
+fn arszyk_is_a_companion_on_by_default_that_can_be_left_out() {
+    // Christopher, 2026-11-07: added for new installations, not for games in progress.
+    let manifest = recipe();
+    let evaluation = recommended(&manifest);
+    let parent = evaluation.view.control("mod:arszyk").unwrap();
+    assert_eq!(parent.decision, Decision::Default);
+    assert!(parent.selected);
+    assert_eq!(
+        evaluation.plan.components_for("arszyk-main"),
+        Some(&[0][..])
+    );
+
+    let mut selection = Selection::defaults("windows");
+    selection.set_feature("mod:arszyk", false);
+    let without = evaluate(&manifest, &selection).unwrap();
+    assert_eq!(without.plan.components_for("arszyk-main"), None);
 }
 
 #[test]
