@@ -1,6 +1,7 @@
 import type { InstalledUpdatePlan, ManagedCopyUpdate } from "../contracts";
 import { actionButton, element } from "./app-shell";
 import { modUpgradeResult, type ModUpgradeActions } from "./mod-upgrade";
+import { flavor } from "../flavor";
 
 export interface InstalledUpdateActions extends ModUpgradeActions {
   readonly installedUpdatePlan?: InstalledUpdatePlan | null;
@@ -152,13 +153,16 @@ export function installedUpdateSection(copies: readonly ManagedCopyUpdate[], act
         content.append(details);
       }
     }
-    if (current && (actions.modUpgrade?.installId === copy.installId || actions.modUpgradeError || actions.modUpgradeBusy)) {
+    const legacy = actions.modUpgrade;
+    const hasLegacyRecovery = legacy?.installId === copy.installId
+      && (legacy.state !== "retired" || legacy.history.length > 0);
+    if (current && flavor.features.modUpgrades && (hasLegacyRecovery || actions.modUpgradeError || actions.modUpgradeBusy)) {
       content.append(modUpgradeResult(copy, actions, disabled || actions.installedUpdateBusy === true || copy.state === "stale"));
     }
     if (plan && copy.state !== "stale" && !(current && actions.installedUpdateBusy)) {
       const details = element("details", "update-diagnostics installed-mod-comparison");
       details.append(element("summary", undefined, "Mod comparison details"),
-        element("p", "update-note", "Compare the mods and choices in this installation with the collection included in CEBG. Checking never changes game files. Supported updates require your confirmation."),
+        element("p", "update-note", `Compare the mods and choices in this installation with the collection included in ${flavor.shortName}. Checking never changes game files. Supported updates require your confirmation.`),
         comparisonResult(plan));
       content.append(details);
     }

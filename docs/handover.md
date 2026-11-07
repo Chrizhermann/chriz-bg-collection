@@ -2,6 +2,53 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 8 — both installers on main
+
+Christopher's decision: Chriz Easy BG and Chriz Easy IWD share `main` and both release from
+it, as separate products. The existing flavor mechanism chooses the source games, resources,
+product identity, updater feed and catalog. IWD retains its own version and signing key.
+The two website download destinations are listed in [BUILDING](BUILDING.md); website
+publication and the separate product releases remain release work.
+
+The merge brings main's download and failed-component questions, Less tested source discovery,
+modded-source confirmation and overwrite policy to IWD. Player additions do not block its
+hotpatches or whole-mod updates. Shared locks, archive checks, install history, backup and Undo
+remain. The obsolete BuffBot 1.8.3 to 1.8.4 Apply route stays removed in both products.
+Recipes, pins, install order, components and versions are unchanged by this merge. Every later
+IWD recipe change still needs a version bump and a new hotpatch base. Source validation is
+recorded in the uncommitted worktree ledger; this entry is not release or live-game acceptance.
+
+## November 7 — Chriz Easy IWD 0.1.8 released
+
+**IWD app and recipe 0.1.8 are public** on the versioned release and the in-app update
+channel. Source PR 116 merged as `889c430`; the signed final setup was built from that
+merge. The release adds Chriz IWD Encounters 0.2.1's companion-banter guard and Arszyk's
+Wonderful Decay BETA1.4 for new installations: 29 mods, 139 recommended components and
+18 companions. Existing games receive the guard only when the player applies the
+separate hotpatch. Arszyk remains a beta and can be deselected in Customize.
+
+The reported Arszyk crash came from the lab's creature-creation action executing after
+the unprotected test player died and lost its area. Two controlled runs passed natural
+fire liberation, recruitment, save/reload, daylight-effect observation and dismissal
+with an area round trip. No Arszyk content fix was needed. The complete quest, all
+dialogue paths and combat remain outside this acceptance. See the
+[acceptance report](package-acceptance-iwd-0.1.8-2026-11-07.md) for evidence and limits,
+and the [release notes](release-notes-iwd-0.1.8.md) for player-facing changes.
+
+The full 2.7.3.0 lab install, source CI, hotpatch apply/Undo, final resource comparison,
+signature verification, updater download/tamper test and Defender scan passed. All six
+public assets and the updated feed were downloaded and verified. The distribution
+README is current. Website PR 66 merged, its Cloudflare deployment passed, and the live
+IWD page, home card, social card and actual download were verified on desktop and mobile.
+Only this session's build output was cleaned. No live or stream-game installation changed.
+
+Known follow-ups: [117](https://github.com/Chrizhermann/chriz-bg-collection/issues/117)
+tracks development-tool dependency advisories (production audit is clean);
+[118](https://github.com/Chrizhermann/chriz-bg-collection/issues/118) tracks an unchanged
+SCS noncombat patrol timer warning. Do not call the installation warning-free.
+The IWD updater key is in the vault; [the release runbook](iwd-release.md) now describes
+temporary retrieval and cleanup. Private diagnostics and lab scripts stay outside Git.
+
 ## November 5 — the installer asks when a single component fails (for 0.1.2)
 
 Christopher, 2026-11-04: when one component fails, the installer "soll nachfragen" instead
@@ -100,16 +147,14 @@ the run's evidence, the runner answers a later prompt in its authored place, and
 of an installed component must have been answered. A success without every answer stays
 refused, and an installed component without its answer still needs a fresh copy.
 
-Chriz Easy IWD does not have this yet. `claude/iwdee-app` branched on 2026-10-24 and has none
-of the question system; [PR #70](https://github.com/Chrizhermann/chriz-bg-collection/pull/70),
-which would bring its first part, conflicts.
+The November 8 merge brings this question system to Chriz Easy IWD as well.
 
 ## November 4 — everything on `main`
 
 Christopher retired the release line on 2026-11-04: [PR #101](https://github.com/Chrizhermann/chriz-bg-collection/pull/101)
 merged `claude/cebg-installer-fixes-20261014` into `main`, and all work goes to `main` from
 now on. The repository variable `CEBG_NEXT_RELEASE_BRANCH` is `main`, so the daily pin job
-prepares its pull requests there. Chriz Easy IWD stays on `claude/iwdee-app` for now.
+prepares its pull requests there. Chriz Easy IWD joins the same source line on November 8.
 
 Open for 0.1.2:
 - BG Rebalance v0.8.10 is pinned ([PR #103](https://github.com/Chrizhermann/chriz-bg-collection/pull/103), merged).

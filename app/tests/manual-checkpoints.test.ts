@@ -172,7 +172,8 @@ describe("manual checkpoint flow", () => {
     expect(getByText(root, "Example option: v1")).toBeTruthy();
     expect(document.activeElement?.id).toBe("manual-checkpoint-review");
     expect(backend.accepts).toEqual([]); expect(backend.resumes).toEqual([]);
-    expect(root.textContent).toContain("disables game hotpatches and whole-mod updates");
+    expect(root.textContent).toContain("Game hotpatches and whole-mod updates remain available.");
+    expect(root.textContent).not.toContain("disables game hotpatches");
     await user.click(getByRole(root, "button", { name: "Accept additions and continue" }));
     expect(backend.accepts).toEqual([["manual-install", "review-1", true]]);
     expect(backend.resumes).toEqual(["manual-install"]);
@@ -183,7 +184,7 @@ describe("manual checkpoint flow", () => {
     const backend = new CheckpointBackend(); backend.reviewed = { ...status, reviewToken: "empty-review" };
     const { root, user } = await mounted(backend);
     await user.click(getByRole(root, "button", { name: "Continue unchanged" }));
-    expect(root.textContent).toContain("No manual additions found");
+    expect(root.textContent).toContain("No new WeiDU components found");
     expect(backend.accepts).toEqual([]); expect(backend.resumes).toEqual([]);
     await user.click(getByRole(root, "button", { name: "Continue unchanged" }));
     expect(backend.accepts).toEqual([["manual-install", "empty-review", false]]);
@@ -298,15 +299,16 @@ describe("manual checkpoint contracts", () => {
     await backend.openManualCheckpointFolder("install"); expect(invoke).toHaveBeenLastCalledWith("open_manual_checkpoint_folder", { installId: "install" });
   });
 
-  it("suppresses game mutation controls for customized copies and preserves app updates", async () => {
+  it("keeps modern mod updates and app updates for customized copies", async () => {
     const updates = await new FixtureBackend().getUpdates();
     const appUpdate = vi.fn();
     const screen = updatesScreen({ ...updates, application: { ...updates.application, state: "available", availableVersion: "next" },
       managedCopies: [{ installId: "custom", name: "Custom", path: "D:\\Custom", installedRecipeVersion: "old", state: "up-to-date", detail: "" }] }, {
       customized: true, checkAgain: () => {}, installApplication: appUpdate, buildUpdatedCopy: () => {}, onCheckInstalledUpdate: vi.fn(), onCheckPatches: vi.fn(), onCheckModUpdate: vi.fn(),
     });
-    expect(screen.textContent).toContain("Game hotpatches and whole-mod updates are disabled");
-    expect(queryByRole(screen, "button", { name: /Check installed mods|Check available fixes|Check for a BuffBot update/ })).toBeNull();
+    expect(screen.textContent).toContain("Game hotpatches and whole-mod updates remain available");
+    expect(getByRole(screen, "button", { name: "Check for a BuffBot update" })).toBeTruthy();
+    expect(queryByRole(screen, "button", { name: /Check installed mods|Check available fixes/ })).toBeNull();
     getByRole(screen, "button", { name: "Update CEBG app" }).click();
     expect(appUpdate).toHaveBeenCalledWith("next");
   });

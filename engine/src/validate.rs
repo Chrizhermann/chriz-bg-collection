@@ -7,8 +7,8 @@ use std::path::{Component as PathComponent, Path};
 use crate::error::EngineError;
 use crate::manifest::{
     AcquisitionPolicy, Artifact, ComponentRef, Decision, Feature, FeatureGroup, GameRoot,
-    InputSpec, InvocationMode, PeMachine, Phase, Postcondition, PromptAnswer, Readiness, Source,
-    SourceKind, MAX_CONFIG_FILE_BYTES,
+    InputSpec, InvocationMode, PeMachine, Phase, Postcondition, PromptAnswer, Readiness, RunArg,
+    Source, SourceKind, MAX_CONFIG_FILE_BYTES,
 };
 use crate::postcondition::{
     is_safe_normalized_relative_path, marker_len_exceeds, MAX_TEXT_FILE_MARKER_BYTES,
@@ -93,6 +93,11 @@ pub const RULE_TOOL_ARCHITECTURE: &str = "tool-architecture";
 pub const RULE_PHASE_ORDER: &str = "phase-order";
 /// Rule enforcing the EET initialization and finalization boundaries.
 pub const RULE_EET_ANCHORS: &str = "eet-anchors";
+/// Rule limiting a standalone single-game collection to its one staged game root.
+pub const RULE_STANDALONE_GAME: &str = "standalone-game";
+/// Rule giving a standalone collection its own application data folder and keeping EET in the
+/// Baldur's Gate folder.
+pub const RULE_APPLICATION_DATA_DIRECTORY: &str = "application-data-directory";
 /// Warning emitted for legacy stdin that lacks a terminating newline.
 pub const RULE_STDIN_NEWLINE: &str = "stdin-newline";
 /// Rule requiring semantic feature ids and references to resolve exactly.
@@ -147,7 +152,12 @@ pub fn validate(manifest: &Manifest) -> Vec<Finding> {
     check_shared_artifacts(manifest, &mut findings);
     check_tool_architecture(manifest, &mut findings);
     check_phase_order(manifest, &mut findings);
-    check_eet_anchors(manifest, &mut findings);
+    if manifest.collection.game.is_standalone() {
+        check_standalone_game(manifest, &mut findings);
+    } else {
+        check_eet_anchors(manifest, &mut findings);
+    }
+    check_application_data_directory(manifest, &mut findings);
     check_stdin(manifest, &mut findings);
     check_feature_references(manifest, &mut findings);
     check_feature_cycles(manifest, &mut findings);
@@ -687,6 +697,10 @@ fn check_artifact_source(
         );
     }
 
+    if artifact.source.kind == SourceKind::WeaselmodsDownload {
+        check_weaselmods_source(id, artifact, allow_loopback_http, findings);
+    }
+
     if github_url_requires_redirect_review(&artifact.source.url)
         && artifact.source.redirect_hosts.is_empty()
     {
@@ -695,6 +709,56 @@ fn check_artifact_source(
             RULE_UNREVIEWED_REDIRECT,
             format!(
                 "artifact {id:?} uses a GitHub route that redirects but declares no reviewed redirect host"
+            ),
+        );
+    }
+}
+
+/// A Weasel Mods package is fetched only through its canonical link, and only when the served
+/// attachment name and ZIP type can be checked, so these gaps are errors rather than warnings.
+fn check_weaselmods_source(
+    id: &str,
+    artifact: &Artifact,
+    allow_loopback_http: bool,
+    findings: &mut Vec<Finding>,
+) {
+    if let Err(message) =
+        crate::acquire::check_weaselmods_download_url(&artifact.source.url, allow_loopback_http)
+    {
+        error(
+            findings,
+            RULE_SOURCES,
+            format!(
+                "artifact {id:?} weaselmods-download url {:?} is not a package link: {message}",
+                artifact.source.url
+            ),
+        );
+    }
+    match artifact.source.expected_filename.as_deref() {
+        None => error(
+            findings,
+            RULE_SOURCES,
+            format!("artifact {id:?} weaselmods-download source needs the expected filename"),
+        ),
+        Some(filename) => {
+            if let Err(message) = crate::acquire::check_saved_filename(filename) {
+                error(
+                    findings,
+                    RULE_SOURCES,
+                    format!(
+                        "artifact {id:?} weaselmods-download expected filename {filename:?} is unusable: {message}"
+                    ),
+                );
+            }
+        }
+    }
+    if artifact.archive.kind != crate::manifest::ArchiveKind::Zip {
+        error(
+            findings,
+            RULE_SOURCES,
+            format!(
+                "artifact {id:?} weaselmods-download source serves ZIP archives, not {:?}",
+                artifact.archive.kind
             ),
         );
     }
@@ -1079,7 +1143,9 @@ fn is_immutable_source_reference(source: &Source) -> bool {
             looks_like_version_tag(reference)
                 && github_route_matches_reference(&source.url, source.kind, reference)
         }
-        SourceKind::Manual => {
+        // A package link names no revision, so the release version is the identity and the
+        // pinned length and SHA-256 decide whether the served bytes still match it.
+        SourceKind::Manual | SourceKind::WeaselmodsDownload => {
             !reference.is_empty()
                 && !matches!(
                     reference.to_ascii_lowercase().as_str(),
@@ -1129,7 +1195,7 @@ fn github_route_matches_reference(url: &str, kind: SourceKind, reference: &str) 
         SourceKind::GithubCommitZip => segments
             .iter()
             .any(|segment| segment.strip_suffix(".zip").unwrap_or(segment) == reference),
-        SourceKind::Manual => true,
+        SourceKind::Manual | SourceKind::WeaselmodsDownload => true,
     }
 }
 
@@ -1163,6 +1229,55 @@ fn check_phase_order(manifest: &Manifest, findings: &mut Vec<Finding>) {
     }
 }
 
+/// A standalone collection keeps its registry in its own folder under `LOCALAPPDATA`, so its
+/// installations never appear in, or are removed through, the Baldur's Gate app. EET recipes
+/// never name a folder: they always use the Baldur's Gate folder, and naming it explicitly would
+/// give the same recipe a second payload digest.
+fn check_application_data_directory(manifest: &Manifest, findings: &mut Vec<Finding>) {
+    use crate::registry::names::{
+        check_application_data_directory as check_name, DEFAULT_APPLICATION_DATA_DIRECTORY,
+    };
+    let game = manifest.collection.game;
+    match (
+        game.is_standalone(),
+        manifest.collection.application_data_directory.as_deref(),
+    ) {
+        (false, None) => {}
+        (false, Some(name)) => error(
+            findings,
+            RULE_APPLICATION_DATA_DIRECTORY,
+            format!(
+                "an Enhanced Edition Trilogy collection always uses the {DEFAULT_APPLICATION_DATA_DIRECTORY:?} application data folder and must not set application_data_directory ({name:?})"
+            ),
+        ),
+        (true, None) => error(
+            findings,
+            RULE_APPLICATION_DATA_DIRECTORY,
+            format!(
+                "a standalone {} collection must name its own application_data_directory",
+                game.display_name()
+            ),
+        ),
+        (true, Some(name)) => {
+            if let Err(reason) = check_name(name) {
+                error(
+                    findings,
+                    RULE_APPLICATION_DATA_DIRECTORY,
+                    format!("application_data_directory {name:?} {reason}"),
+                );
+            } else if name.eq_ignore_ascii_case(DEFAULT_APPLICATION_DATA_DIRECTORY) {
+                error(
+                    findings,
+                    RULE_APPLICATION_DATA_DIRECTORY,
+                    format!(
+                        "a standalone {} collection must not share the Baldur's Gate application data folder {name:?}",
+                        game.display_name()
+                    ),
+                );
+            }
+        }
+    }
+}
 fn check_eet_anchors(manifest: &Manifest, findings: &mut Vec<Finding>) {
     let runs = &manifest.collection.runs;
     let has_eet_sequence = runs.iter().any(|run| {
@@ -1235,6 +1350,49 @@ fn check_eet_anchors(manifest: &Manifest, findings: &mut Vec<Finding>) {
                 runs[index].run_id
             ),
         );
+    }
+}
+
+/// A standalone collection stages exactly one game, so every run must target that game.
+///
+/// Only [`Phase::Main`] is meaningful there: every preparation, initialization, and
+/// finalization phase belongs to the two-source EET build and would either target the absent
+/// BG1 root or invoke an EET boundary that does not exist for this game.
+fn check_standalone_game(manifest: &Manifest, findings: &mut Vec<Finding>) {
+    let game = manifest.collection.game.display_name();
+    for (index, run) in manifest.collection.runs.iter().enumerate() {
+        if run.phase != Phase::Main {
+            error(
+                findings,
+                RULE_STANDALONE_GAME,
+                format!(
+                    "run {index} ({:?}) has phase {:?}, but a standalone {game} collection supports only the main phase",
+                    run.run_id, run.phase
+                ),
+            );
+        }
+        if run.phase.game_root() == GameRoot::Bg1 {
+            error(
+                findings,
+                RULE_STANDALONE_GAME,
+                format!(
+                    "run {index} ({:?}) targets the Baldur's Gate root, which a standalone {game} collection does not stage",
+                    run.run_id
+                ),
+            );
+        }
+        for arg in &run.args {
+            if *arg == RunArg::StagedRoot(GameRoot::Bg1) {
+                error(
+                    findings,
+                    RULE_STANDALONE_GAME,
+                    format!(
+                        "run {index} ({:?}) passes the Baldur's Gate root as an argument, which a standalone {game} collection does not stage",
+                        run.run_id
+                    ),
+                );
+            }
+        }
     }
 }
 

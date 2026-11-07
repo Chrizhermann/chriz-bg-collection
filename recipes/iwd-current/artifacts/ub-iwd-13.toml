@@ -1,0 +1,32 @@
+id = "ub-iwd-13"
+name = "Unfinished Business for Icewind Dale"
+version = "13"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Gibberlings3/iwd_unfinished_business/releases/download/v13/unfinished-business-for-icewind-dale-v13.iemod"
+reference = "v13"
+expected_filename = "unfinished-business-for-icewind-dale-v13.iemod"
+expected_length = 1555072
+sha256 = "eb12da0f5862d768bbedd7304a5282a1c17af7022df56c7ddac7f36ccb5072c3"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "iemod"
+root_rule = "direct"
+publish_roots = ["ub_iwd"]
+tp2_paths = ["ub_iwd/setup-ub_iwd.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 2097152
+max_total_uncompressed_bytes = 8388608
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Gibberlings3/iwd_unfinished_business"
+license = "Fetch-only official asset; upstream permission required for redistribution"
+url = "https://github.com/Gibberlings3/iwd_unfinished_business/releases/tag/v13"
+reviewed_on = "2026-10-25"

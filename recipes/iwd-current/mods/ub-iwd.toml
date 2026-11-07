@@ -1,0 +1,19 @@
+id = "ub-iwd"
+artifact_id = "ub-iwd-13"
+name = "Unfinished Business for Icewind Dale"
+tp2 = "ub_iwd/setup-ub_iwd.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 300
+name = "Marketh's Ring"
+
+[[components]]
+id = 700
+name = "Actual Shadows in Vale of Shadows [Graion Dilach]"
+
+[[components]]
+id = 800
+name = "Add the Wardstone for Lower Dorn's Deep"

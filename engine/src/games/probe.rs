@@ -221,7 +221,7 @@ pub fn detect_storefront<F: FileSystemProvider>(fs_provider: &F, root: &Path) ->
 }
 
 /// Whether `path` lies in the folder where Windows keeps Microsoft Store apps. Windows
-/// protects it: its files cannot be listed or copied by other programs.
+/// can protect it. This selects the explanation after a real read failure, never eligibility.
 pub(crate) fn is_protected_store_folder(path: &Path) -> bool {
     has_component(path, "windowsapps")
 }
@@ -258,8 +258,11 @@ pub(crate) fn unreadable_candidate(
     role: GameRole,
     storefront: Storefront,
     root: &Path,
-    error: &GameError,
+    _error: &GameError,
 ) -> GameCandidate {
+    if is_protected_store_folder(root) {
+        return protected_candidate(role, root);
+    }
     GameCandidate {
         role,
         storefront,
@@ -268,9 +271,9 @@ pub(crate) fn unreadable_candidate(
         eligibility: Eligibility::Ineligible,
         findings: vec![GameFinding {
             kind: FindingKind::Unreadable,
-            message: format!(
-                "CEBG could not check this game folder ({error}). Close programs that use the game, check that the folder can be read, then check again."
-            ),
+            message:
+                "CEBG cannot read this game folder. Check that it can be read, then try again."
+                    .to_owned(),
             paths: vec![root.to_path_buf()],
         }],
         fingerprint: None,
@@ -321,8 +324,26 @@ pub(crate) fn inspect_profile_paths<F: FileSystemProvider>(
             "no profiles supplied for discovered source",
         ),
     })?;
-    if is_protected_store_folder(root) {
-        return Ok(protected_candidate(profile.role, root));
+    // Try the source itself. A folder name or storefront says nothing about read access.
+    if let Err(source) = fs_provider.read_dir(root) {
+        if matches!(
+            source.kind(),
+            io::ErrorKind::NotFound | io::ErrorKind::NotADirectory
+        ) {
+            return Err(GameError::Io {
+                path: root.to_path_buf(),
+                source,
+            });
+        }
+        return Ok(unreadable_candidate(
+            profile.role,
+            storefront,
+            root,
+            &GameError::Io {
+                path: root.to_path_buf(),
+                source,
+            },
+        ));
     }
     if fs_provider
         .file_kind(root)
@@ -346,9 +367,6 @@ pub(crate) fn inspect_profile_paths<F: FileSystemProvider>(
             path: root.to_path_buf(),
             source,
         })?;
-    if is_protected_store_folder(&canonical_root) {
-        return Ok(protected_candidate(profile.role, &canonical_root));
-    }
     let version_path = canonical_root.join(normalized_path(&profile.executable));
     let (build, version_error) = match direct_relative_kind(
         fs_provider,
@@ -532,6 +550,9 @@ fn inspect_with_profile<F: FileSystemProvider>(
         });
     }
     if !observation.unreadable.is_empty() {
+        if is_protected_store_folder(root) {
+            return Ok(protected_candidate(profile.role, root));
+        }
         let names = observation
             .unreadable
             .iter()

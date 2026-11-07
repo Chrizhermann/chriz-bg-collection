@@ -1,24 +1,29 @@
-; Installer hooks for Chriz Easy BG.
+; Installer hooks for Chriz Easy BG and Chriz Easy IWD.
 ;
 ; Before installing: Tauri's installer writes each file over the installed one,
 ; but in update mode (the in-app updater runs it with /UPDATE), silently (/S)
 ; or after "Do not uninstall" it never removes files an older version shipped.
 ; A recipe file left next to its successor stops the app: two artifacts then
-; disagree about one download (seen in Chriz Easy IWD, 0.1.3 to 0.1.6,
-; 2026-11-04). So the folders the app bundles are emptied before the new files
-; are written and hold exactly this version's files afterwards. The list matches
-; the folders in bundle.resources (tests/package_config.rs).
+; disagree about one download (Chriz Easy IWD 0.1.3 to 0.1.6, 2026-11-04). So
+; the folders an app bundles are emptied before the new files are written and
+; hold exactly this version's files afterwards. Each list matches the folders
+; in that app's bundle.resources (tests/package_config.rs).
 
 !macro NSIS_HOOK_PREINSTALL
   ; The app reads these folders; it must be closed while they are replaced.
   !insertmacro CheckIfAppIsRunning "${MAINBINARYNAME}.exe" "${PRODUCTNAME}"
-  !insertmacro CebgClearBundledFolder "manifest\artifacts"
-  !insertmacro CebgClearBundledFolder "manifest\mods"
-  !insertmacro CebgClearBundledFolder "manifest\presets"
-  !insertmacro CebgClearBundledFolder "manifest\game-builds"
-  !insertmacro CebgClearBundledFolder "manifest\releases"
-  !insertmacro CebgClearBundledFolder "recipes\curated-full-current"
-  !insertmacro CebgClearBundledFolder "hotpatches\bg"
+  !if "${BUNDLEID}" == "dev.chrizhermann.iwdcollection"
+    !insertmacro CebgClearBundledFolder "recipes\iwd-current"
+    !insertmacro CebgClearBundledFolder "hotpatches\iwd"
+  !else
+    !insertmacro CebgClearBundledFolder "manifest\artifacts"
+    !insertmacro CebgClearBundledFolder "manifest\mods"
+    !insertmacro CebgClearBundledFolder "manifest\presets"
+    !insertmacro CebgClearBundledFolder "manifest\game-builds"
+    !insertmacro CebgClearBundledFolder "manifest\releases"
+    !insertmacro CebgClearBundledFolder "recipes\curated-full-current"
+    !insertmacro CebgClearBundledFolder "hotpatches\bg"
+  !endif
 !macroend
 
 !macro CebgClearBundledFolder FOLDER

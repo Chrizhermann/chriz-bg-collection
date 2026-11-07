@@ -251,9 +251,7 @@ fn manual_dragonspear_addition_is_interleaved_and_permanently_blocks_game_update
     assert_eq!(expected[1].component, 2);
     fs::write(fixture.root().join("game/WeiDU.log"), "").unwrap();
     assert!(is_customized(fixture.root()).unwrap());
-    assert!(game_update_guard(fixture.root())
-        .unwrap_err()
-        .contains("app updates remain available"));
+    game_update_guard(fixture.root()).unwrap();
     assert!(verify_accepted_current(
         fixture.root(),
         &fixture.checkpoints[0],
@@ -262,6 +260,42 @@ fn manual_dragonspear_addition_is_interleaved_and_permanently_blocks_game_update
         &fixture.manifest.artifacts
     )
     .is_err());
+}
+
+#[test]
+fn manual_addition_to_a_standalone_game_needs_no_bg1_folder() {
+    // A standalone game such as IWD:EE is staged in `game` alone.
+    let fixture = Fixture::new();
+    fs::remove_dir(fixture.root().join("bg1")).unwrap();
+    fixture.begin();
+    let paused = paused_status(fixture.root(), &fixture.checkpoints[0]).unwrap();
+    assert_eq!(paused.target, GameRoot::Bg2);
+    assert_eq!(paused.target_path, fixture.root().join("game"));
+    fixture.add("game", "Other/setup-Other.tp2", 0, "Other/backup");
+    let reviewed = fixture.review().unwrap();
+    assert_eq!(reviewed.status.additions.len(), 1);
+    accept(fixture.root(), &fixture.checkpoints[0], &reviewed).unwrap();
+    verify_accepted_current(
+        fixture.root(),
+        &fixture.checkpoints[0],
+        &fixture.plan,
+        &fixture.manifest.mods,
+        &fixture.manifest.artifacts,
+    )
+    .unwrap();
+    assert!(is_customized(fixture.root()).unwrap());
+    assert!(!fixture.root().join("bg1").exists());
+
+    // A BG1 folder that appears during such a pause is a change outside the shown target.
+    let fixture = Fixture::new();
+    fs::remove_dir(fixture.root().join("bg1")).unwrap();
+    fixture.begin();
+    fs::create_dir(fixture.root().join("bg1")).unwrap();
+    assert!(fixture
+        .review()
+        .err()
+        .unwrap()
+        .contains("other game folder"));
 }
 
 #[test]
@@ -379,7 +413,7 @@ fn manual_acceptance_uses_exact_reviewed_bytes_and_later_mutation_blocks_resume(
 }
 
 #[test]
-fn manual_file_copy_without_weidu_additions_and_wrong_target_resources_are_rejected() {
+fn manual_file_copies_are_accepted_and_wrong_target_resources_stay_protected() {
     let fixture = Fixture::new();
     fixture.begin();
     fs::create_dir(fixture.root().join("game/override")).unwrap();
@@ -388,7 +422,12 @@ fn manual_file_copy_without_weidu_additions_and_wrong_target_resources_are_rejec
         b"copy-only mod",
     )
     .unwrap();
-    assert!(fixture.review().err().unwrap().contains("File-copy mods"));
+    let reviewed = fixture.review().unwrap();
+    assert!(reviewed.status.additions.is_empty());
+    assert_eq!(
+        fs::read(fixture.root().join("game/override/new.spl")).unwrap(),
+        b"copy-only mod"
+    );
     let fixture = Fixture::new();
     fixture.begin();
     fixture.add("game", "Other/setup-Other.tp2", 0, "Other/backup");

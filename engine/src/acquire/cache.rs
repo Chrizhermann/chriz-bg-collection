@@ -279,6 +279,7 @@ impl ArtifactCache {
     ) -> Result<AcquiredArtifact, AcquireError> {
         let digest = validate_request(request)?;
         validate_download_url(&request.url)?;
+        request.route.check_request(&request.url)?;
         let paths = self.paths(request, &digest);
 
         let mut repaired = None;
@@ -564,10 +565,10 @@ impl ArtifactCache {
         policy: LengthPolicy,
     ) -> Result<HttpResponse, AttemptFailure> {
         match policy {
-            LengthPolicy::Reviewed => self.client.get_with_reviewed_redirects(
+            LengthPolicy::Reviewed => self.client.get_with_redirect_policy(
                 &request.url,
                 range,
-                &request.redirect_hosts,
+                request.route.redirect_policy(&request.redirect_hosts),
             ),
             LengthPolicy::Served { .. } => self
                 .client
@@ -904,6 +905,12 @@ fn stream_response(
     resume: Option<&ResumeCandidate>,
     policy: LengthPolicy,
 ) -> Result<TransferResult, AttemptFailure> {
+    // Before anything is written: a page instead of the archive is not a partial download.
+    match policy {
+        LengthPolicy::Reviewed => request.route.check_response(&response),
+        LengthPolicy::Served { .. } => request.route.check_served_response(&response),
+    }
+    .map_err(AttemptFailure::Fatal)?;
     let start = resume.map_or(0, |candidate| candidate.start);
     let truncate = resume.is_none();
     let response_length = header_u64(&response.response, "content-length");
@@ -1375,7 +1382,8 @@ mod tests {
     };
     use crate::acquire::http::{HttpClient, HttpTimeouts};
     use crate::acquire::{
-        AcquireError, ArchiveFormat, ArchiveLimits, CacheDisposition, DownloadRequest, StopSignal,
+        AcquireError, ArchiveFormat, ArchiveLimits, CacheDisposition, DownloadRequest,
+        DownloadRoute, StopSignal,
     };
     use crate::events::{ChannelSink, EngineEvent, Stream};
 
@@ -1387,6 +1395,7 @@ mod tests {
             expected_sha256: "0".repeat(64),
             redirect_hosts: Vec::new(),
             max_attempts,
+            route: DownloadRoute::Generic,
         }
     }
 
@@ -1574,6 +1583,7 @@ mod tests {
                 .to_owned(),
             redirect_hosts: Vec::new(),
             max_attempts: 1,
+            route: DownloadRoute::Generic,
         };
 
         assert!(validate_request(&request).is_ok());
@@ -1699,6 +1709,7 @@ mod tests {
             expected_sha256: hex::encode(Sha256::digest(bytes)),
             redirect_hosts: Vec::new(),
             max_attempts: 1,
+            route: DownloadRoute::Generic,
         }
     }
 

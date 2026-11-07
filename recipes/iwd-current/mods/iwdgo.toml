@@ -1,0 +1,11 @@
+id = "iwdgo"
+artifact_id = "iwdgo-fda64dea40a33336d1e60d54584a4a6c6a4667d6"
+name = "Icewind Dale Graphical Overhaul"
+tp2 = "iwdgo/iwdgo.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Icewind Dale Graphical Overhaul Core"

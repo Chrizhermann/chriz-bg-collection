@@ -282,9 +282,24 @@ pub fn read_logs(root: &Path) -> Result<(String, String), String> {
     Ok((read("bg1")?, read("game")?))
 }
 
+/// Staged game folders present below `root`: `game` always, and `bg1` for an EET install.
+///
+/// A standalone install has no `bg1` folder. An EET folder that disappears after a pause began
+/// is still detected, because its inventory and logs no longer match the saved baseline.
+fn staged_game_folders(root: &Path) -> Result<Vec<(GameRoot, &'static str)>, String> {
+    let mut folders = Vec::new();
+    match fs::symlink_metadata(root.join("bg1")) {
+        Ok(_) => folders.push((GameRoot::Bg1, "bg1")),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => return Err(e.to_string()),
+    }
+    folders.push((GameRoot::Bg2, "game"));
+    Ok(folders)
+}
+
 fn diagnostic_files(root: &Path) -> Result<BTreeMap<String, DiagnosticEvidence>, String> {
     let mut files = BTreeMap::new();
-    for target in ["bg1", "game"] {
+    for (_, target) in staged_game_folders(root)? {
         for entry in fs::read_dir(root.join(target)).map_err(|e| e.to_string())? {
             let entry = entry.map_err(|e| e.to_string())?;
             let name = entry.file_name().to_string_lossy().into_owned();
@@ -373,7 +388,7 @@ pub fn begin(
 
 fn game_inventory(root: &Path) -> Result<BTreeMap<GameRoot, String>, String> {
     let mut result = BTreeMap::new();
-    for (target, folder) in [(GameRoot::Bg1, "bg1"), (GameRoot::Bg2, "game")] {
+    for (target, folder) in staged_game_folders(root)? {
         let directory = root.join(folder);
         let mut entries = BTreeMap::new();
         for entry in walkdir::WalkDir::new(&directory).follow_links(false) {
@@ -602,9 +617,8 @@ pub fn is_customized(root: &Path) -> Result<bool, String> {
 }
 
 pub fn game_update_guard(root: &Path) -> Result<(), String> {
-    if is_customized(root)? {
-        return Err("Customized — manual mods added. Game hotpatches and whole-mod upgrades are disabled for this installation. CEBG app updates remain available.".into());
-    }
+    // Parse our acceptance records, but player additions do not disable updates.
+    is_customized(root)?;
     Ok(())
 }
 
@@ -802,9 +816,6 @@ pub fn review(
         });
     }
     let diagnostics = diagnostic_files(root)?;
-    if additions.is_empty() && baseline.game_files != game_files {
-        return Err("Game files changed without appended WeiDU components. File-copy mods are outside this feature; restore the checkpoint files before continuing without additions.".into());
-    }
     let mut summaries = Vec::new();
     for (name, content) in &diagnostics {
         if baseline.diagnostics.get(name) == Some(content) {
@@ -819,9 +830,9 @@ pub fn review(
         ));
     }
     if !additions.is_empty() && summaries.is_empty() {
-        summaries.push("No new installer debug log was available. Log additions and namespaces were checked; successful installation and compatibility are not proven.".into());
+        summaries.push("No new installer debug log was available. Mod-list additions and namespaces were checked; no installer result was available.".into());
     }
-    summaries.push("Only appended WeiDU components are supported. Managed source/backup checks compare file names, sizes and modification times; they do not prove arbitrary resource compatibility or detect deliberate metadata-preserving edits. File-copy mods are outside this feature. Reported versions are author text, not source hashes.".into());
+    summaries.push("Manual WeiDU components must be appended. Player file changes are included in the accepted snapshot. Managed source/backup checks compare file names, sizes and modification times; they do not detect deliberate metadata-preserving edits. Reported versions are author text, not source hashes.".into());
     let review_token = sha256_bytes(
         &serde_json::to_vec(&(
             root,

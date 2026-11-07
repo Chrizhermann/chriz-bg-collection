@@ -17,6 +17,7 @@
 //! without access to their content, since a starting game that finds its log opened for reading
 //! writes no log.
 
+use std::borrow::Cow;
 use std::collections::BTreeSet;
 use std::fs;
 use std::io::{ErrorKind, Read, Seek, SeekFrom};
@@ -28,7 +29,7 @@ use serde::Serialize;
 
 use crate::digest::sha256_bytes;
 use crate::held_folder::{EntryError, EntryErrorKind, HeldFolder};
-use crate::lock::TargetLock;
+use crate::lock::TargetLockNamespace;
 use crate::preflight::{PreflightError, PreflightHost, SystemPreflight};
 
 /// The log file CEBG sets, in the game folder.
@@ -152,20 +153,26 @@ pub fn status(managed_root: &Path) -> GameLogStatus {
 }
 
 /// Turn the game log of the installation in `managed_root` on or off for the next game start.
-/// Only the `LogFile` value in the `[General]` section of `InfinityLoader.ini` changes, and only
-/// when it is not already as requested. A log set outside CEBG counts as on.
-pub fn set(app_data: &Path, managed_root: &Path, enabled: bool) -> Result<GameLogStatus, String> {
-    set_with(app_data, managed_root, enabled, &SystemPreflight)
+/// Sets the owned `LogFile` key in `[General]`, creating the section when absent. Unrelated
+/// text stays in place; UTF-16 is written in the byte order Windows reads. A log set outside
+/// CEBG counts as on.
+pub fn set(
+    locks: &TargetLockNamespace,
+    managed_root: &Path,
+    enabled: bool,
+) -> Result<GameLogStatus, String> {
+    set_with(locks, managed_root, enabled, &SystemPreflight)
 }
 
 /// [`set`] with the programs that run supplied by `host`.
 pub fn set_with(
-    app_data: &Path,
+    locks: &TargetLockNamespace,
     managed_root: &Path,
     enabled: bool,
     host: &dyn PreflightHost,
 ) -> Result<GameLogStatus, String> {
-    let _lock = TargetLock::try_acquire(app_data.join("locks"), managed_root)
+    let _lock = locks
+        .try_acquire(managed_root)
         .map_err(|error| format!("This installation is in use: {error}"))?;
     crate::patches::launch_guard(managed_root)?;
     crate::mod_upgrades::launch_guard(managed_root)?;
@@ -201,7 +208,8 @@ fn set_in(game: &HeldFolder, enabled: bool) -> Result<(), String> {
         ((GameLogSetting::Off, _), true) => ini.with_value(LOG_FILE.as_bytes()),
         ((GameLogSetting::On | GameLogSetting::Other, _), false) => ini.with_value(b""),
     };
-    let after = after.ok_or_else(|| format!("{INI} has no [General] section."))?;
+    let after =
+        after.ok_or_else(|| format!("{INI} has malformed text and could not be edited."))?;
     game.replace_file(INI, &after)
         .map_err(|error| format!("{}: {error}", game.path().join(INI).display()))
 }
@@ -455,9 +463,11 @@ fn entry_message(error: EntryError) -> String {
 /// around it and without one pair of quotes around it. A line ends at a line feed, a carriage
 /// return or both, and each line keeps its own line ending, so a change to the value leaves every
 /// other byte as it was. A byte order mark is part of the first line, as Windows reads it, and a
-/// file saved as UTF-16 is not changed.
+/// valid UTF-16 file is written in the little-endian form Windows reads.
 struct LoaderIni<'a> {
-    bytes: &'a [u8],
+    bytes: Cow<'a, [u8]>,
+    utf16_big_endian: Option<bool>,
+    malformed_utf16: bool,
     /// The first `[General]` header line, its line ending included.
     general: Option<Range<usize>>,
     /// The first `LogFile` line in that section.
@@ -472,7 +482,40 @@ struct LogFileLine {
 }
 
 impl<'a> LoaderIni<'a> {
-    fn parse(bytes: &'a [u8]) -> Self {
+    fn parse(original: &'a [u8]) -> Self {
+        let utf16_big_endian = if original.starts_with(b"\xFF\xFE") {
+            Some(false)
+        } else if original.starts_with(b"\xFE\xFF") {
+            Some(true)
+        } else {
+            None
+        };
+        let mut malformed_utf16 = false;
+        let decoded = match utf16_big_endian {
+            Some(big_endian) => {
+                let content = &original[2..];
+                let units = content
+                    .chunks_exact(2)
+                    .map(|pair| {
+                        let pair = [pair[0], pair[1]];
+                        if big_endian {
+                            u16::from_be_bytes(pair)
+                        } else {
+                            u16::from_le_bytes(pair)
+                        }
+                    })
+                    .collect::<Vec<_>>();
+                match String::from_utf16(&units) {
+                    Ok(text) if content.len().is_multiple_of(2) => Cow::Owned(text.into_bytes()),
+                    _ => {
+                        malformed_utf16 = true;
+                        Cow::Borrowed(original)
+                    }
+                }
+            }
+            None => Cow::Borrowed(original),
+        };
+        let bytes = decoded.as_ref();
         let mut general = None;
         let mut log_file = None;
         let mut in_general = false;
@@ -502,7 +545,9 @@ impl<'a> LoaderIni<'a> {
             start = end;
         }
         Self {
-            bytes,
+            bytes: decoded,
+            utf16_big_endian,
+            malformed_utf16,
             general,
             log_file,
         }
@@ -511,18 +556,12 @@ impl<'a> LoaderIni<'a> {
     /// The setting, with the configured file for [`GameLogSetting::Other`] or why it is
     /// [`GameLogSetting::Unavailable`].
     fn setting(&self) -> (GameLogSetting, Option<String>) {
-        if self.bytes.starts_with(b"\xFF\xFE") || self.bytes.starts_with(b"\xFE\xFF") {
+        if self.malformed_utf16 {
             return (
                 GameLogSetting::Unavailable,
                 Some(format!(
-                    "{INI} is saved as UTF-16, which CEBG does not change."
+                    "{INI} has malformed UTF-16 text and could not be edited."
                 )),
-            );
-        }
-        if self.general.is_none() {
-            return (
-                GameLogSetting::Unavailable,
-                Some(format!("{INI} has no [General] section.")),
             );
         }
         match self.configured() {
@@ -538,7 +577,12 @@ impl<'a> LoaderIni<'a> {
     }
 
     /// The log file the loader writes, `None` when it writes none.
-    fn configured(&self) -> Option<&'a [u8]> {
+    fn configured(&self) -> Option<&[u8]> {
+        // Windows does not read big-endian UTF-16 INIs. Decode them for editing, but
+        // report the setting the loader actually sees until a write normalizes them.
+        if self.utf16_big_endian == Some(true) {
+            return None;
+        }
         let line = self.log_file.as_ref()?;
         let value = trim(&self.bytes[line.value.clone()]);
         let value = match value {
@@ -548,32 +592,59 @@ impl<'a> LoaderIni<'a> {
         (!value.is_empty()).then_some(value)
     }
 
-    /// These bytes with `value` as the log file: in place of the value of the first `LogFile`
-    /// line, or in a new line right after the `[General]` header. `None` without that section.
+    /// Set the owned key, creating its section when absent. Only malformed encoding
+    /// prevents this file from being edited; old values and layout do not.
     fn with_value(&self, value: &[u8]) -> Option<Vec<u8>> {
-        let bytes = self.bytes;
-        if let Some(line) = &self.log_file {
-            return Some([&bytes[..line.value.start], value, &bytes[line.value.end..]].concat());
+        if self.malformed_utf16 {
+            return None;
         }
-        let header = self.general.clone()?;
-        let line = [b"LogFile=".as_slice(), value].concat();
-        Some(match ending_of(&bytes[header.clone()]) {
-            // The header is the last line.
-            [] => [bytes, line_ending(bytes), &line].concat(),
-            ending => [&bytes[..header.end], &line, ending, &bytes[header.end..]].concat(),
-        })
+        let bytes = self.bytes.as_ref();
+        let changed = if let Some(line) = &self.log_file {
+            [&bytes[..line.value.start], value, &bytes[line.value.end..]].concat()
+        } else {
+            let line = [b"LogFile=".as_slice(), value].concat();
+            if let Some(header) = self.general.clone() {
+                match ending_of(&bytes[header.clone()]) {
+                    [] => [bytes, line_ending(bytes), &line].concat(),
+                    ending => [&bytes[..header.end], &line, ending, &bytes[header.end..]].concat(),
+                }
+            } else {
+                let ending = line_ending(bytes);
+                let separator = if bytes.is_empty() || !ending_of(bytes).is_empty() {
+                    &b""[..]
+                } else {
+                    ending
+                };
+                [bytes, separator, b"[General]", ending, &line, ending].concat()
+            }
+        };
+        Some(self.encoded(changed))
+    }
+
+    fn encoded(&self, bytes: Vec<u8>) -> Vec<u8> {
+        match self.utf16_big_endian {
+            None => bytes,
+            Some(_) => std::iter::once(0xFEFF_u16)
+                .chain(
+                    std::str::from_utf8(&bytes)
+                        .expect("decoded UTF-16 and authored ASCII")
+                        .encode_utf16(),
+                )
+                .flat_map(u16::to_le_bytes)
+                .collect(),
+        }
     }
 
     /// These bytes without the first `LogFile` line, as before such a line was added.
     fn without_line(&self) -> Option<Vec<u8>> {
         let line = self.log_file.as_ref()?;
-        let bytes = self.bytes;
+        let bytes = self.bytes.as_ref();
         let mut start = line.line.start;
         if ending_of(&bytes[line.line.clone()]).is_empty() {
             // The last line: a line ending was added before it, too.
             start -= ending_of(&bytes[..start]).len();
         }
-        Some([&bytes[..start], &bytes[line.line.end..]].concat())
+        Some(self.encoded([&bytes[..start], &bytes[line.line.end..]].concat()))
     }
 }
 
@@ -641,6 +712,11 @@ fn trim(mut bytes: &[u8]) -> &[u8] {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A lock namespace inside the test's own folder.
+    fn test_locks(temp: &Path) -> TargetLockNamespace {
+        TargetLockNamespace::in_local_application_data(temp.join("local")).unwrap()
+    }
     use crate::held_folder::tests::entries;
     use std::fs;
 
@@ -761,7 +837,7 @@ mod tests {
 
     /// Section names as Windows reads them: up to the first `]` or the end of the line, without
     /// the spaces around them. A byte order mark belongs to the first line, so a header there is
-    /// none, and a file saved as UTF-16 is never changed.
+    /// none. UTF-16 edits use the little-endian encoding understood by Windows.
     #[test]
     fn section_headers_are_read_as_windows_reads_them() {
         for (ini, expected) in [
@@ -771,7 +847,7 @@ mod tests {
             ),
             (
                 &b"[\tgeneral ; note\nLogFile=x.log\n"[..],
-                GameLogSetting::Unavailable,
+                GameLogSetting::Off,
             ),
             (
                 &b"[ General\nLogFile=InfinityLoader.log\n"[..],
@@ -783,11 +859,11 @@ mod tests {
             ),
             (
                 &b"[Gen]eral]\nLogFile=InfinityLoader.log\n"[..],
-                GameLogSetting::Unavailable,
+                GameLogSetting::Off,
             ),
             (
                 &b"\xEF\xBB\xBF[General]\nLogFile=InfinityLoader.log\n"[..],
-                GameLogSetting::Unavailable,
+                GameLogSetting::Off,
             ),
             (
                 &b"\xEF\xBB\xBF\n[General]\nLogFile=\n"[..],
@@ -806,13 +882,11 @@ mod tests {
             .chain("[General]\r\nLogFile=\r\n".encode_utf16())
             .flat_map(u16::to_le_bytes)
             .collect();
-        assert_eq!(
-            setting(&utf16),
-            (
-                GameLogSetting::Unavailable,
-                Some("InfinityLoader.ini is saved as UTF-16, which CEBG does not change.".into())
-            )
-        );
+        assert_eq!(setting(&utf16), (GameLogSetting::Off, None));
+        let changed = with_value(&utf16, LOG_FILE);
+        assert!(changed.starts_with(b"\xFF\xFE"));
+        assert_eq!(setting(&changed), (GameLogSetting::On, None));
+        assert_eq!(with_value(&changed, ""), utf16);
     }
 
     /// The log file as the loader gets it: each case where reading by hand could go wrong,
@@ -829,7 +903,19 @@ mod tests {
         }
         let crlf = EEEX_INI.replace('\n', "\r\n");
         let enabled = on(EEEX_INI);
+        let unicode: Vec<u8> = std::iter::once(0xFEFF_u16)
+            .chain(enabled.encode_utf16())
+            .flat_map(u16::to_le_bytes)
+            .collect();
+        let big_endian: Vec<u8> = std::iter::once(0xFEFF_u16)
+            .chain(enabled.encode_utf16())
+            .flat_map(u16::to_be_bytes)
+            .collect();
+        let normalized = with_value(&big_endian, LOG_FILE);
         let cases: Vec<&[u8]> = vec![
+            &unicode,
+            &big_endian,
+            &normalized,
             EEEX_INI.as_bytes(),
             crlf.as_bytes(),
             enabled.as_bytes(),
@@ -1000,17 +1086,49 @@ mod tests {
     }
 
     #[test]
-    fn an_ini_without_a_general_section_is_unavailable() {
-        for ini in [
-            &b""[..],
-            b"[Other]\nLogFile=InfinityLoader.log\n",
-            b"\xFF\xFE[\0G\0",
+    fn missing_sections_are_created_and_valid_encodings_are_preserved() {
+        for text in [
+            "",
+            "[Other]\nLogFile=another.log\n",
+            "Kommentar=anderer Text\r\n",
         ] {
-            assert_eq!(setting(ini).0, GameLogSetting::Unavailable);
-            assert!(LoaderIni::parse(ini)
-                .with_value(LOG_FILE.as_bytes())
-                .is_none());
+            for encoding in [None, Some(false), Some(true)] {
+                let bytes = match encoding {
+                    None => text.as_bytes().to_vec(),
+                    Some(big_endian) => std::iter::once(0xFEFF_u16)
+                        .chain(text.encode_utf16())
+                        .flat_map(|unit| {
+                            if big_endian {
+                                unit.to_be_bytes()
+                            } else {
+                                unit.to_le_bytes()
+                            }
+                        })
+                        .collect(),
+                };
+                let changed = with_value(&bytes, LOG_FILE);
+                let preserved = if encoding == Some(true) {
+                    std::iter::once(0xFEFF_u16)
+                        .chain(text.encode_utf16())
+                        .flat_map(u16::to_le_bytes)
+                        .collect::<Vec<_>>()
+                } else {
+                    bytes.clone()
+                };
+                assert!(changed.starts_with(&preserved));
+                assert_eq!(setting(&changed), (GameLogSetting::On, None));
+                assert_eq!(with_value(&changed, LOG_FILE), changed);
+                assert_eq!(
+                    setting(&with_value(&changed, "")),
+                    (GameLogSetting::Off, None)
+                );
+            }
         }
+        let malformed = b"\xFF\xFE[\0G";
+        assert_eq!(setting(malformed).0, GameLogSetting::Unavailable);
+        assert!(LoaderIni::parse(malformed)
+            .with_value(LOG_FILE.as_bytes())
+            .is_none());
     }
 
     /// Only a change of the game-log setting, as CEBG makes it, keeps the file unchanged.
@@ -1142,7 +1260,7 @@ mod tests {
     #[test]
     fn the_switch_changes_only_the_log_setting_and_only_when_needed() {
         let temp = tempfile::tempdir().unwrap();
-        let app = temp.path().join("app");
+        let app = test_locks(temp.path());
         let root = installation(temp.path(), EEEX_INI.as_bytes());
         let none = Programs(vec![]);
 
@@ -1181,7 +1299,7 @@ mod tests {
     #[test]
     fn the_switch_refuses_while_the_game_runs_or_the_installation_is_busy() {
         let temp = tempfile::tempdir().unwrap();
-        let app = temp.path().join("app");
+        let app = test_locks(temp.path());
         let root = installation(temp.path(), EEEX_INI.as_bytes());
         let game = root.join(GAME).join("Baldur.exe");
         fs::write(&game, b"game").unwrap();
@@ -1198,7 +1316,7 @@ mod tests {
         set_with(&app, &root, true, &Programs(vec![elsewhere])).unwrap();
         assert_eq!(ini_of(&root), on(EEEX_INI).as_bytes());
 
-        let lock = TargetLock::try_acquire(app.join("locks"), &root).unwrap();
+        let lock = app.try_acquire(&root).unwrap();
         let error = set_with(&app, &root, false, &Programs(vec![])).unwrap_err();
         assert!(error.starts_with("This installation is in use"), "{error}");
         drop(lock);
@@ -1212,15 +1330,17 @@ mod tests {
     }
 
     #[test]
-    fn the_switch_refuses_an_ini_it_cannot_change() {
+    fn the_switch_creates_its_section_but_refuses_non_file_entries() {
         let temp = tempfile::tempdir().unwrap();
-        let app = temp.path().join("app");
+        let app = test_locks(temp.path());
         let root = installation(temp.path(), b"[Other]\nLogFile=\n");
         let none = Programs(vec![]);
 
-        let error = set_with(&app, &root, true, &none).unwrap_err();
-        assert_eq!(error, "InfinityLoader.ini has no [General] section.");
-        assert_eq!(ini_of(&root), b"[Other]\nLogFile=\n");
+        set_with(&app, &root, true, &none).unwrap();
+        assert_eq!(
+            ini_of(&root),
+            b"[Other]\nLogFile=\n[General]\nLogFile=InfinityLoader.log\n"
+        );
 
         fs::remove_file(root.join(GAME).join(INI)).unwrap();
         fs::create_dir(root.join(GAME).join(INI)).unwrap();
@@ -1272,7 +1392,7 @@ mod tests {
             let recorded = sha256_bytes(&original);
 
             let temp = tempfile::tempdir().unwrap();
-            let app = temp.path().join("app");
+            let app = test_locks(temp.path());
             let root = installation(temp.path(), &original);
             // Switched to the other setting, then back.
             for enabled in [
@@ -1486,7 +1606,7 @@ mod tests {
         use crate::held_folder::tests::junction;
 
         let temp = tempfile::tempdir().unwrap();
-        let app = temp.path().join("app");
+        let app = test_locks(temp.path());
         let outside = installation(&temp.path().join("outside"), EEEX_INI.as_bytes());
         let none = Programs(vec![]);
 

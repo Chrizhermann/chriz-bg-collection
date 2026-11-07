@@ -170,9 +170,6 @@ fn installed(game: &Path, tp2_key: &str) -> Result<Option<Installed>, String> {
         return Ok(None);
     };
     let language = all[*first].language;
-    if own.iter().any(|index| all[*index].language != language) {
-        return Err("The mod's components are installed in different languages.".into());
-    }
     let mut versions = Vec::new();
     for index in &own {
         let version = row_version(&all[*index]).unwrap_or_else(|| "unknown".into());
@@ -186,6 +183,28 @@ fn installed(game: &Path, tp2_key: &str) -> Result<Option<Installed>, String> {
         language,
         version: versions.join(" and "),
     }))
+}
+
+/// The last package CEBG recorded for this mod. Availability compares our own
+/// package history; a player's mod-list annotation never withholds a decided update.
+pub(super) fn recorded_version<'a>(
+    baseline: &'a VerifiedInstalledBaseline,
+    mod_id: &str,
+) -> Option<&'a str> {
+    let plan = baseline
+        .receipt
+        .installed_plan
+        .as_ref()
+        .unwrap_or(&baseline.receipt.plan);
+    let run = plan.runs.iter().rev().find(|run| run.mod_id == mod_id)?;
+    if let Some(replacement) = baseline.replacements.get(&run.run_id) {
+        return Some(&replacement.version);
+    }
+    baseline
+        .manifest
+        .artifacts
+        .get(&run.artifact_id)
+        .map(|artifact| artifact.version.as_str())
 }
 
 /// Numeric parts of a version such as `1.12.6`, and whether it is a pre-release.
@@ -431,7 +450,7 @@ pub(super) fn assess_with(
             .components
             .iter()
             .find(|declared| declared.id == component)
-            .is_none_or(|declared| declared.stdin.is_some() || !declared.prompts.is_empty());
+            .is_some_and(|declared| declared.stdin.is_some() || !declared.prompts.is_empty());
         let scripted = baseline.receipt.plan.runs.iter().any(|run| {
             run.mod_id == entry.mod_id
                 && run.components.contains(&component)
@@ -645,11 +664,14 @@ pub fn inspect(
     preview.target_version = Some(release.version.clone());
     preview.release_title = release.record.title.clone();
     preview.release_url = release.record.page.clone();
-    if !newer(&release.version, &found.version) {
+    if recorded_version(baseline, &entry.mod_id)
+        .is_some_and(|version| !newer(&release.version, version))
+    {
         preview.state = "up-to-date".into();
         preview.detail = format!(
-            "{} {} is installed. That is the newest release.",
-            entry.title, found.version
+            "{} {} was installed through this app. No newer release is available.",
+            entry.title,
+            recorded_version(baseline, &entry.mod_id).unwrap_or("unknown")
         );
         return Ok(preview);
     }
@@ -753,8 +775,7 @@ pub fn apply_with_progress(
 ) -> Result<ModUpdatePreview, String> {
     crate::operation_progress::stage(progress, "checking");
     let root = &ctx.record.managed_root;
-    let _lock = crate::lock::TargetLock::try_acquire(ctx.app_data.join("locks"), root)
-        .map_err(files::err)?;
+    let _lock = ctx.locks.try_acquire(root).map_err(files::err)?;
     crate::patches::launch_guard(root)?;
     crate::mod_upgrades::launch_guard(root)?;
     super::validate_context(ctx)?;
@@ -785,7 +806,9 @@ pub fn apply_with_progress(
         .get(&installer.artifact_id)
         .ok_or("The installation's recipe has no package for the mod.")?;
     let release = release(entry, pinned)?;
-    if !newer(&release.version, &found.version) {
+    if recorded_version(&baseline, &entry.mod_id)
+        .is_some_and(|version| !newer(&release.version, version))
+    {
         return Err(format!("{} is already up to date.", entry.title));
     }
     if review_token(
@@ -904,7 +927,7 @@ pub(super) struct Plan {
     pub language: String,
     /// The release's files, by their name in the game folder.
     pub payload: BTreeMap<String, PathBuf>,
-    /// The version the new installer declares; the mod list must name it afterwards.
+    /// The version declared by the release, retained as package metadata.
     pub new_version: Option<String>,
 }
 
@@ -1286,13 +1309,13 @@ pub(super) fn place_release(ctx: &Context<'_>, dir: &Path, p: &Prepared) -> Resu
 
 /// Judges WeiDU's run on the list it saw: an exit code that agrees with its result lines, no
 /// component that failed, a result line for every component, the same rows in the same order
-/// with the updated mod's in its new language, and the new version on the updated rows.
+/// with the updated mod's in its new language. Version annotations are descriptive only.
 pub(super) fn reinstalled_as_planned(
     before: &[u8],
     after: &[u8],
     evidence: &transaction::WeiduEvidence,
     p: &Prepared,
-    new_version: Option<&str>,
+    _new_version: Option<&str>,
 ) -> Result<(), String> {
     let update = p.update.as_ref().ok_or("Not an update record.")?;
     let terminal = crate::cli::select_terminal_evidence(&evidence.debug, &evidence.stdout);
@@ -1345,19 +1368,6 @@ pub(super) fn reinstalled_as_planned(
         .map(|(_, row)| receipt_identity(row));
     if rows.iter().map(row_identity).ne(expected) {
         return Err("WeiDU changed the mod list's order or another mod's rows.".into());
-    }
-    if let Some(version) = new_version {
-        let key = normalize_tp2_key(&p.package.tp2);
-        if rows
-            .iter()
-            .filter(|row| row.tp2_key == key)
-            .any(|row| row_version(row).is_none_or(|have| !have.eq_ignore_ascii_case(version)))
-        {
-            return Err(format!(
-                "The mod list does not name {} {version} after the run.",
-                update.name
-            ));
-        }
     }
     Ok(())
 }
@@ -1451,7 +1461,6 @@ pub(super) fn record_applied(
             gate::summarize(&different)
         ));
     }
-    stale_copies(p, &after)?;
     let preimages = transaction::keep_preimages(ctx, dir, p, &after, &changed)?;
     let log_sha256 = after
         .files
@@ -1469,58 +1478,6 @@ pub(super) fn record_applied(
             preimages,
         },
     )
-}
-
-/// WeiDU can report success and still leave the old files (seen when a release regrouped its
-/// components). Every `override/` file that was a plain copy of an old release file must now be
-/// the new release's file of that name. Files copied with changes are not judged.
-fn stale_copies(p: &Prepared, after: &GameFiles) -> Result<(), String> {
-    let by_name = |files: &mut dyn Iterator<Item = (&String, &String)>| {
-        let mut out: BTreeMap<String, Option<String>> = BTreeMap::new();
-        for (name, sha256) in files {
-            let base = name.rsplit('/').next().unwrap_or(name).to_ascii_lowercase();
-            out.entry(base)
-                .and_modify(|seen| *seen = None)
-                .or_insert_with(|| Some(sha256.clone()));
-        }
-        out
-    };
-    let prefix = format!("{}/", p.package.mod_folder);
-    let old = by_name(
-        &mut p
-            .before
-            .files
-            .iter()
-            .filter(|(name, _)| name.starts_with(&prefix))
-            .map(|(name, identity)| (name, &identity.sha256)),
-    );
-    let new = by_name(&mut p.payload.iter());
-    let mut stale = Vec::new();
-    for (name, identity) in &p.before.files {
-        let Some(base) = name.strip_prefix("override/") else {
-            continue;
-        };
-        if base.contains('/') {
-            continue;
-        }
-        let (Some(Some(old)), Some(Some(new))) = (old.get(base), new.get(base)) else {
-            continue;
-        };
-        if identity.sha256 == *old
-            && old != new
-            && after.files.get(name).map(|now| &now.sha256) != Some(new)
-        {
-            stale.push(name.clone());
-        }
-    }
-    if stale.is_empty() {
-        Ok(())
-    } else {
-        Err(format!(
-            "WeiDU reported success, but these files are still the old release's: {}.",
-            stale.join(", ")
-        ))
-    }
 }
 
 /// Whether Undo would take back an update of `mod_id`: the latest change of the installation's

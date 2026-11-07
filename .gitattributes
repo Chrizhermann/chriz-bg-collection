@@ -6,3 +6,6 @@ LICENSES/supplemental/** -text
 
 # Detached catalog signature authenticates exact bytes, independent of checkout EOLs.
 patches/** -text
+
+# Legacy record goldens pin the exact bytes older engines wrote; never rewrite their line endings.
+engine/tests/fixtures/compat/** -text

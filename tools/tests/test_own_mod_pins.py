@@ -116,8 +116,7 @@ class Fixture:
                 resources[f"../../{recipe}/"] = f"{recipe}/"
         self.write(f"app/src-tauri/{config}", json.dumps({"bundle": {"resources": resources}}))
 
-    def registry(self, extra: str = "", *, iwd_branch: str | None = None) -> None:
-        branch = f'branch = "{iwd_branch}"\n' if iwd_branch else ""
+    def registry(self, extra: str = "") -> None:
         self.write("manifest/own-mods.toml", f"""schema = 1
 account = "{ACCOUNT}"
 
@@ -130,7 +129,7 @@ recipes = ["manifest", "recipes/curated"]
 id = "iwd"
 name = "IWD"
 recipes = ["recipes/iwd"]
-{branch}
+
 [[mods]]
 id = "buffbot"
 name = "BuffBot"
@@ -427,32 +426,17 @@ decided = "2026-10-28"
         self.assertEqual(own_mod_pins.bundled_recipe_roots(self.fixture.root)
                          ["app/src-tauri/tauri.iwd.conf.json"], ["recipes/iwd"])
 
-    def test_an_installer_on_another_branch_is_read_from_that_branch(self) -> None:
-        fixture = self.fixture
-        self.standard(iwd_buffbot="v1.1.0")
-        fixture.git("init", "-q", "-b", "trunk")
-        fixture.git("add", "-A")
-        fixture.git("commit", "-q", "-m", "iwd on v1.1.0")
-        fixture.git("update-ref", "refs/remotes/origin/iwd-branch", "HEAD")
-        # This tree has no IWD recipe; the registry sends the check to the branch.
-        for path in sorted((fixture.root / "recipes/iwd").rglob("*"), reverse=True):
-            path.unlink() if path.is_file() else path.rmdir()
-        (fixture.root / "recipes/iwd").rmdir()
-        (fixture.root / "app/src-tauri/tauri.iwd.conf.json").unlink()
-        fixture.registry(iwd_branch="iwd-branch")
-        report = self.run_check(None)
-        self.assertEqual(len(report.errors), 1)
-        self.assertIn("BG v1.2.0, IWD v1.1.0", report.errors[0])
-        self.assertTrue(any(source.startswith("IWD: recipes/iwd from origin/iwd-branch at ")
-                            for source in report.sources))
+    def test_retired_installer_branch_field_is_rejected(self) -> None:
+        self.standard()
+        path = self.fixture.root / "manifest/own-mods.toml"
+        text = path.read_text(encoding="utf-8")
+        path.write_text(text.replace('recipes = ["recipes/iwd"]',
+                                    'recipes = ["recipes/iwd"]\nbranch = "old-iwd"'),
+                        encoding="utf-8")
+        with self.assertRaisesRegex(RegistryError, "unknown keys.*branch"):
+            load_registry(path)
 
-        fixture.registry(iwd_branch="missing-branch")
-        report = self.run_check(None)
-        self.assertIn("git ref `origin/missing-branch` does not exist here; fetch it first",
-                      report.errors)
-        self.assertNotIn("iwd", {key for status in report.statuses for key in status.pins})
-
-    def test_an_installer_without_its_recipe_and_without_a_branch_fails(self) -> None:
+    def test_an_installer_without_its_recipe_fails(self) -> None:
         self.standard()
         (self.fixture.root / "recipes/iwd/collection.toml").unlink()
         report = self.run_check(None)
@@ -574,15 +558,9 @@ class RegistryTests(unittest.TestCase):
             self.assertTrue(hold.reason)
 
     def test_the_shipped_registry_matches_this_tree_without_network(self) -> None:
-        """The in-tree installers; the CI workflow also reads the branches and GitHub."""
+        """Both installers in one tree; CI also checks the newest releases on GitHub."""
         registry = load_registry(ROOT / "manifest/own-mods.toml")
-        in_tree = own_mod_pins.Registry(
-            registry.account,
-            tuple(installer for installer in registry.installers if installer.branch is None),
-            registry.mods,
-            (),
-        )
-        report = check(ROOT, in_tree, None)
+        report = check(ROOT, registry, None)
         self.assertEqual(report.errors, [])
         pinned = {status.own_mod.id for status in report.statuses if status.pins}
         self.assertTrue({"buffbot", "chriz-bg-modpack", "chriz-bg-rebalance"} <= pinned)

@@ -20,10 +20,6 @@ recipes = ["manifest", "recipes/curated-full-current"]
 id = "chriz-easy-iwd"
 name = "Chriz Easy IWD"
 recipes = ["recipes/iwd-current"]
-# Chriz Easy IWD lives on its own branch until it joins main. Until its recipe is in
-# the working tree, the check reads it from this branch, and its pins go there in a
-# matching pull request.
-branch = "claude/iwdee-app"
 # Its static test pins every artifact file, so a new pin replaces the superseded artifact
 # TOML. Chriz Easy BG keeps superseded ones as history (the default, "keep").
 superseded_artifacts = "remove"

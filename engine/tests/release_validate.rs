@@ -63,6 +63,22 @@ fn production_alpha_has_complete_static_release_records_without_claiming_runtime
     assert!(!acceptance.contains("live_acceptance = true"));
 }
 
+/// The Icewind Dale app validates its bundled recipe with this profile at startup.
+#[test]
+fn iwd_release_has_complete_static_release_records_without_claiming_runtime_acceptance() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../recipes/iwd-current");
+    let manifest = Manifest::load(&root).expect("IWD recipe should load");
+    let findings = bg_engine::release_validate::validate_public_alpha(&manifest)
+        .expect("IWD release records should load");
+    assert!(findings.is_empty(), "{findings:#?}");
+
+    let acceptance =
+        fs::read_to_string(root.join("releases/v0.1.0-alpha.1/acceptance.toml")).unwrap();
+    assert!(acceptance.contains("kind = \"runtime-test\""));
+    assert!(acceptance.contains("status = \"pending\""));
+    assert!(!acceptance.contains("live_acceptance = true"));
+}
+
 #[test]
 fn both_bundled_profiles_pass_the_public_alpha_gate_the_app_runs() {
     // The app validates whichever bundled profile it uses with the public-alpha profile
@@ -256,6 +272,36 @@ fn blocked_default_requires_an_explicit_omission_record() {
         omitted(&findings, "feature:bg1npc:component-160"),
         "{findings:#?}"
     );
+}
+
+/// A mod the release leaves off still describes what it installs when a player turns it on;
+/// those default and mandatory children are no omission of the release.
+#[test]
+fn children_of_a_mod_the_release_leaves_off_are_not_omissions() {
+    let mut manifest = recipe();
+    let parent = "mod:hidden-gameplay-options";
+    let children = manifest
+        .collection
+        .features
+        .iter()
+        .filter(|feature| {
+            feature.parent.as_deref() == Some(parent)
+                && feature.decision == bg_engine::manifest::Decision::Default
+        })
+        .count();
+    assert!(
+        children > 0,
+        "the fixture needs default children of {parent}"
+    );
+    manifest
+        .presets
+        .get_mut("chris-recommended")
+        .unwrap()
+        .selections
+        .insert(parent.to_owned(), "off".to_owned());
+
+    let findings = validate_public_alpha_at(&manifest, &release_root()).unwrap();
+    assert!(!has_rule(&findings, RULE_RELEASE_OMISSION), "{findings:#?}");
 }
 
 #[test]

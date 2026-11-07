@@ -1,0 +1,67 @@
+id = "chriz-iwd-encounters-0.2.1"
+artifact_id = "chriz-iwd-encounters-0.2.1"
+name = "Chriz IWD Encounters"
+tp2 = "chriz-iwd-encounters/setup-chriz-iwd-encounters.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 100
+name = "Repair Sword Coast Stratagems caster AI that misses some IWD:EE casters"
+
+[[components]]
+id = 110
+name = "Party banter starts only between living party members in one area (stops a crash with the Crossmod Banter Pack)"
+
+[[components]]
+id = 200
+name = "Enemy priests prepare when they first see the party (Core Rules and up)"
+
+[[components]]
+id = 300
+name = "Belhifet's final fight: no blanket spell immunity, more hit points by difficulty, his cornugons as a second wave"
+
+[[components]]
+id = 310
+name = "Yxunomei's temple: her mages come when the fight starts, her champions join her, yuan-ti elites on Hard and Insane"
+
+[[components]]
+id = 320
+name = "The orog raid on Kuldahar: the raid moves as one and hunts the party, its leaders charge after a war horn"
+
+[[components]]
+id = 330
+name = "Joril's throne room: more hit points for Joril, Berserker rage and Hold Person for his court, Gorg's pack defends him"
+
+[[components]]
+id = 340
+name = "Maiden Ilmadia's forge: her Blackguard abilities, more hit points, her giants gather at her side"
+
+[[components]]
+id = 350
+name = "The Idol: one spell per round on cooldowns and only where it works, more hit points, its undead come when it is attacked"
+
+[[components]]
+id = 360
+name = "Poquelin in the Ascension Cave: more hit points, a jump with Fire Storm and the next wave at three quarters, no outright death"
+
+[[components]]
+id = 370
+name = "Cryshal-Tirith: Pomab's images look like him and hide him again after every hit, his sentries guard him"
+
+[[components]]
+id = 380
+name = "Mebdinga's barrow: her wails come on time, an honour guard of wights and drowned dead, a Lament below half on Hard and Insane"
+
+[[components]]
+id = 390
+name = "Icasaracht's lair: more hit points for her and her soul gem, no second gem, the second underpriestess repaired"
+
+[[components]]
+id = 400
+name = "Lord Maluradek: his banishment rooms fill with animated plates that fight, more hit points, all rooms awake below half"
+
+[[components]]
+id = 410
+name = "The Luremaster: he opens with Improved Invisibility, hops away when an enemy reaches him, his Dispel Magic works"

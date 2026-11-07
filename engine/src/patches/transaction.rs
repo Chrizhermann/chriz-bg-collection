@@ -6,7 +6,6 @@ use crate::{
     },
     events::ConsoleSink,
     held_folder::Existing,
-    lock::TargetLock,
     weidu::{
         invocation::{Invocation, VerifiedWeidu},
         runner::{self, RunOutcome, RunnerRequest},
@@ -379,6 +378,7 @@ fn download(
                 expected_sha256: hash.into(),
                 redirect_hosts,
                 max_attempts: crate::acquire::DEFAULT_DOWNLOAD_ATTEMPTS,
+                route: crate::acquire::DownloadRoute::Generic,
             },
             &ConsoleSink,
         )
@@ -455,7 +455,9 @@ pub fn apply_with_progress(
     progress: crate::operation_progress::ProgressSink<'_>,
 ) -> Result<PatchPreview, String> {
     crate::operation_progress::stage(progress, "checking");
-    let _lock = TargetLock::try_acquire(ctx.app_data.join("locks"), &ctx.record.managed_root)
+    let _lock = ctx
+        .locks
+        .try_acquire(&ctx.record.managed_root)
         .map_err(err)?;
     crate::mod_upgrades::launch_guard(&ctx.record.managed_root)?;
     launch_guard(&ctx.record.managed_root)?;
@@ -765,7 +767,9 @@ pub fn restore_with_progress(
     progress: crate::operation_progress::ProgressSink<'_>,
 ) -> Result<PatchPreview, String> {
     crate::operation_progress::stage(progress, "checking");
-    let _lock = TargetLock::try_acquire(ctx.app_data.join("locks"), &ctx.record.managed_root)
+    let _lock = ctx
+        .locks
+        .try_acquire(&ctx.record.managed_root)
         .map_err(err)?;
     crate::mod_upgrades::launch_guard(&ctx.record.managed_root)?;
     validate_context(ctx)?;

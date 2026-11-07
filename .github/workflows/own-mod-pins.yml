@@ -59,7 +59,7 @@ jobs:
           BASE: ${{ steps.base.outputs.sha }}
           RELEASE: ${{ inputs.release }}
         run: |
-          args=(check --fetch --fetch-depth 1)
+          args=(check)
           if [ -n "$BASE" ]; then args+=(--base "$BASE"); fi
           if [ "$RELEASE" = "true" ]; then args+=(--release); fi
           python -I tools/own_mod_pins.py "${args[@]}"

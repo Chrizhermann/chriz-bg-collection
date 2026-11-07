@@ -1,8 +1,7 @@
 //! Recipe-authored configuration files placed in a staged mod folder before its run.
 //!
-//! A file is created only while absent. An existing file is accepted only when it already holds
-//! the authored bytes, so a retried attempt is idempotent and nothing that a mod archive or a
-//! person put there is ever overwritten.
+//! The recipe owns each whole configuration file. Every attempt writes its authored bytes,
+//! including when a mod archive or player supplied different content.
 //!
 //! The folders from the target root down to the mod folder are opened as a [`HeldFolder`]: one at
 //! a time, each relative to the folder above it and without following a link, and held without
@@ -10,7 +9,6 @@
 //! those handles, so no path is resolved again once a folder was checked, and no folder can be
 //! swapped for a link in between.
 
-use std::io::Read;
 use std::path::Path;
 
 use serde::Serialize;
@@ -76,28 +74,11 @@ fn place_one(
         created,
     };
     match folder.open_file(name) {
-        Ok((existing, metadata)) => {
-            // Compare sizes first, so a large unrelated file is never read in.
-            let expected_len = u64::try_from(content.len()).unwrap_or(u64::MAX);
-            if metadata.len() != expected_len {
-                return Err(format!(
-                    "{} already exists with different content ({} bytes instead of {expected_len}); it was left unchanged",
-                    path.display(),
-                    metadata.len()
-                ));
-            }
-            let mut bytes = Vec::new();
-            (&existing)
-                .take(expected_len.saturating_add(1))
-                .read_to_end(&mut bytes)
-                .map_err(|error| format!("read configuration file {}: {error}", path.display()))?;
-            if bytes != content {
-                return Err(format!(
-                    "{} already exists with different content (SHA-256 {}); it was left unchanged",
-                    path.display(),
-                    sha256_bytes(&bytes)
-                ));
-            }
+        Ok((existing, _)) => {
+            drop(existing);
+            folder
+                .replace_file(name, content)
+                .map_err(|error| format!("place configuration file {}: {error}", path.display()))?;
             Ok(evidence(false))
         }
         Err(EntryError {
@@ -202,31 +183,23 @@ mod tests {
     }
 
     #[test]
-    fn never_overwrites_a_different_existing_file() {
+    fn overwrites_archive_player_and_large_configs_and_repeats_the_decided_output() {
         let root = staged_mod();
         let existing = root.path().join("cdtweaks/cdtweaks.txt");
-        let other = "OUTER_SET party_movement_speed_value = 200\n";
-        fs::write(&existing, other).unwrap();
-
-        let error = place(root.path(), &[(3347, &config("cdtweaks/cdtweaks.txt"))]).unwrap_err();
-
-        assert!(
-            error.contains("already exists with different content (SHA-256"),
-            "{error}"
-        );
-        assert_eq!(fs::read_to_string(existing).unwrap(), other);
-    }
-
-    #[test]
-    fn rejects_a_larger_existing_file_by_its_size() {
-        let root = staged_mod();
-        let existing = root.path().join("cdtweaks/cdtweaks.txt");
-        fs::write(&existing, vec![b'x'; 1024 * 1024]).unwrap();
-
-        let error = place(root.path(), &[(3347, &config("cdtweaks/cdtweaks.txt"))]).unwrap_err();
-
-        assert!(error.contains("1048576 bytes instead of 43"), "{error}");
-        assert_eq!(fs::metadata(existing).unwrap().len(), 1024 * 1024);
+        for other in [
+            b"OUTER_SET party_movement_speed_value = 200\n".to_vec(),
+            "// Andere Sprache\nOUTER_SET party_movement_speed_value = 5\n"
+                .as_bytes()
+                .to_vec(),
+            vec![b'x'; 1024 * 1024],
+            Vec::new(),
+        ] {
+            fs::write(&existing, other).unwrap();
+            for _ in 0..2 {
+                place(root.path(), &[(3347, &config("cdtweaks/cdtweaks.txt"))]).unwrap();
+                assert_eq!(fs::read(&existing).unwrap(), CONTENT.as_bytes());
+            }
+        }
     }
 
     #[test]

@@ -1,0 +1,32 @@
+id = "niriknpc-2a1e9a969edd058937fca7dfb5a9f62caca5b1e4"
+name = "Nirik NPC for IWD:EE"
+version = "2a1e9a969edd058937fca7dfb5a9f62caca5b1e4"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-commit-zip"
+url = "https://codeload.github.com/TheArtisanBG/IWD-Nirik-NPC/zip/2a1e9a969edd058937fca7dfb5a9f62caca5b1e4"
+reference = "2a1e9a969edd058937fca7dfb5a9f62caca5b1e4"
+expected_filename = "IWD-Nirik-NPC-2a1e9a969edd058937fca7dfb5a9f62caca5b1e4.zip"
+expected_length = 2759471
+sha256 = "28e92bce07cbe00222958c7d3bbff5d03aef9c0009954fb9ccefda91fd9d44d9"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "single-wrapper"
+publish_roots = ["NirikNPC"]
+tp2_paths = ["NirikNPC/NirikNPC.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 8388608
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/TheArtisanBG/IWD-Nirik-NPC"
+license = "Fetch-only official upstream commit archive; the collection does not redistribute it"
+url = "https://github.com/TheArtisanBG/IWD-Nirik-NPC/commit/2a1e9a969edd058937fca7dfb5a9f62caca5b1e4"
+reviewed_on = "2026-10-25"

@@ -1,11 +1,5 @@
-//! Christopher's strict rule: a hotpatch is offered only to an installation that is the
-//! recommended setup or differs from it in small ways. Everything else is refused, because a
-//! patch tested on the recommended setup is not known to work on it.
-//!
-//! What players add after installing (voice packs, portraits, other mods) never counts against
-//! it: the hotpatch installs after their additions, and Undo puts back the folder as it was right
-//! before the hotpatch, additions included. Christopher, 2026-11-04, on refusing every
-//! installation whose files changed since the installer: far too strict for the community.
+//! Hotpatch requirements and CEBG record checks. Player choices and additions do not
+//! limit updates; the transaction backs up the game as it stands before applying them.
 use std::collections::{BTreeMap, BTreeSet};
 
 use serde::Serialize;
@@ -92,66 +86,7 @@ pub fn compare_setup(
             difference,
         });
     }
-    for id in &rules.required_mods {
-        if !installed_mods.contains_key(id) {
-            let name = manifest
-                .mods
-                .get(id)
-                .map_or_else(|| id.clone(), |installer| installer.name.clone());
-            comparison
-                .refusals
-                .push(format!("{name} was left out. Hotpatches need it."));
-        }
-    }
-    // A required mod that was left out is refused above; counting it again would say it twice.
-    let counted = comparison
-        .deviations
-        .iter()
-        .filter(|deviation| {
-            !deviation.free
-                && !(deviation.difference == ModDifference::LeftOut
-                    && rules.required_mods.contains(&deviation.mod_id))
-        })
-        .collect::<Vec<_>>();
-    let listed = counted
-        .iter()
-        .map(|deviation| describe(deviation))
-        .collect::<Vec<_>>()
-        .join(", ");
-    if counted.len() > rules.max_changed_mods {
-        comparison.refusals.push(format!(
-            "{} mods differ from the recommended setup; hotpatches allow at most {}: {listed}.",
-            counted.len(),
-            rules.max_changed_mods
-        ));
-    } else if !counted.is_empty() {
-        comparison.notes.push(format!(
-            "Allowed difference from the recommended setup ({} of at most {}): {listed}.",
-            counted.len(),
-            rules.max_changed_mods
-        ));
-    }
-    let free = comparison
-        .deviations
-        .iter()
-        .filter(|deviation| deviation.free)
-        .map(|deviation| deviation.name.as_str())
-        .collect::<Vec<_>>();
-    if !free.is_empty() {
-        comparison.notes.push(format!(
-            "Your own choices in {} do not affect hotpatches.",
-            free.join(", ")
-        ));
-    }
     Ok(comparison)
-}
-
-fn describe(deviation: &ModDeviation) -> String {
-    match deviation.difference {
-        ModDifference::Added => format!("{} added", deviation.name),
-        ModDifference::LeftOut => format!("{} left out", deviation.name),
-        ModDifference::Changed => format!("{} changed", deviation.name),
-    }
 }
 
 /// Everything the gate found for one installation and its next hotpatch.
@@ -187,10 +122,8 @@ pub(super) fn assess_with(
     let mut claimed_base = None;
     let mut verified = None;
     let mut current = None;
-    match crate::manual_checkpoint::is_customized(&ctx.record.managed_root) {
-        Ok(false) => {}
-        Ok(true) => refusals.push("You added your own mods during installation pauses. Hotpatches are only for installations without them.".into()),
-        Err(error) => refusals.push(error),
+    if let Err(error) = crate::manual_checkpoint::is_customized(&ctx.record.managed_root) {
+        refusals.push(error);
     }
     for (folder, what) in [
         (".chriz/patches", "an earlier game fix"),
@@ -204,8 +137,8 @@ pub(super) fn assess_with(
     }
     match baseline {
         Ok(baseline) => {
-            if baseline.recovered {
-                refusals.push("This installation was repaired with replacement mod versions. Hotpatches are only for installations with the collection's own versions.".into());
+            if baseline.manifest.collection.game != catalog.game {
+                refusals.push("These hotpatches are for another game.".into());
             }
             match super::recipe_content_digest(&baseline.manifest) {
                 Ok(digest) => {
@@ -289,13 +222,34 @@ pub(super) fn assess_with(
                 }
             }
             for requirement in &next.requires_components {
-                let present = baseline.receipt.plan.runs.iter().any(|run| {
-                    run.mod_id == requirement.mod_id
-                        && run
-                            .components
-                            .iter()
-                            .any(|component| requirement.any_of.contains(component))
-                });
+                // A real dependency must be installed now. Original selections can include
+                // a download that was later omitted, and players may add the dependency.
+                let present = if let Some(installer) =
+                    baseline.manifest.mods.get(&requirement.mod_id)
+                {
+                    let rows = crate::patches::files::read(
+                        &ctx.game().join("WeiDU.log"),
+                        16 * 1024 * 1024,
+                    )
+                    .and_then(|bytes| {
+                        crate::weidu::log::parse_active_entries(&String::from_utf8_lossy(&bytes))
+                            .map_err(|error| error.to_string())
+                    });
+                    match rows {
+                        Ok(rows) => {
+                            let key = crate::weidu::log::normalize_tp2_key(&installer.tp2);
+                            rows.iter().any(|row| {
+                                row.tp2_key == key && requirement.any_of.contains(&row.component)
+                            })
+                        }
+                        Err(error) => {
+                            refusals.push(error);
+                            continue;
+                        }
+                    }
+                } else {
+                    false
+                };
                 if !present {
                     let name = baseline
                         .manifest
@@ -391,7 +345,7 @@ mod tests {
         GateRules {
             recommended_preset: "chris-recommended".into(),
             max_changed_mods: 2,
-            free_mods: ["cdtweaks", "infinity-ui", "eeex"]
+            free_mods: ["cdtweaks", "leui-iwdee", "infinity-ui", "eeex"]
                 .into_iter()
                 .map(String::from)
                 .collect(),

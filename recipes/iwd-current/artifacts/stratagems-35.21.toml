@@ -1,0 +1,32 @@
+id = "stratagems-35.21"
+name = "Sword Coast Stratagems"
+version = "35.21"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Gibberlings3/SwordCoastStratagems/releases/download/v35.21/lin-stratagems-35.21.zip"
+reference = "v35.21"
+expected_filename = "lin-stratagems-35.21.zip"
+expected_length = 58517195
+sha256 = "dd6b0dbe3b9f65cf70e5f57601ff667c791e968a62136254292e7521a6be99cb"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["stratagems"]
+tp2_paths = ["stratagems/setup-stratagems.tp2"]
+
+[archive.limits]
+max_depth = 16
+max_entries = 8192
+max_entry_uncompressed_bytes = 16777216
+max_total_uncompressed_bytes = 268435456
+max_compression_ratio = 1000
+
+[provenance]
+homepage = "https://github.com/Gibberlings3/SwordCoastStratagems"
+license = "Fetch-only official upstream release; the collection does not redistribute it"
+url = "https://github.com/Gibberlings3/SwordCoastStratagems/releases/tag/v35.21"
+reviewed_on = "2026-09-04"

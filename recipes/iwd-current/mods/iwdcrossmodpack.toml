@@ -1,0 +1,39 @@
+id = "iwdcrossmodpack"
+artifact_id = "iwdcrossmodpack-5"
+name = "Icewind Dale Crossmod Banter Pack"
+tp2 = "iwdcrossmodpack/iwdcrossmodpack.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 10
+name = "Install Crossmod Banters With This Minimum Delay Between Banters: -> 5 minutes"
+
+[[components]]
+id = 11
+name = "Install Crossmod Banters With This Minimum Delay Between Banters: -> 10 minutes"
+
+[[components]]
+id = 12
+name = "Install Crossmod Banters With This Minimum Delay Between Banters: -> 15 minutes (recommended)"
+
+[[components]]
+id = 13
+name = "Install Crossmod Banters With This Minimum Delay Between Banters: -> 30 minutes"
+
+[[components]]
+id = 14
+name = "Install Crossmod Banters With This Minimum Delay Between Banters: -> 45 minutes"
+
+[[components]]
+id = 15
+name = "Install Crossmod Banters With This Minimum Delay Between Banters: -> 1 hour"
+
+[[components]]
+id = 30
+name = "Crossmod Romance Conflicts"
+
+[[components]]
+id = 31
+name = "Conflict Between Kulyok's Holvir and Lava's Dendjelion"

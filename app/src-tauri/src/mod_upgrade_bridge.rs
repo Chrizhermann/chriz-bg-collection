@@ -22,14 +22,19 @@ impl NativeBridge {
         &self,
         install_id: &str,
     ) -> Result<bg_engine::mod_upgrades::ModUpgradePreview, CommandError> {
+        self.ensure_feature(self.flavor.mod_upgrades, "Installed mod updates")?;
         self.ensure_update_idle()?;
         let record = self.available_managed_install(install_id)?.record;
         let app_data = self
             .app_data
             .as_ref()
             .ok_or_else(|| mod_upgrade_inspection_error("Application data is unavailable."))?;
+        let locks = self
+            .target_locks
+            .as_ref()
+            .ok_or_else(|| mod_upgrade_inspection_error("Application data is unavailable."))?;
         let _target =
-            bg_engine::lock::TargetLock::try_acquire(app_data.join("locks"), &record.managed_root)
+            locks.try_acquire(&record.managed_root)
                 .map_err(|error| {
                     CommandError::new(
                 "mod_upgrade_busy",
@@ -41,56 +46,11 @@ impl NativeBridge {
         bg_engine::mod_upgrades::inspect(&bg_engine::mod_upgrades::Context {
             record: &record,
             app_data,
+            locks,
             cache: &self.cache,
             recipe: &self.recipe,
         })
         .map_err(mod_upgrade_inspection_error)
-    }
-
-    pub fn apply_mod_upgrade(
-        &self,
-        install_id: &str,
-        review_token: &str,
-        full_backup: bool,
-        backup_saves: bool,
-    ) -> Result<bg_engine::mod_upgrades::ModUpgradePreview, CommandError> {
-        self.apply_mod_upgrade_with_progress(
-            install_id,
-            review_token,
-            full_backup,
-            backup_saves,
-            &|_| {},
-        )
-    }
-
-    pub fn apply_mod_upgrade_with_progress(
-        &self,
-        install_id: &str,
-        review_token: &str,
-        full_backup: bool,
-        backup_saves: bool,
-        progress: bg_engine::operation_progress::ProgressSink<'_>,
-    ) -> Result<bg_engine::mod_upgrades::ModUpgradePreview, CommandError> {
-        let _guard = self.begin_app_update()?;
-        let record = self.available_managed_install(install_id)?.record;
-        let app_data = self
-            .app_data
-            .as_ref()
-            .ok_or_else(|| mod_upgrade_error("Application data is unavailable."))?;
-        // The engine acquires and holds the target lock through backup and mutation.
-        bg_engine::mod_upgrades::apply_with_progress(
-            &bg_engine::mod_upgrades::Context {
-                record: &record,
-                app_data,
-                cache: &self.cache,
-                recipe: &self.recipe,
-            },
-            review_token,
-            full_backup,
-            backup_saves,
-            progress,
-        )
-        .map_err(mod_upgrade_error)
     }
 
     pub fn restore_mod_upgrade(
@@ -107,16 +67,22 @@ impl NativeBridge {
         undo: bool,
         progress: bg_engine::operation_progress::ProgressSink<'_>,
     ) -> Result<bg_engine::mod_upgrades::ModUpgradePreview, CommandError> {
+        self.ensure_feature(self.flavor.mod_upgrades, "Installed mod updates")?;
         let _guard = self.begin_app_update()?;
         let record = self.available_managed_install(install_id)?.record;
         let app_data = self
             .app_data
             .as_ref()
             .ok_or_else(|| mod_upgrade_error("Application data is unavailable."))?;
+        let locks = self
+            .target_locks
+            .as_ref()
+            .ok_or_else(|| mod_upgrade_error("Application data is unavailable."))?;
         bg_engine::mod_upgrades::restore_with_progress(
             &bg_engine::mod_upgrades::Context {
                 record: &record,
                 app_data,
+                locks,
                 cache: &self.cache,
                 recipe: &self.recipe,
             },
@@ -137,9 +103,12 @@ mod mod_upgrade_bridge_tests {
             "recommended".to_owned(),
             root.join("cache"),
             Some(root.join("app-data")),
+            bg_engine::lock::TargetLockNamespace::in_local_application_data(root).ok(),
             Arc::new(SystemBridgeEngine),
             Arc::new(SystemBridgeSystem),
         )
+        // Installed mod updates are a Baldur's Gate app feature, also in the Icewind Dale build.
+        .with_flavor(&crate::flavor::BG)
     }
 
     #[test]
@@ -184,6 +153,7 @@ mod mod_upgrade_bridge_tests {
             launch_path: launch.clone(),
             receipt_sha256: sha256_bytes(receipt_bytes),
             completed_at_millis: 1,
+            recipe_id: None,
         };
         ManagedInstallRegistry::open_or_create(&root.join("app-data"))
             .unwrap()
@@ -193,6 +163,8 @@ mod mod_upgrade_bridge_tests {
         let expected_detail = bg_engine::mod_upgrades::inspect(&bg_engine::mod_upgrades::Context {
             record: &record,
             app_data: &root.join("app-data"),
+            locks: &bg_engine::lock::TargetLockNamespace::in_local_application_data(&root)
+                .unwrap(),
             cache: &root.join("cache"),
             recipe: &root.join("recipe"),
         })
@@ -246,13 +218,6 @@ mod mod_upgrade_bridge_tests {
             bridge.inspect_mod_upgrade("unknown").unwrap_err().code,
             "managed_install_unknown"
         );
-        assert_eq!(
-            bridge
-                .apply_mod_upgrade("unknown", "untrusted-review", true, false)
-                .unwrap_err()
-                .code,
-            "managed_install_unknown"
-        );
         assert!(!bridge.file_update_active());
         for undo in [false, true] {
             assert_eq!(
@@ -268,17 +233,10 @@ mod mod_upgrade_bridge_tests {
     }
 
     #[test]
-    fn whole_mod_mutations_cannot_overlap_an_existing_update() {
+    fn legacy_restoration_cannot_overlap_an_existing_update() {
         let temp = tempfile::tempdir().unwrap();
         let bridge = bridge(temp.path());
         let guard = bridge.begin_app_update().unwrap();
-        assert_eq!(
-            bridge
-                .apply_mod_upgrade("unknown", "review", true, false)
-                .unwrap_err()
-                .code,
-            "update_busy"
-        );
         assert_eq!(
             bridge
                 .restore_mod_upgrade("unknown", false)
@@ -310,6 +268,7 @@ mod mod_upgrade_bridge_tests {
                 launch_path: root.join("game/InfinityLoader.exe"),
                 receipt_sha256: "22".repeat(32),
                 completed_at_millis: 1,
+                recipe_id: None,
             },
         })
         .unwrap();

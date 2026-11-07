@@ -1,21 +1,7 @@
 use super::*;
 use crate::{
-    acquire::{
-        extract_archive, ArchiveFormat, ArchiveLimits, ArchiveMode, ArchiveRequirements,
-        ArtifactCache, DownloadRequest,
-    },
-    events::ConsoleSink,
     held_folder::{EntryError, EntryErrorKind},
-    lock::TargetLock,
     patches::files::Inventory,
-    weidu::{
-        invocation::{Invocation, VerifiedWeidu},
-        runner::{self, RunOutcome, RunnerRequest},
-    },
-};
-use std::{
-    fs::OpenOptions,
-    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,6 +41,7 @@ pub(super) struct HistoryEntry {
     pub id: String,
     pub dir: PathBuf,
     pub state: String,
+    #[cfg(test)]
     pub terminal: String,
 }
 fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, String> {
@@ -220,11 +207,13 @@ pub(super) fn history(root: &Path) -> Result<Vec<HistoryEntry>, String> {
             id,
             dir,
             state: status.into(),
+            #[cfg(test)]
             terminal: previous.clone().unwrap(),
         });
     }
     Ok(result)
 }
+#[cfg(test)]
 pub(super) fn head(root: &Path) -> Result<Option<String>, String> {
     Ok(history(root)?.last().map(|h| h.terminal.clone()))
 }
@@ -257,71 +246,6 @@ pub fn active_upgrade(root: &Path) -> Result<Option<AppliedUpgrade>, String> {
         }
     }
     Ok(Some(a.upgrade))
-}
-
-pub(super) struct Payloads {
-    pub old: PathBuf,
-    pub new: PathBuf,
-    pub tool: PathBuf,
-}
-pub(super) fn payloads(ctx: &Context<'_>) -> Result<Payloads, String> {
-    let cache = ArtifactCache::open(ctx.cache).map_err(err)?;
-    let unpack = |id: &str,
-                  url: String,
-                  length: u64,
-                  hash: &str,
-                  root: &str,
-                  tp2: Vec<String>|
-     -> Result<PathBuf, String> {
-        let acquired = cache
-            .acquire(
-                &DownloadRequest {
-                    request_id: id.into(),
-                    url,
-                    expected_length: length,
-                    expected_sha256: hash.into(),
-                    redirect_hosts: vec!["release-assets.githubusercontent.com".into()],
-                    max_attempts: crate::acquire::DEFAULT_DOWNLOAD_ATTEMPTS,
-                },
-                &ConsoleSink,
-            )
-            .map_err(err)?;
-        let extraction = extract_archive(
-            &acquired.archive_path,
-            &ctx.cache.join("upgrade-extracted"),
-            &ArchiveRequirements {
-                artifact_sha256: hash.into(),
-                format: ArchiveFormat::Zip,
-                expected_roots: vec![root.into()],
-                expected_tp2_paths: tp2,
-                limits: ArchiveLimits {
-                    max_entries: 256,
-                    max_depth: 8,
-                    max_entry_uncompressed_bytes: 8 * 1024 * 1024,
-                    max_total_uncompressed_bytes: 32 * 1024 * 1024,
-                    ..Default::default()
-                },
-                mode: ArchiveMode::Public,
-            },
-        )
-        .map_err(err)?;
-        Ok(extraction.root)
-    };
-    let old=unpack("upgrade-buffbot-old",format!("https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v{0}/buffbot-v{0}.zip",buffbot::OLD_VERSION),4_240_743,buffbot::OLD_HASH,"buffbot",vec!["buffbot/setup-buffbot.tp2".into()])?;
-    let new=unpack("upgrade-buffbot-new",format!("https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v{0}/buffbot-v{0}.zip",buffbot::NEW_VERSION),4_241_150,buffbot::NEW_HASH,"buffbot",vec!["buffbot/setup-buffbot.tp2".into()])?;
-    buffbot::validate_sources(&old, &new)?;
-    let tool = unpack(
-        "upgrade-weidu-249",
-        "https://github.com/WeiDUorg/weidu/releases/download/v249.00/WeiDU-Windows-249-amd64.zip"
-            .into(),
-        2_154_755,
-        "b156910cbec69359fc2e42f6739aa959d49047d6fd3dc172f6bed88ffad8f927",
-        "weidu.exe",
-        vec![],
-    )?
-    .join("weidu.exe");
-    VerifiedWeidu::verify(&tool, crate::patches::catalog::TOOL_HASH).map_err(err)?;
-    Ok(Payloads { old, new, tool })
 }
 
 fn verify_hashes(
@@ -434,115 +358,8 @@ fn verify_guards(game: &Path, hashes: &BTreeMap<String, String>) -> Result<(), S
     Ok(())
 }
 
-pub fn apply(
-    ctx: &Context<'_>,
-    review_token: &str,
-    full: bool,
-    saves: bool,
-) -> Result<ModUpgradePreview, String> {
-    apply_with_progress(ctx, review_token, full, saves, &|_| {})
-}
-
-pub fn apply_with_progress(
-    ctx: &Context<'_>,
-    review_token: &str,
-    full: bool,
-    saves: bool,
-    progress: crate::operation_progress::ProgressSink<'_>,
-) -> Result<ModUpgradePreview, String> {
-    crate::operation_progress::stage(progress, "checking");
-    let _lock = TargetLock::try_acquire(ctx.app_data.join("locks"), &ctx.record.managed_root)
-        .map_err(err)?;
-    validate_context(ctx)?;
-    launch_guard(&ctx.record.managed_root)?;
-    if active_upgrade(&ctx.record.managed_root)?.is_some() {
-        return inspect(ctx);
-    }
-    crate::operation_progress::stage(progress, "downloading");
-    let source = payloads(ctx)?;
-    crate::operation_progress::stage(progress, "checking");
-    let p = plan(ctx, &source.old, &source.new)?;
-    if token(&p)? != review_token {
-        return Err("Installation changed since review. Check installed mods again.".into());
-    }
-    crate::patches::close_check(&ctx.game(), &p.hashes)?;
-    let before = files::inventory(&ctx.game(), false)?;
-    let affected_bytes = before
-        .iter()
-        .filter(|(n, s)| !s.directory && buffbot::writable(n))
-        .map(|(_, s)| s.length)
-        .sum::<u64>();
-    let profile = if saves {
-        Some(files::inventory(&ctx.record.managed_save_root, true)?)
-    } else {
-        None
-    };
-    let external = (if full { files::total(&before) } else { 0 })
-        .checked_add(profile.as_ref().map(files::total).unwrap_or(0))
-        .ok_or("Backup size overflow")?;
-    // Conservative on separate volumes; also accounts for both backup sets when
-    // app-data and the installation share a volume.
-    let required = external
-        .saturating_add(affected_bytes)
-        .saturating_add(768 * 1024 * 1024);
-    if SystemPreflight.available_space(ctx.app_data).map_err(err)? < required
-        || SystemPreflight
-            .available_space(&ctx.record.managed_root)
-            .map_err(err)?
-            < required
-    {
-        return Err("Not enough free space for the selected backups and update.".into());
-    }
-    let id = format!(
-        "{:020}",
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(err)?
-            .as_nanos()
-    );
-    let dir = ctx.state().join(&id);
-    files::create(&dir.join("identity"), ctx.record.install_id.as_bytes())?;
-    let backup = ctx.backups().join(&id);
-    files::create(&backup.join("identity"), ctx.record.install_id.as_bytes())?;
-    if full {
-        files::copy_tree_with_progress(
-            &ctx.game(),
-            &backup.join("game"),
-            false,
-            "backup-game",
-            progress,
-        )?;
-    }
-    if saves {
-        files::copy_tree_with_progress(
-            &ctx.record.managed_save_root,
-            &backup.join("profile"),
-            true,
-            "backup-saves",
-            progress,
-        )?;
-    }
-    crate::operation_progress::stage(progress, "backup-files");
-    let prepared = prepare(ctx, &dir, p, before)?;
-    crate::patches::close_check(&ctx.game(), &prepared.plan.hashes)?;
-    verify_hashes(&ctx.game(), &prepared.plan.hashes, false)?;
-    if files::inventory(&ctx.game(), false)? != prepared.before {
-        return Err("Game changed while its backup was being prepared.".into());
-    }
-    files::json_new(&dir.join("prepared.json"), &prepared)?;
-    crate::operation_progress::stage(progress, "applying");
-    let result = execute(ctx, &dir, &prepared, &source, progress);
-    if let Err(e) = result {
-        let _ = files::json_new(&dir.join("failure.json"), &e);
-        // Keep the failure visible and offer Restore; never blindly rerun a partial reinstall.
-        let mut preview = inspect(ctx)?;
-        preview.detail =
-            format!("BuffBot did not finish updating. Restore the backup before playing. {e}");
-        return Ok(preview);
-    }
-    crate::operation_progress::stage(progress, "verifying");
-    inspect(ctx)
-}
+// Build historical records only for restoration fixtures. No new upgrades are offered.
+#[cfg(test)]
 pub(super) fn prepare(
     ctx: &Context<'_>,
     dir: &Path,
@@ -571,113 +388,7 @@ pub(super) fn prepare(
     backups(dir, &p)?;
     Ok(p)
 }
-fn execute(
-    ctx: &Context<'_>,
-    dir: &Path,
-    p: &Prepared,
-    sources: &Payloads,
-    progress: crate::operation_progress::ProgressSink<'_>,
-) -> Result<(), String> {
-    // Source-tree identity is checked again immediately before publication.
-    buffbot::validate_sources(&sources.old, &sources.new)?;
-    // The folders are no longer held once WeiDU runs.
-    let held = files::hold(&ctx.record.managed_root, dir)?;
-    for entry in walkdir::WalkDir::new(sources.new.join("buffbot")).follow_links(false) {
-        let entry = entry.map_err(err)?;
-        if entry.file_type().is_dir() {
-            continue;
-        }
-        let relative = entry.path().strip_prefix(&sources.new).map_err(err)?;
-        let name = relative.to_string_lossy().replace('\\', "/");
-        if !buffbot::writable(&name.to_ascii_lowercase()) {
-            return Err("Unexpected upgrade source output.".into());
-        }
-        let bytes = files::read(entry.path(), 16 * 1024 * 1024)?;
-        write_existing(&held, &name, &bytes)?;
-    }
-    drop(held);
-    VerifiedWeidu::verify(&sources.tool, crate::patches::catalog::TOOL_HASH).map_err(err)?;
-    let mut options = OpenOptions::new();
-    options.read(true);
-    #[cfg(windows)]
-    {
-        use std::os::windows::fs::OpenOptionsExt;
-        options.share_mode(1);
-    }
-    let _tool = options.open(&sources.tool).map_err(err)?;
-    if files::hash(&sources.tool)? != crate::patches::catalog::TOOL_HASH {
-        return Err("Installer tool changed.".into());
-    }
-    let debug = dir.join("attempt.debug");
-    let args = [
-        "buffbot/setup-buffbot.tp2",
-        "--language",
-        "0",
-        "--use-lang",
-        "en_US",
-        "--force-install-list",
-        "1",
-        "0",
-        "--no-exit-pause",
-        "--skip-at-view",
-        "--noautoupdate",
-        "--log",
-    ];
-    let mut args = args
-        .into_iter()
-        .map(std::ffi::OsString::from)
-        .collect::<Vec<_>>();
-    args.push(debug.clone().into());
-    files::json_new(&dir.join("invocation.json"), &(&sources.tool, &args))?;
-    let invocation = Invocation {
-        program: sources.tool.clone(),
-        cwd: ctx.game(),
-        identity_digest: sha256_bytes(&serde_json::to_vec(&args).map_err(err)?),
-        args,
-        prompts: vec![],
-        debug_path: debug,
-    };
-    let (_sender, receiver) = crossbeam_channel::unbounded();
-    let outcome = runner::run(
-        RunnerRequest {
-            invocation,
-            step_id: buffbot::UPGRADE_ID.into(),
-            output_log: dir.join("output.log"),
-            silence_threshold: Duration::from_secs(300),
-        },
-        receiver,
-        ConsoleSink,
-    );
-    if outcome != (RunOutcome::Exited { code: 0 }) {
-        return Err(format!("WeiDU did not finish successfully: {outcome:?}"));
-    }
-    crate::operation_progress::stage(progress, "verifying");
-    buffbot::verify_after(
-        &ctx.game(),
-        &sources.new,
-        &files::read(
-            &dir.join("affected/lang/en_us/dialog.tlk"),
-            256 * 1024 * 1024,
-        )?,
-        &files::read(&dir.join("affected/override/bfbot_strrefs.txt"), 65536)?,
-    )?;
-    let old = files::read(&dir.join("affected/weidu.log"), 16 * 1024 * 1024)?;
-    let new = files::read(&ctx.game().join("WeiDU.log"), 16 * 1024 * 1024)?;
-    verify_tail(&new, buffbot::NEW_VERSION)?;
-    let rows = |b: &[u8]| -> Result<Vec<(String, u32, u32)>, String> {
-        Ok(
-            crate::weidu::log::parse_active_entries(std::str::from_utf8(b).map_err(err)?)
-                .map_err(err)?
-                .into_iter()
-                .map(|r| (r.tp2_key, r.language, r.component))
-                .collect(),
-        )
-    };
-    if rows(&old)? != rows(&new)? {
-        return Err("WeiDU changed another mod or the component order.".into());
-    }
-    finish(ctx, dir, p)
-}
+#[cfg(test)]
 pub(super) fn finish(ctx: &Context<'_>, dir: &Path, p: &Prepared) -> Result<(), String> {
     let guards = p
         .plan
@@ -734,7 +445,9 @@ pub fn restore_with_progress(
     progress: crate::operation_progress::ProgressSink<'_>,
 ) -> Result<ModUpgradePreview, String> {
     crate::operation_progress::stage(progress, "checking");
-    let _lock = TargetLock::try_acquire(ctx.app_data.join("locks"), &ctx.record.managed_root)
+    let _lock = ctx
+        .locks
+        .try_acquire(&ctx.record.managed_root)
         .map_err(err)?;
     validate_context(ctx)?;
     let h = history(&ctx.record.managed_root)?;

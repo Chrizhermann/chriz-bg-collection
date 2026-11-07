@@ -17,6 +17,16 @@ export interface BackendStatus {
   readonly startupInstallId: string | null;
   readonly profiles?: readonly { readonly id: string; readonly label: string; readonly description: string }[];
   readonly selectedProfile?: string;
+  /** The standalone collection this backend serves; absent for the Baldur's Gate collection. */
+  readonly collection?: CollectionIdentity;
+}
+
+/** A standalone collection's identity, as `bootstrap` and `select_profile` report it. */
+export interface CollectionIdentity {
+  readonly flavor: string;
+  readonly game: string;
+  readonly productName: string;
+  readonly sources: readonly { readonly slot: string; readonly role: string; readonly label: string }[];
 }
 
 export interface InstallationDefaults {
@@ -31,7 +41,7 @@ export interface CommandErrorPayload {
   readonly technical_detail: string;
 }
 
-export type GameRole = "bgee_sod" | "bg2ee";
+export type GameRole = "bgee_sod" | "bg2ee" | "iwdee";
 export type Storefront = "steam" | "gog" | "beamdog" | "microsoft" | "other";
 
 export type Freshness =
@@ -520,7 +530,7 @@ export interface ModUpgradePreview {
   readonly installId: string;
   readonly upgradeId: string;
   readonly title: string;
-  readonly state: "available" | "already-current" | "not-selected" | "unsupported" | "applied" | "needs-recovery";
+  readonly state: "retired" | "available" | "already-current" | "not-selected" | "unsupported" | "applied" | "needs-recovery";
   readonly detail: string;
   readonly baseRecipeVersion: string;
   readonly installedVersion: string | null;
@@ -560,6 +570,49 @@ export interface PatchPreview {
   readonly backupPath: string;
 }
 
+/** One change of a hotpatch, as the player reads it. */
+export interface HotpatchChange {
+  readonly title: string;
+  readonly summary: string;
+  /** What games already in progress get, as in collection changelogs. */
+  readonly saveApplicability: "current-save" | "before-npc-join" | "before-area-visit" | "before-event" | "next-playthrough" | "new-game-only" | "unknown";
+  readonly conditionNote: string | null;
+}
+
+/** What Updates shows about hotpatches for one installation. Checking never changes the game. */
+export interface HotpatchPreview {
+  readonly installId: string;
+  readonly state: "available" | "refused" | "up-to-date" | "needs-recovery";
+  readonly detail: string;
+  readonly baseRecipeVersion: string;
+  /** The next hotpatch, also when it is refused. */
+  readonly hotpatch: {
+    readonly id: string;
+    readonly title: string;
+    readonly summary: string;
+    readonly changes: readonly HotpatchChange[];
+  } | null;
+  readonly applied: readonly { readonly id: string; readonly title: string }[];
+  /** Why the next hotpatch is not offered. */
+  readonly refusals: readonly string[];
+  /** Differences from the recommended setup that are allowed. */
+  readonly notes: readonly string[];
+  readonly reviewToken: string | null;
+  readonly canUndo: boolean;
+  readonly undoTitle: string | null;
+  readonly canRestore: boolean;
+  /** Decimal byte counts remain strings across the native boundary. */
+  readonly fullBackupBytes: string;
+  readonly saveBackupBytes: string;
+  readonly availableBytes: string;
+  readonly backupPath: string;
+}
+
+/**
+ * What Updates shows about bringing one installed mod, such as BuffBot, to its newest release.
+ * Updates share the hotpatch history: Undo always takes back the latest change. Checking never
+ * changes the game.
+ */
 export interface ModUpdatePreview {
   readonly installId: string;
   readonly modId: string;

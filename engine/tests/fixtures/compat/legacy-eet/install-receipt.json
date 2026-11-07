@@ -1,0 +1,85 @@
+{
+  "schema_version": 2,
+  "install_id": "install-legacy",
+  "attempt_id": "attempt-legacy",
+  "evidence_attempt_id": "attempt-legacy",
+  "managed_root": "C:\\Legacy Managed Install",
+  "staged_bg1": "C:\\Legacy Managed Install\\bg1",
+  "staged_bg2": "C:\\Legacy Managed Install\\game",
+  "started_at_millis": 1761400000000,
+  "completed_at_millis": 1761400900000,
+  "outcome": {
+    "status": "succeeded"
+  },
+  "versions": {
+    "application": "0.1.0-alpha.20",
+    "engine": "0.1.0",
+    "manifest_schema": 2,
+    "recipe": "0.1.0-alpha.20"
+  },
+  "source_games": [
+    {
+      "role": "bgee_sod",
+      "storefront": "steam",
+      "version": "2.7.3.0",
+      "fingerprint": "1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    {
+      "role": "bg2ee",
+      "storefront": "steam",
+      "version": "2.7.3.0",
+      "fingerprint": "2222222222222222222222222222222222222222222222222222222222222222"
+    }
+  ],
+  "recipe_payload_sha256": "9182c61272721e0810f2285bfc2e520367b530dccfb7005f33dac8e7da4acbfa",
+  "recipe_envelope_sha256": "11809171a316f2f8c15f2b28d614f5c91baa533595d2964431b1cb3eb40bcfb7",
+  "selection_sha256": "871c4de396ee3a57f5c7a2b11634c0ecbbfff4f10a5f35347a03a0d435c25479",
+  "normalized_selection": {
+    "platform": "windows",
+    "features": {},
+    "inputs": {}
+  },
+  "plan_sha256": "6f23bb10da82b8a196d50cdfbe0a86f583cc4df842d62052e624fb9b14bd5c90",
+  "plan": {
+    "runs": []
+  },
+  "artifacts": [],
+  "weidu_tools": [],
+  "runs": [],
+  "final_state": {
+    "logs": [
+      {
+        "target": "bg1",
+        "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "components": [
+          {
+            "tp2": "ee_fixpack/ee_fixpack.tp2",
+            "language": 0,
+            "component": 0
+          }
+        ]
+      },
+      {
+        "target": "bg2",
+        "sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+        "components": [
+          {
+            "tp2": "ee_fixpack/ee_fixpack.tp2",
+            "language": 0,
+            "component": 0
+          },
+          {
+            "tp2": "ee_fixpack/ee_fixpack.tp2",
+            "language": 0,
+            "component": 1
+          }
+        ]
+      }
+    ],
+    "bg1_engine_name": "Chriz Easy BG - abc123def456",
+    "bg2_engine_name": "Chriz Easy BG - abc123def456",
+    "managed_save_root": "C:\\Users\\Player\\Documents\\Chriz Easy BG - abc123def456",
+    "launch_path": "C:\\Legacy Managed Install\\game\\Baldur.exe",
+    "verification_summary": "exact frozen stack matched across 2 planned WeiDU runs"
+  }
+}

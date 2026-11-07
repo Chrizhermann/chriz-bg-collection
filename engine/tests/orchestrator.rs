@@ -125,8 +125,9 @@ impl Fixture {
             normalized_selection: selection,
             plan_sha256: plan_digest(&plan).unwrap(),
             source_games: SourceGameFingerprints {
-                bg1: "11".repeat(32),
+                bg1: Some("11".repeat(32)),
                 bg2: "22".repeat(32),
+                standalone_role: None,
             },
             artifact_identities: vec![
                 frozen("eefix", "33", 10),
@@ -134,7 +135,7 @@ impl Fixture {
                 frozen("eet", "44", 20),
             ],
             tool_identities: vec![frozen("weidu", "55", 30)],
-            staged_bg1: managed_root.join("bg1"),
+            staged_bg1: Some(managed_root.join("bg1")),
             staged_bg2: managed_root.join("game"),
         };
         let request = CampaignRequest {
@@ -149,6 +150,45 @@ impl Fixture {
     }
 }
 
+impl Fixture {
+    /// A standalone Icewind Dale: Enhanced Edition campaign: one source, one staged root, and
+    /// only main-phase runs.
+    fn standalone() -> Self {
+        let mut fixture = Self::new();
+        let managed_root = fixture.request.created.managed_root.clone();
+        let plan = InstallPlan {
+            runs: vec![
+                executable_run(
+                    "iwdfix-main",
+                    "eefix",
+                    GameRoot::Bg2,
+                    Phase::Main,
+                    &[0, 2],
+                    vec![],
+                ),
+                executable_run(
+                    "iwdtweaks-main",
+                    "eet",
+                    GameRoot::Bg2,
+                    Phase::Main,
+                    &[0],
+                    vec![RunArg::StagedRoot(GameRoot::Bg2)],
+                ),
+            ],
+        };
+        let created = &mut fixture.request.created;
+        created.plan_sha256 = plan_digest(&plan).unwrap();
+        created.source_games = SourceGameFingerprints {
+            bg1: None,
+            bg2: "22".repeat(32),
+            standalone_role: Some(GameRole::Iwdee),
+        };
+        created.staged_bg1 = None;
+        created.staged_bg2 = managed_root.join("game");
+        fixture.request.plan = plan;
+        fixture
+    }
+}
 fn frozen(id: &str, byte: &str, length: u64) -> FrozenIdentity {
     FrozenIdentity {
         id: id.to_owned(),
@@ -208,8 +248,8 @@ struct FakeDeps {
     dependents: BTreeMap<String, Vec<String>>,
     /// Runs that lose components when a payload is left out, by payload id.
     reduced: BTreeMap<String, Vec<(String, Vec<u32>)>>,
-    /// Payloads the fake recipe cannot do without.
-    essential: Vec<String>,
+    /// Injected failures reconciling CEBG records, independent of mandatory selections.
+    invalid_history: Vec<String>,
     /// Every `plan_without` request, to see replays recompute it.
     plan_without_calls: Vec<Vec<String>>,
     /// Manual pauses of the fake campaign; each continues at once.
@@ -378,9 +418,10 @@ impl ArtifactAcquirer for FakeDeps {
         left_out: &[String],
     ) -> Result<InstallPlan, StepFailure> {
         self.plan_without_calls.push(left_out.to_vec());
-        if let Some(essential) = left_out.iter().find(|id| self.essential.contains(id)) {
+        if let Some(invalid_history) = left_out.iter().find(|id| self.invalid_history.contains(id))
+        {
             return Err(StepFailure::new(format!(
-                "{essential} is a fixed part of this collection"
+                "CEBG history cannot be reconciled for {invalid_history}"
             )));
         }
         let mut runs = Vec::new();
@@ -420,9 +461,9 @@ impl ArtifactAcquirer for FakeDeps {
         self.in_game_at_questions.push(in_game.to_vec());
         for (run_id, _) in failed {
             if let Some(run) = plan.runs.iter().find(|run| &run.run_id == run_id) {
-                if self.essential.contains(&run.artifact_id) {
+                if self.invalid_history.contains(&run.artifact_id) {
                     return Err(StepFailure::new(format!(
-                        "{} is a fixed part of this collection",
+                        "CEBG history cannot be reconciled for {}",
                         run.artifact_id
                     )));
                 }
@@ -456,6 +497,7 @@ impl StagingService for FakeDeps {
         let role_name = match role {
             GameRole::BgeeSod => "bg1",
             GameRole::Bg2ee => "bg2",
+            GameRole::Iwdee => "game",
         };
         let operation = format!("stage:{role_name}");
         self.trace.push(operation.clone());
@@ -710,7 +752,7 @@ fn a_new_campaign_creates_missing_destination_ancestors_before_claiming_its_root
         .join("Games")
         .join("NewCollection")
         .join("managed-alpha");
-    fixture.request.created.staged_bg1 = fixture.request.created.managed_root.join("bg1");
+    fixture.request.created.staged_bg1 = Some(fixture.request.created.managed_root.join("bg1"));
     fixture.request.created.staged_bg2 = fixture.request.created.managed_root.join("game");
     let sink = RecordingSink::default();
     let mut deps = FakeDeps::default();
@@ -937,7 +979,7 @@ fn legacy_empty_postcondition_plan_digest_still_resumes() {
 }
 
 #[test]
-fn normal_proven_install_checks_postconditions_before_completion() {
+fn normal_proven_install_completes_with_authored_markers() {
     let mut fixture = Fixture::new();
     add_first_run_marker(&mut fixture, "merged and ready");
     let sink = RecordingSink::default();
@@ -959,7 +1001,7 @@ fn normal_proven_install_checks_postconditions_before_completion() {
 }
 
 #[test]
-fn failed_normal_postcondition_requires_fresh_copy_and_stops_next_run() {
+fn changed_game_content_does_not_stop_a_proven_install_or_its_resume() {
     let mut fixture = Fixture::new();
     add_first_run_marker(&mut fixture, "merged and ready");
     let sink = RecordingSink::default();
@@ -967,22 +1009,17 @@ fn failed_normal_postcondition_requires_fresh_copy_and_stops_next_run() {
         staged_files: vec![(
             GameRole::BgeeSod,
             first_marker_path(&fixture),
-            b"not ready\n".to_vec(),
+            b"player-edited text\n".to_vec(),
         )],
         ..FakeDeps::default()
     };
-
-    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
-    let first_receipt = deps.receipts.last().unwrap().clone();
-
-    assert!(matches!(
-        outcome,
-        CampaignOutcome::FreshCopyRequired { ref step_id, ref reason }
-            if step_id == "install:eefix-bg1" && reason.contains("postcondition")
-    ));
-    assert!(!completed_step_ids(&fixture.request.created.managed_root)
+    assert_eq!(
+        run_campaign(&fixture.request, &mut deps, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert!(completed_step_ids(&fixture.request.created.managed_root)
         .contains(&"install:eefix-bg1".to_owned()));
-    assert!(!deps
+    assert!(deps
         .trace
         .iter()
         .any(|entry| entry.starts_with("build:eefix-bg2:")));
@@ -991,31 +1028,19 @@ fn failed_normal_postcondition_requires_fresh_copy_and_stops_next_run() {
         .replay()
         .unwrap();
     assert_eq!(replay.unresolved_step(), None);
-    assert_eq!(
-        replay
-            .fresh_copy_required()
-            .map(|seal| seal.step_id.as_str()),
-        Some("install:eefix-bg1")
-    );
-
-    deps.recovery_results
-        .push_back(InstallReconciliation::retry(vec![0, 2]));
+    assert!(replay.fresh_copy_required().is_none());
     let split = deps.trace.len();
-    let resumed_outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
-    assert_eq!(resumed_outcome, outcome);
-    assert_eq!(deps.receipts.last(), Some(&first_receipt));
-    assert_eq!(deps.recovery_results.len(), 1);
-    assert!(!deps.trace[split..].iter().any(|entry| entry == "preflight"));
-    assert!(!deps.trace[split..]
-        .iter()
-        .any(|entry| entry == "recover:eefix-bg1"));
+    assert_eq!(
+        run_campaign(&fixture.request, &mut deps, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
     assert!(!deps.trace[split..]
         .iter()
         .any(|entry| entry.starts_with("build:") || entry.starts_with("run:")));
 }
 
 #[test]
-fn unresolved_proven_install_checks_postconditions_before_completion() {
+fn unresolved_proven_install_completes_with_authored_markers() {
     let mut fixture = Fixture::new();
     add_first_run_marker(&mut fixture, "merged and ready");
     seed_unresolved(
@@ -1041,7 +1066,7 @@ fn unresolved_proven_install_checks_postconditions_before_completion() {
 }
 
 #[test]
-fn failed_unresolved_proven_postcondition_requires_fresh_copy_without_rerun() {
+fn missing_game_marker_does_not_repeat_a_proven_unresolved_install() {
     let mut fixture = Fixture::new();
     add_first_run_marker(&mut fixture, "merged and ready");
     seed_unresolved(
@@ -1054,31 +1079,28 @@ fn failed_unresolved_proven_postcondition_requires_fresh_copy_without_rerun() {
         recovery_results: VecDeque::from([InstallReconciliation::ProvenDone]),
         ..FakeDeps::default()
     };
-
-    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
-
-    assert!(matches!(
-        outcome,
-        CampaignOutcome::FreshCopyRequired { ref step_id, ref reason }
-            if step_id == "install:eefix-bg1" && reason.contains("postcondition")
-    ));
-    assert!(!deps.trace.iter().any(|entry| entry.starts_with("build:")));
-    assert!(!deps.trace.iter().any(|entry| entry.starts_with("run:")));
+    assert_eq!(
+        run_campaign(&fixture.request, &mut deps, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert!(!deps
+        .trace
+        .iter()
+        .any(|entry| entry.starts_with("build:eefix-bg1:") || entry.starts_with("run:eefix-bg1:")));
+    assert!(deps
+        .trace
+        .iter()
+        .any(|entry| entry.starts_with("build:eefix-bg2:")));
     let replay = SessionStore::open(&fixture.request.created.managed_root)
         .unwrap()
         .replay()
         .unwrap();
     assert_eq!(replay.unresolved_step(), None);
-    assert_eq!(
-        replay
-            .fresh_copy_required()
-            .map(|seal| seal.step_id.as_str()),
-        Some("install:eefix-bg1")
-    );
+    assert!(replay.fresh_copy_required().is_none());
 }
 
 #[test]
-fn last_failed_proven_install_checks_postconditions_before_completion() {
+fn last_failed_proven_install_completes_with_authored_markers() {
     let mut fixture = Fixture::new();
     add_first_run_marker(&mut fixture, "merged and ready");
     let sink = RecordingSink::default();
@@ -1107,34 +1129,32 @@ fn last_failed_proven_install_checks_postconditions_before_completion() {
 }
 
 #[test]
-fn failed_last_failed_proven_postcondition_requires_fresh_copy_without_rerun() {
+fn missing_game_marker_does_not_repeat_a_failed_install_later_proven_done() {
     let mut fixture = Fixture::new();
     add_first_run_marker(&mut fixture, "merged and ready");
     let sink = RecordingSink::default();
     let mut deps = FakeDeps {
         after_results: VecDeque::from([InstallReconciliation::retry(vec![0, 2])]),
-        // The player stops at the failed run.
         answers: answer(QuestionKind::FailedComponent, Answer::No),
         ..FakeDeps::default()
     };
-    assert!(matches!(
-        run_campaign(&fixture.request, &mut deps, &sink).unwrap(),
-        CampaignOutcome::Failed { ref step_id, .. } if step_id == "install:eefix-bg1"
-    ));
+    assert!(
+        matches!(run_campaign(&fixture.request, &mut deps, &sink).unwrap(),
+        CampaignOutcome::Failed { ref step_id, .. } if step_id == "install:eefix-bg1")
+    );
     deps.recovery_results
         .push_back(InstallReconciliation::ProvenDone);
     let split = deps.trace.len();
-
-    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
-
-    assert!(matches!(
-        outcome,
-        CampaignOutcome::FreshCopyRequired { ref step_id, ref reason }
-            if step_id == "install:eefix-bg1" && reason.contains("postcondition")
-    ));
+    assert_eq!(
+        run_campaign(&fixture.request, &mut deps, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
     assert!(!deps.trace[split..]
         .iter()
-        .any(|entry| entry.starts_with("build:") || entry.starts_with("run:")));
+        .any(|entry| entry.starts_with("build:eefix-bg1:") || entry.starts_with("run:eefix-bg1:")));
+    assert!(deps.trace[split..]
+        .iter()
+        .any(|entry| entry.starts_with("build:eefix-bg2:")));
 }
 
 #[test]
@@ -1202,6 +1222,8 @@ fn first_marker_path(fixture: &Fixture) -> PathBuf {
         .request
         .created
         .staged_bg1
+        .as_ref()
+        .unwrap()
         .join("override/dlc-merge.txt")
 }
 
@@ -1531,7 +1553,7 @@ fn a_file_in_the_missing_destination_chain_is_rejected_without_creating_below_it
     let blocking_parent = fixture._temp.path().join("Games");
     std::fs::write(&blocking_parent, b"not a directory").unwrap();
     fixture.request.created.managed_root = blocking_parent.join("managed-alpha");
-    fixture.request.created.staged_bg1 = fixture.request.created.managed_root.join("bg1");
+    fixture.request.created.staged_bg1 = Some(fixture.request.created.managed_root.join("bg1"));
     fixture.request.created.staged_bg2 = fixture.request.created.managed_root.join("game");
     let sink = RecordingSink::default();
     let mut deps = FakeDeps::default();
@@ -1555,7 +1577,7 @@ fn a_link_in_the_missing_destination_chain_is_rejected_without_creating_below_it
     std::fs::create_dir(&actual_parent).unwrap();
     create_directory_link(&actual_parent, &linked_parent).expect("create linked parent fixture");
     fixture.request.created.managed_root = linked_parent.join("managed-alpha");
-    fixture.request.created.staged_bg1 = fixture.request.created.managed_root.join("bg1");
+    fixture.request.created.staged_bg1 = Some(fixture.request.created.managed_root.join("bg1"));
     fixture.request.created.staged_bg2 = fixture.request.created.managed_root.join("game");
     let sink = RecordingSink::default();
     let mut deps = FakeDeps::default();
@@ -1893,7 +1915,7 @@ fn resume_keeps_the_recorded_plan_when_the_app_now_derives_it_differently() {
         FakeDeps::default(),
         // Cannot leave `eefix` out at all.
         FakeDeps {
-            essential: vec!["eefix".to_owned()],
+            invalid_history: vec!["eefix".to_owned()],
             ..eefix_recipe_deps()
         },
     ] {
@@ -2065,7 +2087,7 @@ fn a_part_the_recipe_cannot_do_without_seals_the_copy_when_it_cannot_be_placed()
     let sink = RecordingSink::default();
     let mut deps = FakeDeps {
         unplaceable: BTreeMap::from([("materialize:eefix:bg1".to_owned(), UNPLACEABLE.to_owned())]),
-        essential: vec!["eefix".to_owned()],
+        invalid_history: vec!["eefix".to_owned()],
         ..eefix_recipe_deps()
     };
 
@@ -2076,16 +2098,19 @@ fn a_part_the_recipe_cannot_do_without_seals_the_copy_when_it_cannot_be_placed()
     };
     assert_eq!(step_id, "materialize:eefix:bg1");
     assert!(reason.contains(UNPLACEABLE), "{reason}");
-    assert!(reason.contains("fixed part of this collection"), "{reason}");
+    assert!(
+        reason.contains("CEBG history cannot be reconciled"),
+        "{reason}"
+    );
     assert!(left_out_records(&fixture.request.created.managed_root).is_empty());
 }
 
 #[test]
-fn a_mod_the_recipe_cannot_do_without_fails_its_step_instead_of_being_left_out() {
+fn an_unreconciled_cebg_record_stops_omission_before_mutation() {
     let fixture = Fixture::with_dependents();
     let sink = RecordingSink::default();
     let mut deps = FakeDeps {
-        essential: vec!["eefix".to_owned()],
+        invalid_history: vec!["eefix".to_owned()],
         ..eefix_unusable_deps()
     };
 
@@ -2096,7 +2121,10 @@ fn a_mod_the_recipe_cannot_do_without_fails_its_step_instead_of_being_left_out()
     };
     assert_eq!(step_id, "acquire:eefix");
     assert!(reason.contains(LAYOUT_CHANGED), "{reason}");
-    assert!(reason.contains("fixed part of this collection"), "{reason}");
+    assert!(
+        reason.contains("CEBG history cannot be reconciled"),
+        "{reason}"
+    );
     assert!(left_out_records(&fixture.request.created.managed_root).is_empty());
     assert!(deps.receipts.last().unwrap().left_out.is_empty());
 }
@@ -2465,16 +2493,15 @@ fn leaving_out_an_optional_changed_mod_takes_what_needs_it_along() {
     assert_eq!(receipt.decisions[0].answer.answer, Answer::LeaveOut);
 }
 
-/// A changed download of a part the recipe cannot do without is only offered "Install it" and
-/// "Stop": a preset "leave it out" does not answer it, so the installation waits.
+/// A history reconciliation failure cannot be bypassed by leaving out a changed download.
 #[test]
-fn a_changed_part_the_recipe_cannot_do_without_is_never_offered_for_leaving_out() {
+fn a_changed_download_cannot_be_omitted_with_unreconciled_cebg_history() {
     let fixture = Fixture::with_dependents();
     let root = &fixture.request.created.managed_root;
     let sink = RecordingSink::default();
     let mut deps = FakeDeps {
         changed: BTreeMap::from([("eefix".to_owned(), served("ab"))]),
-        essential: vec!["eefix".to_owned()],
+        invalid_history: vec!["eefix".to_owned()],
         answers: BTreeMap::from([(
             QuestionKind::ChangedDownload,
             (Answer::LeaveOut, AnswerSource::Preset),
@@ -2693,14 +2720,14 @@ fn a_placing_question_whose_obstacle_changed_is_asked_anew() {
     assert_eq!(left_out[0].2, "another file is in the way now");
 }
 
-/// Parts the recipe cannot do without and tools never ask: they stop as before.
+/// CEBG history reconciliation errors and unavailable tools remain blockers.
 #[test]
-fn fixed_parts_and_tools_never_ask() {
+fn unreconciled_cebg_records_and_unavailable_tools_never_ask() {
     for (fixture, mut deps, step) in [
         (
             Fixture::with_dependents(),
             FakeDeps {
-                essential: vec!["eefix".to_owned()],
+                invalid_history: vec!["eefix".to_owned()],
                 ..eefix_unusable_deps()
             },
             "acquire:eefix",
@@ -3785,10 +3812,9 @@ fn a_component_the_installer_went_past_is_left_out_or_stopped_at_but_not_tried_a
     assert!(failed_run.continues_with.is_empty());
 }
 
-/// A fixed part WeiDU went past can neither be left out nor tried again: there is nothing to
-/// ask, and this copy needs a fresh start, as it always did. The reason says why in plain words.
+/// A nonprefix failure with unreconciled CEBG records cannot safely be retried or omitted.
 #[test]
-fn a_fixed_part_the_installer_went_past_needs_a_fresh_copy() {
+fn unreconciled_history_after_a_nonprefix_failure_needs_a_fresh_copy() {
     let fixture = Fixture::with_dependents();
     let root = &fixture.request.created.managed_root;
     let sink = RecordingSink::default();
@@ -3797,7 +3823,7 @@ fn a_fixed_part_the_installer_went_past_needs_a_fresh_copy() {
     results.push_back(went_past_the_first_tweak());
     let mut deps = FakeDeps {
         after_results: results,
-        essential: vec!["tweaks".to_owned()],
+        invalid_history: vec!["tweaks".to_owned()],
         ..FakeDeps::default()
     };
 
@@ -3807,7 +3833,10 @@ fn a_fixed_part_the_installer_went_past_needs_a_fresh_copy() {
         panic!("{outcome:?}");
     };
     assert_eq!(step_id, "install:tweaks-bg2");
-    assert!(reason.contains("tweaks is a fixed part"), "{reason}");
+    assert!(
+        reason.contains("CEBG history cannot be reconciled for tweaks"),
+        "{reason}"
+    );
     assert!(reason.contains("cannot try it again"), "{reason}");
     assert_eq!(count_events(root, "required"), 0);
 }
@@ -3856,18 +3885,16 @@ fn results_failing_at(fixture: &Fixture, failing: &str) -> VecDeque<InstallRecon
     results
 }
 
-/// A part the collection cannot do without is asked about too, but the question says so and
-/// offers only to try again or stop. A preset "leave it out" does not answer it: the game would
-/// otherwise lack what the plan says it has. The run ends with the question open, and trying
-/// again can still succeed.
+/// A history reconciliation failure does not permit leaving out a failed run. Retrying can
+/// produce the missing evidence; an incompatible preset leaves the question open.
 #[test]
-fn a_failed_part_the_collection_cannot_do_without_offers_only_to_try_again_or_stop() {
+fn a_failed_part_with_unreconciled_history_offers_only_to_try_again_or_stop() {
     let fixture = Fixture::with_dependents();
     let sink = RecordingSink::default();
     let mut deps = FakeDeps {
         after_results: results_failing_at(&fixture, "eet-core"),
         answers: leave_it_out(),
-        essential: vec!["eet".to_owned()],
+        invalid_history: vec!["eet".to_owned()],
         ..FakeDeps::default()
     };
 
@@ -4018,4 +4045,170 @@ fn a_modded_source_game_asks_before_it_is_copied() {
     assert_eq!(decisions.len(), 2);
     assert_eq!(decisions[1].question.kind, QuestionKind::ModdedSource);
     assert_eq!(decisions[1].answer.answer, Answer::Yes);
+}
+
+#[test]
+fn a_modded_iwd_source_asks_once_and_keeps_the_answer_on_resume() {
+    let fixture = Fixture::standalone();
+    let sink = RecordingSink::default();
+    let modded = || {
+        let mut question = modded_bg1_question();
+        question.artifact_id = "source-iwd".to_owned();
+        question.reviewed.id = question.artifact_id.clone();
+        FakeDeps {
+            source_questions: BTreeMap::from([(GameRole::Iwdee, question)]),
+            ..FakeDeps::default()
+        }
+    };
+
+    let mut waiting = modded();
+    let outcome = run_campaign(&fixture.request, &mut waiting, &sink).unwrap();
+    assert!(
+        matches!(outcome, CampaignOutcome::DecisionRequired { step_id, .. } if step_id == "stage:game")
+    );
+    assert!(!waiting
+        .trace
+        .iter()
+        .any(|entry| entry.starts_with("stage:")));
+
+    let mut accepted = FakeDeps {
+        answers: answer(QuestionKind::ModdedSource, Answer::Yes),
+        fail_once: Some("stage:game".to_owned()),
+        ..modded()
+    };
+    assert!(
+        matches!(run_campaign(&fixture.request, &mut accepted, &sink).unwrap(), CampaignOutcome::Failed { step_id, .. } if step_id == "stage:game")
+    );
+
+    let mut resumed = modded();
+    assert_eq!(
+        run_campaign(&fixture.request, &mut resumed, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert_eq!(resumed.answer_requests, 0);
+    assert_eq!(asked(&fixture.request.created.managed_root).len(), 1);
+    let decisions = &resumed.receipts.last().unwrap().decisions;
+    assert_eq!(decisions.len(), 1);
+    assert_eq!(decisions[0].question.artifact_id, "source-iwd");
+    assert_eq!(decisions[0].answer.answer, Answer::Yes);
+}
+
+#[test]
+fn a_failed_iwd_component_uses_the_shared_question_and_can_retry() {
+    let fixture = Fixture::standalone();
+    let sink = RecordingSink::default();
+    let mut failed = FakeDeps {
+        after_results: results_failing_at(&fixture, "iwdfix-main"),
+        ..FakeDeps::default()
+    };
+    let outcome = run_campaign(&fixture.request, &mut failed, &sink).unwrap();
+    assert!(
+        matches!(outcome, CampaignOutcome::DecisionRequired { step_id, .. } if step_id == "install:iwdfix-main")
+    );
+    let questions = asked(&fixture.request.created.managed_root);
+    assert_eq!(questions.len(), 1);
+    assert_eq!(questions[0].2.kind, QuestionKind::FailedComponent);
+    assert!(questions[0].2.offers(Answer::Retry));
+    let mut retried = FakeDeps {
+        answers: answer(QuestionKind::FailedComponent, Answer::Retry),
+        ..FakeDeps::default()
+    };
+    assert_eq!(
+        run_campaign(&fixture.request, &mut retried, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert_eq!(retried.receipts.last().unwrap().installed_plan, None);
+}
+
+#[test]
+fn standalone_campaign_stages_one_game_without_a_bg1_step() {
+    let fixture = Fixture::standalone();
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps::default();
+
+    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+
+    assert_eq!(outcome, CampaignOutcome::Complete);
+    assert_eq!(
+        completed_step_ids(&fixture.request.created.managed_root),
+        vec![
+            "preflight",
+            "acquire:eefix",
+            "acquire:weidu",
+            "acquire:eet",
+            "stage:game",
+            "materialize:eefix:bg2",
+            "materialize:eet:bg2",
+            "install:iwdfix-main",
+            "install:iwdtweaks-main",
+            "identity:final",
+            "verify:final",
+            "receipt",
+        ]
+    );
+    assert!(deps.trace.iter().any(|entry| entry == "stage:game"));
+    assert!(!deps.trace.iter().any(|entry| entry == "stage:bg1"));
+    let labels = sink
+        .events()
+        .into_iter()
+        .filter_map(|event| match event {
+            EngineEvent::StepStarted { label, .. } => Some(label),
+            EngineEvent::PhaseStarted { name } => Some(name),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert!(labels
+        .iter()
+        .any(|label| label == "Stage Icewind Dale: Enhanced Edition"));
+    assert!(labels
+        .iter()
+        .any(|label| label == "Prepare eefix for Icewind Dale: Enhanced Edition"));
+    assert!(
+        labels.iter().all(|label| !label.contains("Baldur")),
+        "a standalone campaign must not name Baldur's Gate: {labels:?}"
+    );
+    assert!(!fixture.request.created.managed_root.join("bg1").exists());
+}
+
+#[test]
+fn standalone_campaign_rejects_runs_outside_the_main_phase_or_game_root() {
+    for (target, phase) in [
+        (GameRoot::Bg1, Phase::Bg1Preparation),
+        (GameRoot::Bg2, Phase::Bg2Preparation),
+        (GameRoot::Bg2, Phase::EetInitialization),
+    ] {
+        let mut fixture = Fixture::standalone();
+        fixture.request.plan.runs[0].target = target;
+        fixture.request.plan.runs[0].phase = phase;
+        fixture.request.created.plan_sha256 = plan_digest(&fixture.request.plan).unwrap();
+        let sink = RecordingSink::default();
+        let mut deps = FakeDeps::default();
+
+        let error = run_campaign(&fixture.request, &mut deps, &sink).unwrap_err();
+
+        let message = error.to_string();
+        assert!(
+            message.contains(
+                "a standalone Icewind Dale: Enhanced Edition installation runs only the main phase"
+            ),
+            "{phase:?}: {message}"
+        );
+        assert!(deps.trace.is_empty(), "{phase:?}: {:?}", deps.trace);
+    }
+}
+
+#[test]
+fn standalone_resume_rejects_a_bg1_folder_in_the_managed_root() {
+    let fixture = Fixture::standalone();
+    seed_unresolved(&fixture.request, &["preflight"], "acquire:eefix");
+    std::fs::create_dir(fixture.request.created.managed_root.join("bg1")).unwrap();
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps::default();
+
+    let error = run_campaign(&fixture.request, &mut deps, &sink).unwrap_err();
+
+    assert!(
+        error.to_string().contains("unowned top-level entry"),
+        "{error}"
+    );
 }

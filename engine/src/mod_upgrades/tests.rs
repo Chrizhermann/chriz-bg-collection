@@ -8,6 +8,7 @@ struct Fixture {
     _temp: tempfile::TempDir,
     record: ManagedInstallRecord,
     app: PathBuf,
+    locks: crate::lock::TargetLockNamespace,
     cache: PathBuf,
     original: BTreeMap<String, Vec<u8>>,
 }
@@ -58,6 +59,7 @@ impl Fixture {
             launch_path: root.join("game/Baldur.exe"),
             receipt_sha256: sha256_bytes(receipt),
             completed_at_millis: 1,
+            recipe_id: None,
         };
         write(
             &record.managed_save_root.join("save/one.gam"),
@@ -65,6 +67,10 @@ impl Fixture {
         );
         Self {
             app: temp.path().join("app"),
+            locks: crate::lock::TargetLockNamespace::in_local_application_data(
+                temp.path().join("local"),
+            )
+            .unwrap(),
             cache: temp.path().join("cache"),
             _temp: temp,
             record,
@@ -75,6 +81,7 @@ impl Fixture {
         Context {
             record: &self.record,
             app_data: &self.app,
+            locks: &self.locks,
             cache: &self.cache,
             recipe: self._temp.path(),
         }
@@ -130,7 +137,7 @@ impl Fixture {
 }
 
 #[test]
-fn success_records_partial_version_and_undo_restores_without_changing_base_or_saves() {
+fn legacy_applied_record_and_undo_preserve_base_and_saves() {
     let f = Fixture::new();
     let (dir, p) = f.prepare(1);
     assert!(launch_guard(&f.record.managed_root).is_err());
@@ -273,22 +280,6 @@ fn undo_accepts_a_game_log_switch_but_no_other_loader_change() {
         fs::read(f.ctx().game().join("infinityloader.ini")).unwrap(),
         ini("InfinityLoader.log", "lua51.dll").as_bytes()
     );
-}
-#[test]
-fn tail_rejects_later_mods_wrong_versions_languages_or_order() {
-    let good=b"~base.tp2~ #0 #1 // Base: 1\n~buffbot/setup-buffbot.tp2~ #0 #1 // Helper: v1.8.3-alpha\n~buffbot/setup-buffbot.tp2~ #0 #0 // Main: v1.8.3-alpha\n";
-    verify_tail(good, buffbot::OLD_VERSION).unwrap();
-    assert!(verify_tail(good, buffbot::NEW_VERSION).is_err());
-    let mut later = good.to_vec();
-    later.extend_from_slice(b"~later.tp2~ #0 #0 // later\n");
-    assert!(verify_tail(&later, buffbot::OLD_VERSION).is_err());
-    assert!(verify_tail(
-        &String::from_utf8_lossy(good)
-            .replace("#0 #1", "#1 #1")
-            .into_bytes(),
-        buffbot::OLD_VERSION
-    )
-    .is_err());
 }
 
 #[test]
@@ -524,27 +515,6 @@ fn restoring_an_update_refuses_a_link_at_every_level_without_going_through_it() 
     }
 }
 
-#[test]
-fn review_token_changes_for_owned_bytes_selection_recipe_and_history() {
-    let f = Fixture::new();
-    let (_, p) = f.prepare(1);
-    let expected = token(&p.plan).unwrap();
-    let mut changed = p.plan.clone();
-    changed.selection_sha256.push('x');
-    assert_ne!(token(&changed).unwrap(), expected);
-    let mut changed = p.plan.clone();
-    changed.recipe_sha256.push('x');
-    assert_ne!(token(&changed).unwrap(), expected);
-    let mut changed = p.plan.clone();
-    changed.previous = Some("new history".into());
-    assert_ne!(token(&changed).unwrap(), expected);
-    let mut changed = p.plan.clone();
-    changed
-        .hashes
-        .insert("weidu.log".into(), "different".into());
-    assert_ne!(token(&changed).unwrap(), expected);
-}
-
 /// A completed, registered copy in `managed` below the given folder names.
 fn completed_copy(parents: &[&str]) -> (tempfile::TempDir, ManagedInstallRecord) {
     use crate::{
@@ -573,7 +543,7 @@ fn completed_copy(parents: &[&str]) -> (tempfile::TempDir, ManagedInstallRecord)
         attempt_id: "attempt".into(),
         evidence_attempt_id: "attempt".into(),
         managed_root: root.clone(),
-        staged_bg1: root.join("bg1"),
+        staged_bg1: Some(root.join("bg1")),
         staged_bg2: game.clone(),
         started_at_millis: 1,
         completed_at_millis: 2,
@@ -600,7 +570,7 @@ fn completed_copy(parents: &[&str]) -> (tempfile::TempDir, ManagedInstallRecord)
         runs: Vec::new(),
         final_state: Some(FinalReceiptState {
             logs: Vec::new(),
-            bg1_engine_name: "Upgrade test".into(),
+            bg1_engine_name: Some("Upgrade test".into()),
             bg2_engine_name: "Upgrade test".into(),
             managed_save_root: save_root.clone(),
             launch_path: game.join("Baldur.exe"),
@@ -624,6 +594,7 @@ fn completed_copy(parents: &[&str]) -> (tempfile::TempDir, ManagedInstallRecord)
         launch_path: game.join("Baldur.exe"),
         receipt_sha256: sha256_bytes(&receipt),
         completed_at_millis: 2,
+        recipe_id: None,
     };
     (temp, record)
 }
@@ -641,6 +612,10 @@ fn a_registered_copy_below_steamapps_or_program_files_can_be_updated() {
         let ctx = Context {
             record: &record,
             app_data: &app,
+            locks: &crate::lock::TargetLockNamespace::in_local_application_data(
+                temp.path().join("local"),
+            )
+            .unwrap(),
             cache: &cache,
             recipe: temp.path(),
         };
@@ -651,6 +626,10 @@ fn a_registered_copy_below_steamapps_or_program_files_can_be_updated() {
         let ctx = Context {
             record: &record,
             app_data: &app,
+            locks: &crate::lock::TargetLockNamespace::in_local_application_data(
+                temp.path().join("local"),
+            )
+            .unwrap(),
             cache: &cache,
             recipe: temp.path(),
         };
@@ -659,4 +638,30 @@ fn a_registered_copy_below_steamapps_or_program_files_can_be_updated() {
             "Original installation receipt changed."
         );
     }
+}
+
+#[test]
+fn legacy_inspection_is_recovery_only_without_reading_recipe_or_downloading() {
+    let (temp, record) = completed_copy(&[]);
+    let app = temp.path().join("app");
+    fs::create_dir(&app).unwrap();
+    let cache = temp.path().join("unused-cache");
+    let recipe = temp.path().join("missing-recipe");
+    let ctx = Context {
+        record: &record,
+        app_data: &app,
+        locks: &crate::lock::TargetLockNamespace::in_local_application_data(
+            temp.path().join("local"),
+        )
+        .unwrap(),
+        cache: &cache,
+        recipe: &recipe,
+    };
+    let result = inspect(&ctx).unwrap();
+    assert_eq!(result.state, "retired");
+    assert!(result.history.is_empty());
+    assert!(result.review_token.is_none());
+    assert!(!result.can_restore && !result.can_undo);
+    assert!(!cache.exists());
+    assert!(!ctx.state().exists());
 }

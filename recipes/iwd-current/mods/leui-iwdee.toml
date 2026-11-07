@@ -1,0 +1,11 @@
+id = "leui-iwdee"
+artifact_id = "leui-iwdee-2.0"
+name = "Lefreut's Enhanced UI for IWD:EE"
+tp2 = "LeUI-IWDEE/LeUI-IWDEE.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "lefreut's Enhanced UI - Core component"

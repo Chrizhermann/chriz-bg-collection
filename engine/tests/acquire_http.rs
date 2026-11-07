@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 use bg_engine::acquire::{
     served_length_limit, validate_redirect_target, AcceptedContent, AcquireError, ArchiveFormat,
     ArchiveLimits, ArtifactCache, AuthorizedContent, CacheDisposition, DownloadRequest,
-    ServedRedirects, ServedRules, StopSignal,
+    DownloadRoute, ServedRedirects, ServedRules, StopSignal,
 };
 use bg_engine::events::{ChannelSink, EngineEvent};
 use sha2::{Digest, Sha256};
@@ -180,6 +180,7 @@ fn request(id: &str, url: String, bytes: &[u8], max_attempts: u32) -> DownloadRe
         expected_sha256: sha256(bytes),
         redirect_hosts: Vec::new(),
         max_attempts,
+        route: DownloadRoute::Generic,
     }
 }
 
@@ -582,6 +583,62 @@ fn a_changed_download_is_accepted_cached_by_its_own_digest_and_reused_on_resume(
         Err(AcquireError::LengthMismatch { .. })
     ));
     strict_server.finish();
+}
+
+#[test]
+fn a_weaselmods_package_can_change_its_filename_and_bytes() {
+    let reviewed = zip_archive(b"the reviewed package");
+    let served = zip_archive(b"the newer official package");
+    let body = served.clone();
+    let server = TestServer::start(1, move |_, _| {
+        let mut reply = Reply::complete(&body, "\"new\"");
+        reply.headers.extend([
+            ("Content-Type", "application/zip".to_owned()),
+            (
+                "Content-Disposition",
+                "attachment; filename=\"Snowytoes-v1.7.zip\"".to_owned(),
+            ),
+        ]);
+        reply
+    });
+    let temp = TempDir::new().unwrap();
+    let cache = cache(&temp);
+    let (sink, _) = ChannelSink::unbounded();
+    let mut download = request(
+        "snowytoes",
+        server.url("/download/snowytoes/?wpdmdl=557"),
+        &reviewed,
+        1,
+    );
+    download.route = DownloadRoute::WeaselmodsDownload {
+        expected_filename: "Snowytoes-v1.6.zip".to_owned(),
+    };
+    let acquired = cache
+        .acquire_as_served(&download, None, ZIP, &sink, &StopSignal::never())
+        .unwrap();
+    assert!(!acquired.matches_pin(&download));
+    assert_eq!(
+        acquired.served_filename.as_deref(),
+        Some("Snowytoes-v1.7.zip")
+    );
+    assert_eq!(acquired.artifact.metadata.sha256, sha256(&served));
+    assert_eq!(
+        std::fs::read(&acquired.artifact.archive_path).unwrap(),
+        served
+    );
+    assert_eq!(server.finish().len(), 1);
+    let accepted = AcceptedContent {
+        length: acquired.artifact.metadata.length,
+        sha256: acquired.artifact.metadata.sha256.clone(),
+    };
+    let resumed = cache
+        .acquire_as_served(&download, Some(&accepted), ZIP, &sink, &StopSignal::never())
+        .unwrap();
+    assert_eq!(resumed.artifact.disposition, CacheDisposition::Hit);
+    assert_eq!(
+        resumed.artifact.archive_path,
+        acquired.artifact.archive_path
+    );
 }
 
 #[test]

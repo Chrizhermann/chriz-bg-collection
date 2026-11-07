@@ -19,9 +19,10 @@ use crate::session::{CampaignCreated, FrozenIdentity, SessionReplay};
 /// feature): release player builds do not carry the owner's folder names, and there
 /// [`is_creator_protected_destination`] is always false.
 #[cfg(all(windows, any(debug_assertions, feature = "creator-guards")))]
-const CREATOR_PROTECTED_ROOTS: [&str; 2] = [
+const CREATOR_PROTECTED_ROOTS: [&str; 3] = [
     r"C:\Games\Baldur's Gate II Enhanced Edition modded",
     r"C:\Games\Baldurs Gate 1 and 2 mods",
+    r"C:\Games\Icewind Dale Enhanced Edition",
 ];
 const DEFAULT_LANGUAGE: &str = "en_US";
 static WRITE_PROBE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
@@ -93,9 +94,9 @@ impl SpaceRequirement {
 
 /// Inputs checked before a build may move past its frozen Review screen.
 pub struct InitialPreflight<'a> {
-    /// Freshly inspected BGEE+SoD candidate.
-    pub bg1_source: &'a GameCandidate,
-    /// Freshly inspected BG2EE candidate.
+    /// Freshly inspected BGEE+SoD candidate; `None` for a standalone campaign.
+    pub bg1_source: Option<&'a GameCandidate>,
+    /// Freshly inspected primary candidate: BG2EE for EET, otherwise the standalone game.
     pub bg2_source: &'a GameCandidate,
     pub destination: &'a Path,
     pub space: SpaceRequirement,
@@ -267,23 +268,41 @@ pub fn initial_preflight_with(
         return Err(PreflightError::ReviewMismatch);
     }
 
-    let bg1 = validate_source_candidate(
-        request.bg1_source,
-        GameRole::BgeeSod,
-        "BGEE+SoD",
-        &frozen.source_games.bg1,
-    )?;
+    let bg1 = match (request.bg1_source, frozen.source_games.bg1.as_deref()) {
+        (Some(candidate), Some(fingerprint)) => Some(validate_source_candidate(
+            candidate,
+            GameRole::BgeeSod,
+            "BGEE+SoD",
+            fingerprint,
+        )?),
+        (None, None) => None,
+        (Some(_), None) => {
+            return Err(PreflightError::FrozenCampaignMismatch {
+                field: "source games",
+                reason: "a BGEE+SoD source was supplied for a standalone campaign".to_owned(),
+            });
+        }
+        (None, Some(_)) => {
+            return Err(PreflightError::FrozenCampaignMismatch {
+                field: "source games",
+                reason: "the campaign requires a BGEE+SoD source".to_owned(),
+            });
+        }
+    };
+    let primary_role = frozen.source_games.primary_role();
     let bg2 = validate_source_candidate(
         request.bg2_source,
-        GameRole::Bg2ee,
-        "BG2EE",
+        primary_role,
+        primary_role.short_label(),
         &frozen.source_games.bg2,
     )?;
-    if paths_equal(&bg1, &bg2) {
-        return Err(PreflightError::DuplicateSource { path: bg1 });
+    if let Some(bg1) = &bg1 {
+        if paths_equal(bg1, &bg2) {
+            return Err(PreflightError::DuplicateSource { path: bg1.clone() });
+        }
     }
-    // Games of different versions are allowed: the game check already warned about every
-    // version other than the tested one.
+    // Readable source versions may differ; their content is not an install gate.
+    let sources = bg1.iter().chain(std::iter::once(&bg2)).collect::<Vec<_>>();
     validate_required_inputs(
         "artifact",
         request.required_artifacts,
@@ -305,10 +324,9 @@ pub fn initial_preflight_with(
             ),
         });
     }
-    if path_is_under(&target, &bg1)
-        || path_is_under(&bg1, &target)
-        || path_is_under(&target, &bg2)
-        || path_is_under(&bg2, &target)
+    if sources
+        .iter()
+        .any(|source| path_is_under(&target, source) || path_is_under(source, &target))
     {
         return Err(PreflightError::DestinationNotWritable {
             path: target,
@@ -317,7 +335,7 @@ pub fn initial_preflight_with(
     }
 
     let cache = validate_cache_root(&frozen.cache_root)?;
-    check_cache_root_placement(&cache, &bg1, &bg2, &target)?;
+    check_cache_root_placement(&cache, &sources, &target)?;
     host.probe_directory_writable(&writable_root)
         .map_err(|source| PreflightError::DestinationNotWritable {
             path: writable_root.clone(),
@@ -511,10 +529,9 @@ pub fn recheck_staging_target_before_mutation_with(
 /// Refuses a download cache at `cache` inside a protected creator reference path, or overlapping
 /// a read-only source game or the managed `target`. Only paths are compared, so a deleted cache
 /// can be checked before it is created again.
-pub(crate) fn check_cache_root_placement(
+pub(crate) fn check_cache_root_placement<S: AsRef<Path>>(
     cache: &Path,
-    bg1: &Path,
-    bg2: &Path,
+    sources: &[S],
     target: &Path,
 ) -> Result<(), PreflightError> {
     if is_creator_protected_destination(cache) {
@@ -526,11 +543,9 @@ pub(crate) fn check_cache_root_placement(
             ),
         });
     }
-    if path_is_under(cache, bg1)
-        || path_is_under(bg1, cache)
-        || path_is_under(cache, bg2)
-        || path_is_under(bg2, cache)
-        || path_is_under(cache, target)
+    if sources.iter().any(|source| {
+        path_is_under(cache, source.as_ref()) || path_is_under(source.as_ref(), cache)
+    }) || path_is_under(cache, target)
         || path_is_under(target, cache)
     {
         return Err(PreflightError::CacheNotWritable {
@@ -690,7 +705,7 @@ fn validate_required_inputs(
             Some(reason)
         } else if input.length == 0 {
             Some("expected length must be greater than zero".to_owned())
-        } else if !input.obtainable {
+        } else if !input.obtainable && kind == "tool" {
             Some("no verified cache entry or valid acquisition route exists".to_owned())
         } else {
             None
@@ -1327,8 +1342,21 @@ fn inspected_process_path(
     } else {
         Err(io::Error::last_os_error())
     };
-    filter_running_process_image(process, has_synchronize, process_name, process_id, image)
+    filter_running_process_image(
+        process,
+        has_synchronize,
+        process_name,
+        process_id,
+        image,
+        UNRESOLVED_PROCESS_EXIT_GRACE,
+    )
 }
+
+/// How long the process check waits for a relevant program whose image Windows will not report
+/// to finish exiting. Windows denies the image query of an exiting process until its handle is
+/// signaled; that window usually lasts well under a millisecond.
+#[cfg(windows)]
+const UNRESOLVED_PROCESS_EXIT_GRACE: std::time::Duration = std::time::Duration::from_secs(5);
 
 #[cfg(windows)]
 fn filter_running_process_image(
@@ -1337,6 +1365,7 @@ fn filter_running_process_image(
     process_name: &str,
     process_id: u32,
     image: io::Result<PathBuf>,
+    exit_grace: std::time::Duration,
 ) -> io::Result<Option<PathBuf>> {
     use windows_sys::Win32::Foundation::{STILL_ACTIVE, WAIT_OBJECT_0, WAIT_TIMEOUT};
     use windows_sys::Win32::System::Threading::{GetExitCodeProcess, WaitForSingleObject};
@@ -1363,15 +1392,32 @@ fn filter_running_process_image(
         Ok(path) => return Ok(Some(path)),
         Err(source) => source,
     };
-    if is_relevant_process_name(process_name) {
-        return Err(io::Error::new(
-            source.kind(),
-            format!(
-                "could not resolve relevant process {process_name:?} (pid {process_id}): {source}",
-            ),
-        ));
+    if !is_relevant_process_name(process_name) {
+        return Ok(None);
     }
-    Ok(None)
+    // An exiting process already has its final exit code but is not signaled yet, and Windows
+    // answers its image query with access denied. Other programs' short WeiDU runs hit that
+    // window often enough to stop an install, so an unresolved process gets a moment to finish
+    // exiting. One that keeps running, or that cannot be waited for, still fails closed.
+    let outcome = if has_synchronize {
+        let grace_millis = exit_grace.as_millis().min(u128::from(u32::MAX - 1)) as u32;
+        match unsafe { WaitForSingleObject(process, grace_millis) } {
+            WAIT_OBJECT_0 => return Ok(None),
+            WAIT_TIMEOUT => format!("; it was still running after {grace_millis} ms"),
+            _ => format!(
+                "; waiting for it to exit failed: {}",
+                io::Error::last_os_error()
+            ),
+        }
+    } else {
+        String::new()
+    };
+    Err(io::Error::new(
+        source.kind(),
+        format!(
+            "could not resolve relevant process {process_name:?} (pid {process_id}): {source}{outcome}",
+        ),
+    ))
 }
 
 #[cfg(windows)]
@@ -1379,7 +1425,7 @@ fn is_relevant_process_name(name: &str) -> bool {
     let name = name.to_ascii_lowercase();
     matches!(
         name.as_str(),
-        "baldur.exe" | "infinityloader.exe" | "weidu.exe" | "eeex.exe"
+        "baldur.exe" | "icewind.exe" | "infinityloader.exe" | "weidu.exe" | "eeex.exe"
     ) || (name.starts_with("setup-") && name.ends_with(".exe"))
 }
 
@@ -1423,12 +1469,13 @@ mod process_tests {
     use std::os::windows::io::AsRawHandle;
     use std::os::windows::process::CommandExt;
     use std::process::{Child, Command, Stdio};
+    use std::time::Duration;
     use windows_sys::Win32::Foundation::HANDLE;
     use windows_sys::Win32::System::Threading::CREATE_NO_WINDOW;
 
     /// Not named like an installer or the game: tests running in parallel use the real process
-    /// list, which fails closed on such a program that it cannot inspect, for example while it
-    /// starts. The checks below still treat the fixture as `weidu.exe` by its process name.
+    /// list, which fails closed on such a program that it cannot inspect. The checks below still
+    /// treat the fixture as `weidu.exe` by its process name.
     const FIXTURE_IMAGE: &str = "process-fixture.exe";
 
     fn fixture_process(script: &str) -> (tempfile::TempDir, Child) {
@@ -1480,10 +1527,34 @@ mod process_tests {
                 "weidu.exe",
                 child.id(),
                 Ok(image),
+                UNRESOLVED_PROCESS_EXIT_GRACE,
             )
             .expect("recheck retained handle after successful path query"),
             None
         );
+    }
+
+    #[test]
+    fn unresolved_process_that_finishes_exiting_is_not_running() {
+        let (_temp, mut child) = fixture_process("set /p fixture_input= & exit /b 0");
+        let stdin = child.stdin.take().expect("fixture stdin");
+        // Stands in for Windows' exit window: the image query has failed while the process is
+        // not signaled yet, and the process finishes exiting a moment later.
+        let closer = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(200));
+            drop(stdin);
+        });
+        let filtered = filter_running_process_image(
+            child.as_raw_handle() as HANDLE,
+            true,
+            "weidu.exe",
+            child.id(),
+            Err(io::Error::from(io::ErrorKind::PermissionDenied)),
+            Duration::from_secs(30),
+        );
+        closer.join().expect("close fixture stdin");
+        assert_eq!(child.wait().expect("wait for fixture exit").code(), Some(0));
+        assert_eq!(filtered.expect("wait out the exiting process"), None);
     }
 
     #[test]
@@ -1510,6 +1581,7 @@ mod process_tests {
             "weidu.exe",
             child.id(),
             Err(io::Error::from(io::ErrorKind::PermissionDenied)),
+            Duration::from_millis(50),
         );
         drop(child.stdin.take());
         child.wait().expect("wait for fixture after stdin closes");
@@ -1520,11 +1592,11 @@ mod process_tests {
                 .expect("live image path");
             assert_eq!(fs::canonicalize(path).unwrap(), expected);
         }
-        assert_eq!(
-            denied
-                .expect_err("retain relevant inspection failure")
-                .kind(),
-            io::ErrorKind::PermissionDenied
+        let denied = denied.expect_err("retain relevant inspection failure");
+        assert_eq!(denied.kind(), io::ErrorKind::PermissionDenied);
+        assert!(
+            denied.to_string().contains("still running after 50 ms"),
+            "{denied}"
         );
     }
 
@@ -1555,6 +1627,7 @@ mod process_tests {
                 "weidu.exe",
                 child.id(),
                 Ok(image),
+                UNRESOLVED_PROCESS_EXIT_GRACE,
             )
             .expect("filter query-only image conservatively");
             assert_eq!(filtered.is_none(), exit_code == 0);

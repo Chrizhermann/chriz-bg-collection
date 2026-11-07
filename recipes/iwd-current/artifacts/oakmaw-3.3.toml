@@ -1,0 +1,32 @@
+id = "oakmaw-3.3"
+name = "Oak-Maw"
+version = "3.3"
+acquisition = "fetch-only"
+
+[source]
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/oak-maw/?wpdmdl=290"
+reference = "3.3"
+expected_filename = "OakMaw v3.3.zip"
+expected_length = 4852691
+sha256 = "8e4f0dbbc33a4d48cc076afef2165d04589888b98cbfcfe6955cc5f6873440b8"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["OakMaw"]
+tp2_paths = ["OakMaw/OakMaw.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://downloads.weaselmods.net/download/oak-maw/"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
+url = "https://downloads.weaselmods.net/download/oak-maw/"
+reviewed_on = "2026-10-26"

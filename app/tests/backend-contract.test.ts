@@ -512,7 +512,6 @@ describe("native progress and rename boundaries", () => {
 
   const operations: [string, Record<string, unknown>, (backend: NativeBackend, callback: ProgressCallback) => Promise<unknown>][] = [
     ["install_app_update", { version: "0.1.0-alpha.19" }, (backend, callback) => backend.installAppUpdate("0.1.0-alpha.19", callback)],
-    ["apply_mod_upgrade", { installId: "chosen", reviewToken: "review", fullBackup: true, backupSaves: false }, (backend, callback) => backend.applyModUpgrade("chosen", "review", true, false, callback)],
     ["restore_mod_upgrade", { installId: "chosen", undo: true }, (backend, callback) => backend.restoreModUpgrade("chosen", true, callback)],
     ["apply_install_patch", { installId: "chosen", reviewToken: "review", fullBackup: false, saveBackup: true }, (backend, callback) => backend.applyInstallPatch("chosen", "review", false, true, callback)],
     ["undo_install_patch", { installId: "chosen" }, (backend, callback) => backend.undoInstallPatch("chosen", callback)],
@@ -570,5 +569,21 @@ describe("native progress and rename boundaries", () => {
     });
     await expect(new NativeBackend(invoke).renameInstallation("chosen", "Existing name")).rejects.toMatchObject({ code: "invalid_name", recoveryAction: "Choose another name" });
     expect(invoke).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("mod update commands", () => {
+  it("send the registry id and the mod id, never a game path", async () => {
+    const preview = { installId: "managed-one", modId: "buffbot", state: "up-to-date" };
+    const invoke = vi.fn<InvokeCommand>(async () => preview);
+    const backend = new NativeBackend(invoke);
+    await expect(backend.inspectModUpdate("managed-one", "buffbot")).resolves.toBe(preview);
+    await backend.applyModUpdate("managed-one", "buffbot", "bound-review", true, false);
+    await backend.restoreModUpdate("managed-one", "buffbot", true);
+    expect(invoke.mock.calls).toEqual([
+      ["inspect_mod_update", { installId: "managed-one", modId: "buffbot" }],
+      ["apply_mod_update", { installId: "managed-one", modId: "buffbot", reviewToken: "bound-review", fullBackup: true, saveBackup: false }],
+      ["restore_mod_update", { installId: "managed-one", modId: "buffbot", undo: true }],
+    ]);
   });
 });

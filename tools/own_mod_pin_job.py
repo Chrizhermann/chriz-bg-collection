@@ -4,8 +4,7 @@ Christopher, 2026-10-28: a GitHub Actions job looks for new releases of our mods
 day, and on demand. It prepares each new release in every installer that ships the mod and
 opens draft pull requests for his test; it never merges. The pin rules are in
 `docs/own-mod-pins.md`. The workflow, `.github/workflows/own-mod-pin-job.yml`, lives on
-`main`, because GitHub runs scheduled workflows only from there, and runs this file from
-the next-release branch.
+`main`, which is the shared source and release line for both installers.
 
 `plan` only reads. For every mod in `manifest/own-mods.toml` it compares each installer's
 pins with the mod's newest release. Every installer that ships the mod and is behind gets
@@ -19,9 +18,9 @@ the release in the same run, or none does. These stop a release, with the reason
   request for an older release, which the new one supersedes.
 
 `run` plans again, then prepares each release that goes ahead with
-`tools/prepare_own_mod_pin.py`, in a fresh worktree of each installer's branch. It pushes
+`tools/prepare_own_mod_pin.py`, in one fresh worktree for both installers. It pushes
 the branch `own-mod-pin/<installers>/<mod>-<release>`, opens a draft pull request against
-the installer's branch, and starts its checks, because pull requests that the workflow
+`main`, and starts its checks, because pull requests that the workflow
 token opens start none by themselves. A release that needs an agent gets an issue and no
 pull request. The job never merges, closes or approves anything.
 """
@@ -53,7 +52,6 @@ from tools.own_mod_pins import (  # noqa: E402
     REGISTRY,
     GitHub,
     GitHubError,
-    GitRefSource,
     Installer,
     Newest,
     OwnMod,
@@ -63,7 +61,6 @@ from tools.own_mod_pins import (  # noqa: E402
     SourceError,
     TreeSource,
     collect_pins,
-    fetch_branches,
     installer_source,
     is_newest,
     load_registry,
@@ -167,11 +164,11 @@ class JobGitHub(GitHub):
 
 @dataclass(frozen=True)
 class Target:
-    """The installers whose recipes live on one branch, read from `source`."""
+    """Both installers on the shared release line, read from `source`."""
 
     branch: str
     installers: tuple[Installer, ...]
-    source: TreeSource | GitRefSource
+    source: TreeSource
 
 
 @dataclass
@@ -207,17 +204,11 @@ class Item:
                             for installer in part.installers)
 
 
-def targets(root: Path, registry: Registry, next_release: str, remote: str) -> list[Target]:
-    """Group the installers by the branch their recipes live on."""
-    installers: dict[str, list[Installer]] = {}
-    sources: dict[str, TreeSource | GitRefSource] = {}
+def targets(root: Path, registry: Registry, next_release: str) -> list[Target]:
+    """Prepare every installer's pin together on the shared release line."""
     for installer in registry.installers:
-        source = installer_source(root, installer, remote)
-        branch = next_release if isinstance(source, TreeSource) else installer.branch
-        installers.setdefault(branch, []).append(installer)
-        sources.setdefault(branch, source)
-    return [Target(branch, tuple(group), sources[branch])
-            for branch, group in installers.items()]
+        installer_source(root, installer)
+    return [Target(next_release, registry.installers, TreeSource(root))]
 
 
 def pinned_tag(pin: Pin, tags: list[tuple[str, str]]) -> str | None:
@@ -292,7 +283,7 @@ def plan(
     remote: str = "origin",
     only: str | None = None,
 ) -> list[Item]:
-    groups = targets(root, registry, next_release, remote)
+    groups = targets(root, registry, next_release)
     errors: list[str] = []
     pins: dict[tuple[str, str], list[Pin]] = {}
     for target in groups:
@@ -400,17 +391,6 @@ def pull_body(item: Item, part: Part, prepared: str, run_url: str) -> str:
     return "\n".join(lines) + prepared
 
 
-def siblings(item: Item, pulls: list[tuple[Part, int]], branches: set[str]) -> str:
-    lines = ["", "### Every installer in the same step", ""]
-    lines += [f"- {' and '.join(installer.name for installer in part.installers)}: #{number}, "
-              f"into `{part.target.branch}`" for part, number in pulls]
-    if len(branches) > 1:
-        lines += ["", "They merge together. Until all of them are merged, the own-mods check "
-                      "stays red where the installers disagree; merge the one into the "
-                      "installer's own branch first (`docs/own-mod-pins.md`)."]
-    return "\n".join(lines) + "\n"
-
-
 @dataclass
 class Result:
     item: Item
@@ -490,11 +470,6 @@ def run(
                             github.dispatch(workflow, branch)
                         except GitHubError as error:
                             notes.append(f"#{pull['number']}: {workflow} did not start: {error}")
-            if len(pulls) > 1:
-                branches = {part.target.branch for part, _, _ in pulls}
-                links = [(part, number) for part, number, _ in pulls]
-                for part, number, body in pulls:
-                    github.edit_pull(number, body + siblings(item, links, branches))
             detail = "opened " + ", ".join(f"#{number}" for _, number, _ in pulls)
             results.append(Result(item, "pull requests", "; ".join([detail, *notes])))
         except prep.NeedsAgent as error:
@@ -588,7 +563,6 @@ def main(argv: list[str] | None = None) -> int:
             *([f"--depth={args.fetch_depth}"] if args.fetch_depth else []), args.remote,
             f"+refs/heads/{args.next_release_branch}:refs/remotes/{args.remote}/"
             f"{args.next_release_branch}")
-        fetch_branches(root, registry, args.remote, args.fetch_depth)
         items = plan(root, registry, github, args.next_release_branch, args.remote, args.mod)
     except (SourceError, GitHubError, RuntimeError) as error:
         print(f"error: {error}", file=sys.stderr)

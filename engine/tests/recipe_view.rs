@@ -1734,7 +1734,7 @@ fn a_required_part_of_a_selectable_mod_leaves_out_that_whole_mod() {
 }
 
 #[test]
-fn a_fixed_part_of_the_collection_is_never_left_out() {
+fn an_unavailable_fixed_mod_leaves_out_only_it_and_its_dependencies() {
     let manifest = leave_out_manifest();
     let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
 
@@ -1742,24 +1742,24 @@ fn a_fixed_part_of_the_collection_is_never_left_out() {
         &["core-archive"][..],
         &["snowy-archive", "core-archive"][..],
     ] {
-        let error = plan_without_artifacts(
+        let remaining = plan_without_artifacts(
             &manifest,
             &evaluation.normalized_selection,
             &evaluation.plan,
             &unusable(artifacts),
         )
-        .unwrap_err();
-        assert_eq!(
-            error,
-            LeaveOutError::Required {
-                feature_id: "core".to_owned(),
-                title: "core".to_owned(),
-            }
-        );
-        assert_eq!(
-            error.to_string(),
-            "core is a fixed part of this collection, so the installation cannot continue without it"
-        );
+        .unwrap();
+        assert!(!remaining.runs.iter().any(|run| run.run_id == "core"));
+        assert!(remaining
+            .runs
+            .iter()
+            .all(|run| !artifacts.contains(&run.artifact_id.as_str())));
+        assert!(remaining.runs.iter().any(|run| run.run_id == "tweaks"));
+        if artifacts.len() == 1 {
+            assert!(remaining.runs.iter().any(|run| run.run_id == "snowy"));
+        } else {
+            assert!(!remaining.runs.iter().any(|run| run.run_id == "snowy"));
+        }
     }
 }
 

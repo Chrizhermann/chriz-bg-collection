@@ -39,7 +39,7 @@ fn creates_the_exact_managed_layout_outside_both_sources() {
     let temp = tempfile::tempdir().unwrap();
     let (layout, bg1, bg2) = layout(&temp);
 
-    assert_eq!(layout.bg1_source(), fs::canonicalize(bg1).unwrap());
+    assert_eq!(layout.bg1_source().unwrap(), fs::canonicalize(bg1).unwrap());
     assert_eq!(layout.bg2_source(), fs::canonicalize(bg2).unwrap());
     assert_eq!(layout.bg1_root(), layout.root().join("bg1"));
     assert_eq!(layout.game_root(), layout.root().join("game"));
@@ -931,7 +931,7 @@ fn final_identity_seeds_interval_settings_in_isolated_profile_not_shared_eet_pro
     )
     .unwrap();
     let log_before = fs::read(layout.game_root().join("WeiDU.log")).unwrap();
-    assert!(verify_profile_settings(&layout, &identity).is_err());
+    verify_profile_settings(&layout, &identity).unwrap();
 
     finalize_game_identity(&layout, &identity).unwrap();
 
@@ -1001,7 +1001,7 @@ fn interval_defaults_do_not_treat_commented_or_other_section_values_as_enabled()
 }
 
 #[test]
-fn interval_defaults_report_unrecognized_config_without_overwriting_it() {
+fn interval_defaults_preserve_arbitrary_player_preferences() {
     for original in [
         "SetPrivateProfileString('Script','IntervalSaveEnabled', unknownValue)\n",
         "SetPrivateProfileString('Script','IntervalSaveEnabled','maybe')\n",
@@ -1009,24 +1009,27 @@ fn interval_defaults_report_unrecognized_config_without_overwriting_it() {
         let (_temp, layout, identity) = interval_profile_fixture(3354);
         let path = identity.save_root.join("Baldur.lua");
         fs::write(&path, original).unwrap();
-        let error = finalize_game_identity(&layout, &identity).unwrap_err();
-        assert!(
-            error.to_string().contains("interval-save settings"),
-            "{error}"
+        finalize_game_identity(&layout, &identity).unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            format!("{original}SetPrivateProfileString('Script','IntervalSaveCombat','0')\n")
         );
-        assert_eq!(fs::read_to_string(&path).unwrap(), original);
+        verify_profile_settings(&layout, &identity).unwrap();
     }
 }
 
 #[test]
-fn final_profile_verification_detects_missing_settings_without_rewriting_preferences() {
+fn final_profile_verification_seeds_missing_settings_and_preserves_preferences() {
     let (_temp, layout, identity) = interval_profile_fixture(3354);
     finalize_game_identity(&layout, &identity).unwrap();
     let path = identity.save_root.join("Baldur.lua");
     let changed = "SetPrivateProfileString('Script','IntervalSaveEnabled','0')\n";
     fs::write(&path, changed).unwrap();
-    assert!(verify_profile_settings(&layout, &identity).is_err());
-    assert_eq!(fs::read_to_string(&path).unwrap(), changed);
+    verify_profile_settings(&layout, &identity).unwrap();
+    assert_eq!(
+        fs::read_to_string(&path).unwrap(),
+        format!("{changed}SetPrivateProfileString('Script','IntervalSaveCombat','0')\n")
+    );
 }
 
 #[test]
@@ -1074,7 +1077,7 @@ fn final_identity_records_eet_state_in_isolated_profile_for_lefreuts_interface()
     let eet_written =
         format!("{EET_STATE_2}\nSetPrivateProfileString('Game Options','Cheats','1')\n");
     fs::write(shared.join("Baldur.lua"), &eet_written).unwrap();
-    assert!(verify_profile_settings(&layout, &identity).is_err());
+    verify_profile_settings(&layout, &identity).unwrap();
 
     finalize_game_identity(&layout, &identity).unwrap();
 
@@ -1170,7 +1173,7 @@ fn eet_state_ignores_comments_other_sections_and_repeated_correct_values() {
 }
 
 #[test]
-fn eet_state_reports_unrecognized_or_conflicting_assignments_without_overwriting_them() {
+fn eet_state_overwrites_arbitrary_values_duplicates_and_ignores_comments() {
     for original in [
         "SetPrivateProfileString('Program Options','EET Installation State',2)\n",
         "SetPrivateProfileString('Program Options','EET Installation State','1')\nSetPrivateProfileString('Program Options','EET Installation State','2')\n",
@@ -1179,24 +1182,28 @@ fn eet_state_reports_unrecognized_or_conflicting_assignments_without_overwriting
         let (_temp, layout, identity) = eet_profile_fixture(&format!("{EET_CORE}{EET_END}"));
         let path = identity.save_root.join("Baldur.lua");
         fs::write(&path, original).unwrap();
-        let error = finalize_game_identity(&layout, &identity).unwrap_err();
-        assert!(
-            error.to_string().contains("EET installation state"),
-            "{error}"
-        );
-        assert_eq!(fs::read_to_string(&path).unwrap(), original);
+        finalize_game_identity(&layout, &identity).unwrap();
+        let expected = if original.starts_with("--[[") {
+            format!("{original}{EET_STATE_2}\n")
+        } else { format!("{EET_STATE_2}\n").repeat(original.lines().count()) };
+        assert_eq!(fs::read_to_string(&path).unwrap(), expected);
+        finalize_game_identity(&layout, &identity).unwrap();
+        assert_eq!(fs::read_to_string(&path).unwrap(), expected);
     }
 }
 
 #[test]
-fn final_profile_verification_detects_an_outdated_eet_state_without_rewriting_it() {
+fn final_profile_verification_writes_the_decided_eet_state() {
     let (_temp, layout, identity) = eet_profile_fixture(&format!("{EET_CORE}{EET_END}"));
     finalize_game_identity(&layout, &identity).unwrap();
     let path = identity.save_root.join("Baldur.lua");
     let changed = "SetPrivateProfileString('Program Options','EET Installation State','0')\n";
     fs::write(&path, changed).unwrap();
-    assert!(verify_profile_settings(&layout, &identity).is_err());
-    assert_eq!(fs::read_to_string(&path).unwrap(), changed);
+    verify_profile_settings(&layout, &identity).unwrap();
+    assert_eq!(
+        fs::read_to_string(&path).unwrap(),
+        format!("{EET_STATE_2}\n")
+    );
 }
 
 #[test]
@@ -1364,4 +1371,126 @@ fn symlink_file(source: &Path, destination: &Path) -> io::Result<()> {
 #[cfg(windows)]
 fn symlink_directory(source: &Path, destination: &Path) -> io::Result<()> {
     std::os::windows::fs::symlink_dir(source, destination)
+}
+
+fn standalone_layout(temp: &tempfile::TempDir) -> (ManagedLayout, PathBuf) {
+    let source = source_tree(temp.path(), "source-iwd");
+    fs::write(
+        source.join("engine.lua"),
+        b"engine_name = \"Icewind Dale - Enhanced Edition\"\r\nengine_mode = 2\r\n",
+    )
+    .unwrap();
+    let layout =
+        ManagedLayout::prepare_standalone(temp.path().join("managed"), GameRole::Iwdee, &source)
+            .unwrap();
+    (layout, source)
+}
+
+#[test]
+fn standalone_layout_owns_only_the_game_and_state_folders() {
+    let temp = tempfile::tempdir().unwrap();
+    let (layout, source) = standalone_layout(&temp);
+
+    assert!(layout.is_standalone());
+    assert_eq!(layout.primary_role(), GameRole::Iwdee);
+    assert_eq!(layout.bg1_source(), None);
+    assert_eq!(layout.bg2_source(), fs::canonicalize(source).unwrap());
+    assert!(layout.game_root().is_dir());
+    assert!(layout.state_root().is_dir());
+    assert!(!layout.bg1_root().exists());
+    let mut names = fs::read_dir(layout.root())
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+        .collect::<Vec<_>>();
+    names.sort();
+    assert_eq!(names, vec![".chriz", "game"]);
+}
+
+#[test]
+fn standalone_layout_rejects_an_eet_role_and_a_leftover_bg1_folder() {
+    let temp = tempfile::tempdir().unwrap();
+    let source = source_tree(temp.path(), "source-iwd");
+    let error =
+        ManagedLayout::prepare_standalone(temp.path().join("managed"), GameRole::Bg2ee, &source)
+            .unwrap_err();
+    assert!(
+        error.to_string().contains("cannot be installed alone"),
+        "{error}"
+    );
+    assert!(!temp.path().join("managed").exists());
+
+    let managed = temp.path().join("managed-with-bg1");
+    fs::create_dir_all(managed.join("bg1")).unwrap();
+    let error = ManagedLayout::prepare_standalone(&managed, GameRole::Iwdee, &source).unwrap_err();
+    assert!(
+        error.to_string().contains("unowned top-level entry"),
+        "{error:?}"
+    );
+}
+
+#[test]
+fn standalone_staging_copies_only_its_game_and_refuses_other_roles() {
+    let temp = tempfile::tempdir().unwrap();
+    let (layout, _) = standalone_layout(&temp);
+
+    let report = stage_game_copy(&layout, GameRole::Iwdee).unwrap();
+
+    assert_eq!(report.copied_files, 2);
+    assert_eq!(
+        fs::read(layout.game_root().join("data/base.bif")).unwrap(),
+        b"base payload"
+    );
+    for role in [GameRole::BgeeSod, GameRole::Bg2ee] {
+        let error = stage_game_copy(&layout, role).unwrap_err();
+        assert!(error.to_string().contains("does not stage"), "{error}");
+    }
+    assert!(!layout.bg1_root().exists());
+}
+
+#[test]
+fn standalone_final_identity_patches_the_game_and_seeds_no_baldur_profile() {
+    let temp = tempfile::tempdir().unwrap();
+    let (layout, _) = standalone_layout(&temp);
+    let documents = temp.path().join("Documents");
+    fs::create_dir(&documents).unwrap();
+    let identity = reserve_save_identity(
+        &FixedDocuments(documents),
+        &layout,
+        "Chriz Easy IWD",
+        "install-iwd",
+    )
+    .unwrap();
+    stage_game_copy(&layout, GameRole::Iwdee).unwrap();
+    // A Baldur's Gate interval-save component in the log must not seed `Baldur.lua` here.
+    fs::write(
+        layout.game_root().join("WeiDU.log"),
+        "~CDTWEAKS/SETUP-CDTWEAKS.TP2~ #0 #3354 // Installed interval saves\n",
+    )
+    .unwrap();
+
+    finalize_game_identity(&layout, &identity).unwrap();
+
+    assert!(identity.engine_name.starts_with("Chriz Easy IWD - "));
+    assert_eq!(
+        read_engine_name(layout.game_root()).unwrap(),
+        identity.engine_name
+    );
+    assert!(!identity.save_root.join("Baldur.lua").exists());
+    verify_profile_settings(&layout, &identity).unwrap();
+}
+
+#[test]
+fn standalone_save_name_falls_back_to_the_game_not_eet() {
+    let temp = tempfile::tempdir().unwrap();
+    let (layout, _) = standalone_layout(&temp);
+    let documents = temp.path().join("Documents");
+    fs::create_dir(&documents).unwrap();
+
+    let identity = propose_save_identity(&documents, &layout, "!!!", "install-iwd").unwrap();
+
+    assert!(
+        identity.engine_name.starts_with("Chriz IWD - "),
+        "{}",
+        identity.engine_name
+    );
 }
