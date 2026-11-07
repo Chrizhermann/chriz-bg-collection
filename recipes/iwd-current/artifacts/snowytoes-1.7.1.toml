@@ -1,0 +1,32 @@
+id = "snowytoes-1.7.1"
+name = "Snowytoes Hamlet"
+version = "1.7.1"
+acquisition = "fetch-only"
+
+[source]
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/snowytoes-hamlet/?wpdmdl=557"
+reference = "1.7.1"
+expected_filename = "Snowytoes-v1.7.1.zip"
+expected_length = 17797070
+sha256 = "9758a44140e25e17fcea63507043cb30c1b0876c586f2bc1d3ea0377b53dcb26"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["Snowytoes"]
+tp2_paths = ["Snowytoes/Snowytoes.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 1024
+max_entry_uncompressed_bytes = 16777216
+max_total_uncompressed_bytes = 67108864
+max_compression_ratio = 200
+
+[provenance]
+homepage = "https://downloads.weaselmods.net/download/snowytoes-hamlet/"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
+url = "https://downloads.weaselmods.net/download/snowytoes-hamlet/"
+reviewed_on = "2026-11-02"

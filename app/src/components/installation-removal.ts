@@ -1,5 +1,6 @@
 import type { InstallationRemovalPreview, InstallationRemovalResult } from "../contracts";
 import { actionButton, element } from "./app-shell";
+import { flavor } from "../flavor";
 
 function unusedProfile(path: string): HTMLElement[] {
   return [element("p", "muted", "Saved-game profile deleted too, since the game never used it:"), element("p", "path", path)];
@@ -50,7 +51,7 @@ export function installationRemovalDialog(
       ? "This folder is missing. Remove its entry from My installs; only its unused saved-game profile below is deleted."
       : "This folder is missing. Remove its entry from My installs; no files will be deleted."
     : unlist
-      ? "CEBG can no longer confirm that this folder is this installation, so it will not delete anything in it. Only the entry leaves My installs; the folder stays where it is."
+      ? `${flavor.shortName} can no longer confirm that this folder is this installation, so it will not delete anything in it. Only the entry leaves My installs; the folder stays where it is.`
       : "Permanently delete this installation folder and everything inside it, including any files or saves you manually placed there. This cannot be undone.");
   description.id = "removal-description";
   dialog.append(title, element("strong", undefined, preview.displayName), description, element("p", "path removal-path", preview.managedRoot));
@@ -60,7 +61,7 @@ export function installationRemovalDialog(
   } else if (!forget) {
     const size = approximateSize(preview.approximateSizeBytes);
     dialog.append(element("p", "muted", `Approximate folder size: ${size}.${size === "unavailable" ? "" : " Disk space freed may differ."}`));
-    dialog.append(element("p", "muted", "Your original game sources and shared downloads stay untouched. Saves stored outside this folder are kept."));
+    dialog.append(element("p", "muted", flavor.text.removalKeepsSources));
     if (preview.preservedSavePath) {
       dialog.append(element("p", "muted", "Saved-game profile kept:"), element("p", "path", preview.preservedSavePath));
     }

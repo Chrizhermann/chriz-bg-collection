@@ -514,6 +514,7 @@ pub(super) fn unpack(ctx: &Context<'_>, artifact: &Artifact) -> Result<PathBuf, 
                 expected_sha256: artifact.source.sha256.clone(),
                 redirect_hosts: artifact.source.redirect_hosts.clone(),
                 max_attempts: crate::acquire::DEFAULT_DOWNLOAD_ATTEMPTS,
+                route: crate::acquire::DownloadRoute::Generic,
             },
             &ConsoleSink,
         )
@@ -613,8 +614,7 @@ pub fn apply_with_progress(
 ) -> Result<HotpatchPreview, String> {
     crate::operation_progress::stage(progress, "checking");
     let root = &ctx.record.managed_root;
-    let _lock = crate::lock::TargetLock::try_acquire(ctx.app_data.join("locks"), root)
-        .map_err(files::err)?;
+    let _lock = ctx.locks.try_acquire(root).map_err(files::err)?;
     crate::patches::launch_guard(root)?;
     crate::mod_upgrades::launch_guard(root)?;
     super::validate_context(ctx)?;
@@ -1291,8 +1291,7 @@ pub fn restore_with_progress(
 ) -> Result<HotpatchPreview, String> {
     crate::operation_progress::stage(progress, "checking");
     let root = &ctx.record.managed_root;
-    let _lock = crate::lock::TargetLock::try_acquire(ctx.app_data.join("locks"), root)
-        .map_err(files::err)?;
+    let _lock = ctx.locks.try_acquire(root).map_err(files::err)?;
     crate::patches::launch_guard(root)?;
     crate::mod_upgrades::launch_guard(root)?;
     super::validate_context(ctx)?;

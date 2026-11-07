@@ -1,0 +1,82 @@
+# Synthetic Icewind Dale: Enhanced Edition profile for hermetic tests. Its fingerprints describe
+# tests/fixtures/games/content/steam-iwdee, not a real game.
+schema = 1
+id = "steam-iwdee-2.7.3-en-us"
+role = "iwdee"
+storefront = "steam"
+locale = "en_US"
+executable = "icewind.exe"
+product_version = "2.7.3.0"
+steam_app_id = 321800
+gog_game_ids = []
+required_files = [
+  "icewind.exe",
+  "chitin.key",
+  "lang/en_US/dialog.tlk",
+  "engine.lua",
+  "data/PATCH27.bif",
+]
+sod_files = []
+fingerprint_files = ["icewind.exe", "data/PATCH27.bif"]
+[[inventory_surfaces]]
+path = "chitin.key"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "dialog.tlk"
+kind = "file"
+allow_missing = true
+
+[[inventory_surfaces]]
+path = "lang/en_US/dialog.tlk"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "engine.lua"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "override"
+kind = "tree"
+allow_missing = true
+
+# Only installer evidence is inventoried at the game root. The stock `weidu.conf`
+# (`lang_dir = en_us`) and `steam_appid.txt` shipped by Steam are tolerated: every
+# installer run passes `--use-lang en_US`, so `weidu.conf` cannot change its language.
+[[inventory_surfaces]]
+path = "."
+kind = "matching"
+patterns = [
+  "setup-*",
+  "weidu.log",
+  "weidu.exe",
+  "*.debug",
+  "*.debug.log",
+  "stratagems",
+]
+
+[[allowed_clean_variants]]
+id = "fixture-steam-iwdee"
+
+[[allowed_clean_variants.fingerprints]]
+path = "icewind.exe"
+sha256 = "4ebef44a0f67ece0f7d586b71de389dd75a8550b1c30ed48ab5df0b37f8ec049"
+
+[[allowed_clean_variants.fingerprints]]
+path = "data/PATCH27.bif"
+sha256 = "dbed465435c769d9cec9df261298b5df00f8b9bd32f151a0d295e8afc02d614c"
+
+[[allowed_clean_variants.inventory]]
+path = "chitin.key"
+kind = "file"
+sha256 = "9683ffe06f923134135c0a679657e373f3b6937957a335b29186999f3e1354a5"
+
+[[allowed_clean_variants.inventory]]
+path = "lang/en_US/dialog.tlk"
+kind = "file"
+sha256 = "fcd3f138c45ab808a5dded28da7c4051715a8e0667070342176302d5af3f9b29"
+
+[[allowed_clean_variants.inventory]]
+path = "engine.lua"
+kind = "file"
+sha256 = "83199de1a7233bc6bb734df02d12e1aa244cbe90fc6c85f2c85698d42935f782"

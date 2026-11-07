@@ -1,0 +1,83 @@
+# Icewind Dale: Enhanced Edition 2.7.3.0, Steam (app 321800), English. Fingerprints were read
+# from a clean Steam installation on 2026-10-25. Only this Steam build is verified; no GOG or
+# Beamdog build has been fingerprinted, so none is listed.
+schema = 1
+id = "steam-iwdee-2.7.3-en-us"
+role = "iwdee"
+storefront = "steam"
+locale = "en_US"
+executable = "icewind.exe"
+product_version = "2.7.3.0"
+steam_app_id = 321800
+gog_game_ids = []
+required_files = [
+  "icewind.exe",
+  "chitin.key",
+  "lang/en_US/dialog.tlk",
+  "engine.lua",
+  "data/PATCH27.bif",
+]
+sod_files = []
+fingerprint_files = ["icewind.exe", "data/PATCH27.bif"]
+[[inventory_surfaces]]
+path = "chitin.key"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "dialog.tlk"
+kind = "file"
+allow_missing = true
+
+[[inventory_surfaces]]
+path = "lang/en_US/dialog.tlk"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "engine.lua"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "override"
+kind = "tree"
+allow_missing = true
+
+# Only installer evidence is inventoried at the game root. The stock `weidu.conf`
+# (`lang_dir = en_us`) and `steam_appid.txt` shipped by Steam are tolerated: every
+# installer run passes `--use-lang en_US`, so `weidu.conf` cannot change its language.
+[[inventory_surfaces]]
+path = "."
+kind = "matching"
+patterns = [
+  "setup-*",
+  "weidu.log",
+  "weidu.exe",
+  "*.debug",
+  "*.debug.log",
+  "stratagems",
+]
+
+[[allowed_clean_variants]]
+id = "steam-2026-10-25"
+
+[[allowed_clean_variants.fingerprints]]
+path = "icewind.exe"
+sha256 = "3458b17b1ac0e60d5798a4b2d2dcc62bb458521378564a109b1395c847b320f1"
+
+[[allowed_clean_variants.fingerprints]]
+path = "data/PATCH27.bif"
+sha256 = "c3748179cb86229e372d0780b2abab1a7a359bb76512f50957b5ee0346497f97"
+
+[[allowed_clean_variants.inventory]]
+path = "chitin.key"
+kind = "file"
+sha256 = "2c16c07b3de69bcea935c2c68cafc01f08d85dc74056ec5d40e4a2aa24013461"
+
+[[allowed_clean_variants.inventory]]
+path = "lang/en_US/dialog.tlk"
+kind = "file"
+sha256 = "d7fd154738fffe00f5d5956324603dfc558af46ee57a76886cd5516b914126c7"
+
+[[allowed_clean_variants.inventory]]
+path = "engine.lua"
+kind = "file"
+sha256 = "2f8a29be818e0378405040eb7aa53a838b513b89eceb4e7ccf9b81e2352e440c"

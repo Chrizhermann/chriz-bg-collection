@@ -1,0 +1,52 @@
+{
+  "productName": "Chriz Easy IWD",
+  "version": "0.1.8",
+  "mainBinaryName": "chriz-easy-iwd",
+  "identifier": "dev.chrizhermann.iwdcollection",
+  "build": {
+    "beforeDevCommand": "npm run dev -- --mode iwd",
+    "beforeBuildCommand": "npm run check:iwd-recipe && npm run build -- --mode iwd"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Chriz Easy IWD",
+        "width": 1160,
+        "height": 760,
+        "minWidth": 640,
+        "minHeight": 520,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ]
+  },
+  "bundle": {
+    "icon": ["icons/iwd/icon.ico"],
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/iwd/icon.ico"
+      }
+    },
+    "createUpdaterArtifacts": true,
+    "resources": {
+      "../../manifest/collection.toml": null,
+      "../../manifest/release.json": null,
+      "../../manifest/artifacts/": null,
+      "../../manifest/mods/": null,
+      "../../manifest/presets/": null,
+      "../../manifest/game-builds/": null,
+      "../../manifest/releases/": null,
+      "../../recipes/curated-full-current/": null,
+      "../../hotpatches/bg/": null,
+      "../../recipes/iwd-current/": "recipes/iwd-current/",
+      "../../hotpatches/iwd/": "hotpatches/iwd/"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE3REVENjgxREE5Q0RBRkUKUldUKzJwemFnZGJlRjNjUVBHTWR0S3NIRzk4c2FZbGdEaGE5VUdzTUZFY0Fpb2ExVTdMQVh5YVkK",
+      "endpoints": ["https://github.com/Chrizhermann/chriz-easy-iwd/releases/download/updates/latest.json"]
+    }
+  }
+}

@@ -1,0 +1,32 @@
+id = "hommet-1.2"
+name = "Hommet"
+version = "1.2"
+acquisition = "fetch-only"
+
+[source]
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/hommet/?wpdmdl=441"
+reference = "1.2"
+expected_filename = "Hommet-v1.2.zip"
+expected_length = 4373752
+sha256 = "71ce5655db53d428f90ec62445f757403041647c2ffefdfc67ee21f45c4f47df"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["Hommet"]
+tp2_paths = ["Hommet/hommet.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 512
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://downloads.weaselmods.net/download/hommet/"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
+url = "https://downloads.weaselmods.net/download/hommet/"
+reviewed_on = "2026-10-26"

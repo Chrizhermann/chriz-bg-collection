@@ -1,0 +1,32 @@
+id = "eeex-1.3.1"
+name = "EEex"
+version = "1.3.1"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Bubb13/EEex/releases/download/v1.3.1/eeex-v1.3.1.zip"
+reference = "v1.3.1"
+expected_filename = "eeex-v1.3.1.zip"
+expected_length = 10390181
+sha256 = "9c8104bd63fe7e7dfff889d89ab2d98e158b6e552846370a924ed7eacea4ecf3"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["EEex"]
+tp2_paths = ["EEex/EEex.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 512
+max_entry_uncompressed_bytes = 16777216
+max_total_uncompressed_bytes = 67108864
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Bubb13/EEex"
+license = "Fetch-only official upstream release; the collection does not redistribute it"
+url = "https://github.com/Bubb13/EEex/releases/tag/v1.3.1"
+reviewed_on = "2026-10-18"

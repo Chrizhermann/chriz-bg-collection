@@ -31,7 +31,7 @@ const NEW_CREATURE: &[u8] = b"CRE V9.0 synthetic Belhifet after the hotpatch";
 
 const CATALOG: &str = r#"
 schema = 1
-game = "eet"
+game = "iwdee"
 runtime_files = ["infinityloader.ini", "buffbot_*.log", "override/bfbot_presets/**"]
 
 [gate]
@@ -158,6 +158,7 @@ struct Fixture {
     receipt: InstallReceipt,
     receipt_bytes: Vec<u8>,
     app_data: PathBuf,
+    locks: crate::lock::TargetLockNamespace,
     cache: PathBuf,
     catalog: Catalog,
     package: PathBuf,
@@ -189,10 +190,8 @@ fn tlk(entries: u32) -> Vec<u8> {
 }
 
 fn recipe() -> crate::Manifest {
-    crate::Manifest::load(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("../recipes/curated-full-current"),
-    )
-    .unwrap()
+    crate::Manifest::load(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../recipes/iwd-current"))
+        .unwrap()
 }
 
 impl Fixture {
@@ -247,7 +246,7 @@ impl Fixture {
             attempt_id: "attempt-complete".into(),
             evidence_attempt_id: "attempt-complete".into(),
             managed_root: root.clone(),
-            staged_bg1: root.join("bg1"),
+            staged_bg1: None,
             staged_bg2: game.clone(),
             started_at_millis: 1,
             completed_at_millis: 2,
@@ -277,7 +276,7 @@ impl Fixture {
                     sha256: sha256_bytes(log),
                     components,
                 }],
-                bg1_engine_name: ENGINE_NAME.into(),
+                bg1_engine_name: None,
                 bg2_engine_name: ENGINE_NAME.into(),
                 managed_save_root: save_root.clone(),
                 launch_path: game.join("InfinityLoader.exe"),
@@ -303,6 +302,7 @@ impl Fixture {
             launch_path: game.join("InfinityLoader.exe"),
             receipt_sha256: sha256_bytes(&receipt_bytes),
             completed_at_millis: 2,
+            recipe_id: None,
         };
 
         let catalog_dir = temp.path().join("catalog");
@@ -339,6 +339,9 @@ impl Fixture {
         write(&tool, b"synthetic stand-in; never executed");
         let app_data = temp.path().join("app-data");
         fs::create_dir(&app_data).unwrap();
+        let locks =
+            crate::lock::TargetLockNamespace::in_local_application_data(temp.path().join("local"))
+                .unwrap();
         Self {
             cache: temp.path().join("cache"),
             temp,
@@ -346,6 +349,7 @@ impl Fixture {
             receipt,
             receipt_bytes,
             app_data,
+            locks,
             catalog,
             package,
             tool,
@@ -357,6 +361,7 @@ impl Fixture {
         Context {
             record: &self.record,
             app_data: &self.app_data,
+            locks: &self.locks,
             cache: &self.cache,
         }
     }

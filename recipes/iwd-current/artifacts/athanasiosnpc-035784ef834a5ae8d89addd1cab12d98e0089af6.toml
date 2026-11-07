@@ -1,0 +1,32 @@
+id = "athanasiosnpc-035784ef834a5ae8d89addd1cab12d98e0089af6"
+name = "Athanasios NPC for IWD:EE"
+version = "035784ef834a5ae8d89addd1cab12d98e0089af6"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-commit-zip"
+url = "https://codeload.github.com/TheArtisanBG/IWD-Athanasios-NPC/zip/035784ef834a5ae8d89addd1cab12d98e0089af6"
+reference = "035784ef834a5ae8d89addd1cab12d98e0089af6"
+expected_filename = "IWD-Athanasios-NPC-035784ef834a5ae8d89addd1cab12d98e0089af6.zip"
+expected_length = 3009450
+sha256 = "80f020b11806a865f8aac00dc64ed58e1110a2cb064d27e8f5b97f06fcc8ff9b"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "single-wrapper"
+publish_roots = ["AthanasiosNPC"]
+tp2_paths = ["AthanasiosNPC/AthanasiosNPC.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 8388608
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/TheArtisanBG/IWD-Athanasios-NPC"
+license = "Fetch-only official upstream commit archive; the collection does not redistribute it"
+url = "https://github.com/TheArtisanBG/IWD-Athanasios-NPC/commit/035784ef834a5ae8d89addd1cab12d98e0089af6"
+reviewed_on = "2026-10-25"

@@ -282,9 +282,24 @@ pub fn read_logs(root: &Path) -> Result<(String, String), String> {
     Ok((read("bg1")?, read("game")?))
 }
 
+/// Staged game folders present below `root`: `game` always, and `bg1` for an EET install.
+///
+/// A standalone install has no `bg1` folder. An EET folder that disappears after a pause began
+/// is still detected, because its inventory and logs no longer match the saved baseline.
+fn staged_game_folders(root: &Path) -> Result<Vec<(GameRoot, &'static str)>, String> {
+    let mut folders = Vec::new();
+    match fs::symlink_metadata(root.join("bg1")) {
+        Ok(_) => folders.push((GameRoot::Bg1, "bg1")),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => return Err(e.to_string()),
+    }
+    folders.push((GameRoot::Bg2, "game"));
+    Ok(folders)
+}
+
 fn diagnostic_files(root: &Path) -> Result<BTreeMap<String, DiagnosticEvidence>, String> {
     let mut files = BTreeMap::new();
-    for target in ["bg1", "game"] {
+    for (_, target) in staged_game_folders(root)? {
         for entry in fs::read_dir(root.join(target)).map_err(|e| e.to_string())? {
             let entry = entry.map_err(|e| e.to_string())?;
             let name = entry.file_name().to_string_lossy().into_owned();
@@ -373,7 +388,7 @@ pub fn begin(
 
 fn game_inventory(root: &Path) -> Result<BTreeMap<GameRoot, String>, String> {
     let mut result = BTreeMap::new();
-    for (target, folder) in [(GameRoot::Bg1, "bg1"), (GameRoot::Bg2, "game")] {
+    for (target, folder) in staged_game_folders(root)? {
         let directory = root.join(folder);
         let mut entries = BTreeMap::new();
         for entry in walkdir::WalkDir::new(&directory).follow_links(false) {

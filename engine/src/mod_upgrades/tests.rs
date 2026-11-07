@@ -8,6 +8,7 @@ struct Fixture {
     _temp: tempfile::TempDir,
     record: ManagedInstallRecord,
     app: PathBuf,
+    locks: crate::lock::TargetLockNamespace,
     cache: PathBuf,
     original: BTreeMap<String, Vec<u8>>,
 }
@@ -58,6 +59,7 @@ impl Fixture {
             launch_path: root.join("game/Baldur.exe"),
             receipt_sha256: sha256_bytes(receipt),
             completed_at_millis: 1,
+            recipe_id: None,
         };
         write(
             &record.managed_save_root.join("save/one.gam"),
@@ -65,6 +67,10 @@ impl Fixture {
         );
         Self {
             app: temp.path().join("app"),
+            locks: crate::lock::TargetLockNamespace::in_local_application_data(
+                temp.path().join("local"),
+            )
+            .unwrap(),
             cache: temp.path().join("cache"),
             _temp: temp,
             record,
@@ -75,6 +81,7 @@ impl Fixture {
         Context {
             record: &self.record,
             app_data: &self.app,
+            locks: &self.locks,
             cache: &self.cache,
             recipe: self._temp.path(),
         }
@@ -536,7 +543,7 @@ fn completed_copy(parents: &[&str]) -> (tempfile::TempDir, ManagedInstallRecord)
         attempt_id: "attempt".into(),
         evidence_attempt_id: "attempt".into(),
         managed_root: root.clone(),
-        staged_bg1: root.join("bg1"),
+        staged_bg1: Some(root.join("bg1")),
         staged_bg2: game.clone(),
         started_at_millis: 1,
         completed_at_millis: 2,
@@ -563,7 +570,7 @@ fn completed_copy(parents: &[&str]) -> (tempfile::TempDir, ManagedInstallRecord)
         runs: Vec::new(),
         final_state: Some(FinalReceiptState {
             logs: Vec::new(),
-            bg1_engine_name: "Upgrade test".into(),
+            bg1_engine_name: Some("Upgrade test".into()),
             bg2_engine_name: "Upgrade test".into(),
             managed_save_root: save_root.clone(),
             launch_path: game.join("Baldur.exe"),
@@ -587,6 +594,7 @@ fn completed_copy(parents: &[&str]) -> (tempfile::TempDir, ManagedInstallRecord)
         launch_path: game.join("Baldur.exe"),
         receipt_sha256: sha256_bytes(&receipt),
         completed_at_millis: 2,
+        recipe_id: None,
     };
     (temp, record)
 }
@@ -604,6 +612,10 @@ fn a_registered_copy_below_steamapps_or_program_files_can_be_updated() {
         let ctx = Context {
             record: &record,
             app_data: &app,
+            locks: &crate::lock::TargetLockNamespace::in_local_application_data(
+                temp.path().join("local"),
+            )
+            .unwrap(),
             cache: &cache,
             recipe: temp.path(),
         };
@@ -614,6 +626,10 @@ fn a_registered_copy_below_steamapps_or_program_files_can_be_updated() {
         let ctx = Context {
             record: &record,
             app_data: &app,
+            locks: &crate::lock::TargetLockNamespace::in_local_application_data(
+                temp.path().join("local"),
+            )
+            .unwrap(),
             cache: &cache,
             recipe: temp.path(),
         };
@@ -634,6 +650,10 @@ fn legacy_inspection_is_recovery_only_without_reading_recipe_or_downloading() {
     let ctx = Context {
         record: &record,
         app_data: &app,
+        locks: &crate::lock::TargetLockNamespace::in_local_application_data(
+            temp.path().join("local"),
+        )
+        .unwrap(),
         cache: &cache,
         recipe: &recipe,
     };

@@ -1,0 +1,32 @@
+schema = 1
+recipe_id = "chriz-easy-iwd"
+version = "0.1.8"
+published_at = "2026-11-07T00:00:00Z"
+minimum_app_version = "0.1.1"
+supersedes = "0.1.6"
+
+[[changes]]
+id = "chriz-iwd-encounters-0.2.1"
+title = "Chriz IWD Encounters 0.2.1: no more crash when banter picks a dead party member"
+summary = "The Crossmod Banter Pack's banter could pick a dead party member, and that crashes the game. Banter now starts only between living party members in one area; its chances and timers stay as they were. A game already in progress gets this through the hotpatch."
+save_applicability = "current-save"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-iwd-encounters-0.2.0",
+  "artifact:chriz-iwd-encounters-0.2.1",
+  "feature:feature:chriz-iwd-encounters:component-110",
+  "run:chriz-iwd-encounters-main",
+]
+
+[[changes]]
+id = "arszyk"
+title = "New companion: Arszyk's Wonderful Decay"
+summary = "Lava's vampire fighter/druid joins the companions, with a late-game quest that also works without him. The mod is a beta. It comes with new installations only; a game in progress keeps its party options."
+save_applicability = "new-game-only"
+urgency = "informational"
+covers = [
+  "artifact:arszyk-beta1.4",
+  "feature:mod:arszyk",
+  "feature:feature:arszyk:component-0",
+  "run:arszyk-main",
+]

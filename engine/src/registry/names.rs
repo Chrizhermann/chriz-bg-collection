@@ -25,6 +25,57 @@ pub const DEFAULT_INSTALLATION_NAME: &str = "Chriz Easy BG";
 /// Maximum accepted length in Unicode scalar values, excluding edge whitespace.
 pub const MAX_INSTALLATION_NAME_CHARACTERS: usize = 80;
 
+/// Folder under `LOCALAPPDATA` used by the Baldur's Gate app and every EET installation. Its
+/// `locks` folder holds the target locks of every application, whatever folder an application
+/// uses for its own registry.
+pub const DEFAULT_APPLICATION_DATA_DIRECTORY: &str = "Chriz BG Collection";
+
+/// Checks that `name` can be an application's own folder under `LOCALAPPDATA`: one plain
+/// Windows folder name of 1-64 bytes that is not a reserved device name. Returns the reason
+/// when it cannot.
+pub fn check_application_data_directory(name: &str) -> Result<(), &'static str> {
+    if name.trim().is_empty() || name.len() > 64 {
+        return Err("must be 1-64 characters");
+    }
+    if matches!(name, "." | "..") || name.ends_with(['.', ' ']) || name.starts_with(' ') {
+        return Err("is not a plain folder name");
+    }
+    if name.chars().any(|character| {
+        character.is_control()
+            || matches!(
+                character,
+                '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*'
+            )
+    }) {
+        return Err("must be one folder name without path or reserved characters");
+    }
+    // Windows reserves a device name also with an extension or trailing spaces before it.
+    let stem = name.split('.').next().unwrap_or(name).trim_end();
+    if is_reserved_device_name(stem) {
+        return Err("is a reserved Windows device name");
+    }
+    Ok(())
+}
+
+/// CON, PRN, AUX, NUL, CONIN$, CONOUT$, and COM or LPT followed by one digit 0-9 or superscript 1-3, in any
+/// ASCII case. Compared by character, so a multi-byte superscript is never misread.
+fn is_reserved_device_name(stem: &str) -> bool {
+    if ["CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"]
+        .iter()
+        .any(|device| stem.eq_ignore_ascii_case(device))
+    {
+        return true;
+    }
+    let mut characters = stem.chars();
+    let prefix = characters.by_ref().take(3).collect::<String>();
+    let rest = characters.collect::<Vec<_>>();
+    (prefix.eq_ignore_ascii_case("COM") || prefix.eq_ignore_ascii_case("LPT"))
+        && matches!(
+            rest.as_slice(),
+            [digit] if digit.is_ascii_digit() || matches!(digit, '\u{b9}' | '\u{b2}' | '\u{b3}')
+        )
+}
+
 /// Characters Windows does not allow in a folder name; a name replaces each with `-`.
 const FORBIDDEN_NAME_CHARACTERS: [char; 9] = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
 
@@ -108,12 +159,19 @@ struct NamedIdentity {
 impl ManagedInstallRegistry {
     /// Suggest a currently unused numbered default; creation rechecks it under a lock.
     pub fn suggested_display_name(&self) -> Result<String, RegistryError> {
+        self.suggested_display_name_from(DEFAULT_INSTALLATION_NAME)
+    }
+
+    /// Suggest a currently unused numbered name built on `base`, such as the product name of
+    /// another application; creation rechecks it under a lock.
+    pub fn suggested_display_name_from(&self, base: &str) -> Result<String, RegistryError> {
+        let base = normalize_display_name(base);
         let names = self.named_identities()?;
         for suffix in 1_u64.. {
             let name = if suffix == 1 {
-                DEFAULT_INSTALLATION_NAME.to_owned()
+                base.clone()
             } else {
-                format!("{DEFAULT_INSTALLATION_NAME} ({suffix})")
+                format!("{base} ({suffix})")
             };
             if !names
                 .values()

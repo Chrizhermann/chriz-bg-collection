@@ -378,7 +378,15 @@ fn inspect(request: &SupervisedRecoveryRequest) -> Result<Inspected, CliError> {
         ));
     }
     let logs = final_logs(&root, &frozen, request.append_missing_component.as_ref())?;
-    let launch_path = verified_launch_path(&frozen.plan, &root.join("game")).map_err(error)?;
+    let fallback = frozen.fallback_executable().map_err(error)?;
+    let root_label = if frozen.bg1.is_some() {
+        "staged BG2 root".to_owned()
+    } else {
+        format!("staged {} folder", frozen.bg2.role.display_name())
+    };
+    let launch_path =
+        verified_launch_path(&frozen.plan, &root.join("game"), &fallback, &root_label)
+            .map_err(error)?;
     Ok(Inspected {
         root,
         base,
@@ -536,7 +544,8 @@ fn final_logs(
     frozen: &FrozenCliRecipe,
     append: Option<&AppendMissingComponentAuthorization>,
 ) -> Result<Vec<FinalLogReceipt>, CliError> {
-    [GameRoot::Bg1, GameRoot::Bg2]
+    frozen
+        .targets()
         .into_iter()
         .map(|target| {
             let folder = if target == GameRoot::Bg1 {
@@ -610,11 +619,10 @@ fn expected_recovery_log_components(
 pub fn accept_supervised_recovery(
     request: &SupervisedRecoveryRequest,
 ) -> Result<RecoveryReceipt, CliError> {
-    let app_data = application_data_root()?;
-    let _lock =
-        crate::lock::TargetLock::try_acquire(app_data.join(LOCKS_DIRECTORY), &request.managed_root)
-            .map_err(error)?;
+    let _lock = crate::lock::TargetLock::try_acquire(target_lock_root()?, &request.managed_root)
+        .map_err(error)?;
     let checked = inspect(request)?;
+    let app_data = checked_application_data_root(&checked.frozen.collection, &checked.root)?;
     let root = &checked.root;
     let install_receipt = root.join(".chriz/install-receipt.json");
     if install_receipt.exists() {
@@ -641,8 +649,7 @@ pub fn accept_supervised_recovery(
     // Check process/TLK ownership without installing anything. Then reuse the already
     // reserved save identity instead of allowing the game to share EET's default folder.
     recheck_target_before_mutation(&root.join("game"), "en_US").map_err(error)?;
-    let layout = ManagedLayout::prepare(root, &checked.frozen.bg1.root, &checked.frozen.bg2.root)
-        .map_err(error)?;
+    let layout = frozen_layout(root, &checked.frozen).map_err(error)?;
     let identity = reserve_save_identity(
         &SystemDocuments,
         &layout,
@@ -650,14 +657,23 @@ pub fn accept_supervised_recovery(
         &checked.base.install_id,
     )
     .map_err(error)?;
-    let bg1_engine_name = read_engine_name(layout.bg1_root()).map_err(error)?;
-    if bg1_engine_name != identity.engine_name {
-        return Err(error("BG1 save identity differs from its reservation"));
-    }
+    let bg1_engine_name = if layout.is_standalone() {
+        None
+    } else {
+        let name = read_engine_name(layout.bg1_root()).map_err(error)?;
+        if name != identity.engine_name {
+            return Err(error("BG1 save identity differs from its reservation"));
+        }
+        Some(name)
+    };
     finalize_game_identity(&layout, &identity).map_err(error)?;
     let bg2_engine_name = read_engine_name(layout.game_root()).map_err(error)?;
     if bg2_engine_name != identity.engine_name {
-        return Err(error("final EET save identity was not retained"));
+        return Err(error(if layout.is_standalone() {
+            "final save identity was not retained"
+        } else {
+            "final EET save identity was not retained"
+        }));
     }
     let base_path = root
         .join(".chriz/attempts")
@@ -692,6 +708,16 @@ fn publish_registry(
     receipt: &RecoveryReceipt,
     path: &Path,
 ) -> Result<(), CliError> {
+    // Checked again right before the write, as completion does: the folder may have become an
+    // alias of the Baldur's Gate folder, or moved, since recovery started.
+    let current = checked_application_data_root(&frozen.collection, &receipt.managed_root)?;
+    if current != app_data {
+        return Err(error(format!(
+            "the application data folder changed from {} to {} during recovery",
+            app_data.display(),
+            current.display()
+        )));
+    }
     ManagedInstallRegistry::open_or_create(app_data)
         .and_then(|registry| {
             registry.publish(&ManagedInstallRecord {
@@ -711,6 +737,7 @@ fn publish_registry(
                     }
                 })?),
                 completed_at_millis: receipt.completed_at_millis,
+                recipe_id: frozen.recipe_id.clone(),
             })
         })
         .map_err(error)?;
@@ -743,6 +770,20 @@ pub(super) fn report_recovery(
             ))
         }
     };
+    // Every frozen root must have its log checked, not only the logs the receipt carries.
+    let recorded = receipt
+        .final_state
+        .logs
+        .iter()
+        .map(|log| log.target)
+        .collect::<std::collections::BTreeSet<_>>();
+    if receipt.final_state.logs.len() != recorded.len()
+        || recorded != frozen.targets().into_iter().collect()
+    {
+        return Err(error(
+            "recovered receipt does not record exactly the frozen game roots",
+        ));
+    }
     for log in &receipt.final_state.logs {
         if log.components != expected_recovery_log_components(frozen, log.target, append)? {
             return Err(error(

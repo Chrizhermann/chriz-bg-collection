@@ -1,0 +1,32 @@
+id = "karihinpc-1.02"
+name = "Karihi NPC for IWD:EE"
+version = "1.02"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-tag-archive"
+url = "https://codeload.github.com/TheArtisanBG/KarihiNPC/zip/refs/tags/v1.02"
+reference = "v1.02"
+expected_filename = "KarihiNPC-1.02.zip"
+expected_length = 6785704
+sha256 = "1491d118bb4100d4c707b1eed0072407e580b63af4f3e426721b8d61ad342722"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "single-wrapper"
+publish_roots = ["KarihiNPC"]
+tp2_paths = ["KarihiNPC/KarihiNPC.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/TheArtisanBG/KarihiNPC"
+license = "Fetch-only official upstream tag archive; the collection does not redistribute it"
+url = "https://github.com/TheArtisanBG/KarihiNPC/releases/tag/v1.02"
+reviewed_on = "2026-10-25"

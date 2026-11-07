@@ -1,6 +1,6 @@
 """Synthetic checks of tools/own_mod_pin_job.py, the daily pin job.
 
-Each test builds a small origin repository with two installer branches and clones it. A
+Each test builds a small origin repository with both installers on main and clones it. A
 fake stands in for GitHub, and a fake preparer edits the recipes the way
 tools/prepare_own_mod_pin.py would, so these tests need no network and no engine build.
 The fixture mods are named Test*, so that no real pin ever finds this file.
@@ -28,11 +28,10 @@ ACCOUNT = "Chrizhermann"
 TESTBOT = f"{ACCOUNT}/testbot"
 TESTREMOTE = f"{ACCOUNT}/testremote"
 TESTENCOUNTERS = f"{ACCOUNT}/testencounters"
-NEXT = "next-release"
-IWD_BRANCH = "iwd-app"
+NEXT = "main"
 COMMITS = {"v1.1.0": "1" * 40, "v1.1.5": "2" * 40, "v1.2.0": "3" * 40, "v0.9.0": "4" * 40}
 REMOTE_COMMIT = "5" * 40
-BG_BRANCH = "own-mod-pin/bg/testbot-v1.2.0"
+BG_BRANCH = "own-mod-pin/bg+iwd/testbot-v1.2.0"
 IWD_PIN_BRANCH = "own-mod-pin/iwd/testbot-v1.2.0"
 
 
@@ -118,8 +117,7 @@ class FakeGitHub:
 
 
 class JobFixture:
-    """An origin with the next-release branch (Chriz Easy BG's recipes, the registry) and an
-    installer branch (Chriz Easy IWD's recipe), and a clone of it as the job's root."""
+    """An origin with both recipes and the registry on main, and a clone for the job."""
 
     def __init__(self, base: Path) -> None:
         self.base = base
@@ -166,7 +164,6 @@ recipes = [{bg_recipes}]
 id = "iwd"
 name = "IWD"
 recipes = ["recipes/iwd"]
-branch = "{IWD_BRANCH}"
 
 [[mods]]
 id = "testbot"
@@ -187,7 +184,7 @@ repository = "{TESTENCOUNTERS}"
 
     def build(self, *, bg: str = "v1.1.0", iwd: str = "v1.1.5", holds: str = "",
               extra: str | None = None) -> None:
-        """Commit both branches to the origin and clone it. `extra` adds a second recipe to
+        """Commit both recipes to the origin and clone it. `extra` adds a second recipe to
         Chriz Easy BG that pins Testbot at that release."""
         self.git(self.seed, "checkout", "--quiet", "-b", NEXT)
         self.recipe("manifest", {"testbot": release_artifact("testbot", bg),
@@ -199,21 +196,11 @@ repository = "{TESTENCOUNTERS}"
         self.write("manifest/own-mods.toml", self.registry(holds, bg_recipes))
         self.write(".github/workflows/ci.yml", "name: CI\n")
         self.write(".github/workflows/own-mod-pins.yml", "name: Own mod pins\n")
-        self.git(self.seed, "add", "--all")
-        self.git(self.seed, "commit", "--quiet", "-m", "next-release")
-        self.git(self.seed, "checkout", "--quiet", "--orphan", IWD_BRANCH)
-        self.git(self.seed, "rm", "-r", "--quiet", "--cached", ".")
-        for path in ("manifest", "recipes", ".github"):
-            subprocess.run(["git", "clean", "-fdq", path], cwd=self.seed, check=False)
         self.recipe("recipes/iwd", {"testbot": release_artifact("testbot", iwd)})
-        self.write(".github/workflows/ci.yml", "name: CI\n")
         self.git(self.seed, "add", "--all")
-        self.git(self.seed, "commit", "--quiet", "-m", "iwd")
-        self.git(self.seed, "push", "--quiet", str(self.origin), NEXT, IWD_BRANCH)
-        self.git(self.base, "clone", "--quiet", "--branch", NEXT, str(self.origin),
-                 str(self.root))
-        self.git(self.root, "fetch", "--quiet", "origin",
-                 f"+refs/heads/{IWD_BRANCH}:refs/remotes/origin/{IWD_BRANCH}")
+        self.git(self.seed, "commit", "--quiet", "-m", "both installers on main")
+        self.git(self.seed, "push", "--quiet", str(self.origin), NEXT)
+        self.git(self.base, "clone", "--quiet", "--branch", NEXT, str(self.origin), str(self.root))
 
     def plan(self, only: str | None = None) -> list[job.Item]:
         registry = load_registry(self.root / "manifest/own-mods.toml")
@@ -257,15 +244,15 @@ class PlanTests(unittest.TestCase):
         fixture.build(**build)
         return fixture
 
-    def test_every_installer_that_is_behind_gets_the_release_on_its_branch(self) -> None:
+    def test_every_installer_that_is_behind_gets_one_shared_release_branch(self) -> None:
         fixture = self.fixture()
         items = fixture.plan()
         self.assertEqual([(item.mod.id, item.release, item.stop) for item in items],
                          [("testbot", "v1.2.0", None)])
         item = items[0]
         self.assertEqual([(part.target.branch, [installer.id for installer in part.installers])
-                          for part in item.parts], [(NEXT, ["bg"]), (IWD_BRANCH, ["iwd"])])
-        self.assertEqual([item.branch(part) for part in item.parts], [BG_BRANCH, IWD_PIN_BRANCH])
+                          for part in item.parts], [(NEXT, ["bg", "iwd"])])
+        self.assertEqual([item.branch(part) for part in item.parts], [BG_BRANCH])
 
     def test_mods_on_their_newest_release_or_in_no_installer_need_nothing(self) -> None:
         fixture = self.fixture(bg="v1.2.0", iwd="v1.2.0")
@@ -273,7 +260,7 @@ class PlanTests(unittest.TestCase):
         # Only the behind installer goes ahead; the other already has the release.
         fixture = self.fixture(bg="v1.2.0")
         item, = fixture.plan()
-        self.assertEqual([part.target.branch for part in item.parts], [IWD_BRANCH])
+        self.assertEqual([part.target.branch for part in item.parts], [NEXT])
 
     def test_a_release_stops_with_its_reason(self) -> None:
         hold = '''
@@ -293,13 +280,13 @@ installers = {{ bg = "v1.1.0", iwd = "v1.1.5" }}
              lambda github: github.latest.update({TESTBOT: "v0.9.0"})),
             ("its newest release is unknown", {}, lambda github: github.broken.add(TESTBOT)),
             ("the job already prepared it as #7 (closed)", {},
-             lambda github: github.heads.update({IWD_PIN_BRANCH: [{"number": 7,
+             lambda github: github.heads.update({BG_BRANCH: [{"number": 7,
                                                                    "state": "closed"}]})),
             ("the job already prepared it as #8 (merged)", {},
              lambda github: github.heads.update({BG_BRANCH: [
                  {"number": 8, "state": "closed", "merged_at": "2026-11-01T10:00:00Z"}]})),
             ("#9 already changes `recipes/iwd/mods/testbot.toml`; the job waits", {},
-             lambda github: (github.open.update({IWD_BRANCH: [
+             lambda github: (github.open.update({NEXT: [
                  {"number": 9, "head": {"ref": "claude/pin-testbot-iwd"}}]}),
                  github.files.update({9: [{"filename": "recipes/iwd/mods/testbot.toml"}]}))),
             ("#10 already changes `manifest/artifacts/testbot-1.1.0.toml`", {},
@@ -346,67 +333,42 @@ class RunTests(unittest.TestCase):
         fixture.build(**build)
         return fixture
 
-    def test_it_pushes_a_branch_per_installer_and_opens_linked_draft_pull_requests(self) -> None:
+    def test_one_pull_request_pins_both_installers_on_main(self) -> None:
         fixture = self.fixture()
         preparer = fake_preparer()
         result, = fixture.run(preparer)
-        self.assertEqual((result.action, result.detail), ("pull requests", "opened #100, #101"))
-        self.assertEqual(preparer.calls, [("v1.2.0", ["bg"]), ("v1.2.0", ["iwd"])])
-
-        self.assertEqual(fixture.origin_branches(), sorted([NEXT, IWD_BRANCH, BG_BRANCH,
-                                                            IWD_PIN_BRANCH]))
-        for branch, base, changed in (
-            (BG_BRANCH, NEXT, ["manifest/artifacts/testbot-1.2.0.toml",
-                               "manifest/mods/testbot.toml"]),
-            (IWD_PIN_BRANCH, IWD_BRANCH, ["recipes/iwd/artifacts/testbot-1.2.0.toml",
-                                          "recipes/iwd/mods/testbot.toml"]),
-        ):
-            with self.subTest(branch=branch):
-                self.assertEqual(fixture.git(fixture.origin, "rev-parse", f"{branch}^"),
-                                 fixture.git(fixture.origin, "rev-parse", base))
-                self.assertEqual(fixture.git(fixture.origin, "log", "-1", "--format=%an <%ae>",
-                                             branch), f"{job.BOT_NAME} <{job.BOT_EMAIL}>")
-                self.assertEqual(fixture.git(fixture.origin, "diff", "--name-only",
-                                             f"{base}..{branch}").split(), changed)
-
-        created = fixture.github.created
-        self.assertEqual([(pull["title"], pull["head"], pull["base"]) for pull in created], [
-            ("Pin Testbot v1.2.0 in BG", BG_BRANCH, NEXT),
-            ("Pin Testbot v1.2.0 in IWD", IWD_PIN_BRANCH, IWD_BRANCH),
+        self.assertEqual((result.action, result.detail), ("pull requests", "opened #100"))
+        self.assertEqual(preparer.calls, [("v1.2.0", ["bg", "iwd"])])
+        self.assertEqual(fixture.origin_branches(), sorted([NEXT, BG_BRANCH]))
+        self.assertEqual(fixture.git(fixture.origin, "rev-parse", f"{BG_BRANCH}^"),
+                         fixture.git(fixture.origin, "rev-parse", NEXT))
+        self.assertEqual(fixture.git(fixture.origin, "diff", "--name-only", f"{NEXT}..{BG_BRANCH}").split(), [
+            "manifest/artifacts/testbot-1.2.0.toml", "manifest/mods/testbot.toml",
+            "recipes/iwd/artifacts/testbot-1.2.0.toml", "recipes/iwd/mods/testbot.toml",
         ])
-        self.assertIn("Prepared by the [daily pin job](https://example.invalid/run)",
-                      created[0]["body"])
-        self.assertIn("never merges by itself", created[0]["body"])
-        self.assertIn("## Testbot v1.2.0\n\nPrepared for bg.", created[0]["body"])
-        # The workflow token's pull requests start no checks, so the job starts them, where
-        # the branch has the workflow.
-        self.assertEqual(fixture.github.dispatched, [("ci.yml", BG_BRANCH),
-                                                     ("own-mod-pins.yml", BG_BRANCH),
-                                                     ("ci.yml", IWD_PIN_BRANCH)])
-        for number in (100, 101):
-            body = fixture.github.edited[number]
-            self.assertIn("### Every installer in the same step", body)
-            self.assertIn(f"- BG: #100, into `{NEXT}`", body)
-            self.assertIn(f"- IWD: #101, into `{IWD_BRANCH}`", body)
-            self.assertIn("merge the one into the installer's own branch first", body)
-        # Its worktrees are gone again.
+        created, = fixture.github.created
+        self.assertEqual((created["title"], created["head"], created["base"]),
+                         ("Pin Testbot v1.2.0 in BG and IWD", BG_BRANCH, NEXT))
+        self.assertIn("Prepared for bg, iwd.", created["body"])
+        self.assertEqual(fixture.github.dispatched,
+                         [("ci.yml", BG_BRANCH), ("own-mod-pins.yml", BG_BRANCH)])
         self.assertEqual(len(fixture.git(fixture.root, "worktree", "list").splitlines()), 1)
 
     def test_a_superseded_pull_request_is_named_in_the_new_one(self) -> None:
         fixture = self.fixture()
-        fixture.github.open[IWD_BRANCH] = [{"number": 12,
+        fixture.github.open[NEXT] = [{"number": 12,
                                             "head": {"ref": "own-mod-pin/iwd/testbot-v1.1.9"}}]
         fixture.github.files[12] = [{"filename": "recipes/iwd/mods/testbot.toml"}]
         fixture.run(fake_preparer())
         self.assertIn("Supersedes #12, the job's pull request for an older release; close it.",
-                      fixture.github.created[1]["body"])
+                      fixture.github.created[0]["body"])
 
     def test_a_release_that_needs_an_agent_gets_one_issue_and_no_branch(self) -> None:
         fixture = self.fixture()
         result, = fixture.run(fake_preparer({"iwd"}))
         self.assertEqual(result.action, "needs an agent")
         self.assertIn("(issue #201)", result.detail)
-        self.assertEqual(fixture.origin_branches(), sorted([NEXT, IWD_BRANCH]))
+        self.assertEqual(fixture.origin_branches(), [NEXT])
         self.assertEqual(fixture.github.created, [])
         title, body = fixture.github.created_issues[0]
         self.assertEqual(title, "Pin Testbot v1.2.0 by hand")
@@ -423,7 +385,7 @@ class RunTests(unittest.TestCase):
         result, = fixture.run(fake_preparer(), dry_run=True)
         self.assertEqual(result.action, "dry run")
         self.assertIn(f"`{BG_BRANCH}` into `{NEXT}`", result.detail)
-        self.assertEqual(fixture.origin_branches(), sorted([NEXT, IWD_BRANCH]))
+        self.assertEqual(fixture.origin_branches(), [NEXT])
         self.assertEqual((fixture.github.created, fixture.github.dispatched,
                           fixture.github.created_issues), ([], [], []))
 

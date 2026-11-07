@@ -1,0 +1,16 @@
+schema = 1
+recipe_id = "chriz-easy-iwd"
+version = "0.1.2"
+published_at = "2026-10-29T00:00:00Z"
+minimum_app_version = "0.1.1"
+supersedes = "0.1.1"
+
+[[changes]]
+id = "marketh-ring-optional"
+title = "Marketh's Ring is optional"
+summary = "Unfinished Business's Marketh's Ring is offered but off: a player reports that Marketh can vanish together with his signet, so the quest cannot be finished."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = [
+  "feature:feature:ub-iwd:component-300",
+]

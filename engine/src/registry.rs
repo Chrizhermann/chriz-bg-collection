@@ -82,6 +82,10 @@ pub struct ManagedInstallRecord {
     pub receipt_sha256: String,
     /// Successful receipt completion time in Unix epoch milliseconds.
     pub completed_at_millis: u64,
+    /// Stable id of the recipe family that produced this install, when the recipe publishes
+    /// one. Omitted when absent, so records written before the field existed keep their bytes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recipe_id: Option<String>,
 }
 
 /// Whether a registry record still resolves to its exact receipted target.
@@ -601,6 +605,9 @@ fn validate_stored_record(record: &ManagedInstallRecord) -> Result<(), RegistryE
     }
     validate_hash("recipe", &record.recipe_sha256)?;
     validate_hash("receipt", &record.receipt_sha256)?;
+    if let Some(recipe_id) = &record.recipe_id {
+        validate_identifier(recipe_id, "recipe id", &record.managed_root)?;
+    }
     for (label, path) in [
         ("managed root", &record.managed_root),
         ("managed save root", &record.managed_save_root),

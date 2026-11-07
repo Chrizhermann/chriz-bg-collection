@@ -1,0 +1,23 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-11-07"
+generator = "tools/prepare_own_mod_pin.py"
+command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 <TP2 path>; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python -I tools/check_native_component_order.py --recipe-root <recipe> --mod-id <mod> --archive <fresh downloaded ZIP>"
+scope = "Chriz IWD Encounters v0.2.1 (published 2026-11-06 15:59 UTC, a normal GitHub release, tag commit c34334e) replaces chriz-iwd-encounters-0.2.0 in recipes/iwd-current. Each archive was downloaded anonymously into a fresh cache for the inspection and for each recipe's artifact TOML, and passed the production acquisition and extraction contracts. The superseded evidence records stay as history; in recipes/iwd-current the new artifact TOML replaces the superseded one. This is automated source/package verification, not a WeiDU install or gameplay acceptance."
+
+# 60 entries, 321,945 bytes uncompressed, largest entry 61,189 bytes, depth 4, compression ratio at most 1.0.
+[[artifacts]]
+mod_id = "chriz-iwd-encounters"
+artifact_id = "chriz-iwd-encounters-0.2.1"
+recipe_profiles = ["recipes/iwd-current"]
+source_reference = "v0.2.1"
+source_commit = "c34334e01eddf8e353c517e59e05e1baf1c8bea1"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/download/v0.2.1/chriz-iwd-encounters-v0.2.1.zip"
+actual_length = 331725
+actual_sha256 = "a4899e731f6d7f0fe157dba5c810f233ac3146ada1aa84fc4ee8ffd58271f031"
+tp2_sha256 = "5280eb2a4685352334a3f2e91c4e5058c8cd32347c0ce294648107dab7e9d3ef"
+native_components = [100, 110, 200, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true

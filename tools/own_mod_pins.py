@@ -11,8 +11,8 @@ agents follow on every pin is in `docs/own-mod-pins.md`. In short:
 - The registry lists every one of our mods that a recipe pins, and every recipe the app
   bundles belongs to an installer in the registry.
 
-Installer recipes are read from this working tree, or from a git ref while an installer
-lives on another branch. The newest releases come from the GitHub API; `--offline` checks
+Installer recipes are read together from this working tree.
+The newest releases come from the GitHub API; `--offline` checks
 only what needs no network. Being behind the newest release is an error in a release
 check (`--release`, or a change of a recipe or app version against `--base`) and for every
 mod whose pin changed against `--base`; otherwise it is a note, so that a release of one of
@@ -69,7 +69,6 @@ class Installer:
     id: str
     name: str
     recipes: tuple[str, ...]
-    branch: str | None = None
     # "keep": a new pin leaves the superseded artifact TOML as history; "remove": it goes.
     superseded_artifacts: str = "keep"
 
@@ -148,7 +147,7 @@ def parse_registry(data: dict) -> Registry:
         where = f"installers[{index}]"
         if not isinstance(table, dict):
             raise RegistryError(f"{where} must be a table")
-        unknown = sorted(set(table) - {"id", "name", "recipes", "branch",
+        unknown = sorted(set(table) - {"id", "name", "recipes",
                                        "superseded_artifacts"})
         if unknown:
             raise RegistryError(f"{where}: unknown keys {unknown}")
@@ -170,8 +169,7 @@ def parse_registry(data: dict) -> Registry:
                     f"{where}: recipe `{path}` already belongs to `{recipe_owner[path]}`"
                 )
             recipe_owner[path] = installer_id
-        branch = _text(table, "branch", where, required=False)
-        installers.append(Installer(installer_id, _text(table, "name", where), paths, branch,
+        installers.append(Installer(installer_id, _text(table, "name", where), paths,
                                     superseded))
     if not installers:
         raise RegistryError("own-mods registry: list at least one installer")
@@ -655,39 +653,14 @@ def version_of(source: TreeSource | GitRefSource, path: str) -> str | None:
     return version if isinstance(version, str) else None
 
 
-def installer_source(
-    root: Path,
-    installer: Installer,
-    remote: str,
-) -> TreeSource | GitRefSource:
+def installer_source(root: Path, installer: Installer) -> TreeSource:
+    """Both products belong to this source tree; a missing recipe is an incomplete checkout."""
     tree = TreeSource(root)
-    if all(tree.exists(f"{recipe}/collection.toml") for recipe in installer.recipes):
-        return tree
-    if installer.branch is None:
-        missing = [recipe for recipe in installer.recipes
-                   if not tree.exists(f"{recipe}/collection.toml")]
+    missing = [recipe for recipe in installer.recipes
+               if not tree.exists(f"{recipe}/collection.toml")]
+    if missing:
         raise SourceError(f"{installer.name}: {', '.join(missing)} is not in this working tree")
-    return GitRefSource(root, f"{remote}/{installer.branch}")
-
-
-def fetch_branches(root: Path, registry: Registry, remote: str, depth: int | None) -> None:
-    """Fetch the branches installers live on; `depth` only for a shallow CI checkout."""
-    tree = TreeSource(root)
-    for installer in registry.installers:
-        if installer.branch and not all(
-            tree.exists(f"{recipe}/collection.toml") for recipe in installer.recipes
-        ):
-            refspec = f"+refs/heads/{installer.branch}:refs/remotes/{remote}/{installer.branch}"
-            shallow = [f"--depth={depth}"] if depth else []
-            result = subprocess.run(
-                ["git", "fetch", "--no-tags", "--quiet", *shallow, remote, refspec],
-                cwd=root,
-                capture_output=True,
-                check=False,
-            )
-            if result.returncode != 0:
-                message = result.stderr.decode("utf-8", "replace").strip()
-                raise SourceError(f"could not fetch {installer.branch} from {remote}: {message}")
+    return tree
 
 
 def check(
@@ -697,7 +670,6 @@ def check(
     *,
     base: str | None = None,
     release: bool = False,
-    remote: str = "origin",
 ) -> Report:
     report = Report()
 
@@ -717,7 +689,7 @@ def check(
     collected: list[InstallerPins] = []
     for installer in registry.installers:
         try:
-            source = installer_source(root, installer, remote)
+            source = installer_source(root, installer)
         except SourceError as error:
             report.errors.append(str(error))
             continue
@@ -968,11 +940,6 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--base", help="git ref this change is compared with")
     run.add_argument("--release", action="store_true",
                      help="require the newest release (or a hold) for every mod")
-    run.add_argument("--remote", default="origin",
-                     help="remote that holds the branches installers live on")
-    run.add_argument("--fetch", action="store_true",
-                     help="fetch those branches from the remote first")
-    run.add_argument("--fetch-depth", type=int, help="shallow fetch, for CI checkouts only")
     run.add_argument("--api", default=os.environ.get("CEBG_GITHUB_API", GITHUB_API),
                      help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
@@ -980,15 +947,12 @@ def main(argv: list[str] | None = None) -> int:
     root = args.root.resolve()
     try:
         registry = load_registry(root / REGISTRY)
-        if args.fetch:
-            fetch_branches(root, registry, args.remote, args.fetch_depth)
     except (RegistryError, SourceError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 2
     token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
     github = None if args.offline else GitHub(args.api, token)
-    report = check(root, registry, github, base=args.base, release=args.release,
-                   remote=args.remote)
+    report = check(root, registry, github, base=args.base, release=args.release)
     sys.stdout.write(render(report, registry))
     if os.environ.get("GITHUB_ACTIONS") == "true":
         annotate(report)

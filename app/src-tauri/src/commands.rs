@@ -203,6 +203,70 @@ pub async fn restore_install_patch(
 }
 
 #[tauri::command]
+pub async fn inspect_hotpatch(
+    state: State<'_, BridgeState>,
+    install_id: String,
+) -> Result<bg_engine::hotpatch::HotpatchPreview, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || bridge.inspect_hotpatch(&install_id)).await
+}
+
+#[tauri::command]
+pub async fn apply_hotpatch(
+    state: State<'_, BridgeState>,
+    install_id: String,
+    review_token: String,
+    full_backup: bool,
+    save_backup: bool,
+    webview: tauri::Webview,
+    on_progress: Option<JavaScriptChannelId>,
+) -> Result<bg_engine::hotpatch::HotpatchPreview, CommandError> {
+    let on_progress = on_progress.map(|id| id.channel_on(webview));
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || {
+        bridge.apply_hotpatch_with_progress(
+            &install_id,
+            &review_token,
+            full_backup,
+            save_backup,
+            &|progress| report_progress(&on_progress, progress),
+        )
+    })
+    .await
+}
+
+/// Undo the latest hotpatch (`undo`), or finish restoring one that did not finish.
+#[tauri::command]
+pub async fn restore_hotpatch(
+    state: State<'_, BridgeState>,
+    install_id: String,
+    undo: bool,
+    webview: tauri::Webview,
+    on_progress: Option<JavaScriptChannelId>,
+) -> Result<bg_engine::hotpatch::HotpatchPreview, CommandError> {
+    let on_progress = on_progress.map(|id| id.channel_on(webview));
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || {
+        bridge.restore_hotpatch_with_progress(&install_id, undo, &|progress| {
+            report_progress(&on_progress, progress)
+        })
+    })
+    .await
+}
+
+#[tauri::command]
 pub async fn inspect_mod_update(
     state: State<'_, BridgeState>,
     install_id: String,
@@ -377,6 +441,7 @@ pub async fn choose_game_folder(
         let title = match role {
             GameRole::BgeeSod => "Choose Baldur's Gate: Enhanced Edition with SoD",
             GameRole::Bg2ee => "Choose Baldur's Gate II: Enhanced Edition",
+            GameRole::Iwdee => "Choose Icewind Dale: Enhanced Edition",
         };
         let selected = local_path(app.dialog().file().set_title(title).blocking_pick_folder())?;
         bridge.choose_game_folder(role, selected)
@@ -684,13 +749,25 @@ pub async fn check_updates(
         .unwrap_or_else(|poisoned| poisoned.into_inner())
         .clone();
     let mut summary =
-        background(move || bridge.unconfigured_update_center(env!("CARGO_PKG_VERSION"))).await?;
-    let radar_bridge = state
-        .bridge
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
-        .clone();
-    let radar_check = tauri::async_runtime::spawn_blocking(move || radar_bridge.radar_update());
+        background(move || bridge.unconfigured_update_center(crate::flavor::APP_VERSION)).await?;
+    // The overlay has its own releases, also in an app without an update feed.
+    let radar_check = crate::flavor::CURRENT.radar.then(|| {
+        let radar_bridge = state
+            .bridge
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clone();
+        tauri::async_runtime::spawn_blocking(move || radar_bridge.radar_update())
+    });
+    // An app without its own signed update feed has no updater to ask; its collection
+    // arrives only with a new app download.
+    if !crate::flavor::CURRENT.app_updates {
+        if let Some(radar_check) = radar_check {
+            summary.radar = radar_check.await.ok();
+        }
+        crate::installation_lookup_trace::updates_returned(&summary);
+        return Ok(summary);
+    }
     let updater = app
         .updater_builder()
         .timeout(Duration::from_secs(15))
@@ -707,7 +784,10 @@ pub async fn check_updates(
         .recipe_version()?
         .unwrap_or_else(|| "bundled".to_owned());
     summary.recipe.state = crate::updates::RecipeUpdateState::UpToDate;
-    summary.recipe.detail = "The collection is included with your CEBG version.".to_owned();
+    summary.recipe.detail = format!(
+        "The collection is included with your {} version.",
+        crate::flavor::CURRENT.short_name
+    );
     summary.recipe.disposition = "up-to-date".to_owned();
     match candidate {
         Ok(candidate) => {
@@ -719,11 +799,16 @@ pub async fn check_updates(
             }
             .to_owned();
             summary.application.detail = if candidate.is_some() {
-                "A newer CEBG version is available."
+                format!(
+                    "A newer {} version is available.",
+                    crate::flavor::CURRENT.short_name
+                )
             } else {
-                "You're using the latest CEBG version."
-            }
-            .to_owned();
+                format!(
+                    "You're using the latest {} version.",
+                    crate::flavor::CURRENT.short_name
+                )
+            };
             if let Some(update) = &candidate {
                 summary.application.available_version = Some(update.version.clone());
                 summary.application.release_notes = update.body.clone();
@@ -736,7 +821,7 @@ pub async fn check_updates(
                         summary.recipe.state = crate::updates::RecipeUpdateState::RequiresApp;
                         summary.recipe.available_version = Some(recipe_version.to_owned());
                         summary.recipe.disposition = "app-update-required".to_owned();
-                        summary.recipe.detail = "Install the CEBG update to get this collection. Existing games remain on their recorded version.".to_owned();
+                        summary.recipe.detail = format!("Install the {} update to get this collection. Existing games remain on their recorded version.", crate::flavor::CURRENT.short_name);
                     }
                 }
             }
@@ -748,7 +833,10 @@ pub async fn check_updates(
         Err(error) => {
             summary.network_state = "offline".to_owned();
             summary.application.state = "offline".to_owned();
-            summary.application.detail = format!("Could not check for CEBG updates: {error}");
+            summary.application.detail = format!(
+                "Could not check for {} updates: {error}",
+                crate::flavor::CURRENT.short_name
+            );
             summary.recipe.state = crate::updates::RecipeUpdateState::Offline;
             summary.recipe.detail = "Collection updates could not be checked.".to_owned();
             *state
@@ -757,7 +845,9 @@ pub async fn check_updates(
                 .unwrap_or_else(|poisoned| poisoned.into_inner()) = None;
         }
     }
-    summary.radar = radar_check.await.ok();
+    if let Some(radar_check) = radar_check {
+        summary.radar = radar_check.await.ok();
+    }
     for copy in &mut summary.managed_copies {
         if copy.state != "stale" {
             copy.state = if copy.installed_recipe_version.as_deref()
@@ -803,6 +893,17 @@ pub async fn install_app_update(
     on_progress: Option<JavaScriptChannelId>,
 ) -> Result<(), CommandError> {
     let on_progress = on_progress.map(|id| id.channel_on(webview));
+    if !crate::flavor::CURRENT.app_updates {
+        return Err(CommandError::new(
+            "update_not_checked",
+            format!(
+                "{} updates arrive as a new download.",
+                crate::flavor::CURRENT.product_name
+            ),
+            "Download the new version and install it over this one.",
+            "this app has no signed update feed",
+        ));
+    }
     let bridge = state
         .bridge
         .lock()
@@ -858,7 +959,10 @@ pub async fn install_app_update(
 fn update_error(error: impl std::fmt::Display) -> CommandError {
     CommandError::new(
         "application_update_failed",
-        "The CEBG update could not be installed.",
+        format!(
+            "The {} update could not be installed.",
+            crate::flavor::CURRENT.short_name
+        ),
         "Check your connection and try again.",
         error.to_string(),
     )
@@ -878,7 +982,7 @@ pub async fn activate_recipe_update(
         bridge.ensure_update_idle()?;
         Err(CommandError::new(
             "recipe_requires_app_update",
-            "This collection is delivered with a CEBG update.",
+            format!("This collection is delivered with a {} update.", crate::flavor::CURRENT.short_name),
             "Install the application update, then create a new installation.",
             format!("requested recipe version {version}; collection replacement requires the signed app package"),
         ))

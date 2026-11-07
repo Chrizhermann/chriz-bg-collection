@@ -1,0 +1,59 @@
+schema = 1
+recipe_id = "chriz-easy-iwd"
+version = "0.1.1"
+published_at = "2026-10-29T00:00:00Z"
+minimum_app_version = "0.1.1"
+supersedes = "0.1.0-alpha.1"
+
+[[changes]]
+id = "chriz-iwd-encounters"
+title = "Chriz IWD Encounters"
+summary = "Christopher's fight mod joins the recommended setup after Sword Coast Stratagems: it repairs SCS's caster AI for IWD:EE casters it misses, and enemy priests prepare when they first see the party (Core Rules difficulty and up)."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-iwd-encounters-0.1.0",
+  "feature:mod:chriz-iwd-encounters",
+  "run:chriz-iwd-encounters-main",
+]
+
+[[changes]]
+id = "hidden-gameplay-options-default"
+title = "Hidden Gameplay Options on by default"
+summary = "Hidden Gameplay Options and its 28 recommended options are on by default. Next to Lefreut's Enhanced UI or Infinity UI++, the options those interfaces do not support are left out."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = [
+  "feature:mod:hidden-gameplay-options",
+  "run:hidden-gameplay-options-main",
+]
+
+[[changes]]
+id = "buffbot"
+title = "BuffBot"
+summary = "BuffBot 1.12.0 installs late, after the rule and fight mods: it casts the buffs you choose for your party from an in-game panel (F11)."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = [
+  "artifact:buffbot-1.12.0",
+  "feature:mod:buffbot",
+  "run:buffbot-main",
+]
+
+[[changes]]
+id = "druids-keep-their-xp-table"
+title = "Druids keep their own experience table"
+summary = "Tweaks Anthology's cleric experience table for druids is offered but off, since on it druids reach level 15 far too early."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = [
+  "feature:feature:cdtweaks:component-2292",
+]
+
+[[changes]]
+id = "hotpatch-ready-installations"
+title = "Installations that can take hotpatches"
+summary = "A finished installation records every game file, so later hotpatches can check that it was not changed by hand. Installations from earlier test builds cannot take hotpatches."
+save_applicability = "new-game-only"
+urgency = "informational"
+covers = ["release:hotpatch-record"]

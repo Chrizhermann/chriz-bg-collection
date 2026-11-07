@@ -8,20 +8,15 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use crate::digest::sha256_bytes;
-use crate::manifest::{AcquisitionPolicy, ArchiveKind, Artifact, ModFile, SourceKind};
+use crate::manifest::{
+    AcquisitionPolicy, ArchiveKind, Artifact, CollectionGame, ModFile, SourceKind,
+};
 use crate::patches::files;
 use crate::updates::SaveApplicability;
 
 /// Format of `catalog.toml`.
 pub const CATALOG_SCHEMA: u32 = 1;
 const FILE_LIMIT: u64 = 1024 * 1024;
-
-/// The game a catalog is for. Chriz Easy BG installs the Enhanced Edition Trilogy only.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum CatalogGame {
-    Eet,
-}
 
 /// Christopher's rule for how far an installation may differ from the recommended setup.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -75,7 +70,7 @@ pub struct Change {
 #[serde(deny_unknown_fields)]
 struct CatalogFile {
     schema: u32,
-    game: CatalogGame,
+    game: CollectionGame,
     #[serde(default)]
     runtime_files: Vec<String>,
     gate: GateRules,
@@ -183,7 +178,7 @@ impl RuntimeFiles {
 /// The whole validated catalog.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Catalog {
-    pub game: CatalogGame,
+    pub game: CollectionGame,
     pub runtime_files: RuntimeFiles,
     pub gate: GateRules,
     pub bases: Vec<Base>,
@@ -543,47 +538,114 @@ mod tests {
         }
     }
 
-    /// What the game, its loader and its add-ons write must not stop Undo, but the mods' own
-    /// files must stay checked.
+    /// The Icewind Dale app's catalog fits the recipe it ships with: the same game and mods, and
+    /// a base for the current release whose digest is that recipe's. A recipe change before the
+    /// release therefore needs the digest updated here as well.
     #[test]
-    fn the_bundled_bg_catalog_ignores_what_a_played_game_writes() {
-        let catalog = load(&repository().join("hotpatches/bg")).unwrap();
-        for name in [
-            "infinityloader.ini",
-            "infinityloader.db",
-            "infinityloader.log",
-            "eeex_scripts/extra_pattern_dbs/v2.7.3.0.db",
-            "eeex_scripts/override",
-            "buffbot_exec.log",
-            "override/bfbtch.spl",
-            "override/bfbotbg2.mos",
-            "override/eeex_remote_ready.json",
-            "override/eeex_remote_result.json.tmp",
-            "override/eeex_remote_cmd.lua.run",
-        ] {
-            assert!(catalog.runtime_files.matches(name), "{name}");
+    fn the_bundled_iwd_catalog_fits_the_current_release() {
+        let catalog = load(&repository().join("hotpatches/iwd")).unwrap();
+        let recipe = crate::Manifest::load(&repository().join("recipes/iwd-current")).unwrap();
+        assert_eq!(catalog.game, recipe.collection.game);
+        assert!(recipe
+            .presets
+            .contains_key(&catalog.gate.recommended_preset));
+        for id in catalog
+            .gate
+            .free_mods
+            .iter()
+            .chain(&catalog.gate.required_mods)
+            .chain(catalog.updates.iter().map(|update| &update.mod_id))
+        {
+            assert!(recipe.mods.contains_key(id), "unknown mod {id:?}");
         }
-        for name in [
-            "weidu.log",
-            "chitin.key",
-            "lang/en_us/dialog.tlk",
-            "override/ui.menu",
-            "override/m___eeex.lua",
-            "override/m_eeexrc.lua",
-            "eeex_scripts/extra_pattern_dbs",
-            "eeex_scripts/extra_pattern_dbs/readme.txt",
-            "eeex_scripts/override/eeex_main.lua",
-            "eeex_scripts/eeex_main.lua",
-            "eeex/loader/v2.7.3.0/pattern_dbs/v2.7.3.0.db",
-        ] {
-            assert!(!catalog.runtime_files.matches(name), "{name}");
+        let release: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(repository().join("recipes/iwd-current/release.json")).unwrap(),
+        )
+        .unwrap();
+        let version = release["version"].as_str().unwrap();
+        // A carriage return in a recipe value would make the digest depend on the checkout's
+        // line endings.
+        fn carriage_return(value: &serde_json::Value) -> bool {
+            match value {
+                serde_json::Value::String(text) => text.contains('\r'),
+                serde_json::Value::Array(items) => items.iter().any(carriage_return),
+                serde_json::Value::Object(fields) => fields
+                    .iter()
+                    .any(|(key, value)| key.contains('\r') || carriage_return(value)),
+                _ => false,
+            }
+        }
+        let content = serde_json::to_value((
+            &recipe.collection,
+            &recipe.artifacts,
+            &recipe.mods,
+            &recipe.presets,
+        ))
+        .unwrap();
+        assert!(
+            !carriage_return(&content),
+            "a recipe value holds a carriage return"
+        );
+        let digest = super::super::recipe_content_digest(&recipe).unwrap();
+        let base = catalog
+            .bases
+            .iter()
+            .find(|base| base.recipe_version == version)
+            .unwrap_or_else(|| {
+                panic!("hotpatches/iwd/catalog.toml needs a base for {version} with content_sha256 = {digest:?}")
+            });
+        assert_eq!(
+            base.content_sha256, digest,
+            "recipes/iwd-current changed: set content_sha256 of base {:?} to {digest:?}",
+            base.id
+        );
+    }
+
+    /// What played IWD installations wrote into the game folder (Christopher's own one, and the
+    /// 0.1.1 release lab, 2026-10-29) must not count as the player's changes or block Undo; the
+    /// files mods and hotpatches install must stay checked.
+    #[test]
+    fn both_bundled_catalogs_ignore_what_a_played_game_writes() {
+        for folder in ["hotpatches/bg", "hotpatches/iwd"] {
+            let catalog = load(&repository().join(folder)).unwrap();
+            for name in [
+                "infinityloader.ini",
+                "infinityloader.db",
+                "infinityloader.log",
+                "eeex_scripts/extra_pattern_dbs/v2.7.3.0.db",
+                "eeex_scripts/override",
+                "buffbot_exec.log",
+                "override/bfbtch.spl",
+                "override/bfbotbg2.mos",
+                "override/eeex_remote_ready.json",
+                "override/eeex_remote_result.json.tmp",
+                "override/eeex_remote_cmd.lua.run",
+            ] {
+                assert!(catalog.runtime_files.matches(name), "{name}");
+            }
+            for name in [
+                "weidu.log",
+                "chitin.key",
+                "lang/en_us/dialog.tlk",
+                "override/ui.menu",
+                "override/m___eeex.lua",
+                "override/m_eeexrc.lua",
+                "eeex_scripts/extra_pattern_dbs",
+                "eeex_scripts/extra_pattern_dbs/readme.txt",
+                "eeex_scripts/override/eeex_main.lua",
+                "eeex_scripts/eeex_main.lua",
+                "eeex/loader/v2.7.3.0/pattern_dbs/v2.7.3.0.db",
+                "chriz-iwd-encounters/setup-chriz-iwd-encounters.tp2",
+            ] {
+                assert!(!catalog.runtime_files.matches(name), "{name}");
+            }
         }
     }
 
     /// An installation keeps its recipe as JSON; read back, it has the digest it was made with.
     #[test]
     fn a_frozen_recipe_keeps_its_content_digest() {
-        let recipe = crate::Manifest::load(&repository().join(RECIPE)).unwrap();
+        let recipe = crate::Manifest::load(&repository().join("recipes/iwd-current")).unwrap();
         let frozen = serde_json::to_vec(&(
             &recipe.collection,
             &recipe.artifacts,

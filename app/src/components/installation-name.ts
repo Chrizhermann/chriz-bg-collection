@@ -1,4 +1,5 @@
 import { element } from "./app-shell";
+import { flavor } from "../flavor";
 
 export interface NamedInstallation {
   readonly installId: string;
@@ -90,7 +91,7 @@ export function installationNameEditor(options: InstallationNameEditorOptions): 
   input.setAttribute("aria-describedby", `${id}-hint ${id}-note ${id}-error`);
   const hint = element("p", "muted");
   hint.id = `${id}-hint`;
-  hint.textContent = "Changes the name shown in CEBG, not your game or save folders.";
+  hint.textContent = `Changes the name shown in ${flavor.shortName}, not your game or save folders.`;
   const note = element("p", "field-help");
   note.id = `${id}-note`;
   note.setAttribute("aria-live", "polite");

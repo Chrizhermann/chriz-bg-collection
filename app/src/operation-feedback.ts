@@ -1,4 +1,5 @@
 import type { OperationProgress } from "./contracts";
+import { flavor } from "./flavor";
 
 export interface OperationFeedback {
   readonly title: string;
@@ -13,7 +14,7 @@ const stages: Readonly<Record<string, string>> = {
   "backup-game": "Backing up your game…", "backup-saves": "Backing up saved games…",
   "backup-files": "Backing up affected files…", applying: "Applying the update…",
   verifying: "Verifying the result…", restoring: "Restoring the backup…",
-  finishing: "Finishing up…", restarting: "Waiting for CEBG to restart…",
+  finishing: "Finishing up…", restarting: `Waiting for ${flavor.shortName} to restart…`,
 };
 export function progressLabel(progress?: OperationProgress): string {
   return progress ? stages[progress.stage] ?? "Working…" : "Preparing…";
@@ -47,6 +48,6 @@ export function completedAppUpdate(currentVersion: string): OperationFeedback | 
     if (!pending || typeof pending.to !== "string" || typeof pending.from !== "string" ||
       typeof pending.at !== "number" || Date.now() - pending.at > 30 * 86400000 || pending.at > Date.now()) return null;
     if (!pending.from.trim() || !pending.to.trim() || pending.from === pending.to || pending.to !== currentVersion) return null;
-    return { title: "CEBG update complete", detail: `You’re running CEBG ${currentVersion}. Your game installations are unchanged.`, state: "success" };
+    return { title: `${flavor.shortName} update complete`, detail: `You’re running ${flavor.shortName} ${currentVersion}. Your game installations are unchanged.`, state: "success" };
   } catch { return null; }
 }

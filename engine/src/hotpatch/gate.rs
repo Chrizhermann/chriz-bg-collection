@@ -137,6 +137,9 @@ pub(super) fn assess_with(
     }
     match baseline {
         Ok(baseline) => {
+            if baseline.manifest.collection.game != catalog.game {
+                refusals.push("These hotpatches are for another game.".into());
+            }
             match super::recipe_content_digest(&baseline.manifest) {
                 Ok(digest) => {
                     let version = &baseline.receipt.versions.recipe;
@@ -342,7 +345,7 @@ mod tests {
         GateRules {
             recommended_preset: "chris-recommended".into(),
             max_changed_mods: 2,
-            free_mods: ["cdtweaks", "infinity-ui", "eeex"]
+            free_mods: ["cdtweaks", "leui-iwdee", "infinity-ui", "eeex"]
                 .into_iter()
                 .map(String::from)
                 .collect(),

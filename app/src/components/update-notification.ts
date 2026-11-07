@@ -1,5 +1,6 @@
 import type { UpdateSummary } from "../contracts";
 import { element } from "./app-shell";
+import { flavor } from "../flavor";
 
 export interface UpdateAvailability {
   readonly application: boolean;
@@ -8,11 +9,11 @@ export interface UpdateAvailability {
 }
 
 export function getUpdateAvailability(updates: UpdateSummary): UpdateAvailability {
-  const application = updates.application.state === "available" && updates.application.availableVersion !== null;
+  const application = flavor.features.appUpdates && updates.application.state === "available" && updates.application.availableVersion !== null;
   const collection = (updates.recipe.state === "available" && updates.recipe.availableVersion !== null)
     || (updates.recipe.state === "requires-app" && application)
     || updates.managedCopies.some((copy) => copy.state === "update-available");
-  const radar = updates.radar?.state === "available"
+  const radar = flavor.features.radar && updates.radar?.state === "available"
     && updates.radar.currentVersion !== null
     && updates.radar.availableVersion !== null;
   return { application, collection, radar };
@@ -20,11 +21,15 @@ export function getUpdateAvailability(updates: UpdateSummary): UpdateAvailabilit
 
 function availabilityText(availability: UpdateAvailability): string {
   const names = [
-    availability.application ? "CEBG app" : null,
+    availability.application ? `${flavor.shortName} app` : null,
     availability.collection ? "collection" : null,
     availability.radar ? "BG Radar Overlay" : null,
   ].filter((name): name is string => name !== null);
-  if (names.length === 0) return "Check CEBG app, collection, and BG Radar Overlay versions.";
+  if (names.length === 0) {
+    return flavor.features.radar
+      ? `Check ${flavor.shortName} app, collection, and BG Radar Overlay versions.`
+      : `Check ${flavor.shortName} app and collection versions.`;
+  }
   if (names.length === 1) return `New ${names[0]} update available.`;
   const joined = names.length === 2 ? names.join(" and ") : `${names[0]}, ${names[1]}, and ${names[2]}`;
   return `New updates available: ${joined}.`;

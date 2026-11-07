@@ -25,6 +25,7 @@ fn record(managed_root: &Path) -> ManagedInstallRecord {
         launch_path: managed_root.join("game/InfinityLoader.exe"),
         receipt_sha256: "22".repeat(32),
         completed_at_millis: 42,
+        recipe_id: None,
     }
 }
 
@@ -70,12 +71,13 @@ fn started_campaign(managed_root: &Path, cache_root: &Path, install_id: &str) ->
         normalized_selection: selection,
         plan_sha256: plan_digest(&plan).unwrap(),
         source_games: SourceGameFingerprints {
-            bg1: "11".repeat(32),
+            bg1: Some("11".repeat(32)),
             bg2: "22".repeat(32),
+            standalone_role: None,
         },
         artifact_identities: Vec::new(),
         tool_identities: Vec::new(),
-        staged_bg1: managed_root.join("bg1"),
+        staged_bg1: Some(managed_root.join("bg1")),
         staged_bg2: managed_root.join("game"),
     }
 }
@@ -528,6 +530,32 @@ fn name_defaults_include_failed_missing_and_completed_entries() {
 }
 
 #[test]
+fn name_defaults_can_start_from_another_product_name() {
+    let (_temp, _app_data, managed, registry) = setup();
+    assert_eq!(
+        registry
+            .suggested_display_name_from("  Chriz Easy IWD ")
+            .unwrap(),
+        "Chriz Easy IWD"
+    );
+    let mut completed = record(&managed);
+    completed.display_name = "chriz easy iwd".to_owned();
+    completed.receipt_sha256 = sha256_bytes(b"immutable receipt");
+    registry.publish(&completed).unwrap();
+    assert_eq!(
+        registry
+            .suggested_display_name_from("Chriz Easy IWD")
+            .unwrap(),
+        "Chriz Easy IWD (2)"
+    );
+    assert_eq!(registry.suggested_display_name().unwrap(), "Chriz Easy BG");
+    assert_eq!(
+        registry.suggested_display_name_from("Chriz/Easy").unwrap(),
+        "Chriz-Easy"
+    );
+}
+
+#[test]
 fn name_validation_trims_compares_case_insensitively_and_sanitizes_instead_of_refusing() {
     use bg_engine::registry::names::{normalize_display_name, sanitize_display_name};
     let (temp, _app_data, _managed, registry) = setup();
@@ -921,4 +949,37 @@ fn name_publication_rejects_an_id_reassigned_to_a_different_root() {
         Err(RegistryError::DuplicateRoot { .. })
     ));
     assert_eq!(registry.display_name("bound-name").unwrap(), "Bound name");
+}
+
+#[test]
+fn recipe_id_is_written_only_when_present_and_round_trips() {
+    let (_temp, _app_data, managed, registry) = setup();
+    let mut legacy = record(&managed);
+    legacy.receipt_sha256 = bg_engine::digest::sha256_bytes(b"immutable receipt");
+    let legacy_path = registry.publish(&legacy).unwrap();
+    let legacy_text = std::fs::read_to_string(&legacy_path).unwrap();
+    assert!(!legacy_text.contains("recipe_id"), "{legacy_text}");
+
+    let mut standalone = legacy.clone();
+    standalone.install_id = "install-iwd".to_owned();
+    standalone.recipe_id = Some("chriz-easy-iwd".to_owned());
+    let path = registry.publish(&standalone).unwrap();
+
+    let text = std::fs::read_to_string(&path).unwrap();
+    assert!(text.contains("\"recipe_id\": \"chriz-easy-iwd\""), "{text}");
+    let listed = registry.list().unwrap();
+    assert!(listed.iter().any(|card| card.record == standalone));
+    assert!(listed.iter().any(|card| card.record == legacy));
+}
+
+#[test]
+fn an_unsafe_recipe_id_is_rejected() {
+    let (_temp, _app_data, managed, registry) = setup();
+    for recipe_id in ["", "..", "chriz/iwd", "chriz iwd"] {
+        let mut invalid = record(&managed);
+        invalid.receipt_sha256 = bg_engine::digest::sha256_bytes(b"immutable receipt");
+        invalid.recipe_id = Some(recipe_id.to_owned());
+
+        assert!(registry.publish(&invalid).is_err(), "{recipe_id:?}");
+    }
 }

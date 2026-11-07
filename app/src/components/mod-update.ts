@@ -1,20 +1,11 @@
 import type { ManagedCopyUpdate, ModUpdatePreview } from "../contracts";
+import type { ModUpdateOffer } from "../flavor";
 import { actionButton, element } from "./app-shell";
 import { bytes, formatBytes } from "./install-patches";
 
-/** A whole installed mod the app can bring to its newest release in a finished installation. */
-export interface ModUpdateOffer {
-  /** The mod's id in the recipe and in the app's update catalog. */
-  readonly modId: string;
-  readonly title: string;
-}
-
-/** Whole-mod updates offered under Updates, one card each. */
-export const MOD_UPDATES: readonly ModUpdateOffer[] = [{ modId: "buffbot", title: "BuffBot" }];
-
 /**
- * Whole-mod updates such as BuffBot. They share one history: Undo always takes back the latest
- * change, so a card offers Undo only when that change is its own mod's update.
+ * Whole-mod updates such as BuffBot. They share the hotpatch history: Undo always takes back the
+ * latest change, so a card offers Undo only when that change is its own mod's update.
  */
 export interface ModUpdateActions {
   /** Checked results by mod id; a result for another installation is never shown. */

@@ -2,6 +2,7 @@ import type { GameLogFile, GameLogStatus } from "../contracts";
 import { actionButton, element } from "./app-shell";
 import { persistDisclosure } from "./disclosure";
 import { errorDetails } from "./error-details";
+import { flavor } from "../flavor";
 
 /** The collapsed Troubleshooting section of one installation. */
 export interface GameLogView {
@@ -64,9 +65,9 @@ function helpText(view: GameLogView): string {
   if (status.setting === "unavailable") return `The game log can't be changed for this installation. ${status.detail ?? ""}`.trim();
   if (view.blockedReason !== null) return view.blockedReason;
   if (status.setting === "other") {
-    return `The game writes its log to ${status.detail ?? "a file"}, as set outside CEBG. CEBG keeps no earlier copies of that file. Turning this off stops that log.`;
+    return `The game writes its log to ${status.detail ?? "a file"}, as set outside ${flavor.shortName}. ${flavor.shortName} keeps no earlier copies of that file. Turning this off stops that log.`;
   }
-  return "Takes effect the next time the game starts. The game starts a new log each time, so CEBG keeps the log of the previous session whenever you press Play.";
+  return `Takes effect the next time the game starts. The game starts a new log each time, so ${flavor.shortName} keeps the log of the previous session whenever you press Play.`;
 }
 
 /** Hidden from the normal flow: off unless the player opens it and turns the log on. */

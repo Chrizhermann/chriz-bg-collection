@@ -16,6 +16,7 @@ installation-lookup-diagnostics = []
 test-application-data = []
 
 [build-dependencies]
+serde_json = "1"
 tauri-build = { version = "=2.6.3", features = [] }
 
 [dependencies]
