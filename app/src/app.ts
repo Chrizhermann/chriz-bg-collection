@@ -526,13 +526,12 @@ class AppController implements AppHandle {
     this.#operationFeedback = { title, detail, installId, state: success ? "success" : "error" };
   }
 
-  async #modUpgradeOperation(kind: "apply" | "undo" | "restore", fullBackup = true, backupSaves = false): Promise<void> {
+  async #modUpgradeOperation(kind: "undo" | "restore"): Promise<void> {
     if (this.#modUpgradeBusy || this.#modUpdateBusy || this.#installedUpdateBusy || this.#patchBusy || this.#installingUpdate || this.#installationActive()) return;
     const preview = this.#modUpgrade;
     const installId = this.#installedUpdateInstallId;
     if (this.#installations.some(copy => copy.id === installId && copy.customized)) return;
     if (!preview || preview.installId !== installId) return;
-    if (kind === "apply" && (preview.state !== "available" || !preview.reviewToken || !this.backend.applyModUpgrade)) return;
     if (kind === "undo" && (preview.state !== "applied" || !preview.canUndo || !this.backend.restoreModUpgrade)) return;
     if (kind === "restore" && (preview.state !== "needs-recovery" || !preview.canRestore || !this.backend.restoreModUpgrade)) return;
     ++this.#installedUpdateRevision;
@@ -545,24 +544,21 @@ class AppController implements AppHandle {
     // All earlier mutation previews are stale once an update starts.
     this.#patchPreview = null;
     this.#checkedPatches.delete(installId);
-    const progress = this.#beginOperation(kind === "apply" ? "Updating BuffBot" : "Restoring BuffBot", installId);
+    const progress = this.#beginOperation("Restoring BuffBot", installId);
     this.#render();
     try {
-      const result = kind === "apply"
-        ? await this.backend.applyModUpgrade!(installId, preview.reviewToken!, fullBackup, backupSaves, progress)
-        : await this.backend.restoreModUpgrade!(installId, kind === "undo", progress);
+      const result = await this.backend.restoreModUpgrade!(installId, kind === "undo", progress);
       if (result.installId !== installId) throw new Error("The BuffBot update returned another installation. Check installed mods again.");
       this.#modUpgrade = result;
-      const complete = kind === "apply" ? ["applied", "already-current"].includes(result.state) : result.state === "available";
-      this.#finishOperation(complete ? kind === "apply" ? "BuffBot update complete" : kind === "undo" ? "BuffBot update undone" : "BuffBot backup restored" : "BuffBot update needs attention",
+      const complete = result.state === "retired";
+      this.#finishOperation(complete ? kind === "undo" ? "BuffBot update undone" : "BuffBot backup restored" : "BuffBot update needs attention",
         complete ? `BuffBot ${result.installedVersion ?? ""} is installed. Your other mods and saves are unchanged.` : "Keep the game closed. Review the recovery options below.", complete, installId);
     } catch (error: unknown) {
       this.#modUpgrade = null;
       this.#setModUpgradeError(error);
       this.#finishOperation("BuffBot update could not finish", "Keep the game closed and check the error below before trying again.", false, installId);
     } finally {
-      // Consume old Apply authority on every attempt, including failures. A new
-      // inspection supplies recovery state or a newly checked review token.
+      // Refresh the durable recovery state after every restoration attempt.
       if (this.backend.inspectModUpgrade) {
         try {
           const result = await this.backend.inspectModUpgrade(installId);
@@ -643,7 +639,6 @@ class AppController implements AppHandle {
     if (this.#modUpdateBusy || this.#patchBusy || this.#installingUpdate || this.#installedUpdateBusy || this.#modUpgradeBusy || this.#installationActive()) return;
     const checked = this.#modUpdateInstallId === installId ? this.#modUpdates[modId] : undefined;
     const preview = checked?.installId === installId && checked.modId === modId ? checked : null;
-    if (kind === "apply" && (preview?.state !== "available" || !preview.reviewToken || !this.backend.applyModUpdate)) return;
     if (kind === "undo" && (!preview?.canUndo || !this.backend.restoreModUpdate)) return;
     if (kind === "restore" && (preview?.state !== "needs-recovery" || !preview.canRestore || !this.backend.restoreModUpdate)) return;
     if (this.#modUpdateInstallId !== installId) {
@@ -2084,7 +2079,6 @@ class AppController implements AppHandle {
           onRestoreModUpdate: this.backend.restoreModUpdate ? (modId) => this.#modUpdateOperation("restore", modId) : undefined,
           modUpgradeError: this.#installedUpdateInstallId === selected?.installId ? this.#modUpgradeError : undefined,
           modUpgradeErrorDetail: this.#installedUpdateInstallId === selected?.installId ? this.#modUpgradeErrorDetail : undefined,
-          onApplyModUpgrade: this.backend.applyModUpgrade ? (full, saves) => this.#modUpgradeOperation("apply", full, saves) : undefined,
           onUndoModUpgrade: this.backend.restoreModUpgrade ? () => this.#modUpgradeOperation("undo") : undefined,
           onRestoreModUpgrade: this.backend.restoreModUpgrade ? () => this.#modUpgradeOperation("restore") : undefined,
           onCheckInstalledUpdate: this.backend.inspectInstalledUpdate ? (id) => this.#checkInstalledUpdate(id) : undefined,

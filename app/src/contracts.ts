@@ -520,7 +520,7 @@ export interface ModUpgradePreview {
   readonly installId: string;
   readonly upgradeId: string;
   readonly title: string;
-  readonly state: "available" | "already-current" | "not-selected" | "unsupported" | "applied" | "needs-recovery";
+  readonly state: "retired" | "available" | "already-current" | "not-selected" | "unsupported" | "applied" | "needs-recovery";
   readonly detail: string;
   readonly baseRecipeVersion: string;
   readonly installedVersion: string | null;

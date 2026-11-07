@@ -512,7 +512,6 @@ describe("native progress and rename boundaries", () => {
 
   const operations: [string, Record<string, unknown>, (backend: NativeBackend, callback: ProgressCallback) => Promise<unknown>][] = [
     ["install_app_update", { version: "0.1.0-alpha.19" }, (backend, callback) => backend.installAppUpdate("0.1.0-alpha.19", callback)],
-    ["apply_mod_upgrade", { installId: "chosen", reviewToken: "review", fullBackup: true, backupSaves: false }, (backend, callback) => backend.applyModUpgrade("chosen", "review", true, false, callback)],
     ["restore_mod_upgrade", { installId: "chosen", undo: true }, (backend, callback) => backend.restoreModUpgrade("chosen", true, callback)],
     ["apply_install_patch", { installId: "chosen", reviewToken: "review", fullBackup: false, saveBackup: true }, (backend, callback) => backend.applyInstallPatch("chosen", "review", false, true, callback)],
     ["undo_install_patch", { installId: "chosen" }, (backend, callback) => backend.undoInstallPatch("chosen", callback)],

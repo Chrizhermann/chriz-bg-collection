@@ -13,7 +13,6 @@ use crate::resolve::PlannedRun;
 
 pub(crate) const LEGACY_FAILURE: &str = "explicit-relative-TP2 invocation is unavailable until the signed recipe schema records separately reviewed compatibility evidence; use setup-name mode";
 const ARCHIVE_SHA256: &str = "4bb0b81414b4198b866c3e7f2473479c7d1ee1f1a1bacd15c0e98913d5b83055";
-const TP2_SHA256: &str = "3e5f311f32353c1c579a23c19630c9e9b6923d4652f3dc67a673411fbadc516e";
 const TOOL_SHA256: &str = "ad70f5897a6d0ba4b0d226f845a9b14cf345f56cc9697ca8d05cac9fe4932c1a";
 
 /// Match the shipped mistake, not arbitrary explicit-mode recipes or other UI releases.
@@ -52,29 +51,29 @@ pub(crate) fn reviewed(
 pub(crate) struct Evidence {
     fix_id: &'static str,
     archive_sha256: &'static str,
-    tp2_sha256: &'static str,
+    tp2_sha256: String,
     weidu_sha256: &'static str,
     original_mode: InvocationMode,
     effective_mode: InvocationMode,
 }
 
-/// Verify the exact staged TP2 and reject alternate files that could shadow setup discovery.
+/// Record the staged TP2 and reject alternate files that could shadow setup discovery.
 /// Archive verification/materialization and the normal target/process guards still apply.
 pub(crate) fn prepare(root: &Path) -> Result<Evidence, String> {
-    check_discovery(root, TP2_SHA256)?;
+    let tp2_sha256 = check_discovery(root)?;
     Ok(Evidence {
         fix_id: "infinity-ui-1.28-setup-name-v1",
         archive_sha256: ARCHIVE_SHA256,
-        tp2_sha256: TP2_SHA256,
+        tp2_sha256,
         weidu_sha256: TOOL_SHA256,
         original_mode: InvocationMode::ExplicitTp2,
         effective_mode: InvocationMode::SetupName,
     })
 }
 
-fn check_discovery(root: &Path, expected_sha256: &str) -> Result<(), String> {
+fn check_discovery(root: &Path) -> Result<String, String> {
     let root = HeldFolder::open(root, []).map_err(discovery_error)?;
-    check_held_discovery(root, expected_sha256)
+    check_held_discovery(root)
 }
 
 /// The staged root and `infinity_ui` are opened from the target root down without following a
@@ -82,7 +81,7 @@ fn check_discovery(root: &Path, expected_sha256: &str) -> Result<(), String> {
 /// looked up are those of the checked folders, never of a tree that a link points to. Nothing
 /// above the target root is inspected. WeiDU resolves the same names by path again when it
 /// starts; this check cannot hold them for it.
-fn check_held_discovery(root: HeldFolder, expected_sha256: &str) -> Result<(), String> {
+fn check_held_discovery(root: HeldFolder) -> Result<String, String> {
     // WeiDU's setup-name discovery checks the root and the same-named subdirectory, with and
     // without the setup- prefix.
     reject_shadows(&root, &["setup-infinity_ui.tp2", "infinity_ui.tp2"])?;
@@ -96,13 +95,8 @@ fn check_held_discovery(root: HeldFolder, expected_sha256: &str) -> Result<(), S
             folder.path().join("infinity_ui.tp2").display()
         )
     })?;
-    if digest != expected_sha256 {
-        return Err(
-            "Infinity UI launch correction does not recognize the staged TP2; files left unchanged"
-                .into(),
-        );
-    }
-    reject_shadows(&folder, &["setup-infinity_ui.tp2"])
+    reject_shadows(&folder, &["setup-infinity_ui.tp2"])?;
+    Ok(digest)
 }
 
 /// An entry shadows a name when the file system opens it under that name, which covers every
@@ -204,14 +198,13 @@ mod tests {
     }
 
     #[test]
-    fn discovery_rejects_shadowing_or_changed_tp2_without_writing() {
+    fn discovery_accepts_changed_tp2_and_rejects_shadowing_without_writing() {
         let temp = tempfile::tempdir().unwrap();
         let root = temp.path();
         fs::create_dir(root.join("infinity_ui")).unwrap();
         let path = root.join("infinity_ui/infinity_ui.tp2");
         fs::write(&path, b"reviewed fixture").unwrap();
-        let digest = sha256_bytes(b"reviewed fixture");
-        check_discovery(root, &digest).unwrap();
+        check_discovery(root).unwrap();
         for alias in [
             "infinity_ui.tp2",
             "INFINITY_UI.TP2",
@@ -221,15 +214,12 @@ mod tests {
         ] {
             let alias = root.join(alias);
             fs::write(&alias, b"shadow").unwrap();
-            assert!(check_discovery(root, &digest)
-                .unwrap_err()
-                .contains("ambiguous"));
+            assert!(check_discovery(root).unwrap_err().contains("ambiguous"));
             fs::remove_file(alias).unwrap();
         }
         fs::write(&path, b"changed").unwrap();
-        assert!(check_discovery(root, &digest)
-            .unwrap_err()
-            .contains("does not recognize"));
+        assert_eq!(check_discovery(root).unwrap(), sha256_bytes(b"changed"));
+        assert_eq!(prepare(root).unwrap().tp2_sha256, sha256_bytes(b"changed"));
         assert_eq!(fs::read(path).unwrap(), b"changed");
     }
 
@@ -278,8 +268,7 @@ mod tests {
             b"reviewed fixture",
         )
         .unwrap();
-        let digest = sha256_bytes(b"reviewed fixture");
-        check_discovery(&root, &digest).unwrap();
+        check_discovery(&root).unwrap();
 
         for (folder, shadow, name) in [
             ("", "INFINITY_UI.TP2", "infinity_ui.tp2"),
@@ -298,14 +287,12 @@ mod tests {
             assert!(!held.contains(name).unwrap(), "{shadow} is told apart");
             drop(held);
             assert!(
-                check_discovery(&root, &digest)
-                    .unwrap_err()
-                    .contains("ambiguous"),
+                check_discovery(&root).unwrap_err().contains("ambiguous"),
                 "{shadow}"
             );
             fs::remove_file(folder_path.join(shadow)).unwrap();
         }
-        check_discovery(&root, &digest).unwrap();
+        check_discovery(&root).unwrap();
     }
 
     /// A staged root below `parent` with the reviewed fixture TP2; returns the root.
@@ -323,12 +310,11 @@ mod tests {
     #[test]
     fn discovery_requires_the_folder_and_a_regular_tp2() {
         let temp = tempfile::tempdir().unwrap();
-        let digest = sha256_bytes(b"reviewed fixture");
 
-        let error = check_discovery(temp.path(), &digest).unwrap_err();
+        let error = check_discovery(temp.path()).unwrap_err();
         assert!(error.contains("could not find"), "{error}");
         fs::create_dir_all(temp.path().join("infinity_ui/infinity_ui.tp2")).unwrap();
-        let error = check_discovery(temp.path(), &digest).unwrap_err();
+        let error = check_discovery(temp.path()).unwrap_err();
         assert!(
             error.contains("requires direct files and folders"),
             "{error}"
@@ -341,7 +327,6 @@ mod tests {
     #[test]
     fn discovery_refuses_a_junction_at_every_level() {
         let temp = tempfile::tempdir().unwrap();
-        let digest = sha256_bytes(b"reviewed fixture");
         let outside = staged_ui(&temp.path().join("outside"));
 
         let linked_root = temp.path().join("linked-root");
@@ -366,7 +351,7 @@ mod tests {
                 linked_tp2.join("infinity_ui").join("infinity_ui.tp2"),
             ),
         ] {
-            let error = check_discovery(root, &digest).unwrap_err();
+            let error = check_discovery(root).unwrap_err();
             assert!(
                 error.contains(&format!(
                     "requires direct files and folders: {}",
@@ -378,7 +363,7 @@ mod tests {
 
         let shadowed = staged_ui(&temp.path().join("shadowed"));
         junction(&shadowed.join("SETUP-infinity_ui.tp2"), &outside);
-        assert!(check_discovery(&shadowed, &digest)
+        assert!(check_discovery(&shadowed)
             .unwrap_err()
             .contains("ambiguous"));
     }
@@ -393,7 +378,7 @@ mod tests {
         let link = temp.path().join("link");
         junction(&link, &temp.path().join("real"));
 
-        check_discovery(&link.join("game"), &sha256_bytes(b"reviewed fixture")).unwrap();
+        check_discovery(&link.join("game")).unwrap();
     }
 
     /// Re-pointing a link above the staged root after it was opened redirects every path through
@@ -402,7 +387,6 @@ mod tests {
     #[test]
     fn discovery_inspects_the_held_folders_after_a_link_above_is_repointed() {
         let temp = tempfile::tempdir().unwrap();
-        let digest = sha256_bytes(b"reviewed fixture");
         let clean = temp.path().join("clean");
         staged_ui(&clean);
         let ambiguous = temp.path().join("ambiguous");
@@ -420,13 +404,13 @@ mod tests {
         let root = HeldFolder::open(&link.join("game"), []).unwrap();
         fs::remove_dir(&link).unwrap();
         junction(&link, &ambiguous);
-        check_held_discovery(root, &digest).unwrap();
+        check_held_discovery(root).unwrap();
 
         // Checked ambiguous, then pointed at the clean tree: the ambiguous folders decide.
         let root = HeldFolder::open(&link.join("game"), []).unwrap();
         fs::remove_dir(&link).unwrap();
         junction(&link, &clean);
-        assert!(check_held_discovery(root, &digest)
+        assert!(check_held_discovery(root)
             .unwrap_err()
             .contains("ambiguous"));
     }

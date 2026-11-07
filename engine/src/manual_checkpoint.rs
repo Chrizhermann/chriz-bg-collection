@@ -602,9 +602,8 @@ pub fn is_customized(root: &Path) -> Result<bool, String> {
 }
 
 pub fn game_update_guard(root: &Path) -> Result<(), String> {
-    if is_customized(root)? {
-        return Err("Customized — manual mods added. Game hotpatches and whole-mod upgrades are disabled for this installation. CEBG app updates remain available.".into());
-    }
+    // Parse our acceptance records, but player additions do not disable updates.
+    is_customized(root)?;
     Ok(())
 }
 
@@ -802,9 +801,6 @@ pub fn review(
         });
     }
     let diagnostics = diagnostic_files(root)?;
-    if additions.is_empty() && baseline.game_files != game_files {
-        return Err("Game files changed without appended WeiDU components. File-copy mods are outside this feature; restore the checkpoint files before continuing without additions.".into());
-    }
     let mut summaries = Vec::new();
     for (name, content) in &diagnostics {
         if baseline.diagnostics.get(name) == Some(content) {
@@ -819,9 +815,9 @@ pub fn review(
         ));
     }
     if !additions.is_empty() && summaries.is_empty() {
-        summaries.push("No new installer debug log was available. Log additions and namespaces were checked; successful installation and compatibility are not proven.".into());
+        summaries.push("No new installer debug log was available. Mod-list additions and namespaces were checked; no installer result was available.".into());
     }
-    summaries.push("Only appended WeiDU components are supported. Managed source/backup checks compare file names, sizes and modification times; they do not prove arbitrary resource compatibility or detect deliberate metadata-preserving edits. File-copy mods are outside this feature. Reported versions are author text, not source hashes.".into());
+    summaries.push("Manual WeiDU components must be appended. Player file changes are included in the accepted snapshot. Managed source/backup checks compare file names, sizes and modification times; they do not detect deliberate metadata-preserving edits. Reported versions are author text, not source hashes.".into());
     let review_token = sha256_bytes(
         &serde_json::to_vec(&(
             root,

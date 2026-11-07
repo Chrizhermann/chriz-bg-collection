@@ -369,7 +369,6 @@ fn inspect(request: &SupervisedRecoveryRequest) -> Result<Inspected, CliError> {
                     "recovery changed an earlier installed version or annotation",
                 ));
             }
-            crate::postcondition::verify(&root.join("game"), &run.postconditions).map_err(error)?;
         }
         previous = after;
     }

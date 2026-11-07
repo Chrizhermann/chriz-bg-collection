@@ -779,18 +779,23 @@ fn required_artifact_and_tool_sets_must_match_frozen_nonzero_pins() {
 }
 
 #[test]
-fn unobtainable_required_input_is_rejected() {
+fn unavailable_mod_reaches_acquisition_but_unavailable_tool_is_refused() {
     let fixture = Fixture::new();
     let mut artifacts = artifact_inputs();
-    let tools = tool_inputs();
+    let mut tools = tool_inputs();
     artifacts[0].obtainable = false;
 
+    let report =
+        initial_preflight_with(&request(&fixture, &artifacts, &tools), &FakeHost::default())
+            .unwrap();
+    assert!(report.warnings.is_empty());
+
+    tools[0].obtainable = false;
     let error =
         initial_preflight_with(&request(&fixture, &artifacts, &tools), &FakeHost::default())
             .unwrap_err();
-    assert!(matches!(
-        error,
-        PreflightError::RequiredInputUnavailable { ref id, .. } if id == "eefixpack"
+    assert!(matches!(error,
+        PreflightError::RequiredInputUnavailable { ref id, .. } if id == &tools[0].id
     ));
 }
 

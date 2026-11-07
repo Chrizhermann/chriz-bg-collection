@@ -12,7 +12,7 @@ use crate::weidu::log::parse_active_entries;
 /// How an existing value of a seeded key is treated.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Ownership {
-    /// A player preference: any recognized value is kept; only a missing key is seeded.
+    /// A player preference: any existing value is kept; only a missing key is seeded.
     Preference,
     /// Installation state that the component's own installer records. It is set to the
     /// installed state, as that installer would have done in its own profile.
@@ -21,7 +21,6 @@ enum Ownership {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct Setting {
-    label: &'static str,
     section: &'static str,
     key: &'static str,
     value: &'static str,
@@ -37,8 +36,6 @@ impl Setting {
     }
 }
 
-const INTERVAL_SAVES: &str = "interval-save settings";
-const EET_STATE: &str = "EET installation state";
 const PROFILE: &str = "profile settings";
 
 fn settings_error(path: &Path, label: &str, reason: impl Into<String>) -> EngineError {
@@ -67,7 +64,6 @@ fn required_settings(game_root: &Path) -> Result<Vec<Setting>> {
     if installed("cdtweaks/setup-cdtweaks.tp2", 3350..=3357) {
         for (key, value) in [("IntervalSaveEnabled", "1"), ("IntervalSaveCombat", "0")] {
             settings.push(Setting {
-                label: INTERVAL_SAVES,
                 section: "Script",
                 key,
                 value,
@@ -87,7 +83,6 @@ fn required_settings(game_root: &Path) -> Result<Vec<Setting>> {
     };
     if let Some(value) = eet_state {
         settings.push(Setting {
-            label: EET_STATE,
             section: "Program Options",
             key: "EET Installation State",
             value,
@@ -120,40 +115,75 @@ fn read_optional_regular(path: &Path) -> Result<Option<Vec<u8>>> {
 }
 
 // Recognize the engine's data-file syntax, without ever executing Lua. Other
-// settings are retained byte-for-byte. Unsupported syntax for an owned key is
-// reported instead of guessing or overriding a user's preference.
-fn quoted<'a>(text: &mut &'a str) -> Option<&'a str> {
-    *text = text.trim_start();
-    let quote = text.chars().next()?;
-    if !matches!(quote, '\'' | '"') {
+// settings are retained byte-for-byte. Only the first two arguments identify ownership;
+// an old value is never an acceptance condition.
+fn quoted<'a>(text: &mut &'a [u8]) -> Option<&'a [u8]> {
+    *text = text.trim_ascii_start();
+    let quote = *text.first()?;
+    if !matches!(quote, b'\'' | b'"') {
         return None;
     }
     let rest = &text[1..];
-    let end = rest.find(quote)?;
+    let end = rest.iter().position(|byte| *byte == quote)?;
     let value = &rest[..end];
-    if value.contains('\\') {
+    if value.contains(&b'\\') {
         return None;
     }
     *text = &rest[end + 1..];
     Some(value)
 }
 
-fn consume(text: &mut &str, token: char) -> Option<()> {
-    *text = text.trim_start().strip_prefix(token)?;
+fn consume(text: &mut &[u8], token: u8) -> Option<()> {
+    *text = text.trim_ascii_start().strip_prefix(&[token])?;
     Some(())
 }
 
-fn assignment(line: &str) -> Option<(&str, &str, &str)> {
-    let mut text = line.trim_start().strip_prefix("SetPrivateProfileString")?;
-    consume(&mut text, '(')?;
+// Read literal keys across line breaks without decoding unrelated profile bytes.
+fn assignment_key(line: &[u8]) -> Option<(&[u8], &[u8])> {
+    let mut text = line
+        .trim_ascii_start()
+        .strip_prefix(b"SetPrivateProfileString")?;
+    consume(&mut text, b'(')?;
     let section = quoted(&mut text)?;
-    consume(&mut text, ',')?;
+    consume(&mut text, b',')?;
     let key = quoted(&mut text)?;
-    consume(&mut text, ',')?;
-    let value = quoted(&mut text)?;
-    consume(&mut text, ')')?;
-    let tail = text.trim().strip_prefix(';').unwrap_or(text.trim()).trim();
-    (tail.is_empty() || tail.starts_with("--")).then_some((section, key, value))
+    Some((section, key))
+}
+
+/// Locate the end of a complete call without interpreting its old value or executing Lua.
+fn is_single_assignment(line: &str) -> bool {
+    let mut quote = None;
+    let mut escaped = false;
+    let mut depth = 0usize;
+    let bytes = line.as_bytes();
+    for (index, byte) in bytes.iter().copied().enumerate() {
+        if let Some(delimiter) = quote {
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == delimiter {
+                quote = None;
+            }
+            continue;
+        }
+        if byte == b'-' && bytes.get(index + 1) == Some(&b'-') {
+            return false;
+        }
+        match byte {
+            b'\'' | b'"' => quote = Some(byte),
+            b'(' => depth += 1,
+            b')' if depth > 0 => {
+                depth -= 1;
+                if depth == 0 {
+                    let tail = line[index + 1..].trim().trim_start_matches(';').trim();
+                    return tail.is_empty() || tail.starts_with("--");
+                }
+            }
+            _ => {}
+        }
+    }
+    false
 }
 
 /// What must change so the profile holds every required setting.
@@ -162,6 +192,7 @@ struct Changes {
     /// Whole assignment lines (byte ranges without their line ending) to rewrite.
     replace: Vec<(Range<usize>, Setting)>,
     append: Vec<Setting>,
+    incomplete_comment: bool,
 }
 
 impl Changes {
@@ -173,119 +204,99 @@ impl Changes {
     }
 }
 
-fn changes(path: &Path, bytes: &[u8], settings: &[Setting]) -> Result<Changes> {
-    let label = settings.first().map_or(PROFILE, |setting| setting.label);
-    let content = std::str::from_utf8(bytes)
-        .map_err(|_| settings_error(path, label, "Baldur.lua is not UTF-8; left unchanged"))?;
-    let mut assignments: Vec<Vec<(Range<usize>, &str)>> = vec![Vec::new(); settings.len()];
-    let mut offset = if content.starts_with('\u{feff}') {
-        '\u{feff}'.len_utf8()
+fn changes(_path: &Path, bytes: &[u8], settings: &[Setting]) -> Result<Changes> {
+    let mut changes = Changes::default();
+    let mut found = vec![false; settings.len()];
+    let mut offset = if bytes.starts_with(b"\xef\xbb\xbf") {
+        3
     } else {
         0
     };
-    let mut block_comment = false;
-    for full_line in content[offset..].split_inclusive('\n') {
-        let text = full_line.strip_suffix('\n').unwrap_or(full_line);
-        let text = text.strip_suffix('\r').unwrap_or(text);
+    let mut block_end: Option<String> = None;
+    for full_line in bytes[offset..].split_inclusive(|byte| *byte == b'\n') {
+        let text = full_line.strip_suffix(b"\n").unwrap_or(full_line);
+        let text = text.strip_suffix(b"\r").unwrap_or(text);
         let range = offset..offset + text.len();
         offset += full_line.len();
-        let line = text.trim();
-        // Engine-written Baldur.lua has no block comments. Don't infer settings
-        // from a manually commented-out example or an arbitrary Lua program.
-        if line.starts_with("--[") {
-            block_comment = true;
+        let line = String::from_utf8_lossy(text);
+        let line = line.trim();
+        if let Some(tail) = line.strip_prefix("--[") {
+            let equals = tail.bytes().take_while(|byte| *byte == b'=').count();
+            if tail.as_bytes().get(equals) == Some(&b'[') {
+                block_end = Some(format!("]{}]", "=".repeat(equals)));
+            }
         }
-        for (index, setting) in settings.iter().enumerate() {
-            if !line.contains(setting.key) {
-                continue;
+        if let Some(end) = &block_end {
+            if line.contains(end) {
+                block_end = None;
             }
-            if block_comment {
-                return Err(settings_error(
-                    path,
-                    setting.label,
-                    format!("cannot interpret {} in a block comment", setting.key),
-                ));
+            continue;
+        }
+        if line.is_empty() || line.starts_with("--") {
+            continue;
+        }
+        let assignment = assignment_key(&bytes[range.start..]);
+        // Unknown executable text or a multiline call may set the owned state later.
+        // Complete assignments to other literal keys preserve it and keep normal bytes.
+        if assignment.is_none() || !is_single_assignment(line) {
+            for (index, setting) in settings.iter().enumerate() {
+                if setting.ownership == Ownership::InstallState {
+                    found[index] = false;
+                }
             }
-            if line.starts_with("--") {
-                continue;
-            }
-            match assignment(line) {
-                Some((section, key, value)) if section == setting.section && key == setting.key => {
-                    if setting.ownership == Ownership::Preference && !matches!(value, "0" | "1") {
-                        return Err(settings_error(
-                            path,
-                            setting.label,
-                            format!("cannot interpret {}; left unchanged", setting.key),
-                        ));
+        }
+        if let Some((section, key)) = assignment {
+            for (index, setting) in settings.iter().enumerate() {
+                if section == setting.section.as_bytes() && key == setting.key.as_bytes() {
+                    if setting.ownership == Ownership::Preference {
+                        found[index] = true;
+                    } else {
+                        // A complete assignment occupies this line. For a multiline call or
+                        // extra Lua statements, leave its bytes and append our final assignment.
+                        if is_single_assignment(line) {
+                            found[index] = true;
+                            changes.replace.push((range.clone(), *setting));
+                        }
                     }
-                    assignments[index].push((range.clone(), value));
-                }
-                Some(_) => {}
-                None => {
-                    return Err(settings_error(
-                        path,
-                        setting.label,
-                        format!("cannot interpret {}; left unchanged", setting.key),
-                    ))
                 }
             }
-        }
-        if block_comment && line.contains("]]") {
-            block_comment = false;
         }
     }
-
-    let mut changes = Changes::default();
-    for (setting, found) in settings.iter().zip(assignments) {
-        match (setting.ownership, found.as_slice()) {
-            (_, []) => changes.append.push(*setting),
-            (Ownership::Preference, _) => {}
-            (Ownership::InstallState, found)
-                if found.iter().all(|(_, value)| *value == setting.value) => {}
-            (Ownership::InstallState, [(range, _)]) => {
-                changes.replace.push((range.clone(), *setting));
-            }
-            (Ownership::InstallState, _) => {
-                return Err(settings_error(
-                    path,
-                    setting.label,
-                    format!(
-                        "{} is assigned more than once with different values; left unchanged",
-                        setting.key
-                    ),
-                ))
-            }
+    changes.incomplete_comment = block_end.is_some();
+    for (setting, found) in settings.iter().zip(found) {
+        if !found {
+            changes.append.push(*setting);
         }
     }
     Ok(changes)
 }
 
-fn apply(content: &str, changes: &Changes) -> Vec<u8> {
-    let newline = if content.contains("\r\n") {
-        "\r\n"
+fn apply(content: &[u8], changes: &Changes) -> Vec<u8> {
+    let newline: &[u8] = if content.windows(2).any(|bytes| bytes == b"\r\n") {
+        b"\r\n"
     } else {
-        "\n"
+        b"\n"
     };
     let mut replace = changes.replace.clone();
     replace.sort_by_key(|(range, _)| range.start);
-    let mut after = String::with_capacity(content.len() + 128);
+    let mut after = Vec::with_capacity(content.len() + 128);
     let mut cursor = 0;
     for (range, setting) in replace {
-        after.push_str(&content[cursor..range.start]);
-        after.push_str(&setting.assignment());
+        after.extend_from_slice(&content[cursor..range.start]);
+        after.extend_from_slice(setting.assignment().as_bytes());
         cursor = range.end;
     }
-    after.push_str(&content[cursor..]);
+    after.extend_from_slice(&content[cursor..]);
     if !changes.append.is_empty() {
-        if !after.is_empty() && !after.ends_with('\n') {
-            after.push_str(newline);
+        if !after.is_empty() && !after.ends_with(b"\n") {
+            after.extend_from_slice(newline);
         }
         for setting in &changes.append {
-            after.push_str(&setting.assignment());
-            after.push_str(newline);
+            after.extend_from_slice(setting.assignment().as_bytes());
+            after.extend_from_slice(newline);
         }
     }
-    after.into_bytes()
+    after
 }
 
 /// Writes the settings that `game_root`'s installed components need into the profile
@@ -299,11 +310,20 @@ fn ensure_settings(game_root: &Path, save_root: &Path) -> Result<bool> {
     let before = read_optional_regular(&path)?;
     let bytes = before.as_deref().unwrap_or_default();
     let changes = changes(&path, bytes, &settings)?;
+    if changes.incomplete_comment {
+        eprintln!(
+            "Profile settings: kept {} because its Lua block comment is unfinished.",
+            path.display()
+        );
+        return Ok(false);
+    }
     if changes.first().is_none() {
         return Ok(false);
     }
-    // `changes` succeeded, so the content is UTF-8.
-    let after = apply(std::str::from_utf8(bytes).unwrap_or_default(), &changes);
+    let after = apply(bytes, &changes);
+    if after == bytes {
+        return Ok(false);
+    }
     let mut temporary =
         tempfile::NamedTempFile::new_in(save_root).map_err(|source| EngineError::Io {
             path: path.clone(),
@@ -349,20 +369,7 @@ fn ensure_settings(game_root: &Path, save_root: &Path) -> Result<bool> {
 }
 
 fn verify_settings(game_root: &Path, save_root: &Path) -> Result<()> {
-    let settings = required_settings(game_root)?;
-    if settings.is_empty() {
-        return Ok(());
-    }
-    let path = save_root.join("Baldur.lua");
-    let bytes = read_optional_regular(&path)?.unwrap_or_default();
-    if let Some(setting) = changes(&path, &bytes, &settings)?.first() {
-        return Err(settings_error(
-            &path,
-            setting.label,
-            "required settings are missing or outdated in the isolated game profile",
-        ));
-    }
-    Ok(())
+    ensure_settings(game_root, save_root).map(|_| ())
 }
 
 pub(super) fn ensure_profile_settings(
@@ -370,13 +377,11 @@ pub(super) fn ensure_profile_settings(
     identity: &ReservedSaveIdentity,
 ) -> Result<()> {
     verify_reserved_save_identity(layout, identity)?;
-    ensure_settings(layout.game_root(), &identity.save_root)?;
-    verify_profile_settings(layout, identity)
+    ensure_settings(layout.game_root(), &identity.save_root).map(|_| ())
 }
 
-/// Check the final isolated profile before declaring an installation successful.
-/// An explicit user preference such as an interval-save value of 0 is valid; only
-/// missing settings and outdated installation state are defects.
+/// Ensure the final isolated profile has the owned install state and missing defaults.
+/// Existing player preferences remain theirs, regardless of their values.
 pub fn verify_profile_settings(
     layout: &ManagedLayout,
     identity: &ReservedSaveIdentity,
@@ -396,9 +401,7 @@ pub fn repair_installed_profile_settings(
     save_root: &Path,
 ) -> Result<bool> {
     let game_root = verify_installed_save_root(managed_root, install_id, engine_name, save_root)?;
-    let changed = ensure_settings(&game_root, save_root)?;
-    verify_settings(&game_root, save_root)?;
-    Ok(changed)
+    ensure_settings(&game_root, save_root)
 }
 
 /// Prepares a completed installation's isolated profile for the player to open.
@@ -557,5 +560,119 @@ mod tests {
         assert_eq!(waits.get(), 1);
         assert_eq!(fs::read_to_string(&profile).unwrap(), edited);
         assert_eq!(names(&save), ["Baldur.lua"]);
+    }
+}
+
+#[cfg(test)]
+mod overwrite_tests {
+    use super::*;
+
+    #[test]
+    fn installed_state_is_written_for_changed_values_duplicates_and_other_text() {
+        let state = Setting {
+            section: "Program Options",
+            key: "EET Installation State",
+            value: "2",
+            ownership: Ownership::InstallState,
+        };
+        let decided = format!("{}\n", state.assignment());
+        for input in [
+            "SetPrivateProfileString('Program Options','EET Installation State','0')\n",
+            "SetPrivateProfileString('Program Options','EET Installation State',42)\n",
+            "SetPrivateProfileString('Program Options','EET Installation State','anderer Text')\n",
+        ] {
+            let changed = apply(
+                input.as_bytes(),
+                &changes(Path::new("Baldur.lua"), input.as_bytes(), &[state]).unwrap(),
+            );
+            assert_eq!(changed, decided.as_bytes());
+            assert_eq!(
+                apply(
+                    &changed,
+                    &changes(Path::new("Baldur.lua"), &changed, &[state]).unwrap()
+                ),
+                changed
+            );
+        }
+        let normal = format!("{decided}SetPrivateProfileString('Graphics','Width','1920')\n");
+        assert_eq!(
+            apply(
+                normal.as_bytes(),
+                &changes(Path::new("Baldur.lua"), normal.as_bytes(), &[state]).unwrap()
+            ),
+            normal.as_bytes()
+        );
+        let duplicated = format!(
+            "{}{}",
+            decided, "SetPrivateProfileString('Program Options','EET Installation State',-1)\n"
+        );
+        assert_eq!(
+            apply(
+                duplicated.as_bytes(),
+                &changes(Path::new("Baldur.lua"), duplicated.as_bytes(), &[state]).unwrap()
+            ),
+            decided.repeat(2).as_bytes()
+        );
+        let other_bytes = b"-- commentaire: \xe9\r\n";
+        assert_eq!(
+            apply(
+                other_bytes,
+                &changes(Path::new("Baldur.lua"), other_bytes, &[state]).unwrap()
+            ),
+            [
+                other_bytes.as_slice(),
+                state.assignment().as_bytes(),
+                b"\r\n"
+            ]
+            .concat()
+        );
+    }
+
+    #[test]
+    fn multiline_preference_keys_keep_the_players_value_and_unrelated_bytes() {
+        let preference = Setting {
+            section: "Script",
+            key: "IntervalSaveEnabled",
+            value: "1",
+            ownership: Ownership::Preference,
+        };
+        let input = b"SetPrivateProfileString(\n  'Script',\n  'IntervalSaveEnabled',\n  'my choice')\n-- commentaire: \xe9\n";
+        let output = apply(
+            input,
+            &changes(Path::new("Baldur.lua"), input, &[preference]).unwrap(),
+        );
+        assert_eq!(output, input);
+    }
+
+    #[test]
+    fn multiline_assignments_get_a_final_owned_assignment_and_preferences_stay() {
+        let state = Setting {
+            section: "Program Options",
+            key: "EET Installation State",
+            value: "2",
+            ownership: Ownership::InstallState,
+        };
+        let preference = Setting {
+            section: "Script",
+            key: "IntervalSaveEnabled",
+            value: "1",
+            ownership: Ownership::Preference,
+        };
+        let input = b"SetPrivateProfileString('Program Options','EET Installation State','2')\nSetPrivateProfileString('Program Options','EET Installation State',\n 42)\nSetPrivateProfileString('Script','IntervalSaveEnabled','my choice')\n";
+        let output = apply(
+            input,
+            &changes(Path::new("Baldur.lua"), input, &[state, preference]).unwrap(),
+        );
+        assert_eq!(
+            output,
+            [input.as_slice(), state.assignment().as_bytes(), b"\n"].concat()
+        );
+        assert_eq!(
+            apply(
+                &output,
+                &changes(Path::new("Baldur.lua"), &output, &[state, preference]).unwrap()
+            ),
+            output
+        );
     }
 }

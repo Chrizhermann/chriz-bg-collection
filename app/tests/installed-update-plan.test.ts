@@ -82,18 +82,18 @@ describe("installed-mod comparison", () => {
         { rule: "new-required-option", featureId: "new-option", message: "Review a new collection requirement." },
       ] }),
       modUpgrade: {
-        installId: "first", upgradeId: "buffbot-upgrade", title: "BuffBot", state: "available", detail: "Only BuffBot changes.",
+        installId: "first", upgradeId: "buffbot-upgrade", title: "BuffBot", state: "needs-recovery", detail: "Restore the historical BuffBot backup.",
         installedVersion: "1.8.3-alpha", targetVersion: "1.8.4-alpha", baseRecipeVersion: "1", reviewToken: "review",
-        canUndo: false, canRestore: false, fullBackupBytes: "10", saveBackupBytes: "2", availableBytes: "100",
+        canUndo: false, canRestore: true, fullBackupBytes: "10", saveBackupBytes: "2", availableBytes: "100",
         backupPath: "D:\\Backups", saveCompatibility: "Existing saves remain compatible.", history: [],
       },
-      onApplyModUpgrade: vi.fn(),
+      onRestoreModUpgrade: vi.fn(),
     }));
     const comparison = section.querySelector<HTMLDetailsElement>(".installed-mod-comparison")!;
     const update = section.querySelector(".mod-upgrade-result")!;
     expect(comparison.open).toBe(false);
     expect(update.compareDocumentPosition(comparison) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    const review = getByRole(section, "button", { name: "Review BuffBot update" }) as HTMLButtonElement;
+    const review = getByRole(section, "button", { name: "Restore BuffBot backup" }) as HTMLButtonElement;
     expect(review.closest("details")).toBeNull();
     expect(review.disabled).toBe(false);
     expect(comparison.textContent).toContain("Comparison needs attention");

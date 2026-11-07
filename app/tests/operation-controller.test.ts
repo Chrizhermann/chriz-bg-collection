@@ -9,7 +9,7 @@ import type { ModUpgradePreview, OperationProgress, UpdateSummary } from "../src
 const pendingKey = "cebg.pending-app-update.v1";
 const oldApp = "0.1.0-alpha.18", newApp = "0.1.0-alpha.19";
 function preview(overrides: Partial<ModUpgradePreview> = {}): ModUpgradePreview {
-  return { installId: "chosen", upgradeId: "buffbot-upgrade", title: "BuffBot", state: "available",
+  return { installId: "chosen", upgradeId: "buffbot-upgrade", title: "BuffBot", state: "retired",
     detail: "Only BuffBot will change.", baseRecipeVersion: "1", installedVersion: "1.8.3-alpha", targetVersion: "1.8.4-alpha",
     reviewToken: "review", canUndo: false, canRestore: false, fullBackupBytes: "100", saveBackupBytes: "5", availableBytes: "1000",
     backupPath: "D:\\Backups", saveCompatibility: "Existing saves are kept.", history: [], ...overrides };
@@ -33,46 +33,46 @@ async function mounted(version = oldApp) {
   vi.spyOn(backend, "getUpdates").mockResolvedValue(summary(version));
   vi.spyOn(backend, "inspectInstalledUpdate").mockResolvedValue({ installId: "chosen", baseRecipeVersion: "1", targetRecipeVersion: "1", state: "comparison-ready", detail: "Compared", choicesPreserved: true, issues: [], runs: [] });
   const inspect = vi.spyOn(backend, "inspectModUpgrade").mockResolvedValue(preview());
-  const apply = vi.spyOn(backend, "applyModUpgrade");
   const restore = vi.spyOn(backend, "restoreModUpgrade");
   const root = document.createElement("div"); document.body.append(root);
   const app = await mountApp(root, backend);
   await app.navigate("updates");
-  return { root, backend, inspect, apply, restore };
+  return { root, backend, inspect, restore };
 }
-async function startApply(root: HTMLElement) {
+async function startRestore(root: HTMLElement) {
   fireEvent.click(getByRole(root, "button", { name: "Check installed mods" }));
-  await waitFor(() => expect(getByRole(root, "button", { name: "Review BuffBot update" })).toBeTruthy());
-  fireEvent.click(getByRole(root, "button", { name: "Review BuffBot update" }));
-  fireEvent.click(getByRole(root, "button", { name: "Update BuffBot now" }));
+  await waitFor(() => expect(getByRole(root, "button", { name: "Restore BuffBot backup" })).toBeTruthy());
+  fireEvent.click(getByRole(root, "button", { name: "Restore BuffBot backup" }));
+  fireEvent.click(getByRole(root, "button", { name: "Restore backup now" }));
 }
 
 afterEach(() => { document.body.replaceChildren(); localStorage.clear(); vi.restoreAllMocks(); });
 
 describe("operation feedback controller", () => {
-  it("keeps byte completion working until Apply returns, then ignores late progress", async () => {
-    const { root, apply, inspect } = await mounted();
+  it("keeps byte completion working until restoration returns, then ignores late progress", async () => {
+    const { root, restore, inspect } = await mounted();
     const pending = deferred<ModUpgradePreview>();
     let report: ((progress: OperationProgress) => void) | undefined;
-    apply.mockImplementation(async (_id, _token, _full, _saves, onProgress?: (progress: OperationProgress) => void) => {
+    restore.mockImplementation(async (_id, _undo, onProgress?: (progress: OperationProgress) => void) => {
       report = onProgress;
       return pending.promise;
     });
-    await startApply(root);
-    await waitFor(() => expect(apply).toHaveBeenCalledOnce());
+    inspect.mockResolvedValue(preview({ state: "needs-recovery", canRestore: true }));
+    await startRestore(root);
+    await waitFor(() => expect(restore).toHaveBeenCalledOnce());
     expect(feedback(root).classList.contains("operation-working")).toBe(true);
-    expect(feedback(root).textContent).toContain("Updating BuffBot");
+    expect(feedback(root).textContent).toContain("Restoring BuffBot");
     report!({ stage: "backup-game", completed: "25", total: "100", unit: "bytes" });
     expect(getByRole(feedback(root), "progressbar").getAttribute("value")).toBe("25");
     report!({ stage: "backup-game", completed: "100", total: "100", unit: "bytes" });
     expect(feedback(root).classList.contains("operation-success")).toBe(false);
     expect(queryByRole(root, "button", { name: "Dismiss" })).toBeNull();
-    const applied = preview({ state: "applied", installedVersion: "1.8.4-alpha", reviewToken: null, canUndo: true });
+    const applied = preview({ state: "retired", installedVersion: "1.8.3-alpha", reviewToken: null });
     inspect.mockResolvedValue(applied);
     pending.resolve(applied);
     await waitFor(() => expect(feedback(root).classList.contains("operation-success")).toBe(true));
-    expect(feedback(root).textContent).toContain("BuffBot update complete");
-    expect(feedback(root).textContent).toContain("BuffBot 1.8.4-alpha is installed");
+    expect(feedback(root).textContent).toContain("BuffBot backup restored");
+    expect(feedback(root).textContent).toContain("BuffBot 1.8.3-alpha is installed");
     report!({ stage: "backup-game", completed: "1", total: "100", unit: "bytes" });
     expect(feedback(root).classList.contains("operation-success")).toBe(true);
     expect(queryByRole(feedback(root), "progressbar")).toBeNull();
@@ -80,20 +80,20 @@ describe("operation feedback controller", () => {
     expect(feedback(root)).toBeNull();
   });
 
-  it.each(["throws", "needs-recovery"] as const)("never shows success when Apply %s", async outcome => {
-    const { root, apply, inspect } = await mounted();
+  it.each(["throws", "needs-recovery"] as const)("never shows success when restoration %s", async outcome => {
+    const { root, restore, inspect } = await mounted();
     const recovery = preview({ state: "needs-recovery", reviewToken: null, canRestore: true, detail: "Restore before playing." });
-    apply.mockImplementation(async () => {
+    restore.mockImplementation(async () => {
       inspect.mockResolvedValue(recovery);
       if (outcome === "throws") throw new BackendCommandError({ code: "interrupted", message: "Update interrupted.", recovery_action: "Restore its backup.", technical_detail: "fixture" });
       return recovery;
     });
-    await startApply(root);
+    inspect.mockResolvedValue(preview({ state: "needs-recovery", canRestore: true }));
+    await startRestore(root);
     await waitFor(() => expect(feedback(root).classList.contains("operation-error")).toBe(true));
     expect(feedback(root).textContent).not.toContain("update complete");
     expect(feedback(root).textContent).toContain("Keep the game closed");
     expect(getByRole(root, "button", { name: "Restore BuffBot backup" })).toBeTruthy();
-    expect(queryByRole(root, "button", { name: "Review BuffBot update" })).toBeNull();
   });
 
   it("names the restored old version after Undo without claiming saved progress was restored", async () => {
