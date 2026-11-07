@@ -484,21 +484,25 @@ impl FrozenCliRecipe {
         }
     }
 
-    /// Executable launched when no EEex loader applies, from the frozen primary-source profile.
+    /// Executable launched when no EEex loader applies. Use the same reference profiles as
+    /// source discovery: an accepted Less tested store/build still launches its own game.
     fn fallback_executable(&self) -> Result<String, String> {
         if self.collection.game.standalone_role().is_none() {
             return Ok("Baldur.exe".to_owned());
         }
         let source = &self.bg2;
-        self.profiles
-            .matching(source.role, source.storefront)
+        let profiles =
+            crate::games::probe::role_profiles(&self.profiles, source.role, source.storefront);
+        profiles
+            .iter()
+            .copied()
             .find(|profile| Some(&profile.product_version) == source.build.as_ref())
+            .or_else(|| profiles.first().copied())
             .map(|profile| profile.executable.clone())
             .ok_or_else(|| {
                 format!(
-                    "the frozen recipe has no {} profile for build {}",
-                    source.role.display_name(),
-                    source.build.as_deref().unwrap_or("unknown")
+                    "the frozen recipe has no {} profile",
+                    source.role.display_name()
                 )
             })
     }
@@ -910,9 +914,12 @@ pub fn install_campaign_reviewed<S: EventSink + Sync>(
 }
 
 fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, CliError> {
-    // Sanitized, never refused; recording the campaign numbers a name another copy has.
-    let display_name = crate::registry::names::normalize_display_name(&request.display_name);
     let manifest = load_recipe(&request.recipe)?;
+    // Sanitized, never refused; recording the campaign numbers a name another copy has.
+    let display_name = crate::registry::names::normalize_display_name_with_default(
+        &request.display_name,
+        manifest.collection.game.default_installation_name(),
+    );
     validate::check(&manifest).map_err(|error| {
         CliError::new(
             "validation_failed",
@@ -5310,6 +5317,11 @@ impl<S: EventSink> CampaignRecorder for GuardedCliDependencies<'_, S> {
     fn record_campaign(&mut self, created: &CampaignCreated) -> Result<(), StepFailure> {
         self.recheck_application_data()?;
         ManagedInstallRegistry::open_or_create(&self.app_data)
+            .map(|registry| {
+                registry.with_default_display_name(
+                    self.frozen.collection.game.default_installation_name(),
+                )
+            })
             .and_then(|registry| {
                 registry.publish_campaign_named(created, self.frozen.effective_display_name())
             })
@@ -9249,12 +9261,42 @@ mod tests {
         );
         let frozen = standalone_frozen_recipe();
         assert_eq!(frozen.fallback_executable().unwrap(), "icewind.exe");
+    }
 
-        let mut unknown_build = frozen.clone();
-        unknown_build.bg2.build = Some("2.6.6.0".to_owned());
-        let error = unknown_build.fallback_executable().unwrap_err();
-        assert!(error.contains("Icewind Dale: Enhanced Edition"), "{error}");
-        assert!(error.contains("2.6.6.0"), "{error}");
+    #[test]
+    fn less_tested_iwd_sources_finalize_with_the_game_or_eeex_launcher() {
+        let temp = tempfile::tempdir().unwrap();
+        let vanilla = temp.path().join("vanilla");
+        let eeex = temp.path().join("eeex");
+        std::fs::create_dir(&vanilla).unwrap();
+        std::fs::create_dir(&eeex).unwrap();
+        std::fs::write(vanilla.join("icewind.exe"), b"fixture executable").unwrap();
+        std::fs::write(eeex.join("InfinityLoader.exe"), b"fixture loader").unwrap();
+        let mut frozen = standalone_frozen_recipe();
+        let mut eeex_plan = frozen.plan.clone();
+        eeex_plan.runs[0].mod_id = "eeex".to_owned();
+        for store in [
+            Storefront::Steam,
+            Storefront::Gog,
+            Storefront::Beamdog,
+            Storefront::Microsoft,
+            Storefront::Other,
+        ] {
+            for build in [Some("2.7.3.0"), Some("2.6.6.0"), Some("unreviewed"), None] {
+                frozen.bg2.storefront = store;
+                frozen.bg2.build = build.map(str::to_owned);
+                let fallback = frozen.fallback_executable().unwrap();
+                assert_eq!(fallback, "icewind.exe", "{store:?} {build:?}");
+                assert_eq!(
+                    super::verified_launch_path(&frozen.plan, &vanilla, &fallback, "IWD").unwrap(),
+                    vanilla.join("icewind.exe")
+                );
+                assert_eq!(
+                    super::verified_launch_path(&eeex_plan, &eeex, &fallback, "IWD").unwrap(),
+                    eeex.join("InfinityLoader.exe")
+                );
+            }
+        }
     }
 
     #[test]

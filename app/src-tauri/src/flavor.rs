@@ -94,7 +94,7 @@ pub const IWD: AppFlavor = AppFlavor {
     identifier: "dev.chrizhermann.iwdcollection",
     game: CollectionGame::Iwdee,
     application_data_directory: "Chriz IWD Collection",
-    default_installation_name: "Chriz Easy IWD",
+    default_installation_name: CollectionGame::Iwdee.default_installation_name(),
     standalone: Some(StandaloneCollection {
         recipe: "recipes/iwd-current",
         profile_id: "iwd-current",

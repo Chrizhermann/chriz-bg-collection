@@ -531,6 +531,18 @@ describe("Chriz Easy IWD build flavor", () => {
     const status = root.querySelector(".update-selection-status");
     expect(status?.textContent).toBe("No game installation yet. App updates are still available below.");
   });
+
+  it("uses its own product name for empty names and numbers duplicates", async () => {
+    await iwd();
+    const { savedInstallationName, installationNameNote } = await import("../src/components/installation-name");
+    const copies = [{ installId: "iwd-install", name: "Chriz Easy IWD" }];
+    for (const empty of ["", " ", ".", "..", " ... ", "\u0001"]) {
+      expect(savedInstallationName(empty, [])).toBe("Chriz Easy IWD");
+      expect(savedInstallationName(empty, copies)).toBe("Chriz Easy IWD (2)");
+      expect(savedInstallationName(empty, copies, "iwd-install")).toBe("Chriz Easy IWD");
+      expect(installationNameNote(empty, [])).toBe("Will be saved as “Chriz Easy IWD”.");
+    }
+  });
 });
 
 describe("startup with a backend for another collection", () => {

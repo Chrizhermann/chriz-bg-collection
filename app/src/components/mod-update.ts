@@ -42,7 +42,7 @@ function list(className: string, heading: string, items: readonly string[]): HTM
 export function modUpdateSection(copy: ManagedCopyUpdate, offer: ModUpdateOffer, actions: ModUpdateActions, disabled = false): HTMLElement {
   const busyHere = actions.modUpdateBusy === true && actions.modUpdateBusyId === offer.modId;
   const blocked = disabled || actions.modUpdateBusy === true;
-  const section = element("section", "install-patches mod-update-section");
+  const section = element("section", "mod-update-section");
   section.dataset.modId = offer.modId;
   const headingId = `mod-update-heading-${offer.modId}`;
   section.setAttribute("aria-labelledby", headingId);

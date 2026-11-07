@@ -671,6 +671,14 @@ impl CollectionGame {
         }
     }
 
+    /// Product name used when the player leaves an installation name empty.
+    pub const fn default_installation_name(self) -> &'static str {
+        match self {
+            Self::Eet => "Chriz Easy BG",
+            Self::Iwdee => "Chriz Easy IWD",
+        }
+    }
+
     /// Returns the single source-game role of a standalone collection, or `None` for EET.
     pub const fn standalone_role(self) -> Option<crate::games::GameRole> {
         match self {

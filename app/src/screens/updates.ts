@@ -81,7 +81,7 @@ function versionRow(
   const row = element("article", "update-row");
   if (["available", "requires-app", "local-available"].includes(state) && availableVersion !== null) row.classList.add("available");
   const installed = element("div", "update-installed");
-  installed.append(element("h2", undefined, title), element("p", undefined, currentVersion === null ? "Not installed" : `${currentLabel}: ${currentVersion === "bundled" ? "Bundled with CEBG" : currentVersion}`));
+  installed.append(element("h2", undefined, title), element("p", undefined, currentVersion === null ? "Not installed" : `${currentLabel}: ${currentVersion === "bundled" ? `Bundled with ${flavor.shortName}` : currentVersion}`));
   if (note !== undefined) installed.append(element("p", "update-purpose", note));
   const latest = element("div", "update-latest");
   if (availableVersion !== null) {
@@ -125,10 +125,10 @@ export function updatesScreen(updates: UpdateSummary, actions: UpdateActions, ch
   if (selected && flavor.features.hotpatches && actions.onCheckHotpatch !== undefined) {
     gameSections.append(hotpatchSection(selected, actions, installing || actions.installedUpdateBusy === true || actions.modUpdateBusy === true));
   }
-  // Whole-mod updates share the hotpatch history, so each waits for the other.
+  // Whole-mod updates wait for every other game operation, including legacy recovery.
   if (selected && actions.onCheckModUpdate !== undefined) {
     for (const offer of flavor.modUpdates) {
-      gameSections.append(modUpdateSection(selected, offer, actions, installing || actions.installedUpdateBusy === true || actions.hotpatchBusy === true));
+      gameSections.append(modUpdateSection(selected, offer, actions, installing || actions.installedUpdateBusy === true || actions.patchBusy === true || actions.modUpgradeBusy === true || actions.hotpatchBusy === true));
     }
   }
   // Whole-mod updates wait for every other game operation, and those wait for them.

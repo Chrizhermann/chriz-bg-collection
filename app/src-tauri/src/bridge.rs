@@ -2513,7 +2513,11 @@ impl NativeBridge {
                 "LOCALAPPDATA is missing or is not an absolute path",
             )
         })?;
-        ManagedInstallRegistry::open_or_create(app_data).map_err(registry_error)
+        ManagedInstallRegistry::open_or_create(app_data)
+            .map(|registry| {
+                registry.with_default_display_name(self.flavor.default_installation_name)
+            })
+            .map_err(registry_error)
     }
 
     fn resumable_campaign(&self, install_id: &str) -> Result<PathBuf, CommandError> {

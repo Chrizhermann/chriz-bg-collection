@@ -238,6 +238,31 @@ mod installation_name_tests {
     }
 
     #[test]
+    fn empty_names_follow_the_native_flavor_for_validation_and_rename() {
+        for flavor in [&crate::flavor::BG, &crate::flavor::IWD] {
+            let (_temp, bridge, _managed) = fixture();
+            let bridge = bridge.with_flavor(flavor);
+            for empty in ["", " ... ", "\u{1}"] {
+                assert_eq!(
+                    bridge
+                        .validate_installation_name(empty, Some("name-fixture"))
+                        .unwrap()
+                        .name,
+                    flavor.product_name
+                );
+                assert_eq!(
+                    bridge.rename_installation("name-fixture", empty).unwrap().name,
+                    flavor.product_name
+                );
+                assert_eq!(
+                    bridge.validate_installation_name(empty, None).unwrap().name,
+                    format!("{} (2)", flavor.product_name)
+                );
+            }
+        }
+    }
+
+    #[test]
     fn naming_commands_check_unique_names_and_rename_display_metadata_only() {
         let (_temp, bridge, managed) = fixture();
         assert_eq!(

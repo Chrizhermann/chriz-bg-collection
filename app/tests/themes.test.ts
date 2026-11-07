@@ -75,6 +75,23 @@ describe("app themes", () => {
     }
   });
 
+  it("keeps the BG palette and system fonts from main, without added fonts or ornaments", () => {
+    expect(Object.fromEntries(rootTokens(bgTheme))).toMatchObject({
+      "--iron": "#151819", "--charcoal": "#23282a", "--slate": "#343b3e", "--slate-light": "#4c575b",
+      "--vellum": "#f1e7d2", "--vellum-dim": "#c8bfad", "--brass": "#c59a51", "--brass-dark": "#806436",
+      "--teal": "#75bab4", "--teal-dark": "#325f5c", "--ember": "#e47b67", "--ok": "#98c790", "--focus": "#f1c873",
+      "--on-accent": "#151819", "--danger-surface": "#61372f", "--header-background": "rgba(21, 24, 25, 0.96)",
+      "--log-background": "#101314", "--log-text": "#d9dfd4",
+      "--font-display": 'Georgia, "Times New Roman", serif',
+      "--font-body": '"Segoe UI Variable", "Segoe UI", system-ui, sans-serif',
+      "--font-mono": '"Cascadia Mono", Consolas, monospace',
+    });
+    expect(bgTheme).toContain("color-scheme: dark");
+    expect(bgTheme).toContain("linear-gradient(rgba(197, 154, 81, 0.035) 1px, transparent 1px)");
+    expect(bgTheme).toContain("background-size: 100% 4rem");
+    expect(bgTheme).not.toMatch(/@font-face|url\(|::after|\.brand-mark|\.app-header|box-shadow/);
+  });
+
   for (const [id, css] of Object.entries(themes) as [FlavorId, string][]) {
     describe(id, () => {
       const tokens = rootTokens(css);
@@ -87,7 +104,7 @@ describe("app themes", () => {
         expect(css).toMatch(/color-scheme:\s*(light|dark)/);
       });
 
-      it("keeps text readable and focus rings and control borders visible", () => {
+      it("keeps text readable and focus rings visible", () => {
         const hex = (token: string): string => {
           const value = tokens.get(token) ?? "";
           expect(value, `${id} ${token} must be a plain #rrggbb color`).toMatch(/^#[0-9a-f]{6}$/i);
@@ -97,14 +114,21 @@ describe("app themes", () => {
           expect(contrast(hex(text), hex(ground)), `${id}: ${text} on ${ground}`).toBeGreaterThanOrEqual(4.5);
         }
         for (const [mark, ground] of UI_PAIRS) {
-          expect(contrast(hex(mark), hex(ground)), `${id}: ${mark} against ${ground}`).toBeGreaterThanOrEqual(3);
+          const actual = contrast(hex(mark), hex(ground));
+          if (id === "bg" && mark === "--slate-light") {
+            // The existing BG border must stay exactly as on main; IWD has a new design.
+            expect(actual).toBe(contrast("#4c575b", ground === "--charcoal" ? "#23282a" : "#151819"));
+          } else {
+            expect(actual, `${id}: ${mark} against ${ground}`).toBeGreaterThanOrEqual(3);
+          }
         }
       });
 
       it("loads its fonts and ornaments from files bundled with the app", () => {
         // Offline, and within the window's content security policy: no network, no data: URLs.
         const urls = [...css.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)].map(match => match[1]);
-        expect(urls.length).toBeGreaterThan(0);
+        if (id === "bg") expect(urls).toEqual([]);
+        else expect(urls.length).toBeGreaterThan(0);
         for (const url of urls) {
           expect(url, `${id} theme url ${url} must be a file beside the theme`).toMatch(/^\.\/(fonts|images)\//);
           expect(Object.keys(assetFiles), `${id} theme file ${url}`).toContain(`../src/themes/${url.slice(2)}`);
@@ -114,6 +138,11 @@ describe("app themes", () => {
 
       it("keeps each font's licence beside it", () => {
         const fonts = [...css.matchAll(/url\("?(\.\/fonts\/[^")]+)"?\)/g)].map(match => match[1]);
+        if (id === "bg") {
+          expect(fonts).toEqual([]);
+          expect(css).not.toContain("@font-face");
+          return;
+        }
         expect(fonts.length).toBeGreaterThan(0);
         for (const url of fonts) {
           const licence = licences[`../src/themes/${url.slice(2, url.lastIndexOf("/"))}/OFL.txt`];

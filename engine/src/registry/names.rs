@@ -21,7 +21,8 @@ use super::{
 };
 
 /// Suggested name for the first registered installation.
-pub const DEFAULT_INSTALLATION_NAME: &str = "Chriz Easy BG";
+pub const DEFAULT_INSTALLATION_NAME: &str =
+    crate::manifest::CollectionGame::Eet.default_installation_name();
 /// Maximum accepted length in Unicode scalar values, excluding edge whitespace.
 pub const MAX_INSTALLATION_NAME_CHARACTERS: usize = 80;
 
@@ -82,7 +83,7 @@ const FORBIDDEN_NAME_CHARACTERS: [char; 9] = ['<', '>', ':', '"', '/', '\\', '|'
 /// Turns a player-provided name into one CEBG can store, without refusing it: edge whitespace
 /// and control characters are dropped, each of `< > : " / \ | ? *` becomes `-`, and the name is
 /// cut to 80 characters. `None` when nothing but whitespace or dots is left; callers then use
-/// [`DEFAULT_INSTALLATION_NAME`]. This does not check other installs.
+/// the active product's default name. This does not check other installs.
 pub fn sanitize_display_name(name: &str) -> Option<String> {
     let cleaned: String = name
         .chars()
@@ -111,7 +112,12 @@ pub fn sanitize_display_name(name: &str) -> Option<String> {
 /// [`sanitize_display_name`], with [`DEFAULT_INSTALLATION_NAME`] for a name that has nothing
 /// left. This does not check other installs; the registry numbers a name that is taken.
 pub fn normalize_display_name(name: &str) -> String {
-    sanitize_display_name(name).unwrap_or_else(|| DEFAULT_INSTALLATION_NAME.to_owned())
+    normalize_display_name_with_default(name, DEFAULT_INSTALLATION_NAME)
+}
+
+/// Sanitize a name, using the active product's name when no characters remain.
+pub fn normalize_display_name_with_default(name: &str, default_name: &str) -> String {
+    sanitize_display_name(name).unwrap_or_else(|| default_name.to_owned())
 }
 
 /// Whether a stored name is one an earlier or the current installer could have saved. Names
@@ -157,15 +163,25 @@ struct NamedIdentity {
 }
 
 impl ManagedInstallRegistry {
+    /// Select the product's fallback for empty new names and renames. Stored names stay as-is.
+    pub fn with_default_display_name(mut self, name: &str) -> Self {
+        self.default_display_name = normalize_display_name(name);
+        self
+    }
+
+    fn normalize_display_name(&self, name: &str) -> String {
+        normalize_display_name_with_default(name, &self.default_display_name)
+    }
+
     /// Suggest a currently unused numbered default; creation rechecks it under a lock.
     pub fn suggested_display_name(&self) -> Result<String, RegistryError> {
-        self.suggested_display_name_from(DEFAULT_INSTALLATION_NAME)
+        self.suggested_display_name_from(&self.default_display_name)
     }
 
     /// Suggest a currently unused numbered name built on `base`, such as the product name of
     /// another application; creation rechecks it under a lock.
     pub fn suggested_display_name_from(&self, base: &str) -> Result<String, RegistryError> {
-        let base = normalize_display_name(base);
+        let base = self.normalize_display_name(base);
         let names = self.named_identities()?;
         for suffix in 1_u64.. {
             let name = if suffix == 1 {
@@ -193,7 +209,7 @@ impl ManagedInstallRegistry {
         name: &str,
         excluding_install_id: Option<&str>,
     ) -> Result<String, RegistryError> {
-        let name = normalize_display_name(name);
+        let name = self.normalize_display_name(name);
         let identities = self.named_identities()?;
         if let Some(id) = excluding_install_id {
             if !identities.contains_key(id) {
@@ -221,7 +237,7 @@ impl ManagedInstallRegistry {
         name: &str,
     ) -> Result<String, RegistryError> {
         validate_identifier(install_id, "install id", &self.names_root)?;
-        let name = normalize_display_name(name);
+        let name = self.normalize_display_name(name);
         let _guard = self.lock_names()?;
         let identities = self.named_identities()?;
         let identity = identities
@@ -264,7 +280,7 @@ impl ManagedInstallRegistry {
             }
             return Ok(path);
         }
-        let name = unused_display_name(&identities, &normalize_display_name(name), None)?;
+        let name = unused_display_name(&identities, &self.normalize_display_name(name), None)?;
         let path = self.publish_campaign(created)?;
         self.write_name(&created.install_id, &created.managed_root, &name)?;
         Ok(path)
@@ -332,7 +348,7 @@ impl ManagedInstallRegistry {
             }
             let name = match self.read_name(&record.install_id, &record.managed_root)? {
                 Some(name) => name,
-                None => legacy_campaign_name(&record.managed_root),
+                None => legacy_campaign_name(&record.managed_root, &self.default_display_name),
             };
             identities.insert(
                 record.install_id,
@@ -437,7 +453,7 @@ fn unused_display_name(
     ))
 }
 
-fn legacy_campaign_name(root: &Path) -> String {
+fn legacy_campaign_name(root: &Path, default_name: &str) -> String {
     // The frozen display name is read only. No ledger/receipt migration is needed.
     let frozen_name = SessionStore::open(root)
         .and_then(|store| store.replay_for_inspection())
@@ -458,7 +474,7 @@ fn legacy_campaign_name(root: &Path) -> String {
                 .and_then(|name| name.to_str())
                 .map(str::to_owned)
         })
-        .unwrap_or_else(|| DEFAULT_INSTALLATION_NAME.to_owned())
+        .unwrap_or_else(|| default_name.to_owned())
 }
 
 fn metadata_if_present(path: &Path) -> Result<Option<fs::Metadata>, RegistryError> {

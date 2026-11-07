@@ -556,6 +556,53 @@ fn name_defaults_can_start_from_another_product_name() {
 }
 
 #[test]
+fn empty_iwd_names_use_the_product_default_for_creation_validation_and_rename() {
+    use bg_engine::manifest::CollectionGame;
+    use bg_engine::registry::names::normalize_display_name_with_default;
+    let (temp, app_data, _managed, registry) = setup();
+    let default_name = CollectionGame::Iwdee.default_installation_name();
+    let registry = registry.with_default_display_name(default_name);
+    for empty in ["", " ", ".", "..", " ... ", "\u{1}"] {
+        assert_eq!(
+            normalize_display_name_with_default(empty, default_name),
+            "Chriz Easy IWD"
+        );
+        assert_eq!(
+            registry.validate_display_name(empty, None).unwrap(),
+            "Chriz Easy IWD"
+        );
+    }
+    let first = create_named_campaign(temp.path(), "iwd-first", "");
+    registry.publish_campaign_named(&first, "  ").unwrap();
+    let second = create_named_campaign(temp.path(), "iwd-second", "");
+    registry.publish_campaign_named(&second, " ... ").unwrap();
+    assert_eq!(
+        registry.display_name("iwd-first").unwrap(),
+        "Chriz Easy IWD"
+    );
+    assert_eq!(
+        registry.display_name("iwd-second").unwrap(),
+        "Chriz Easy IWD (2)"
+    );
+    assert_eq!(
+        registry.suggested_display_name().unwrap(),
+        "Chriz Easy IWD (3)"
+    );
+    assert_eq!(
+        registry.rename_display_name("iwd-second", "").unwrap(),
+        "Chriz Easy IWD (2)"
+    );
+    assert_eq!(
+        ManagedInstallRegistry::open_or_create(&app_data)
+            .unwrap()
+            .with_default_display_name(default_name)
+            .display_name("iwd-second")
+            .unwrap(),
+        "Chriz Easy IWD (2)"
+    );
+}
+
+#[test]
 fn name_validation_trims_compares_case_insensitively_and_sanitizes_instead_of_refusing() {
     use bg_engine::registry::names::{normalize_display_name, sanitize_display_name};
     let (temp, _app_data, _managed, registry) = setup();

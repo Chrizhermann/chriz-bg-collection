@@ -2157,14 +2157,18 @@ input[type="search"] {
   transform: translateY(0);
 }
 
-.install-patches {
+.install-patches,
+.mod-update-section {
   border-top: 1px solid var(--slate-light);
   padding-block: 1rem;
 }
 
 .install-patches h2,
 .install-patches h3,
-.install-patches p {
+.install-patches p,
+.mod-update-section h2,
+.mod-update-section h3,
+.mod-update-section p {
   margin-block: 0 0.6rem;
 }
 
@@ -2242,17 +2246,21 @@ input[type="search"] {
   margin-block: 0.4rem 0.75rem;
 }
 
-.updates-screen .install-patches {
+.updates-screen .install-patches,
+.updates-screen .mod-update-section {
   padding-block: 0.65rem 0.15rem;
 }
 
-.updates-screen .update-game-sections > .install-patches:first-child {
+.updates-screen .update-game-sections > .install-patches:first-child,
+.updates-screen .update-game-sections > .mod-update-section:first-child {
   padding-top: 0;
   border-top: 0;
 }
 
 .updates-screen .install-patches h3,
-.updates-screen .install-patches p {
+.updates-screen .install-patches p,
+.updates-screen .mod-update-section h3,
+.updates-screen .mod-update-section p {
   margin-bottom: 0.4rem;
 }
 

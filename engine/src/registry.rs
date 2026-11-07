@@ -173,6 +173,7 @@ pub struct ManagedInstallRegistry {
     records_root: PathBuf,
     campaigns_root: PathBuf,
     names_root: PathBuf,
+    default_display_name: String,
 }
 
 impl ManagedInstallRegistry {
@@ -264,6 +265,7 @@ impl ManagedInstallRegistry {
             records_root,
             campaigns_root,
             names_root: app_data_root.join("managed-install-names"),
+            default_display_name: names::DEFAULT_INSTALLATION_NAME.to_owned(),
         })
     }
 

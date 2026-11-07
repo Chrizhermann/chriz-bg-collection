@@ -6,8 +6,8 @@ export interface NamedInstallation {
   readonly name: string;
 }
 
-/** The name CEBG uses when nothing but spaces or dots is entered. */
-export const DEFAULT_INSTALLATION_NAME = "Chriz Easy BG";
+/** The product name used when nothing but spaces or dots is entered. */
+export const DEFAULT_INSTALLATION_NAME = flavor.productName;
 const MAX_INSTALLATION_NAME_CHARACTERS = 80;
 
 /**
