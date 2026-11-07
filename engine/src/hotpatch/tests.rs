@@ -920,7 +920,7 @@ fn components_installed_outside_the_app_are_named_instead_of_offered() {
 }
 
 #[test]
-fn the_rule_refuses_a_changed_collection_and_far_away_choices() {
+fn the_rule_checks_collection_records_and_accepts_other_choices_and_recovery() {
     let f = Fixture::new();
     let mut baseline = f.baseline();
     let artifact = baseline.manifest.artifacts.values_mut().next().unwrap();
@@ -954,13 +954,11 @@ fn the_rule_refuses_a_changed_collection_and_far_away_choices() {
     let mut baseline = f.baseline();
     baseline.receipt.normalized_selection = evaluation.normalized_selection;
     baseline.receipt.plan = evaluation.plan;
-    let refusals = f.assess(baseline).refusals.join(" ");
-    assert!(refusals.contains("was left out"), "{refusals}");
+    assert!(f.assess(baseline).refusals.is_empty());
 
     let mut baseline = f.baseline();
     baseline.recovered = true;
-    let refusals = f.assess(baseline).refusals.join(" ");
-    assert!(refusals.contains("repaired"), "{refusals}");
+    assert!(f.assess(baseline).refusals.is_empty());
 
     let refusals = gate::assess_with(
         &f.ctx(),
@@ -1405,16 +1403,18 @@ fn an_interrupted_update_blocks_play_and_restoring_gives_the_whole_mod_list_back
 }
 
 #[test]
-fn an_update_that_left_the_old_files_is_not_recorded() {
+fn an_update_does_not_judge_installed_file_contents() {
     let f = Fixture::buffbot();
     let (dir, prepared) = f.update_prepare();
     update::place_release(&f.ctx(), &dir, &prepared).unwrap();
-    // WeiDU wrote the new version into the mod list but installed nothing.
+    // Successful component history is authoritative even when resource bytes stay the same.
     write(&f.game().join("WeiDU.log"), &buffbot_log(1, "1.16.0", b""));
-    let error = update::record_applied(&f.ctx(), &f.catalog, &dir, &prepared).unwrap_err();
-    assert!(error.contains("still the old release's"), "{error}");
-    assert!(error.contains("override/bfbotcor.lua"), "{error}");
-    restore(&f.ctx(), &f.catalog, false).unwrap();
+    update::record_applied(&f.ctx(), &f.catalog, &dir, &prepared).unwrap();
+    assert_eq!(
+        fs::read(f.game().join("override/bfbotcor.lua")).unwrap(),
+        OLD_CORE
+    );
+    restore(&f.ctx(), &f.catalog, true).unwrap();
     f.assert_original();
 }
 
@@ -1488,6 +1488,7 @@ fn the_update_is_judged_by_the_mod_list_weidu_saw_and_its_result_lines() {
             "#1 #1 // BuffBot: EEex LuaJIT Support (auto-detected): v1.12.6",
         )
         .into_bytes();
+    judge(&old_version, success(2), 0, Some("1.16.0")).unwrap();
     // English kept its old number, which is German in the new release.
     let old_number = String::from_utf8(after.clone())
         .unwrap()
@@ -1507,7 +1508,6 @@ fn the_update_is_judged_by_the_mod_list_weidu_saw_and_its_result_lines() {
             0,
             "exit code",
         ),
-        (old_version, success(2), 0, "1.16.0"),
         (old_number, success(2), 0, "order"),
         (row_lost, success(2), 0, "uninstalled"),
         (garbled, success(2), 0, "uninstalled"),
@@ -1565,4 +1565,66 @@ fn an_undo_that_stopped_after_a_later_one_was_undone_blocks_play_until_restored(
     f.assert_preset_kept();
     launch_guard(f.root()).unwrap();
     assert!(f.history().undo_target().is_none());
+}
+
+#[test]
+fn update_availability_uses_package_records_not_player_version_annotations() {
+    let f = Fixture::buffbot();
+    let mut baseline = f.baseline();
+    let recorded = update::recorded_version(&baseline, "buffbot")
+        .unwrap()
+        .to_owned();
+    write(
+        &f.game().join("WeiDU.log"),
+        &buffbot_log(0, "999.0-player-edit", b""),
+    );
+    assert_eq!(
+        update::recorded_version(&baseline, "buffbot"),
+        Some(recorded.as_str())
+    );
+    let run = baseline
+        .receipt
+        .plan
+        .runs
+        .iter()
+        .rev()
+        .find(|run| run.mod_id == "buffbot")
+        .unwrap();
+    baseline.replacements.insert(
+        run.run_id.clone(),
+        crate::session::FrozenIdentity {
+            id: "buffbot-recorded-update".into(),
+            version: "2.0.0".into(),
+            sha256: "11".repeat(32),
+            length: 42,
+        },
+    );
+    assert_eq!(
+        update::recorded_version(&baseline, "buffbot"),
+        Some("2.0.0")
+    );
+}
+
+#[test]
+fn real_hotpatch_requirements_use_installed_components_including_player_additions() {
+    let mut f = Fixture::new();
+    f.catalog.hotpatches[0]
+        .requires_components
+        .push(catalog::ComponentRequirement {
+            mod_id: "stratagems".into(),
+            any_of: vec![1000],
+        });
+    let mut baseline = f.baseline();
+    baseline
+        .receipt
+        .plan
+        .runs
+        .retain(|run| run.mod_id != "stratagems");
+    assert!(f.assess(baseline).refusals.is_empty());
+    write(&f.game().join("WeiDU.log"), b"");
+    assert!(f
+        .assess(f.baseline())
+        .refusals
+        .iter()
+        .any(|reason| reason.contains("with component 1000")));
 }

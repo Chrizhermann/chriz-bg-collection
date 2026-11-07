@@ -19,6 +19,8 @@ const GOG_KEY: &str = r"SOFTWARE\GOG.com\Games";
 #[derive(Default)]
 struct FixtureFileSystem {
     versions: BTreeMap<PathBuf, String>,
+    read_errors: BTreeMap<PathBuf, io::ErrorKind>,
+    directory_errors: BTreeMap<PathBuf, io::ErrorKind>,
     kind_overrides: BTreeMap<PathBuf, FileKind>,
     kind_errors: BTreeMap<PathBuf, io::ErrorKind>,
     directory_overrides: BTreeMap<PathBuf, Vec<DirectoryEntry>>,
@@ -48,11 +50,17 @@ impl FixtureFileSystem {
 
 impl FileSystemProvider for FixtureFileSystem {
     fn read(&self, path: &Path) -> io::Result<Vec<u8>> {
+        if let Some(kind) = self.read_errors.get(&fs::canonicalize(path)?) {
+            return Err(io::Error::new(*kind, "injected read failure"));
+        }
         fs::read(path)
     }
 
     fn read_dir(&self, path: &Path) -> io::Result<Vec<DirectoryEntry>> {
         let canonical = fs::canonicalize(path)?;
+        if let Some(kind) = self.directory_errors.get(&canonical) {
+            return Err(io::Error::new(*kind, "injected directory read failure"));
+        }
         if let Some(entries) = self.directory_overrides.get(&canonical) {
             return Ok(entries.clone());
         }
@@ -1325,7 +1333,10 @@ fn a_steam_game_folder_that_cannot_be_read_is_listed_with_its_reason() {
         .iter()
         .find(|finding| finding.kind == FindingKind::Unreadable)
         .expect("an unreadable finding");
-    assert!(finding.message.contains("injected"), "{finding:?}");
+    assert_eq!(
+        finding.message,
+        "CEBG cannot read this game folder. Check that it can be read, then try again."
+    );
 }
 
 /// The fixture profiles without their GOG ones, like the shipped recipes, which have only
@@ -1478,35 +1489,64 @@ fn gog_and_beamdog_games_in_their_default_folders_are_found() {
 }
 
 #[test]
-fn a_microsoft_store_folder_is_named_as_protected_instead_of_failing_obscurely() {
-    let temp = tempfile::tempdir().unwrap();
-    let root = temp.path().join("WindowsApps").join("BaldursGate_1.0_x64");
-    fs::create_dir_all(&root).unwrap();
-
-    let candidate = inspect_game_path(
-        &profiles(),
-        &FixtureFileSystem::default(),
-        GameRole::Bg2ee,
-        Storefront::Microsoft,
-        &root,
-    )
-    .unwrap();
-    assert_eq!(candidate.eligibility, Eligibility::Ineligible);
-    assert_eq!(candidate.storefront, Storefront::Microsoft);
-    let protected = candidate
-        .findings
-        .iter()
-        .find(|finding| finding.kind == FindingKind::ProtectedFolder)
-        .expect("a protected-folder finding");
-    assert!(
-        protected.message.contains("Microsoft Store"),
-        "{protected:?}"
-    );
-    assert!(protected.message.contains("Steam or GOG"), "{protected:?}");
-    assert_eq!(
-        detect_storefront(&FixtureFileSystem::default(), &root),
-        Storefront::Microsoft
-    );
+fn source_read_access_is_tested_instead_of_assumed_from_windowsapps() {
+    for parent in ["WindowsApps", "ordinary-games"] {
+        let temp = tempfile::tempdir().unwrap();
+        let mut provider = FixtureFileSystem::default();
+        let root = fixture_game(
+            "steam-bg2ee",
+            &temp.path().join(parent).join("BG2"),
+            &mut provider,
+            "2.7.3.0",
+        );
+        let store = detect_storefront(&provider, &root);
+        let inspect = |provider: &FixtureFileSystem| {
+            inspect_game_path(&profiles(), provider, GameRole::Bg2ee, store, &root).unwrap()
+        };
+        let readable = inspect(&provider);
+        assert!(readable.eligibility.is_usable());
+        if parent == "WindowsApps" {
+            assert_eq!(readable.storefront, Storefront::Microsoft);
+            assert_eq!(readable.eligibility, Eligibility::Experimental);
+        } else {
+            assert_eq!(readable.eligibility, Eligibility::Eligible);
+        }
+        assert!(readable.fingerprint.is_some());
+        assert!(!has_finding(&readable, FindingKind::ProtectedFolder));
+        provider.directory_errors.insert(
+            fs::canonicalize(&root).unwrap(),
+            io::ErrorKind::PermissionDenied,
+        );
+        let denied = inspect(&provider);
+        assert_eq!(denied.eligibility, Eligibility::Ineligible);
+        let (kind, message) = if parent == "WindowsApps" {
+            (FindingKind::ProtectedFolder, "This copy comes from the Microsoft Store or the Xbox app. Windows protects its folder, so CEBG cannot copy the game from it. Use a Steam or GOG copy of the game instead.")
+        } else {
+            (
+                FindingKind::Unreadable,
+                "CEBG cannot read this game folder. Check that it can be read, then try again.",
+            )
+        };
+        assert_eq!(denied.findings[0].kind, kind);
+        assert_eq!(denied.findings[0].message, message);
+        provider.directory_errors.clear();
+        provider.read_errors.insert(
+            fs::canonicalize(root.join("chitin.key")).unwrap(),
+            io::ErrorKind::PermissionDenied,
+        );
+        let denied_file = inspect(&provider);
+        assert_eq!(denied_file.eligibility, Eligibility::Ineligible);
+        let finding = denied_file
+            .findings
+            .iter()
+            .find(|finding| finding.kind == kind)
+            .unwrap();
+        if parent == "WindowsApps" {
+            assert_eq!(finding.message, message);
+        } else {
+            assert!(!has_finding(&denied_file, FindingKind::ProtectedFolder));
+        }
+    }
 }
 
 #[test]

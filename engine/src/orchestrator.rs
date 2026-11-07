@@ -17,7 +17,6 @@ use crate::events::{EngineEvent, EventSink, StepOutcome};
 use crate::games::GameRole;
 use crate::lock::{LockError, TargetLock};
 use crate::manifest::{GameRoot, Phase};
-use crate::postcondition;
 use crate::preflight::is_creator_protected_destination;
 use crate::resolve::{InstallPlan, PlannedRun};
 use crate::session::{CampaignCreated, FrozenIdentity, SessionEvent, SessionReplay, SessionStore};
@@ -3127,9 +3126,6 @@ where
                 }
                 match self.dependencies.recover(&run, &attempt) {
                     Ok(InstallReconciliation::ProvenDone) => {
-                        if let Some(outcome) = self.postcondition_failure(step, &run, &attempt)? {
-                            return Ok(Some(outcome));
-                        }
                         self.complete_step(step, &attempt)?;
                         return Ok(None);
                     }
@@ -3178,11 +3174,6 @@ where
             let evidence_attempt = self.attempt(step, attempt);
             match self.dependencies.recover(&run, &evidence_attempt) {
                 Ok(InstallReconciliation::ProvenDone) => {
-                    if let Some(outcome) =
-                        self.postcondition_failure(step, &run, &failed_attempt)?
-                    {
-                        return Ok(Some(outcome));
-                    }
                     let reconciliation = self.begin_new(step)?;
                     self.complete_step(step, &reconciliation)?;
                     return Ok(None);
@@ -3239,9 +3230,6 @@ where
             };
             match reconciliation {
                 InstallReconciliation::ProvenDone => {
-                    if let Some(outcome) = self.postcondition_failure(step, &run, &current)? {
-                        return Ok(Some(outcome));
-                    }
                     self.complete_step(step, &current)?;
                     return Ok(None);
                 }
@@ -3371,26 +3359,6 @@ where
             }
             Err(error) => error,
         }
-    }
-
-    fn postcondition_failure(
-        &mut self,
-        step: &PipelineStep,
-        run: &PlannedRun,
-        attempt: &StepAttempt,
-    ) -> Result<Option<CampaignOutcome>, OrchestratorError> {
-        let root = match run.target {
-            GameRoot::Bg1 => &self.request.created.staged_bg1,
-            GameRoot::Bg2 => &self.request.created.staged_bg2,
-        };
-        let Err(error) = postcondition::verify(root, &run.postconditions) else {
-            return Ok(None);
-        };
-        let reason = format!(
-            "run {:?} postcondition verification failed after installed state was proven: {error}",
-            run.run_id
-        );
-        self.seal_fresh_copy(step, attempt, reason).map(Some)
     }
 
     fn begin_or_resume(&mut self, step: &PipelineStep) -> Result<StepAttempt, OrchestratorError> {
@@ -4556,17 +4524,15 @@ mod tests {
 
     /// Whichever component of the recommended setup fails, the question has an answer at the
     /// point where it fails, whether WeiDU went on or stopped there: the component leaves with
-    /// what needs it, it is one of the fixed parts, or it would leave half of a feature's core
-    /// in the game. Nothing else may come of it, with or without Spell Revisions, and both
+    /// what needs it, or it would leave half of a feature's core in the game. Nothing else may come of it, with or without Spell Revisions, and both
     /// directions hold: nothing leaves that has all it needs, and nothing stays that lost it.
     #[test]
-    fn every_planned_component_can_leave_where_it_fails_or_is_a_fixed_part() {
+    fn every_planned_component_can_leave_unless_it_would_leave_half_a_core() {
         for manifest in [bundled(), curated()] {
             for spell_revisions in [true, false] {
                 let evaluation = recommended(&manifest, spell_revisions);
                 let plan = &evaluation.plan;
                 let needs = Needs::new(&manifest, plan);
-                let mut fixed = BTreeSet::new();
                 let mut incomplete = BTreeSet::new();
                 for (position, run) in plan.runs.iter().enumerate() {
                     for (index, component) in run.components.iter().enumerate() {
@@ -4586,9 +4552,6 @@ mod tests {
                                 Ok((kept, in_game)) => assert_the_right_parts_leave(
                                     &manifest, &needs, &kept, &in_game, &failed,
                                 ),
-                                Err(LeaveOutError::Required { title, .. }) => {
-                                    fixed.insert(title);
-                                }
                                 Err(LeaveOutError::Incomplete { title, .. }) => {
                                     incomplete.insert(title);
                                 }
@@ -4598,17 +4561,11 @@ mod tests {
                     }
                 }
                 assert_eq!(
-                    fixed.iter().map(String::as_str).collect::<Vec<_>>(),
+                    incomplete.iter().map(String::as_str).collect::<Vec<_>>(),
                     [
                         "Core fixes and Game Text Update",
-                        "EET core import",
-                        "Merge Siege of Dragonspear DLC",
-                        "Standard EET finalization"
+                        "EEex full runtime with LuaJIT"
                     ]
-                );
-                assert_eq!(
-                    incomplete.iter().map(String::as_str).collect::<Vec<_>>(),
-                    ["EEex full runtime with LuaJIT"]
                 );
             }
         }
@@ -4647,7 +4604,7 @@ mod tests {
                             );
                         }
                     }
-                    Err(LeaveOutError::Required { .. } | LeaveOutError::Incomplete { .. }) => {}
+                    Err(LeaveOutError::Incomplete { .. }) => {}
                     Err(error) => panic!("{}: {error}", run.run_id),
                 }
             }

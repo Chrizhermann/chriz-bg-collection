@@ -152,7 +152,10 @@ export function installedUpdateSection(copies: readonly ManagedCopyUpdate[], act
         content.append(details);
       }
     }
-    if (current && (actions.modUpgrade?.installId === copy.installId || actions.modUpgradeError || actions.modUpgradeBusy)) {
+    const legacy = actions.modUpgrade;
+    const hasLegacyRecovery = legacy?.installId === copy.installId
+      && (legacy.state !== "retired" || legacy.history.length > 0);
+    if (current && (hasLegacyRecovery || actions.modUpgradeError || actions.modUpgradeBusy)) {
       content.append(modUpgradeResult(copy, actions, disabled || actions.installedUpdateBusy === true || copy.state === "stale"));
     }
     if (plan && copy.state !== "stale" && !(current && actions.installedUpdateBusy)) {

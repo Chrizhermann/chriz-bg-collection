@@ -8,6 +8,11 @@ Read `docs/handover.md` first — it is the live entry point (status, guardrails
 
 ## Rules
 
+- Follow the current bg-modding `references/compatibility-policy.md`: write the decided
+  result regardless of old game content. Do not add version, content or layout gates.
+  Preserve PC safety, CEBG archives, install history, concurrency, backups and recovery.
+  Failed components keep the player's Try again / Skip / Stop decision.
+
 - Chriz Easy BG work goes to `main` (Christopher, 2026-11-04). The old next-release
   branch `claude/cebg-installer-fixes-20261014` is retired; Chriz Easy IWD still lives on
   `claude/iwdee-app`.

@@ -1188,16 +1188,6 @@ fn build_plan(
 /// Why an installation cannot continue without some mods.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum LeaveOutError {
-    /// The recipe always installs a part of a mod that would have to be left out.
-    #[error(
-        "{title} is a fixed part of this collection, so the installation cannot continue without it"
-    )]
-    Required {
-        /// Feature that the recipe always installs.
-        feature_id: String,
-        /// Its display title.
-        title: String,
-    },
     /// Leaving out would keep only part of what a feature exists for in the game.
     #[error("{title} is installed only in part, and it can't stay that way")]
     Incomplete {
@@ -1220,9 +1210,9 @@ pub enum LeaveOutError {
 /// did not install is never added, even when it was off only because it conflicted with a
 /// removed feature. Prompt answers are rendered again because they may depend on removed
 /// features, and a run that lost components drops its recipe checks, which describe the
-/// complete run. A mandatory part of an optional feature removes that whole feature; a
-/// feature the recipe always installs (mandatory, with only mandatory parents) cannot be
-/// removed, so then this fails.
+/// complete run. A mandatory part of an optional feature removes that whole feature.
+/// Mandatory selection does not prevent omitting an unavailable mod; the installed-core
+/// rule in `plan_without_parts` still prevents leaving a core only partly installed.
 pub fn plan_without_artifacts(
     manifest: &Manifest,
     selection: &NormalizedSelection,
@@ -1349,12 +1339,10 @@ pub fn plan_without_parts(
                     leaving.push(parent);
                     depth += 1;
                 }
-                _ => {
-                    return Err(LeaveOutError::Required {
-                        feature_id: feature.id.clone(),
-                        title: feature.title.clone(),
-                    })
-                }
+                // An entirely unavailable mod may be omitted even when the recipe's
+                // normal selection makes it mandatory. The installed-core check below
+                // still forbids leaving an incomplete core behind.
+                _ => break,
             }
         }
         for feature in leaving

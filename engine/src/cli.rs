@@ -2564,9 +2564,7 @@ fn receipt_notes(
             (QuestionKind::ChangedDownload | QuestionKind::UnreviewedTool, Answer::Yes)
                 if left_out_in_the_end(&decision.artifact_id) => {}
             (QuestionKind::ChangedDownload, Answer::Yes) => {
-                notes.push(format!(
-                    "You chose to install a newer download of {name} ({file})."
-                ));
+                notes.push(format!("Installed a newer download of {name} ({file})."));
             }
             (QuestionKind::ModdedSource, Answer::Yes) => {
                 let game =
@@ -2595,7 +2593,7 @@ fn receipt_notes(
                     (QuestionKind::UnusableDownload, Some(reason)) => reason.short().to_owned(),
                     _ => format!("a newer download than the reviewed one was found: {file}"),
                 };
-                let mut note = format!("You chose to continue without {name} ({why}).");
+                let mut note = format!("Continued without {name} ({why}).");
                 let (dependents, changed) = affected(
                     &decision.artifact_id,
                     &decision.removed_runs,
@@ -2687,12 +2685,6 @@ fn receipt_notes(
             "Used a newer or different installer tool than the reviewed version: {}.",
             changed_tools.join(", ")
         ));
-    }
-    if !notes.is_empty() {
-        notes.push(
-            "If something does not work as expected, please report it so the collection can be fixed."
-                .to_owned(),
-        );
     }
     notes
 }
@@ -4010,6 +4002,17 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                     let drop_dir = self.created.cache_root.join("manual");
                     ensure_directories(&drop_dir)?;
                     let path = drop_dir.join(filename);
+                    if artifact.tool.is_none() && first.is_none() && authorized.is_none() {
+                        if let Err(source) = fs::symlink_metadata(&path) {
+                            if source.kind() == std::io::ErrorKind::NotFound {
+                                return Err(AcquisitionFailure::Unavailable(AcquireError::Io {
+                                    action: "find the supplied mod archive",
+                                    path,
+                                    source,
+                                }));
+                            }
+                        }
+                    }
                     if !path.is_file() {
                         self.sink.emit(EngineEvent::ManualDownloadNeeded {
                             mod_id: artifact.id.clone(),
@@ -4318,12 +4321,10 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         Ok(verified)
     }
 
-    /// Acquires a mod's archive. A changed download is unpacked now, before anything is
-    /// staged, so that a mod whose new archive cannot be used is asked about here instead of
-    /// stopping the installation later. The archive is unpacked once into the shared
-    /// extraction cache either way. A changed download is recorded only once the player
-    /// accepted it ([`Self::acquire_answered`]), so that nothing records a file nobody
-    /// accepted and a damaged one can be asked for again ([`Self::first_acquisition`]).
+    /// Acquires and records the archive served by the official link. Changed archives
+    /// are unpacked before staging; unusable mods leave only their dependency closure out.
+    /// An explicit command-line answer remains authoritative. Recorded acquisitions remain
+    /// fixed for the running campaign so a resumed run cannot mix two archives.
     fn acquire_payload(
         &self,
         artifact: &Artifact,
@@ -4360,18 +4361,22 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                 self.record_acquisition(artifact, None, fetched)?;
                 Ok(AcquisitionOutcome::Ready)
             }
-            // The player chose a manual download's file themselves, which answers the question
-            // a changed link download asks: it is recorded and installed as chosen.
-            FirstAcquisition::Changed(fetched, _)
-                if artifact.acquisition == AcquisitionPolicy::ManualUserSupplied =>
-            {
+            // A changed archive from the same official link is installed and recorded.
+            // first_acquisition already checked its archive structure and extraction safety.
+            FirstAcquisition::Changed(fetched, _) => {
+                if self
+                    .preset_answers
+                    .get(QuestionKind::ChangedDownload)
+                    .is_some_and(|answer| answer != Answer::Yes)
+                {
+                    return Ok(AcquisitionOutcome::Ask {
+                        kind: QuestionKind::ChangedDownload,
+                        served: served_download(&fetched),
+                    });
+                }
                 self.record_acquisition(artifact, None, fetched)?;
                 Ok(AcquisitionOutcome::Ready)
             }
-            FirstAcquisition::Changed(fetched, _) => Ok(AcquisitionOutcome::Ask {
-                kind: QuestionKind::ChangedDownload,
-                served: served_download(&fetched),
-            }),
             FirstAcquisition::Unusable(unusable) => Ok(AcquisitionOutcome::LeaveOut {
                 reason: unusable.reason(),
             }),
@@ -5035,6 +5040,12 @@ impl<S: EventSink> ArtifactAcquirer for GuardedCliDependencies<'_, S> {
         Ok(self
             .preset_answers
             .get(decision.question.kind)
+            .or_else(|| {
+                decision
+                    .question
+                    .kind
+                    .installer_default(decision.question.artifact_kind)
+            })
             .map(|answer| (answer, AnswerSource::Preset)))
     }
 
@@ -5401,6 +5412,8 @@ fn unavailable_reason(error: &AcquireError) -> UnusableReason {
         AcquireError::AuthorizedContentChanged { length, sha256, .. } => other(format!(
             "its official link now serves yet another file ({length} bytes, SHA-256 {sha256})"
         )),
+        AcquireError::Io { action: "find the supplied mod archive", .. } =>
+            other("the mod's manually supplied archive is missing".into()),
         error => other(format!("its official link cannot be used: {error}")),
     }
 }
@@ -6493,7 +6506,7 @@ impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
             )
             .map_err(step_error)?
             {
-                format!("Frozen managed stack and explicitly accepted manual WeiDU additions matched across {} planned runs. Manual compatibility is unverified; game updates are disabled.", plan.runs.len())
+                format!("Frozen managed stack and explicitly accepted manual additions matched across {} planned runs.", plan.runs.len())
             } else {
                 format!(
                     "exact frozen stack matched across {} planned WeiDU runs",

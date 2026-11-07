@@ -47,52 +47,6 @@ impl NativeBridge {
         .map_err(mod_upgrade_inspection_error)
     }
 
-    pub fn apply_mod_upgrade(
-        &self,
-        install_id: &str,
-        review_token: &str,
-        full_backup: bool,
-        backup_saves: bool,
-    ) -> Result<bg_engine::mod_upgrades::ModUpgradePreview, CommandError> {
-        self.apply_mod_upgrade_with_progress(
-            install_id,
-            review_token,
-            full_backup,
-            backup_saves,
-            &|_| {},
-        )
-    }
-
-    pub fn apply_mod_upgrade_with_progress(
-        &self,
-        install_id: &str,
-        review_token: &str,
-        full_backup: bool,
-        backup_saves: bool,
-        progress: bg_engine::operation_progress::ProgressSink<'_>,
-    ) -> Result<bg_engine::mod_upgrades::ModUpgradePreview, CommandError> {
-        let _guard = self.begin_app_update()?;
-        let record = self.available_managed_install(install_id)?.record;
-        let app_data = self
-            .app_data
-            .as_ref()
-            .ok_or_else(|| mod_upgrade_error("Application data is unavailable."))?;
-        // The engine acquires and holds the target lock through backup and mutation.
-        bg_engine::mod_upgrades::apply_with_progress(
-            &bg_engine::mod_upgrades::Context {
-                record: &record,
-                app_data,
-                cache: &self.cache,
-                recipe: &self.recipe,
-            },
-            review_token,
-            full_backup,
-            backup_saves,
-            progress,
-        )
-        .map_err(mod_upgrade_error)
-    }
-
     pub fn restore_mod_upgrade(
         &self,
         install_id: &str,
@@ -246,13 +200,6 @@ mod mod_upgrade_bridge_tests {
             bridge.inspect_mod_upgrade("unknown").unwrap_err().code,
             "managed_install_unknown"
         );
-        assert_eq!(
-            bridge
-                .apply_mod_upgrade("unknown", "untrusted-review", true, false)
-                .unwrap_err()
-                .code,
-            "managed_install_unknown"
-        );
         assert!(!bridge.file_update_active());
         for undo in [false, true] {
             assert_eq!(
@@ -268,17 +215,10 @@ mod mod_upgrade_bridge_tests {
     }
 
     #[test]
-    fn whole_mod_mutations_cannot_overlap_an_existing_update() {
+    fn legacy_restoration_cannot_overlap_an_existing_update() {
         let temp = tempfile::tempdir().unwrap();
         let bridge = bridge(temp.path());
         let guard = bridge.begin_app_update().unwrap();
-        assert_eq!(
-            bridge
-                .apply_mod_upgrade("unknown", "review", true, false)
-                .unwrap_err()
-                .code,
-            "update_busy"
-        );
         assert_eq!(
             bridge
                 .restore_mod_upgrade("unknown", false)
