@@ -762,21 +762,22 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertEqual(preset["selections"]["feature:evandra:component-1"], "on")
             bg_mod = tomllib.loads((output / "mods/chriz-bg-rebalance.toml").read_text(encoding="utf-8"))
             # November 2: v0.8.9 (texts of 210/211) replaced v0.8.8; November 3 intake: v0.8.10
-            # (Flail of the Ages 302 without Spell Revisions) replaces v0.8.9. Both artifacts stay.
-            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.8.10")
+            # (Flail of the Ages 302 without Spell Revisions), and November 8 v0.8.11, replace
+            # v0.8.9. All three artifacts stay.
+            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.8.11")
             bg_artifact = tomllib.loads(
-                (output / "artifacts/chriz-bg-rebalance-0.8.10.toml").read_text(encoding="utf-8")
+                (output / "artifacts/chriz-bg-rebalance-0.8.11.toml").read_text(encoding="utf-8")
             )
             self.assertTrue((output / "artifacts/chriz-bg-rebalance-0.8.9.toml").exists())
             self.assertTrue((output / "artifacts/chriz-bg-rebalance-0.8.8.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.3.1.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.4.0.toml").exists())
-            self.assertEqual(bg_artifact["version"], "0.8.10")
-            self.assertEqual(bg_artifact["source"]["reference"], "v0.8.10")
-            self.assertEqual(bg_artifact["source"]["expected_length"], 1848783)
+            self.assertEqual(bg_artifact["version"], "0.8.11")
+            self.assertEqual(bg_artifact["source"]["reference"], "v0.8.11")
+            self.assertEqual(bg_artifact["source"]["expected_length"], 1813831)
             self.assertEqual(
                 bg_artifact["source"]["sha256"],
-                "40be063d26d531f3355022f7ab822e0b2018f00d99ecfd0d493913ffc4f68826",
+                "c9e9adf57a06b95bac055b4aee983b92690e3dacb2173b6c584cf4f75f059b34",
             )
             self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.1")
             for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14", "0.1.0-alpha.15", "0.1.0-alpha.16", "0.1.0-alpha.17", "0.1.0-alpha.18", "0.1.0-alpha.19", "0.1.0-alpha.20", "0.1.0", "0.1.1"):

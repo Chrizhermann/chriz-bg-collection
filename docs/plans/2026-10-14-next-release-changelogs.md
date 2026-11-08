@@ -72,6 +72,10 @@ is described in [`docs/release-notes-0.1.1.md`](../release-notes-0.1.1.md).
   missing owned dialogue state or placement, occupied script slot, or another mod's version
   no longer stops, warns or skips a selected remix component: it writes the decided result.
   Its components, order and defaults do not change. (SoD Remix v0.6.17)
+- **BG Rebalance writes every selected balance change as decided** (Default). Edited values,
+  another mod's version of the same spell, item or table, and missing pieces no longer stop,
+  warn or skip it. Bard spell-level ceilings also find their tables on case-sensitive installs.
+  Components, order and Chris's Recommended selection stay the same. (BG Rebalance v0.8.11)
 - **Smaller BuffBot changes** (Default):
   - New: five text sizes instead of three. Tiny and Huge join Small, Medium and Large, and
     your setting stays. Large and Huge change only the title and the button captions.
@@ -86,7 +90,7 @@ These changes apply to new installations; existing games and saves are unchanged
 
 ### Mod versions
 
-- BG Rebalance v0.8.10 (was v0.8.9)
+- BG Rebalance v0.8.11 (was v0.8.9)
 - BuffBot v1.16.1 (was v1.12.6)
 - SoD Remix v0.6.17 (was v0.6.16)
 
@@ -99,7 +103,12 @@ These changes apply to new installations; existing games and saves are unchanged
   not been tested in a running game, in a localized game or with other item or spell
   overhauls of the flail (its release notes). The 0.1.1 known issue ends with this pin, so
   0.1.2's release notes drop it, and the 0.1.2 update ledger needs an entry that covers
-  `artifact:chriz-bg-rebalance-0.8.10`.
+  `artifact:chriz-bg-rebalance-0.8.11`.
+- **Rebalance v0.8.11** (pinned 2026-11-08) keeps its 36 components, their source order and
+  the Recommended selection. Every component overwrites its decided spell, item or table
+  result regardless of edited data, another mod's version or missing owned pieces, and `420`
+  copies bard progression tables by exact file name for case-sensitive WeiDU. Its fresh-download
+  evidence is source/package verification only; no WeiDU or gameplay acceptance is claimed.
 - **Rolled HP in Recommended** (Christopher, 2026-11-04): Tweaks Anthology `3000` and `3010`
   are unchecked options. The Recommended plan loses both components (468 to 466), and its 69
   runs and their order stay. The 0.1.2 update ledger needs an entry that covers

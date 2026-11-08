@@ -12,8 +12,9 @@ Static pin, evidence, component, selection and order checks for both recipe prof
 Nothing here is a game installation or gameplay acceptance. The November 2 intake
 (test_nov02_kitpack_rebalance_fix_pins_recipe) supersedes this pin with v0.8.9, which changes
 only texts of 210 and 211 and no component, and the November 3 intake
-(test_nov03_rebalance_0810_pin_recipe) supersedes v0.8.9 with v0.8.10, which changes only 302;
-the v0.8.8 record and artifacts stay as verified here.
+(test_nov03_rebalance_0810_pin_recipe) supersedes v0.8.9 with v0.8.10, and the November 8
+intake (test_nov08_rebalance_0811_pin_recipe) supersedes that pin with v0.8.11; the v0.8.8
+record and artifacts stay as verified here.
 """
 
 from pathlib import Path
@@ -38,9 +39,9 @@ SHA256 = "dec0544b3cc0f2197b5791e89cf0eb73d2cdb563d3ae35c254d0da719d89a2e3"
 LENGTH = 1_839_187
 TAG_COMMIT = "92479d1baa83e8b0780b7dfc3009dc8820478cc6"
 # The November 2 intake moved both profiles to v0.8.9, which collection 0.1.0 ships, and the
-# November 3 intake moves them to v0.8.10 for 0.1.2.
-SUCCESSOR = "chriz-bg-rebalance-0.8.10"
-SUCCESSOR_TAG = "v0.8.10"
+# November 8 intake moves them to v0.8.11 for 0.1.2.
+SUCCESSOR = "chriz-bg-rebalance-0.8.11"
+SUCCESSOR_TAG = "v0.8.11"
 RELEASED_010_TAG = "v0.8.9"
 RUN = "chriz-bg-rebalance-bg2"
 EEEX_RUN = "eeex-bg2"

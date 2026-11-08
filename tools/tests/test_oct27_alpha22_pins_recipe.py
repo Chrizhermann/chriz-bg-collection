@@ -275,9 +275,9 @@ REBALANCE_LENGTH = 1_817_306
 REBALANCE_COMMIT = "43b8811abe04ad71575c89d5589866919801bdff"
 # The October 29 intakes replace v0.8.6 with v0.8.7, which renames 360, and v0.8.7 with
 # v0.8.8, which declares 410 and 411 (checked against its own record). The November 2
-# intake replaces v0.8.8 with v0.8.9, and the November 3 intake v0.8.9 with v0.8.10; neither
-# changes a component.
-REBALANCE_SUCCESSOR = "chriz-bg-rebalance-0.8.10"
+# intake replaces v0.8.8 with v0.8.9, the November 3 intake v0.8.9 with v0.8.10, and the
+# November 8 intake v0.8.10 with v0.8.11; none changes a component.
+REBALANCE_SUCCESSOR = "chriz-bg-rebalance-0.8.11"
 REBALANCE_LATER = {410, 411}
 CLOCKS_TITLE = "True Time Stop – fair Haste & Slow"
 REBALANCE_RUN = "chriz-bg-rebalance-bg2"

@@ -350,9 +350,9 @@ subject_kind = "run"
 subject_id = "chriz-bg-rebalance-bg2"
 kind = "static-test"
 repository = "Chrizhermann/chriz-bg-collection"
-commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+commit = "5de5d4b1293ce689da51e069fa691c5bc7e09dd8"
 test_artifact = "engine/tests/production_recipe_chriz.rs"
-date = "2026-09-04"
+date = "2026-11-08"
 status = "accepted"
 scope = "Static recipe source, component, and order assertions only; not live game acceptance."
 
@@ -775,6 +775,7 @@ status = "accepted"
 scope = "Passed focused selection, dependencies, native component ordering and source intake checks; Christopher performs the installation and gameplay acceptance separately."
 
 
+
 [[evidence]]
 subject_kind = "run"
 subject_id = "chriz-bg-modpack-pre-continuity-bg2"
@@ -833,4 +834,3 @@ test_artifact = "tools/tests/test_expanded_release_recipe.py"
 date = "2026-09-16"
 status = "accepted"
 scope = "Passed focused selection, dependencies, native component ordering and source intake checks; Christopher performs the installation and gameplay acceptance separately."
-

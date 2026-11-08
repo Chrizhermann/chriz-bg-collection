@@ -10,7 +10,8 @@ component, selection or order changes.
 The daily pin job prepared the pin (tools/prepare_own_mod_pin.py); this test freezes it and
 its evidence record. Static pin, evidence, component, selection, order and release-text
 checks for both recipe profiles only. Nothing here is a game installation or gameplay
-acceptance.
+acceptance. The November 8 intake (test_nov08_rebalance_0811_pin_recipe) supersedes this pin
+with v0.8.11; the v0.8.10 record and artifacts stay as verified here.
 """
 
 from pathlib import Path
@@ -29,6 +30,7 @@ PROFILES = ["manifest", "recipes/curated-full-current"]
 MOD = "chriz-bg-rebalance"
 PIN = "chriz-bg-rebalance-0.8.10"
 PREVIOUS = "chriz-bg-rebalance-0.8.9"
+SUCCESSOR = "chriz-bg-rebalance-0.8.11"
 TAG = "v0.8.10"
 COMMIT = "cd0ffa2dfa9b42e432e1ef9f59751eaa19cf75e1"
 URL = ("https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.10/"
@@ -105,7 +107,7 @@ class Nov03RebalanceV0810PinTests(unittest.TestCase):
         self.assertNotEqual(record["tp2_sha256"], self.previous["tp2_sha256"])
         self.assertEqual(record["native_components"], self.previous["native_components"])
 
-    def test_both_profiles_pin_v0810_and_keep_v089(self):
+    def test_both_profiles_keep_v0810_as_history(self):
         for profile_name, directory in self.directories:
             artifact = _load(directory / f"artifacts/{PIN}.toml")
             previous = _load(directory / f"artifacts/{PREVIOUS}.toml")
@@ -130,7 +132,7 @@ class Nov03RebalanceV0810PinTests(unittest.TestCase):
                 self.assertEqual(artifact["provenance"]["license"], previous["provenance"]["license"])
                 self.assertIn(profile_name, self.record["recipe_profiles"])
                 mod = _load(directory / f"mods/{MOD}.toml")
-                self.assertEqual(mod["artifact_id"], PIN)
+                self.assertEqual(mod["artifact_id"], SUCCESSOR)
                 self.assertEqual(artifact["archive"]["tp2_paths"], [mod["tp2"]])
                 # The release's standalone packages are not part of the recipe.
                 names = {path.name.casefold() for path in (directory / "artifacts").glob("*.toml")}
@@ -175,18 +177,18 @@ class Nov03RebalanceV0810PinTests(unittest.TestCase):
         self.assertEqual(rows[302].decision, Decision.DEFAULT)
         catalog = " ".join((ROOT / "docs/curation/components/CHRIZ-BG-REBALANCE.md")
                            .read_text(encoding="utf-8").split())
-        for phrase in ("The recipe pins **v0.8.10** (published 2026-11-03 18:42 UTC, tag commit `cd0ffa2`",
+        for phrase in ("v0.8.10 (published 2026-11-03 18:42 UTC, tag commit `cd0ffa2`",
                        "for CEBG 0.1.2", "v0.8.9 (2026-11-01 21:45 UTC, tag commit `bb3f11b`; pinned",
                        "Potion of Haste", EVIDENCE):
             self.assertIn(phrase, catalog)
         pin_list = (ROOT / "docs/pin-list-2.7.md").read_text(encoding="utf-8")
-        self.assertEqual(pin_list.count(f"| CHRIZ-BG-REBALANCE | {TAG.removeprefix('v')} | `{MOD}` | `{SHA256[:12]}…` |"), 2)
+        self.assertNotIn("| CHRIZ-BG-REBALANCE | 0.8.10 |", pin_list)
         self.assertNotIn("| CHRIZ-BG-REBALANCE | 0.8.9 |", pin_list)
         changelog = " ".join((ROOT / CHANGELOG).read_text(encoding="utf-8").split())
         for phrase in ("## Collection 0.1.2 (draft)",
                        "**A new installation without Spell Revisions no longer stops at BG Rebalance.**",
                        "known issue of 0.1.1", "Potion of Haste", "(Rebalance v0.8.10)",
-                       "BG Rebalance v0.8.10 (was v0.8.9)", "**Rebalance v0.8.10** (pinned 2026-11-04",
+                       "BG Rebalance v0.8.11 (was v0.8.9)", "**Rebalance v0.8.10** (pinned 2026-11-04",
                        # 0.1.0's own entries keep the version it shipped.
                        "BG Rebalance v0.8.9 (was v0.8.2)", "Rebalance to v0.8.9"):
             self.assertIn(phrase, changelog)
