@@ -196,8 +196,11 @@ candidate.
   own Lua without the LuaJIT loader, and BG:EE, SoD, EET and IWD:EE for the new views. BuffBot's
   README still calls the configuration with `430` not accepted.
 - Christopher, 2026-11-04: BuffBot waits for 0.1.2, first v1.15.0, then v1.16.0, in both
-  installers; 0.1.1 ships the tested v1.12.6. Since 2026-11-08 both installers pin v1.16.1
-  and no hold remains: Chriz Easy IWD 0.1.9 ships it, and Chriz Easy BG gets it with 0.1.2.
+  installers; 0.1.1 ships the tested v1.12.6. Chriz Easy IWD kept v1.12.6 under a hold in
+  `manifest/own-mods.toml` while [PR #107](https://github.com/Chrizhermann/chriz-bg-collection/pull/107)
+  waited; #107 was closed unmerged on 2026-11-08 when IWD moved onto `main`. Since then both
+  installers pin v1.16.1 and no hold remains: Chriz Easy IWD 0.1.9 ships it, and Chriz Easy BG
+  gets it with 0.1.2.
 - v1.16.1 (released 2026-11-08, tag on commit `377bb1d`) keeps scanned 5E Spellcasting rows
   visible when a hand-edited wrapper cannot name a usable cast target or an overlay fails. It
   chooses the table's usable target where it can and records the exceptional route once in the
