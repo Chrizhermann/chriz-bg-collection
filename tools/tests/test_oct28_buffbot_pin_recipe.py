@@ -8,7 +8,8 @@ the TP2 adds no component and keeps the declaration order, so no decision change
 Static pin, evidence, component, selection and order checks for both recipe profiles only.
 Nothing here is a game installation or gameplay acceptance. The November 1 intake
 (test_nov01_buffbot_pin_recipe) supersedes this pin with v1.12.6, and the November 4 intake
-(test_nov04_buffbot_pin_recipe) v1.12.6 with v1.16.0; both keep the two components and their
+(test_nov04_buffbot_pin_recipe) v1.12.6 with v1.16.0, and test_nov08_buffbot_pin_recipe
+v1.16.0 with v1.16.1; all keep the two components and their
 order, and the v1.12.1 record and artifacts stay as verified here.
 """
 
@@ -29,8 +30,9 @@ MOD = "buffbot"
 PIN = "buffbot-1.12.1"
 PREVIOUS = "buffbot-1.11.0"
 # The November 1 intake (test_nov01_buffbot_pin_recipe) moved both profiles to v1.12.6, and
-# the November 4 intake (test_nov04_buffbot_pin_recipe) to v1.16.0.
-SUCCESSOR = "buffbot-1.16.0"
+# the November 4 intake (test_nov04_buffbot_pin_recipe) to v1.16.0, and the November 8 intake
+# (test_nov08_buffbot_pin_recipe) to v1.16.1.
+SUCCESSOR = "buffbot-1.16.1"
 TAG = "v1.12.1"
 FILENAME = "buffbot-v1.12.1.zip"
 SHA256 = "7ab5f040b05d474edfb846b11bff5fda134ee468e3e3a289e6f788f33e34ed22"

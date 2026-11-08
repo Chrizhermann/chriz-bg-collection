@@ -90,10 +90,3 @@ mod = "item-randomiser"
 release = "v1.0.3"
 reason = "v1.0.x is the Campaign Item Randomiser, which replaces Randomiser v8.1.1 only after its integration into the collection and a lab test."
 decided = "2026-10-25"
-
-[[holds]]
-mod = "buffbot"
-release = "v1.16.0"
-reason = "Chriz Easy BG 0.1.1 ships v1.12.6, the version Christopher tested it with; newer BuffBot releases go into both installers for 0.1.2."
-decided = "2026-11-04"
-installers = { chriz-easy-bg = "v1.16.0", chriz-easy-iwd = "v1.12.6" }

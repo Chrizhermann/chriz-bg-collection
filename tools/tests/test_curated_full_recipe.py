@@ -562,46 +562,46 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertEqual(compatibility_prompt["answer"]["value"], {"kind": "choice", "value": "y"})
             self.assertIn("leave these items where they are", compatibility_prompt["expected_output"])
             sod_mod = tomllib.loads((output / "mods/chriz-sod-remix.toml").read_text(encoding="utf-8"))
-            self.assertEqual(sod_mod["artifact_id"], "chriz-sod-remix-0.6.16")
+            self.assertEqual(sod_mod["artifact_id"], "chriz-sod-remix-0.6.17")
             # Setup-name WeiDU resolves the nested copy when both identical TP2s
             # are shipped. The frozen expected log identity must use that path.
             self.assertEqual(sod_mod["tp2"], "chriz-sod-remix/setup-chriz-sod-remix.tp2")
             sod_artifact = tomllib.loads(
-                (output / "artifacts/chriz-sod-remix-0.6.16.toml").read_text(encoding="utf-8")
+                (output / "artifacts/chriz-sod-remix-0.6.17.toml").read_text(encoding="utf-8")
             )
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.4.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.5.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.6.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.7.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.11.toml").exists())
-            self.assertEqual(sod_artifact["version"], "0.6.16")
-            self.assertEqual(sod_artifact["source"]["reference"], "v0.6.16")
+            self.assertEqual(sod_artifact["version"], "0.6.17")
+            self.assertEqual(sod_artifact["source"]["reference"], "v0.6.17")
             self.assertEqual(
                 sod_artifact["source"]["expected_filename"],
-                "chriz-sod-remix-v0.6.16.zip",
+                "chriz-sod-remix-v0.6.17.zip",
             )
-            self.assertEqual(sod_artifact["source"]["expected_length"], 3055655)
+            self.assertEqual(sod_artifact["source"]["expected_length"], 3087264)
             self.assertEqual(
                 sod_artifact["source"]["sha256"],
-                "7da50d206e4f0d50dd94d5e60fd985290a245d2dc3bed32068e1eaad0219c2e6",
+                "d8ce264f4288979bc23b84d501b05eeaf8b2a0462f4a780b9380d062e48c09e3",
             )
             # October 13 adds mandatory v0.6.13 rows 177, 198 and 285 in native TP2 order;
             # October 23 (v0.6.15) adds the Imoen choice 292/293/294 after 910; October 29
-            # (v0.6.16) keeps the components and their order.
+            # (v0.6.16 and v0.6.17) keep the components and their order.
             self.assertEqual(runs["chriz-sod-remix-bg2"]["components"], [100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 177, 185, 190, 195, 210, 197, 198, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 285, 290, 900, 910, 292, 293, 294])
             self.assertNotIn(291, runs["chriz-sod-remix-bg2"]["components"])
             self.assertNotIn(258, runs["chriz-sod-remix-bg2"]["components"])
             self.assertLess(runs["chriz-sod-remix-bg2"]["components"].index(210), runs["chriz-sod-remix-bg2"]["components"].index(197))
             buffbot = tomllib.loads((output / "mods/buffbot.toml").read_text(encoding="utf-8"))
-            self.assertEqual(buffbot["artifact_id"], "buffbot-1.16.0")
+            self.assertEqual(buffbot["artifact_id"], "buffbot-1.16.1")
             buffbot_artifact = tomllib.loads(
-                (output / "artifacts/buffbot-1.16.0.toml").read_text(encoding="utf-8")
+                (output / "artifacts/buffbot-1.16.1.toml").read_text(encoding="utf-8")
             )
-            self.assertEqual(buffbot_artifact["version"], "1.16.0")
-            self.assertEqual(buffbot_artifact["source"]["reference"], "v1.16.0")
-            self.assertEqual(buffbot_artifact["source"]["expected_filename"], "buffbot-v1.16.0.zip")
-            self.assertEqual(buffbot_artifact["source"]["expected_length"], 5797041)
-            self.assertEqual(buffbot_artifact["source"]["sha256"], "ce38d81102f717acf709cc8a7827586f8ab6ff5ff450aaca42f0b5d513da0082")
+            self.assertEqual(buffbot_artifact["version"], "1.16.1")
+            self.assertEqual(buffbot_artifact["source"]["reference"], "v1.16.1")
+            self.assertEqual(buffbot_artifact["source"]["expected_filename"], "buffbot-v1.16.1.zip")
+            self.assertEqual(buffbot_artifact["source"]["expected_length"], 5797598)
+            self.assertEqual(buffbot_artifact["source"]["sha256"], "e116ab16e98f055e398e23b3f1f417f61e37c9d2bf04aefced6c9a3f629ed31d")
             self.assertEqual(runs["buffbot-bg2"]["components"], [1, 0])
             self.assertEqual(runs["bardicwonders-garrick-bg2"]["components"], [1008])
             bardic = tomllib.loads((output / "mods/bardicwonders.toml").read_text(encoding="utf-8"))
