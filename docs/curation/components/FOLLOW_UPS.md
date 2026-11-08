@@ -601,6 +601,14 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Small documentation fixes: the Remote Console README's EEex v1.3.1 lab note still says
   "this branch". Also open: whether Remote Console gets GitHub releases (it has tags
   only).
+- Hotpatches after a changed WeiDU download (both installers): an installation may accept
+  a changed WeiDU download, but a hotpatch always unpacks the recipe's reviewed WeiDU
+  (`weidu_tool` in `engine/src/hotpatch/transaction.rs`). It should run the WeiDU the
+  installation used, which the receipt records. PR 70 did this on the retired IWD branch
+  (`installed_tool`, `unpack_served`); the rest of PR 70 reached `main` with PR 121, so PR 70
+  is closed as superseded. Low risk while WeiDU comes from fixed GitHub release files. Also
+  small: the changed-download path does not repeat the Weasel Mods link-shape check, which
+  recipe validation already makes.
 
 **Waiting for Christopher**
 
