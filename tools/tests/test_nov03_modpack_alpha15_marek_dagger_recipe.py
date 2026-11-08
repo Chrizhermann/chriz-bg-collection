@@ -8,6 +8,9 @@ default in Recommended and runs in the main post-EET_end Modpack run after 660.
 
 Static pin, evidence, component, selection, order and release-text checks for both recipe
 profiles only. Nothing here is a game installation or gameplay acceptance.
+
+The November 8 alpha.16 intake supersedes this pin without changing its component declarations;
+the alpha.15 evidence and artifact remain checked here as history.
 """
 
 from pathlib import Path
@@ -25,6 +28,7 @@ PROFILES = ["manifest", "recipes/curated-full-current"]
 MOD = "chriz-bg-modpack"
 PIN = "chriz-bg-modpack-0.2.0-alpha.15"
 PREVIOUS = "chriz-bg-modpack-0.2.0-alpha.14"
+SUCCESSOR = "chriz-bg-modpack-0.2.0-alpha.16"
 TAG = "v0.2.0-alpha.15"
 COMMIT = "0920504b954ff8d7e8a3640f58acbe4b33242b85"
 URL = ("https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.15/"
@@ -97,7 +101,7 @@ class Nov03ModpackAlpha15Tests(unittest.TestCase):
         native.insert(native.index(660) + 1, 670)
         self.assertEqual(record["native_components"], native)
 
-    def test_both_profiles_pin_alpha15_and_keep_alpha14(self):
+    def test_both_profiles_keep_alpha15_as_history(self):
         for profile_name, directory in self.directories:
             artifact = _load(directory / f"artifacts/{PIN}.toml")
             previous = _load(directory / f"artifacts/{PREVIOUS}.toml")
@@ -119,7 +123,7 @@ class Nov03ModpackAlpha15Tests(unittest.TestCase):
                 self.assertEqual(artifact["source"]["redirect_hosts"], previous["source"]["redirect_hosts"])
                 self.assertIn(profile_name, self.record["recipe_profiles"])
                 mod = _load(directory / f"mods/{MOD}.toml")
-                self.assertEqual(mod["artifact_id"], PIN)
+                self.assertEqual(mod["artifact_id"], SUCCESSOR)
                 self.assertIn(mod["tp2"], artifact["archive"]["tp2_paths"])
         # The checked-in curated artifacts are the generator's copies of the authored pins.
         for artifact_id in (PIN, PREVIOUS):
@@ -189,7 +193,7 @@ class Nov03ModpackAlpha15Tests(unittest.TestCase):
                        "`670` has to move before it"):
             self.assertIn(phrase, folded)
         pin_list = (ROOT / "docs/pin-list-2.7.md").read_text(encoding="utf-8")
-        self.assertEqual(pin_list.count(f"| {MOD} | {TAG.removeprefix('v')} | `{MOD}` | `{SHA256[:12]}…` |"), 2)
+        self.assertNotIn(f"| {MOD} | {TAG.removeprefix('v')} |", pin_list)
         self.assertNotIn(f"| {MOD} | 0.2.0-alpha.14 |", pin_list)
         follow_ups = " ".join((ROOT / "docs/curation/components/FOLLOW_UPS.md").read_text(encoding="utf-8").split())
         for phrase in (EVIDENCE, "The carrier is Marek (Christopher, 2026-11-03)",

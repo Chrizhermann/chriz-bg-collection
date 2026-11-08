@@ -6,134 +6,134 @@ use bg_engine::manifest::{
 use bg_engine::recipe_view::evaluate_preset;
 use bg_engine::Manifest;
 
-/// ChrizFader's player voicepacks, release v1.1.0, in release-manifest order:
+/// ChrizFader's player voicepacks, release v1.2.0, in release-manifest order:
 /// (pack id, TP2 folder, version, archive length, SHA-256).
 const PACKS: &[(&str, &str, &str, u64, &str)] = &[
     (
         "neera",
         "cd_neera",
-        "1.0.1",
-        2_361_220,
-        "f2adbfd775f86f9cfbcae37ca1b4aaa1ca9e57876b8952603a56b632aba50fbc",
+        "1.0.2",
+        2_363_513,
+        "b7d029f839062b5e7763de61f541a4922e2cb73d82b6e6c035d8fcdcff3eac94",
     ),
     (
         "safana-bg1",
         "cd_safana",
-        "1.0.1",
-        2_947_151,
-        "e5b3e7fa69461c333530d61979bf713dfddc693614e95f6cea854e45ae8a541d",
+        "1.0.2",
+        2_949_451,
+        "daf45b3d58901509a05f570269e417ad137dcd920cc4cbfc14fbeafe6272f276",
     ),
     (
         "safana-sod",
         "cd_safsod",
-        "1.0.1",
-        2_749_003,
-        "edd486e85c9521905dd8cba2a5f3fddb846f3ae33b3f36e0308bab89c0432602",
+        "1.0.2",
+        2_751_308,
+        "eacccb9187a1abaa28d8d8e6171e3437459f1280b04bec9c9c4199e7f33a2be2",
     ),
     (
         "jaheira-bg1",
         "cd_jahebg1",
-        "1.0.1",
-        2_710_434,
-        "d8a3bd683fc1c044eceec662414ff8279ea4992053b6c931486097436ad03806",
+        "1.0.2",
+        2_712_742,
+        "7167f278446bc9d63485aebf54cefe281d52d6659a496a2c070417fc734322e8",
     ),
     (
         "jaheira-bg2",
         "cd_jahebg2",
-        "1.0.1",
-        2_119_330,
-        "5efe01db15944ad675eaf115ba0ca6bbcf76656ffa6c0408096e4c82be5ccf07",
+        "1.0.2",
+        2_121_640,
+        "1c629463c66b0cc377e35356e560e1d26868eab61124fa704c26d61843df8bcf",
     ),
     (
         "yeslick",
         "cd_yeslick",
-        "1.0.1",
-        2_710_823,
-        "c3c1213cc4ec89002b750788c58cd533d5c765d839c9c6b7c463c9db9ec3f22b",
+        "1.0.2",
+        2_713_135,
+        "b4118fecf98786bd092056f9039ee6d8591d5419aa09cdb5b8807ba85bd2c7d6",
     ),
     (
         "edwin-bg1",
         "cd_edwnbg1",
-        "1.0.1",
-        2_904_129,
-        "6c02995b38edc5a021a54afbf544ae3e3ec3fa8f7cf5750aad22eb853a5e5411",
+        "1.0.2",
+        2_906_433,
+        "478b58972a4f247e00c046e02ab6c2c87f3fb520d3b10f037b730ba855061a5b",
     ),
     (
         "edwin-bg2",
         "cd_edwnbg2",
-        "1.0.1",
-        2_454_719,
-        "d32e6f5577b95ae73b2113cb2ec83de2952a8c83383b4863d7df5fdcbc6aebc9",
+        "1.0.2",
+        2_457_030,
+        "131d4db31326c377ddfde2f73009d1bc18e8d62ff0f053d66389d6be684b8e3d",
     ),
     (
         "aerie",
         "cd_aerie",
-        "1.0.1",
-        2_341_205,
-        "04ce446df621ad6def59f5ca922c44a4d9a147ca86a236afdb22df1390ba6775",
+        "1.0.2",
+        2_343_511,
+        "a6c0d61b87803df550dd97cdd9e56e443ee268a06e5751e9b6b4cb2cbba93f18",
     ),
     (
         "imoen-bg1",
         "cd_imobg1",
-        "1.0.1",
-        1_796_373,
-        "cda87d6b56a15437025c536e2ea50194330565adf8a5e55f1cbdbbcaf8de79bb",
+        "1.0.2",
+        1_798_679,
+        "7bac3a24dbd5ecdc70afb2b82210c2e6e39061fcb4f2b7803aeb9c911452d098",
     ),
     (
         "imoen-bg2",
         "cd_imobg2",
-        "1.0.1",
-        2_046_524,
-        "043d6216b4cf347a8a28f0d464af4286f01624587e55c14e324d0d21f628be60",
+        "1.0.2",
+        2_048_827,
+        "98125ee8e3159ec7c968649e769fa1de0073c0d9dc8c41675c62247586ebe3d7",
     ),
     (
         "sarevok",
         "cd_sarevok",
-        "1.0.1",
-        2_115_482,
-        "e105f9b296d06677d9d0ba67ffdc3583c90ac13a97ea4dd7d45117f721af7937",
+        "1.0.2",
+        2_117_790,
+        "29589c43eb14191124155b246979270c137af2f1303a70e8df245173d1c31882",
     ),
     (
         "amelyssan",
         "cd_amely",
-        "1.0.1",
-        2_447_749,
-        "f67c4e4b87ccafc9272539d212c0211d53e45f8cd76d1a06aabd86239f4b6809",
+        "1.0.2",
+        2_450_051,
+        "d16ed2b2b773b5e6caf1b67597eab4c1717ea0014ddbf90e969cc1d808b2693a",
     ),
     (
         "gromnir-il-khan",
         "cd_gromn",
-        "1.0.1",
-        1_972_660,
-        "7aaad0379a6cbba87c5b2aa772ad3b53b777ae1d1821194567cfa8288811c9f5",
+        "1.0.2",
+        1_974_964,
+        "ce709ab49aea5db3e6ac1419995301d66c64c9bf13e79f55be1968926a363e0b",
     ),
     (
         "ajantis",
         "cd_ajanti",
-        "2.0.0",
-        4_057_717,
-        "7d2150ba920205e68258b9fc74a35594c1368d8b09e4e66ca9f1569a1baed77b",
+        "2.0.1",
+        4_059_707,
+        "1c9bb4056e8266b2868a223c22fe9675407763bf8c2796e96a4c1590dc6e73f3",
     ),
     (
         "viconia-bg1",
         "cd_vicbg1",
-        "1.0.0",
-        4_120_894,
-        "bd56af0ef69e84986061ee53fad36611291fb2038c2dbfd059542eb6d6a0d5f5",
+        "1.0.1",
+        4_122_902,
+        "a1f9b57cd841861cc87eec665b862c215089ae51548994b1fc193f45904708f6",
     ),
     (
         "viconia-bg2",
         "cd_vicbg2",
-        "1.0.0",
-        5_058_181,
-        "dde9cfca2692de0b75e1bd9a6bc8dabba85db79608b87da18f49ae685d31420a",
+        "1.0.1",
+        5_060_194,
+        "68fbfca869d7d4a5ef795a7b2d8573b886448dd724da873a24d53ced1b74b56f",
     ),
     (
         "garithos",
         "cd_garith",
-        "1.1.0",
-        5_117_808,
-        "24abfd30cd8c9e5bedc77b2f8c9ab8b1444cc5c4189f5857d2b70def805525c5",
+        "1.1.1",
+        5_119_782,
+        "84d153f3e7608243ab57b32a3f57d1f34301b602a0196566da48fa7ce646f2a8",
     ),
 ];
 
@@ -147,7 +147,7 @@ fn profiles() -> [(&'static str, Manifest); 2] {
 }
 
 #[test]
-fn freezes_the_published_v110_voicepack_archives_without_their_bundled_weidu() {
+fn freezes_the_published_v120_voicepack_archives_without_their_bundled_weidu() {
     for (profile, manifest) in profiles() {
         for (pack, folder, version, length, sha256) in PACKS {
             let artifact_id = format!("voicepack-{pack}-{version}");
@@ -156,11 +156,11 @@ fn freezes_the_published_v110_voicepack_archives_without_their_bundled_weidu() {
             assert_eq!(artifact.version, *version, "{profile} {artifact_id}");
             assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
             assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
-            assert_eq!(artifact.source.reference, "v1.1.0");
+            assert_eq!(artifact.source.reference, "v1.2.0");
             assert_eq!(
                 artifact.source.url,
                 format!(
-                    "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/{filename}"
+                    "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/{filename}"
                 )
             );
             assert_eq!(

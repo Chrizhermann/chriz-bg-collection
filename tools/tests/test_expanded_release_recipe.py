@@ -97,12 +97,12 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
 
     def test_reviewed_modpack_compatibility_release_preserves_selection(self):
         mod = tomllib.loads((self.output / "mods/chriz-bg-modpack.toml").read_text())
-        # November 3: alpha.15 adds Marek's Boomerang Dagger 670; alpha.14 stays as history.
-        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.15")
-        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.15.toml").read_text())
-        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.15")
-        self.assertEqual(artifact["source"]["expected_length"], 10555318)
-        self.assertEqual(artifact["source"]["sha256"], "a6031332c10c0bd5ee72b63ff1e1a870b1ef1b5e056f59e3542949e0c4ba7d8d")
+        # November 8: alpha.16 retains alpha.15's Marek's Boomerang Dagger 670.
+        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.16")
+        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.16.toml").read_text())
+        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.16")
+        self.assertEqual(artifact["source"]["expected_length"], 9529061)
+        self.assertEqual(artifact["source"]["sha256"], "668937ba7ea468834aad1fd1ecc214be72a9b1b0564109a48fc0827dab09e570")
         self.assertTrue((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.14.toml").exists())
         self.assertFalse((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
         # Alpha.18 adds Rebalance 301/302 after alpha.17's interval-save controls;

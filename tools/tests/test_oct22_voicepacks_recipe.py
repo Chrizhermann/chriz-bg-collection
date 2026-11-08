@@ -1,4 +1,4 @@
-"""October 22 intake: ChrizFader's 18 player voicepacks (release v1.1.0).
+"""November 8 pin: ChrizFader's 18 player voicepacks (release v1.2.0).
 
 Static recipe, selection, order, pin and evidence checks for both recipe profiles only.
 The owner's fixture installs are recorded in the intake evidence; nothing here is a game
@@ -16,44 +16,44 @@ from tools.curation_audit import Decision, RowKey, load_catalogs, load_curation_
 
 ROOT = Path(__file__).resolve().parents[2]
 RELEASE = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases"
-RELEASE_COMMIT = "5cdb10639d9e5d729c0ce881165623995ac127ff"
+RELEASE_COMMIT = "0afae24b1467d141fca6007b72992fca12ec529e"
 # Release-manifest order: (id, TP2 folder, version, length, SHA-256, title, TP2 @0 name).
 PACKS = (
-    ("neera", "cd_neera", "1.0.1", 2_361_220, "f2adbfd775f86f9cfbcae37ca1b4aaa1ca9e57876b8952603a56b632aba50fbc",
+    ("neera", "cd_neera", "1.0.2", 2_363_513, "b7d029f839062b5e7763de61f541a4922e2cb73d82b6e6c035d8fcdcff3eac94",
      "Neera", "Neera Soundset"),
-    ("safana-bg1", "cd_safana", "1.0.1", 2_947_151, "e5b3e7fa69461c333530d61979bf713dfddc693614e95f6cea854e45ae8a541d",
+    ("safana-bg1", "cd_safana", "1.0.2", 2_949_451, "daf45b3d58901509a05f570269e417ad137dcd920cc4cbfc14fbeafe6272f276",
      "Safana (BG1)", "Safana Soundset"),
-    ("safana-sod", "cd_safsod", "1.0.1", 2_749_003, "edd486e85c9521905dd8cba2a5f3fddb846f3ae33b3f36e0308bab89c0432602",
+    ("safana-sod", "cd_safsod", "1.0.2", 2_751_308, "eacccb9187a1abaa28d8d8e6171e3437459f1280b04bec9c9c4199e7f33a2be2",
      "Safana (SoD)", "Safana SoD Soundset"),
-    ("jaheira-bg1", "cd_jahebg1", "1.0.1", 2_710_434, "d8a3bd683fc1c044eceec662414ff8279ea4992053b6c931486097436ad03806",
+    ("jaheira-bg1", "cd_jahebg1", "1.0.2", 2_712_742, "7167f278446bc9d63485aebf54cefe281d52d6659a496a2c070417fc734322e8",
      "Jaheira (BG1)", "Jaheira BG1 Soundset"),
-    ("jaheira-bg2", "cd_jahebg2", "1.0.1", 2_119_330, "5efe01db15944ad675eaf115ba0ca6bbcf76656ffa6c0408096e4c82be5ccf07",
+    ("jaheira-bg2", "cd_jahebg2", "1.0.2", 2_121_640, "1c629463c66b0cc377e35356e560e1d26868eab61124fa704c26d61843df8bcf",
      "Jaheira (BG2)", "Jaheira BG2 Soundset"),
-    ("yeslick", "cd_yeslick", "1.0.1", 2_710_823, "c3c1213cc4ec89002b750788c58cd533d5c765d839c9c6b7c463c9db9ec3f22b",
+    ("yeslick", "cd_yeslick", "1.0.2", 2_713_135, "b4118fecf98786bd092056f9039ee6d8591d5419aa09cdb5b8807ba85bd2c7d6",
      "Yeslick", "Yeslick Soundset"),
-    ("edwin-bg1", "cd_edwnbg1", "1.0.1", 2_904_129, "6c02995b38edc5a021a54afbf544ae3e3ec3fa8f7cf5750aad22eb853a5e5411",
+    ("edwin-bg1", "cd_edwnbg1", "1.0.2", 2_906_433, "478b58972a4f247e00c046e02ab6c2c87f3fb520d3b10f037b730ba855061a5b",
      "Edwin (BG1)", "Edwin BG1 Soundset"),
-    ("edwin-bg2", "cd_edwnbg2", "1.0.1", 2_454_719, "d32e6f5577b95ae73b2113cb2ec83de2952a8c83383b4863d7df5fdcbc6aebc9",
+    ("edwin-bg2", "cd_edwnbg2", "1.0.2", 2_457_030, "131d4db31326c377ddfde2f73009d1bc18e8d62ff0f053d66389d6be684b8e3d",
      "Edwin (BG2)", "Edwin BG2 Soundset"),
-    ("aerie", "cd_aerie", "1.0.1", 2_341_205, "04ce446df621ad6def59f5ca922c44a4d9a147ca86a236afdb22df1390ba6775",
+    ("aerie", "cd_aerie", "1.0.2", 2_343_511, "a6c0d61b87803df550dd97cdd9e56e443ee268a06e5751e9b6b4cb2cbba93f18",
      "Aerie", "Aerie Soundset"),
-    ("imoen-bg1", "cd_imobg1", "1.0.1", 1_796_373, "cda87d6b56a15437025c536e2ea50194330565adf8a5e55f1cbdbbcaf8de79bb",
+    ("imoen-bg1", "cd_imobg1", "1.0.2", 1_798_679, "7bac3a24dbd5ecdc70afb2b82210c2e6e39061fcb4f2b7803aeb9c911452d098",
      "Imoen (BG1)", "Imoen (BG1) Soundset"),
-    ("imoen-bg2", "cd_imobg2", "1.0.1", 2_046_524, "043d6216b4cf347a8a28f0d464af4286f01624587e55c14e324d0d21f628be60",
+    ("imoen-bg2", "cd_imobg2", "1.0.2", 2_048_827, "98125ee8e3159ec7c968649e769fa1de0073c0d9dc8c41675c62247586ebe3d7",
      "Imoen (BG2)", "Imoen (BG2) Soundset"),
-    ("sarevok", "cd_sarevok", "1.0.1", 2_115_482, "e105f9b296d06677d9d0ba67ffdc3583c90ac13a97ea4dd7d45117f721af7937",
+    ("sarevok", "cd_sarevok", "1.0.2", 2_117_790, "29589c43eb14191124155b246979270c137af2f1303a70e8df245173d1c31882",
      "Sarevok", "Sarevok Soundset"),
-    ("amelyssan", "cd_amely", "1.0.1", 2_447_749, "f67c4e4b87ccafc9272539d212c0211d53e45f8cd76d1a06aabd86239f4b6809",
+    ("amelyssan", "cd_amely", "1.0.2", 2_450_051, "d16ed2b2b773b5e6caf1b67597eab4c1717ea0014ddbf90e969cc1d808b2693a",
      "Amelyssan", "Amelyssan Soundset"),
-    ("gromnir-il-khan", "cd_gromn", "1.0.1", 1_972_660, "7aaad0379a6cbba87c5b2aa772ad3b53b777ae1d1821194567cfa8288811c9f5",
+    ("gromnir-il-khan", "cd_gromn", "1.0.2", 1_974_964, "ce709ab49aea5db3e6ac1419995301d66c64c9bf13e79f55be1968926a363e0b",
      "Gromnir Il-Khan", "Gromnir Il-Khan Soundset"),
-    ("ajantis", "cd_ajanti", "2.0.0", 4_057_717, "7d2150ba920205e68258b9fc74a35594c1368d8b09e4e66ca9f1569a1baed77b",
+    ("ajantis", "cd_ajanti", "2.0.1", 4_059_707, "1c9bb4056e8266b2868a223c22fe9675407763bf8c2796e96a4c1590dc6e73f3",
      "Ajantis", "Ajantis: original BG1 companion soundset"),
-    ("viconia-bg1", "cd_vicbg1", "1.0.0", 4_120_894, "bd56af0ef69e84986061ee53fad36611291fb2038c2dbfd059542eb6d6a0d5f5",
+    ("viconia-bg1", "cd_vicbg1", "1.0.1", 4_122_902, "a1f9b57cd841861cc87eec665b862c215089ae51548994b1fc193f45904708f6",
      "Viconia (BG1)", "Viconia (BG1): original BG1 companion soundset"),
-    ("viconia-bg2", "cd_vicbg2", "1.0.0", 5_058_181, "dde9cfca2692de0b75e1bd9a6bc8dabba85db79608b87da18f49ae685d31420a",
+    ("viconia-bg2", "cd_vicbg2", "1.0.1", 5_060_194, "68fbfca869d7d4a5ef795a7b2d8573b886448dd724da873a24d53ced1b74b56f",
      "Viconia (BG2)", "Viconia (BG2): original BG2/ToB companion soundset"),
-    ("garithos", "cd_garith", "1.1.0", 5_117_808, "24abfd30cd8c9e5bedc77b2f8c9ab8b1444cc5c4189f5857d2b70def805525c5",
+    ("garithos", "cd_garith", "1.1.1", 5_119_782, "84d153f3e7608243ab57b32a3f57d1f34301b602a0196566da48fa7ce646f2a8",
      "Garithos", "Garithos - player voicepack"),
 )
 RUNS = [f"voicepack-{pack[0]}-bg2" for pack in PACKS]
@@ -86,7 +86,7 @@ class Oct22VoicepacksTests(unittest.TestCase):
             "fallback": (ROOT / "manifest", *_load_profile(ROOT / "manifest")),
         }
         cls.evidence = tomllib.loads(
-            (ROOT / "manifest/evidence/release-intake-20261022.toml").read_text(encoding="utf-8"))
+            (ROOT / "manifest/evidence/release-intake-20261108-voicepacks-chriz-easy-bg.toml").read_text(encoding="utf-8"))
 
     @classmethod
     def tearDownClass(cls):
@@ -118,8 +118,8 @@ class Oct22VoicepacksTests(unittest.TestCase):
                 self.assertEqual(artifact["acquisition"], "fetch-only")
                 self.assertEqual(artifact["source"], {
                     "kind": "github-release",
-                    "url": f"{RELEASE}/download/v1.1.0/{filename}",
-                    "reference": "v1.1.0",
+                    "url": f"{RELEASE}/download/v1.2.0/{filename}",
+                    "reference": "v1.2.0",
                     "expected_filename": filename,
                     "expected_length": length,
                     "sha256": sha256,
@@ -138,8 +138,8 @@ class Oct22VoicepacksTests(unittest.TestCase):
                 self.assertGreaterEqual(limits["max_entry_uncompressed_bytes"], 1_390_080)
                 self.assertGreaterEqual(limits["max_total_uncompressed_bytes"], 5_905_009)
                 self.assertEqual(artifact["provenance"]["homepage"], "https://github.com/Chrizhermann/chriz-bg-voicepacks")
-                self.assertEqual(artifact["provenance"]["url"], f"{RELEASE}/tag/v1.1.0")
-                self.assertEqual(artifact["provenance"]["reviewed_on"], "2026-10-22")
+                self.assertEqual(artifact["provenance"]["url"], f"{RELEASE}/tag/v1.2.0")
+                self.assertEqual(artifact["provenance"]["reviewed_on"], "2026-11-08")
                 self.assertIn("does not redistribute", artifact["provenance"]["license"])
                 self.assertEqual(artifact["name"], f"{title} player voicepack")
         # The checked-in curated artifacts are the generator's copies of the authored pins.
@@ -241,14 +241,14 @@ class Oct22VoicepacksTests(unittest.TestCase):
         self.assertEqual(len([key for key in rows if key.catalog.startswith("CD_")]), len(PACKS))
 
     def test_intake_evidence_matches_current_pins(self):
-        self.assertEqual(self.evidence["verified_on"], "2026-10-22")
+        self.assertEqual(self.evidence["verified_on"], "2026-11-08")
         records = self.evidence["artifacts"]
         self.assertEqual([record["mod_id"] for record in records], [f"voicepack-{pack[0]}" for pack in PACKS])
         for record, (pack_id, folder, version, length, sha256, _, _) in zip(records, PACKS):
             with self.subTest(pack=pack_id):
                 self.assertEqual(record["artifact_id"], f"voicepack-{pack_id}-{version}")
                 self.assertEqual(record["recipe_profiles"], ["manifest", "recipes/curated-full-current"])
-                self.assertEqual(record["source_reference"], "v1.1.0")
+                self.assertEqual(record["source_reference"], "v1.2.0")
                 self.assertEqual(record["source_commit"], RELEASE_COMMIT)
                 self.assertEqual((record["actual_length"], record["actual_sha256"]), (length, sha256))
                 self.assertRegex(record["tp2_sha256"], r"^[0-9a-f]{64}$")

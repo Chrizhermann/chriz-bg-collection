@@ -76,6 +76,14 @@ is described in [`docs/release-notes-0.1.1.md`](../release-notes-0.1.1.md).
   another mod's version of the same spell, item or table, and missing pieces no longer stop,
   warn or skip it. Bard spell-level ceilings also find their tables on case-sensitive installs.
   Components, order and Chris's Recommended selection stay the same. (BG Rebalance v0.8.11)
+- **Chriz BG Modpack writes every selected result as decided** (Default). Edited values,
+  another mod's version and missing owned pieces no longer stop, warn or skip a component. Its
+  XP table is copied as `xplevel.2da`, so case-sensitive WeiDU finds it. Components, order and
+  Chris's Recommended selection stay the same. (Chriz BG Modpack v0.2.0-alpha.16)
+- **Voicepacks write their registrations as decided** (Default, each separately). Every one of
+  the 18 packs writes its player-soundset registration whatever `CHARSND.2DA` holds; the audio
+  is unchanged. The generated packs are now 1.0.2, Ajantis is 2.0.1, Viconia BG1/BG2 are 1.0.1,
+  and Garithos is 1.1.1. (ChrizFader's voicepacks v1.2.0)
 - **Smaller BuffBot changes** (Default):
   - New: five text sizes instead of three. Tiny and Huge join Small, Medium and Large, and
     your setting stays. Large and Huge change only the title and the button captions.
@@ -91,8 +99,10 @@ These changes apply to new installations; existing games and saves are unchanged
 ### Mod versions
 
 - BG Rebalance v0.8.11 (was v0.8.9)
+- Chriz BG Modpack v0.2.0-alpha.16 (was alpha.15)
 - BuffBot v1.16.1 (was v1.12.6)
 - SoD Remix v0.6.17 (was v0.6.16)
+- ChrizFader's voicepacks v1.2.0 (was v1.1.0)
 
 ### Notes for the release integrator
 
@@ -109,6 +119,18 @@ These changes apply to new installations; existing games and saves are unchanged
   result regardless of edited data, another mod's version or missing owned pieces, and `420`
   copies bard progression tables by exact file name for case-sensitive WeiDU. Its fresh-download
   evidence is source/package verification only; no WeiDU or gameplay acceptance is claimed.
+- **Chriz BG Modpack v0.2.0-alpha.16** (pinned 2026-11-08) keeps its component declarations,
+  source order and Recommended selection. Every selected component overwrites its decided result
+  regardless of edited values, another mod's version or missing owned pieces; its XP table is
+  copied as tracked `xplevel.2da` for case-sensitive WeiDU. Its source/package evidence is
+  `manifest/evidence/release-intake-20261108-chriz-bg-modpack-chriz-easy-bg.toml`; no WeiDU or
+  gameplay acceptance is claimed. The 0.1.2 update ledger needs an entry covering
+  `artifact:chriz-bg-modpack-0.2.0-alpha.16`.
+- **ChrizFader's voicepacks v1.2.0** (pinned 2026-11-08) keep the 18 component-0 runs, their
+  order and Recommended selection. All write their registrations regardless of `CHARSND.2DA`;
+  audio is unchanged. Fourteen generated packs are 1.0.2, Ajantis is 2.0.1, Viconia BG1/BG2
+  are 1.0.1 and Garithos is 1.1.1. Their intake record separates fresh-download/artifact-verify
+  and owner fixture evidence from a combined collection install or gameplay acceptance.
 - **Rolled HP in Recommended** (Christopher, 2026-11-04): Tweaks Anthology `3000` and `3010`
   are unchecked options. The Recommended plan loses both components (468 to 466), and its 69
   runs and their order stay. The 0.1.2 update ledger needs an entry that covers
