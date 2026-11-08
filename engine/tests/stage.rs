@@ -931,7 +931,7 @@ fn final_identity_seeds_interval_settings_in_isolated_profile_not_shared_eet_pro
     )
     .unwrap();
     let log_before = fs::read(layout.game_root().join("WeiDU.log")).unwrap();
-    assert!(verify_profile_settings(&layout, &identity).is_err());
+    verify_profile_settings(&layout, &identity).unwrap();
 
     finalize_game_identity(&layout, &identity).unwrap();
 
@@ -1001,7 +1001,7 @@ fn interval_defaults_do_not_treat_commented_or_other_section_values_as_enabled()
 }
 
 #[test]
-fn interval_defaults_report_unrecognized_config_without_overwriting_it() {
+fn interval_defaults_preserve_arbitrary_player_preferences() {
     for original in [
         "SetPrivateProfileString('Script','IntervalSaveEnabled', unknownValue)\n",
         "SetPrivateProfileString('Script','IntervalSaveEnabled','maybe')\n",
@@ -1009,24 +1009,27 @@ fn interval_defaults_report_unrecognized_config_without_overwriting_it() {
         let (_temp, layout, identity) = interval_profile_fixture(3354);
         let path = identity.save_root.join("Baldur.lua");
         fs::write(&path, original).unwrap();
-        let error = finalize_game_identity(&layout, &identity).unwrap_err();
-        assert!(
-            error.to_string().contains("interval-save settings"),
-            "{error}"
+        finalize_game_identity(&layout, &identity).unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            format!("{original}SetPrivateProfileString('Script','IntervalSaveCombat','0')\n")
         );
-        assert_eq!(fs::read_to_string(&path).unwrap(), original);
+        verify_profile_settings(&layout, &identity).unwrap();
     }
 }
 
 #[test]
-fn final_profile_verification_detects_missing_settings_without_rewriting_preferences() {
+fn final_profile_verification_seeds_missing_settings_and_preserves_preferences() {
     let (_temp, layout, identity) = interval_profile_fixture(3354);
     finalize_game_identity(&layout, &identity).unwrap();
     let path = identity.save_root.join("Baldur.lua");
     let changed = "SetPrivateProfileString('Script','IntervalSaveEnabled','0')\n";
     fs::write(&path, changed).unwrap();
-    assert!(verify_profile_settings(&layout, &identity).is_err());
-    assert_eq!(fs::read_to_string(&path).unwrap(), changed);
+    verify_profile_settings(&layout, &identity).unwrap();
+    assert_eq!(
+        fs::read_to_string(&path).unwrap(),
+        format!("{changed}SetPrivateProfileString('Script','IntervalSaveCombat','0')\n")
+    );
 }
 
 #[test]
@@ -1074,7 +1077,7 @@ fn final_identity_records_eet_state_in_isolated_profile_for_lefreuts_interface()
     let eet_written =
         format!("{EET_STATE_2}\nSetPrivateProfileString('Game Options','Cheats','1')\n");
     fs::write(shared.join("Baldur.lua"), &eet_written).unwrap();
-    assert!(verify_profile_settings(&layout, &identity).is_err());
+    verify_profile_settings(&layout, &identity).unwrap();
 
     finalize_game_identity(&layout, &identity).unwrap();
 
@@ -1170,7 +1173,7 @@ fn eet_state_ignores_comments_other_sections_and_repeated_correct_values() {
 }
 
 #[test]
-fn eet_state_reports_unrecognized_or_conflicting_assignments_without_overwriting_them() {
+fn eet_state_overwrites_arbitrary_values_duplicates_and_ignores_comments() {
     for original in [
         "SetPrivateProfileString('Program Options','EET Installation State',2)\n",
         "SetPrivateProfileString('Program Options','EET Installation State','1')\nSetPrivateProfileString('Program Options','EET Installation State','2')\n",
@@ -1179,24 +1182,28 @@ fn eet_state_reports_unrecognized_or_conflicting_assignments_without_overwriting
         let (_temp, layout, identity) = eet_profile_fixture(&format!("{EET_CORE}{EET_END}"));
         let path = identity.save_root.join("Baldur.lua");
         fs::write(&path, original).unwrap();
-        let error = finalize_game_identity(&layout, &identity).unwrap_err();
-        assert!(
-            error.to_string().contains("EET installation state"),
-            "{error}"
-        );
-        assert_eq!(fs::read_to_string(&path).unwrap(), original);
+        finalize_game_identity(&layout, &identity).unwrap();
+        let expected = if original.starts_with("--[[") {
+            format!("{original}{EET_STATE_2}\n")
+        } else { format!("{EET_STATE_2}\n").repeat(original.lines().count()) };
+        assert_eq!(fs::read_to_string(&path).unwrap(), expected);
+        finalize_game_identity(&layout, &identity).unwrap();
+        assert_eq!(fs::read_to_string(&path).unwrap(), expected);
     }
 }
 
 #[test]
-fn final_profile_verification_detects_an_outdated_eet_state_without_rewriting_it() {
+fn final_profile_verification_writes_the_decided_eet_state() {
     let (_temp, layout, identity) = eet_profile_fixture(&format!("{EET_CORE}{EET_END}"));
     finalize_game_identity(&layout, &identity).unwrap();
     let path = identity.save_root.join("Baldur.lua");
     let changed = "SetPrivateProfileString('Program Options','EET Installation State','0')\n";
     fs::write(&path, changed).unwrap();
-    assert!(verify_profile_settings(&layout, &identity).is_err());
-    assert_eq!(fs::read_to_string(&path).unwrap(), changed);
+    verify_profile_settings(&layout, &identity).unwrap();
+    assert_eq!(
+        fs::read_to_string(&path).unwrap(),
+        format!("{EET_STATE_2}\n")
+    );
 }
 
 #[test]

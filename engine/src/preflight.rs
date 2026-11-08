@@ -282,8 +282,8 @@ pub fn initial_preflight_with(
     if paths_equal(&bg1, &bg2) {
         return Err(PreflightError::DuplicateSource { path: bg1 });
     }
-    // Games of different versions are allowed: the game check already warned about every
-    // version other than the tested one.
+    // Games of different versions are allowed; source probing verifies readability for every
+    // source without comparing its content to a clean release.
     validate_required_inputs(
         "artifact",
         request.required_artifacts,
@@ -690,7 +690,7 @@ fn validate_required_inputs(
             Some(reason)
         } else if input.length == 0 {
             Some("expected length must be greater than zero".to_owned())
-        } else if !input.obtainable {
+        } else if !input.obtainable && kind == "tool" {
             Some("no verified cache entry or valid acquisition route exists".to_owned())
         } else {
             None

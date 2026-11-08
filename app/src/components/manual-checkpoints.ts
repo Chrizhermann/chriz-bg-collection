@@ -2,7 +2,7 @@ import type { ManualBreakpoint, ManualCheckpointOption, ManualCheckpointStatus }
 import { actionButton, element } from "./app-shell";
 import { persistDisclosure } from "./disclosure";
 
-export const manualModsWarning = "Manual mods can conflict with this setup. You choose their compatibility and install order. CEBG records your changes, but cannot guarantee them. Adding manual mods disables game hotpatches and whole-mod updates for this installation; CEBG app updates still work.";
+export const manualModsNote = "Add your own mods at the pauses you choose. CEBG records accepted changes, and game updates remain available.";
 
 export function sameBreakpoint(a: ManualBreakpoint, b: ManualBreakpoint): boolean {
   return a.runId === b.runId && a.component === b.component;
@@ -33,7 +33,7 @@ export function manualBreakpointEditor(model: ManualBreakpointEditorModel): HTML
   persistDisclosure(details, title, model.onOpen);
   details.append(title);
   const body = element("div", "manual-breakpoint-body");
-  body.append(element("p", "manual-mod-warning", manualModsWarning));
+  body.append(element("p", "muted", manualModsNote));
   body.append(element("p", "muted", "Add pauses after selected components finish. No pauses are added by default. Keep the game and all other installers closed before continuing."));
   const guide = element("details", "manual-mod-guide");
   guide.append(element("summary", undefined, "Manual-mod guide"));
@@ -42,7 +42,7 @@ export function manualBreakpointEditor(model: ManualBreakpointEditorModel): HTML
     "Choose a completed component after which your add-on belongs. For example, an add-on that needs EEex belongs after the appropriate EEex component. Check the add-on’s own requirements first.",
     "At the pause, use the displayed managed BG1 or BG2 folder, never either original game. Back up that folder before making changes: CEBG does not automatically create a full checkpoint backup. Keep the game closed and retain the manual installer’s backups and diagnostics.",
     "Close the manual installer, check changes in CEBG, then explicitly accept the displayed additions. A pause with no additions can continue unchanged.",
-    "Only new WeiDU components are supported. Do not remove, reinstall or reorder managed components or edit WeiDU.log. BG1 changes after EET imports it will not enter the combined campaign.",
+    "Add new WeiDU components or copy game files. Do not remove, reinstall or reorder managed components or edit WeiDU.log. BG1 changes after EET imports it will not enter the combined campaign.",
   ]) steps.append(element("li", undefined, instruction));
   guide.append(steps);
   body.append(guide);
@@ -157,9 +157,9 @@ export function manualCheckpointPanel(actions: ManualCheckpointActions): HTMLEle
             element("p", "path", `${addition.tp2} · Component ${addition.component} · Language ${addition.language}`));
           list.append(item);
         }
-        panel.append(list, element("p", "manual-mod-warning", "Accepting records these additions and disables game hotpatches and whole-mod updates for this installation. Compatibility is your responsibility. App updates still work."));
+        panel.append(list, element("p", "muted", "Accepting records these additions. Game hotpatches and whole-mod updates remain available."));
       } else {
-        const unchanged = element("p", undefined, "No manual additions found. Continue with the remaining installation steps.");
+        const unchanged = element("p", undefined, "No new WeiDU components found. Continue with the checked game files.");
         unchanged.id = "manual-checkpoint-review";
         unchanged.tabIndex = -1;
         unchanged.setAttribute("role", "status");

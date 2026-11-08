@@ -101,34 +101,6 @@ pub async fn inspect_mod_upgrade(
 }
 
 #[tauri::command]
-pub async fn apply_mod_upgrade(
-    state: State<'_, BridgeState>,
-    install_id: String,
-    review_token: String,
-    full_backup: bool,
-    backup_saves: bool,
-    webview: tauri::Webview,
-    on_progress: Option<JavaScriptChannelId>,
-) -> Result<bg_engine::mod_upgrades::ModUpgradePreview, CommandError> {
-    let on_progress = on_progress.map(|id| id.channel_on(webview));
-    let bridge = state
-        .bridge
-        .lock()
-        .unwrap_or_else(|p| p.into_inner())
-        .clone();
-    background(move || {
-        bridge.apply_mod_upgrade_with_progress(
-            &install_id,
-            &review_token,
-            full_backup,
-            backup_saves,
-            &|progress| report_progress(&on_progress, progress),
-        )
-    })
-    .await
-}
-
-#[tauri::command]
 pub async fn restore_mod_upgrade(
     state: State<'_, BridgeState>,
     install_id: String,

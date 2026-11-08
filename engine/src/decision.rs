@@ -1,24 +1,13 @@
 //! Questions the installer asks the player, and their answers.
 //!
-//! These situations stop an installation with a question instead of deciding silently:
+//! Usable mod downloads from an official link continue by default.
+//! An unavailable mod and its real dependents are left out and recorded. These question
+//! kinds remain readable for old campaigns and explicit command-line answers.
 //!
-//! - **changed download**: the official link of a mod or tool serves a file other than the
-//!   reviewed one, and that file passed every check.
-//! - **unusable download**: a mod's download cannot be installed, so the mod and everything that
-//!   needs it would be left out.
-//! - **unreviewed tool**: a changed installer tool came, at least in part, from a host the
-//!   recipe did not review, and the download folder holds no reviewed copy to use instead.
-//! - **modded source**: a source game looks modded already, so installing on top of it may
-//!   fail later. It is asked once at that game's staging step, before anything is copied.
-//! - **failed component**: a component's installer stopped with an error, and the evidence
-//!   proves that the attempt left nothing of it behind. The player decides whether the
-//!   installation goes on without that component and without what needs it. It is asked at the
-//!   run's install step.
-//!
-//! The campaign worker records the question in the ledger ([`crate::session::SessionEvent`])
-//! and stops. An answer reaches it as a create-once answer file, written under the target lock
-//! by `decide`, or as a preset answer given for one run; the worker records the answer in the
-//! ledger before it applies it.
+//! A source that looks modded asks once before copying, as the shipped installer decided.
+//! Failed components still ask Try again / Skip / Stop, with Skip unavailable for an
+//! incomplete core. Changed installer tools still require a player's decision.
+//! Questions and answers are recorded in the campaign ledger before being applied.
 
 use std::collections::BTreeMap;
 
@@ -46,6 +35,18 @@ pub enum QuestionKind {
 }
 
 impl QuestionKind {
+    /// Continue through content differences and unavailable mods. A failed component
+    /// and changed installer tools still require a player's answer, as do modded sources.
+    pub(crate) const fn installer_default(self, artifact: ArtifactKind) -> Option<Answer> {
+        if matches!(artifact, ArtifactKind::Tool) {
+            return None;
+        }
+        match self {
+            Self::ChangedDownload | Self::UnusableDownload => Some(Answer::Yes),
+            Self::ModdedSource | Self::UnreviewedTool | Self::FailedComponent => None,
+        }
+    }
+
     /// Every kind, in a stable order.
     pub const ALL: [Self; 5] = [
         Self::ChangedDownload,
@@ -126,7 +127,7 @@ impl Answer {
 pub enum AnswerSource {
     /// The player, through `decide` or the app.
     Player,
-    /// A preset answer given for one run (`--answer`), for tests and automation.
+    /// An answer preset for the run, by `--answer` or an installer default.
     Preset,
 }
 
@@ -495,7 +496,7 @@ fn is_lower_hex(value: &str, length: usize) -> bool {
 pub struct PresetAnswers(BTreeMap<QuestionKind, Answer>);
 
 impl PresetAnswers {
-    /// No preset answers: every question stops the installation.
+    /// No explicit preset answers; the installer may supply its own defaults.
     pub fn none() -> Self {
         Self::default()
     }
@@ -1003,6 +1004,32 @@ mod tests {
             ],
         ] {
             assert!(PresetAnswers::parse(&invalid).is_err(), "{invalid:?}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod overwrite_defaults_tests {
+    use super::*;
+
+    #[test]
+    fn downloads_and_missing_mods_continue_but_sources_failures_and_tools_ask() {
+        for kind in [
+            QuestionKind::ChangedDownload,
+            QuestionKind::UnusableDownload,
+        ] {
+            assert_eq!(
+                kind.installer_default(ArtifactKind::Payload),
+                Some(Answer::Yes)
+            );
+            assert_eq!(kind.installer_default(ArtifactKind::Tool), None);
+        }
+        for kind in [
+            QuestionKind::ModdedSource,
+            QuestionKind::FailedComponent,
+            QuestionKind::UnreviewedTool,
+        ] {
+            assert_eq!(kind.installer_default(ArtifactKind::Payload), None);
         }
     }
 }

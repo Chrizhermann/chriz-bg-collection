@@ -251,9 +251,7 @@ fn manual_dragonspear_addition_is_interleaved_and_permanently_blocks_game_update
     assert_eq!(expected[1].component, 2);
     fs::write(fixture.root().join("game/WeiDU.log"), "").unwrap();
     assert!(is_customized(fixture.root()).unwrap());
-    assert!(game_update_guard(fixture.root())
-        .unwrap_err()
-        .contains("app updates remain available"));
+    game_update_guard(fixture.root()).unwrap();
     assert!(verify_accepted_current(
         fixture.root(),
         &fixture.checkpoints[0],
@@ -379,7 +377,7 @@ fn manual_acceptance_uses_exact_reviewed_bytes_and_later_mutation_blocks_resume(
 }
 
 #[test]
-fn manual_file_copy_without_weidu_additions_and_wrong_target_resources_are_rejected() {
+fn manual_file_copies_are_accepted_and_wrong_target_resources_stay_protected() {
     let fixture = Fixture::new();
     fixture.begin();
     fs::create_dir(fixture.root().join("game/override")).unwrap();
@@ -388,7 +386,12 @@ fn manual_file_copy_without_weidu_additions_and_wrong_target_resources_are_rejec
         b"copy-only mod",
     )
     .unwrap();
-    assert!(fixture.review().err().unwrap().contains("File-copy mods"));
+    let reviewed = fixture.review().unwrap();
+    assert!(reviewed.status.additions.is_empty());
+    assert_eq!(
+        fs::read(fixture.root().join("game/override/new.spl")).unwrap(),
+        b"copy-only mod"
+    );
     let fixture = Fixture::new();
     fixture.begin();
     fixture.add("game", "Other/setup-Other.tp2", 0, "Other/backup");

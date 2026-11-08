@@ -172,7 +172,8 @@ describe("manual checkpoint flow", () => {
     expect(getByText(root, "Example option: v1")).toBeTruthy();
     expect(document.activeElement?.id).toBe("manual-checkpoint-review");
     expect(backend.accepts).toEqual([]); expect(backend.resumes).toEqual([]);
-    expect(root.textContent).toContain("disables game hotpatches and whole-mod updates");
+    expect(root.textContent).toContain("Game hotpatches and whole-mod updates remain available.");
+    expect(root.textContent).not.toContain("disables game hotpatches");
     await user.click(getByRole(root, "button", { name: "Accept additions and continue" }));
     expect(backend.accepts).toEqual([["manual-install", "review-1", true]]);
     expect(backend.resumes).toEqual(["manual-install"]);
@@ -183,7 +184,7 @@ describe("manual checkpoint flow", () => {
     const backend = new CheckpointBackend(); backend.reviewed = { ...status, reviewToken: "empty-review" };
     const { root, user } = await mounted(backend);
     await user.click(getByRole(root, "button", { name: "Continue unchanged" }));
-    expect(root.textContent).toContain("No manual additions found");
+    expect(root.textContent).toContain("No new WeiDU components found");
     expect(backend.accepts).toEqual([]); expect(backend.resumes).toEqual([]);
     await user.click(getByRole(root, "button", { name: "Continue unchanged" }));
     expect(backend.accepts).toEqual([["manual-install", "empty-review", false]]);

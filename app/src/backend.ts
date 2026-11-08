@@ -106,7 +106,6 @@ export interface Backend {
   activateRecipeUpdate(version: string): Promise<void>;
   inspectInstalledUpdate?(installId: string): Promise<InstalledUpdatePlan>;
   inspectModUpgrade?(installId: string): Promise<ModUpgradePreview>;
-  applyModUpgrade?(installId: string, reviewToken: string, fullBackup: boolean, backupSaves: boolean, onProgress?: (progress: OperationProgress) => void): Promise<ModUpgradePreview>;
   restoreModUpgrade?(installId: string, undo: boolean, onProgress?: (progress: OperationProgress) => void): Promise<ModUpgradePreview>;
   /** Check one whole-mod update, such as BuffBot, for an installation. Never changes the game. */
   inspectModUpdate?(installId: string, modId: string): Promise<ModUpdatePreview>;
@@ -788,10 +787,6 @@ export class NativeBackend implements Backend {
     return this.#command("inspect_mod_upgrade", { installId });
   }
 
-  applyModUpgrade(installId: string, reviewToken: string, fullBackup: boolean, backupSaves: boolean, onProgress?: (progress: OperationProgress) => void): Promise<ModUpgradePreview> {
-    return this.#commandWithProgress("apply_mod_upgrade", { installId, reviewToken, fullBackup, backupSaves }, onProgress);
-  }
-
   restoreModUpgrade(installId: string, undo: boolean, onProgress?: (progress: OperationProgress) => void): Promise<ModUpgradePreview> {
     return this.#commandWithProgress("restore_mod_upgrade", { installId, undo }, onProgress);
   }
@@ -1197,25 +1192,14 @@ export class FixtureBackend implements Backend {
     if (!copy) throw new Error("Unknown fixture installation.");
     const preview: ModUpgradePreview = {
       installId, upgradeId: "buffbot-1.8.3-to-1.8.4", title: "BuffBot",
-      state: "available", detail: "Preview fixture only. No real installation was inspected.",
+      state: "retired", detail: "Preview fixture only. No real installation was inspected.",
       baseRecipeVersion: copy.installedRecipeVersion ?? "Unknown", installedVersion: "1.8.3-alpha", targetVersion: "1.8.4-alpha",
-      reviewToken: `fixture-mod-upgrade-${installId}`, canUndo: false, canRestore: false,
+      reviewToken: null, canUndo: false, canRestore: false,
       fullBackupBytes: "12884901888", saveBackupBytes: "104857600", availableBytes: "107374182400",
       backupPath: "C:\\Fixture\\CEBG-Backups", saveCompatibility: "Preview only. No saved games are changed.", history: [],
     };
     this.#modUpgrades.set(installId, preview);
     return preview;
-  }
-
-  async applyModUpgrade(installId: string, reviewToken: string, _fullBackup: boolean, _backupSaves: boolean): Promise<ModUpgradePreview> {
-    const preview = this.#modUpgrades.get(installId);
-    if (!preview || preview.state !== "available" || preview.reviewToken !== reviewToken) throw new Error("Check this fixture installation again before updating.");
-    const applied: ModUpgradePreview = { ...preview, state: "applied", installedVersion: preview.targetVersion,
-      detail: "Preview only: BuffBot was updated. No game files changed.", reviewToken: null, canUndo: true,
-      history: [...preview.history, { transactionId: "fixture-upgrade", fromVersion: preview.installedVersion ?? "Unknown", toVersion: preview.targetVersion, state: "applied" }],
-    };
-    this.#modUpgrades.set(installId, applied);
-    return applied;
   }
 
   async restoreModUpgrade(installId: string, undo: boolean): Promise<ModUpgradePreview> {

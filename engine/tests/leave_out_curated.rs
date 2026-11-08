@@ -11,7 +11,7 @@ use std::path::PathBuf;
 
 use bg_engine::manifest::{ComponentRef, Decision, Feature};
 use bg_engine::recipe_view::{
-    evaluate, plan_without_artifacts, plan_without_parts, LeaveOutError, SelectionEvaluation,
+    evaluate, plan_without_artifacts, plan_without_parts, SelectionEvaluation,
 };
 use bg_engine::resolve::{InstallPlan, Selection};
 use bg_engine::Manifest;
@@ -419,13 +419,12 @@ fn a_failed_component_is_left_out_like_unticking_its_feature() {
     }
 }
 
-/// A component the recipe always installs cannot be left out when its installer fails: DLC
-/// Merger's merge of Siege of Dragonspear is a fixed part.
+/// A mandatory selection still leaves out a wholly absent failed component and its dependents.
 #[test]
-fn a_failed_fixed_component_cannot_be_left_out() {
+fn a_failed_mandatory_component_leaves_when_nothing_of_its_core_is_installed() {
     let manifest = curated();
     let evaluation = evaluate(&manifest, &recommended(&manifest, true)).unwrap();
-    let error = plan_without_parts(
+    let remaining = plan_without_parts(
         &manifest,
         &evaluation.normalized_selection,
         &evaluation.plan,
@@ -436,6 +435,7 @@ fn a_failed_fixed_component_cannot_be_left_out() {
         }]),
         &BTreeSet::new(),
     )
-    .unwrap_err();
-    assert!(matches!(error, LeaveOutError::Required { .. }), "{error}");
+    .unwrap();
+    assert_only_removes(&evaluation.plan, &remaining);
+    assert!(remaining.components_for("dlcmerger-bg1").is_none());
 }

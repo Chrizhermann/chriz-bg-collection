@@ -76,7 +76,6 @@ pub fn run() -> tauri::Result<()> {
             commands::record_install_lookup_client,
             commands::inspect_installed_update,
             commands::inspect_mod_upgrade,
-            commands::apply_mod_upgrade,
             commands::restore_mod_upgrade,
             commands::inspect_mod_update,
             commands::apply_mod_update,
