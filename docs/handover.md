@@ -2,6 +2,21 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 8 — Chriz Easy IWD 0.1.9 released
+
+**IWD app and recipe 0.1.9 are public** on the versioned release and the in-app update
+channel (12:50 UTC). It is the first IWD release from `main`, built from `3efbada`: the
+download and failed-component questions, Less tested sources, the modded-source question
+and the overwrite rule now reach IWD players. New installations get BuffBot 1.16.1 and
+Chriz IWD Encounters 0.2.2; the recommended setup stays at 29 mods and 139 components.
+There is no new hotpatch; the bundled catalog has the new base `iwd-0.1.9`.
+
+A full lab installation of the recommended setup and a start test with a loaded save passed;
+the changed fights were not played. See the
+[acceptance report](package-acceptance-iwd-0.1.9-2026-11-08.md) for evidence and limits,
+and the [release notes](release-notes-iwd-0.1.9.md) for player-facing changes. The
+distribution README describes 0.1.9; the website is maintained separately.
+
 ## November 8 — both installers on main
 
 Christopher's decision: Chriz Easy BG and Chriz Easy IWD share `main` and both release from

@@ -31,7 +31,9 @@ candidate.
   collection's own final-loader boot and BG1 start/save/reload smoke on the completed EET
   stack passed on 2026-10-18 with the then-pinned v1.10.0 (see
   [FOLLOW_UPS](FOLLOW_UPS.md)); no collection lab result is recorded for v1.11.0, v1.12.1,
-  v1.12.6 or v1.16.0 yet.
+  v1.12.6 or v1.16.0. For v1.16.1, the Chriz Easy IWD 0.1.9 lab installed a candidate whose
+  code differs only in version strings, and BuffBot loaded in its start test (see the
+  [IWD 0.1.9 acceptance](../../package-acceptance-iwd-0.1.9-2026-11-08.md)).
 - v1.10.1 (released 2026-10-20) fixes the combat-stop notice
   ([bg-eeex-buffbot#76](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/76)). Against
   v1.10.0 its TP2 changes only the version, so components `1` and `0` are unchanged.
@@ -194,9 +196,11 @@ candidate.
   own Lua without the LuaJIT loader, and BG:EE, SoD, EET and IWD:EE for the new views. BuffBot's
   README still calls the configuration with `430` not accepted.
 - Christopher, 2026-11-04: BuffBot waits for 0.1.2, first v1.15.0, then v1.16.0, in both
-  installers; 0.1.1 ships the tested v1.12.6. Chriz Easy IWD still pins v1.12.6 until
-  [PR #107](https://github.com/Chrizhermann/chriz-bg-collection/pull/107) merges, and the
-  hold in `manifest/own-mods.toml` records that split.
+  installers; 0.1.1 ships the tested v1.12.6. Chriz Easy IWD kept v1.12.6 under a hold in
+  `manifest/own-mods.toml` while [PR #107](https://github.com/Chrizhermann/chriz-bg-collection/pull/107)
+  waited; #107 was closed unmerged on 2026-11-08 when IWD moved onto `main`. Since then both
+  installers pin v1.16.1 and no hold remains: Chriz Easy IWD 0.1.9 ships it, and Chriz Easy BG
+  gets it with 0.1.2.
 - v1.16.1 (released 2026-11-08, tag on commit `377bb1d`) keeps scanned 5E Spellcasting rows
   visible when a hand-edited wrapper cannot name a usable cast target or an overlay fails. It
   chooses the table's usable target where it can and records the exceptional route once in the
