@@ -1,6 +1,7 @@
 # BuffBot updater for existing games (Chriz Easy IWD first, then Chriz Easy BG)
 
-Status: in Chriz Easy IWD since 0.1.7 (2026-11-05); for Chriz Easy BG on this branch, for 0.1.2.
+Status: in Chriz Easy IWD since 0.1.7 (2026-11-05); both flavors share the updater on `main`
+since the November 8 merge. Chriz Easy BG release acceptance remains tracked for 0.1.2.
 Christopher asked for it on 2026-11-04: update BuffBot in an existing game to the newest release
 from either installer, without breaking later hotpatches.
 
@@ -38,8 +39,7 @@ Undo and Restore work as for hotpatches.
    nothing outside the update's area. Otherwise the game files are put back automatically.
 
 The engine is `engine/src/hotpatch/update.rs`; the catalog lists the mods it updates
-(`[[updates]]` in `hotpatches/bg/catalog.toml`, in `hotpatches/iwd/catalog.toml` on
-`claude/iwdee-app`). For labs:
+(`[[updates]]` in `hotpatches/bg/catalog.toml` and `hotpatches/iwd/catalog.toml`). For labs:
 `chriz-bg-install hotpatch update-check|update-apply --mod buffbot <managed root>`, and
 `hotpatch undo|restore` as for hotpatches.
 

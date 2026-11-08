@@ -21,9 +21,61 @@ use super::{
 };
 
 /// Suggested name for the first registered installation.
-pub const DEFAULT_INSTALLATION_NAME: &str = "Chriz Easy BG";
+pub const DEFAULT_INSTALLATION_NAME: &str =
+    crate::manifest::CollectionGame::Eet.default_installation_name();
 /// Maximum accepted length in Unicode scalar values, excluding edge whitespace.
 pub const MAX_INSTALLATION_NAME_CHARACTERS: usize = 80;
+
+/// Folder under `LOCALAPPDATA` used by the Baldur's Gate app and every EET installation. Its
+/// `locks` folder holds the target locks of every application, whatever folder an application
+/// uses for its own registry.
+pub const DEFAULT_APPLICATION_DATA_DIRECTORY: &str = "Chriz BG Collection";
+
+/// Checks that `name` can be an application's own folder under `LOCALAPPDATA`: one plain
+/// Windows folder name of 1-64 bytes that is not a reserved device name. Returns the reason
+/// when it cannot.
+pub fn check_application_data_directory(name: &str) -> Result<(), &'static str> {
+    if name.trim().is_empty() || name.len() > 64 {
+        return Err("must be 1-64 characters");
+    }
+    if matches!(name, "." | "..") || name.ends_with(['.', ' ']) || name.starts_with(' ') {
+        return Err("is not a plain folder name");
+    }
+    if name.chars().any(|character| {
+        character.is_control()
+            || matches!(
+                character,
+                '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*'
+            )
+    }) {
+        return Err("must be one folder name without path or reserved characters");
+    }
+    // Windows reserves a device name also with an extension or trailing spaces before it.
+    let stem = name.split('.').next().unwrap_or(name).trim_end();
+    if is_reserved_device_name(stem) {
+        return Err("is a reserved Windows device name");
+    }
+    Ok(())
+}
+
+/// CON, PRN, AUX, NUL, CONIN$, CONOUT$, and COM or LPT followed by one digit 0-9 or superscript 1-3, in any
+/// ASCII case. Compared by character, so a multi-byte superscript is never misread.
+fn is_reserved_device_name(stem: &str) -> bool {
+    if ["CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"]
+        .iter()
+        .any(|device| stem.eq_ignore_ascii_case(device))
+    {
+        return true;
+    }
+    let mut characters = stem.chars();
+    let prefix = characters.by_ref().take(3).collect::<String>();
+    let rest = characters.collect::<Vec<_>>();
+    (prefix.eq_ignore_ascii_case("COM") || prefix.eq_ignore_ascii_case("LPT"))
+        && matches!(
+            rest.as_slice(),
+            [digit] if digit.is_ascii_digit() || matches!(digit, '\u{b9}' | '\u{b2}' | '\u{b3}')
+        )
+}
 
 /// Characters Windows does not allow in a folder name; a name replaces each with `-`.
 const FORBIDDEN_NAME_CHARACTERS: [char; 9] = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
@@ -31,7 +83,7 @@ const FORBIDDEN_NAME_CHARACTERS: [char; 9] = ['<', '>', ':', '"', '/', '\\', '|'
 /// Turns a player-provided name into one CEBG can store, without refusing it: edge whitespace
 /// and control characters are dropped, each of `< > : " / \ | ? *` becomes `-`, and the name is
 /// cut to 80 characters. `None` when nothing but whitespace or dots is left; callers then use
-/// [`DEFAULT_INSTALLATION_NAME`]. This does not check other installs.
+/// the active product's default name. This does not check other installs.
 pub fn sanitize_display_name(name: &str) -> Option<String> {
     let cleaned: String = name
         .chars()
@@ -60,7 +112,12 @@ pub fn sanitize_display_name(name: &str) -> Option<String> {
 /// [`sanitize_display_name`], with [`DEFAULT_INSTALLATION_NAME`] for a name that has nothing
 /// left. This does not check other installs; the registry numbers a name that is taken.
 pub fn normalize_display_name(name: &str) -> String {
-    sanitize_display_name(name).unwrap_or_else(|| DEFAULT_INSTALLATION_NAME.to_owned())
+    normalize_display_name_with_default(name, DEFAULT_INSTALLATION_NAME)
+}
+
+/// Sanitize a name, using the active product's name when no characters remain.
+pub fn normalize_display_name_with_default(name: &str, default_name: &str) -> String {
+    sanitize_display_name(name).unwrap_or_else(|| default_name.to_owned())
 }
 
 /// Whether a stored name is one an earlier or the current installer could have saved. Names
@@ -106,14 +163,31 @@ struct NamedIdentity {
 }
 
 impl ManagedInstallRegistry {
+    /// Select the product's fallback for empty new names and renames. Stored names stay as-is.
+    pub fn with_default_display_name(mut self, name: &str) -> Self {
+        self.default_display_name = normalize_display_name(name);
+        self
+    }
+
+    fn normalize_display_name(&self, name: &str) -> String {
+        normalize_display_name_with_default(name, &self.default_display_name)
+    }
+
     /// Suggest a currently unused numbered default; creation rechecks it under a lock.
     pub fn suggested_display_name(&self) -> Result<String, RegistryError> {
+        self.suggested_display_name_from(&self.default_display_name)
+    }
+
+    /// Suggest a currently unused numbered name built on `base`, such as the product name of
+    /// another application; creation rechecks it under a lock.
+    pub fn suggested_display_name_from(&self, base: &str) -> Result<String, RegistryError> {
+        let base = self.normalize_display_name(base);
         let names = self.named_identities()?;
         for suffix in 1_u64.. {
             let name = if suffix == 1 {
-                DEFAULT_INSTALLATION_NAME.to_owned()
+                base.clone()
             } else {
-                format!("{DEFAULT_INSTALLATION_NAME} ({suffix})")
+                format!("{base} ({suffix})")
             };
             if !names
                 .values()
@@ -135,7 +209,7 @@ impl ManagedInstallRegistry {
         name: &str,
         excluding_install_id: Option<&str>,
     ) -> Result<String, RegistryError> {
-        let name = normalize_display_name(name);
+        let name = self.normalize_display_name(name);
         let identities = self.named_identities()?;
         if let Some(id) = excluding_install_id {
             if !identities.contains_key(id) {
@@ -163,7 +237,7 @@ impl ManagedInstallRegistry {
         name: &str,
     ) -> Result<String, RegistryError> {
         validate_identifier(install_id, "install id", &self.names_root)?;
-        let name = normalize_display_name(name);
+        let name = self.normalize_display_name(name);
         let _guard = self.lock_names()?;
         let identities = self.named_identities()?;
         let identity = identities
@@ -206,7 +280,7 @@ impl ManagedInstallRegistry {
             }
             return Ok(path);
         }
-        let name = unused_display_name(&identities, &normalize_display_name(name), None)?;
+        let name = unused_display_name(&identities, &self.normalize_display_name(name), None)?;
         let path = self.publish_campaign(created)?;
         self.write_name(&created.install_id, &created.managed_root, &name)?;
         Ok(path)
@@ -274,7 +348,7 @@ impl ManagedInstallRegistry {
             }
             let name = match self.read_name(&record.install_id, &record.managed_root)? {
                 Some(name) => name,
-                None => legacy_campaign_name(&record.managed_root),
+                None => legacy_campaign_name(&record.managed_root, &self.default_display_name),
             };
             identities.insert(
                 record.install_id,
@@ -379,7 +453,7 @@ fn unused_display_name(
     ))
 }
 
-fn legacy_campaign_name(root: &Path) -> String {
+fn legacy_campaign_name(root: &Path, default_name: &str) -> String {
     // The frozen display name is read only. No ledger/receipt migration is needed.
     let frozen_name = SessionStore::open(root)
         .and_then(|store| store.replay_for_inspection())
@@ -400,7 +474,7 @@ fn legacy_campaign_name(root: &Path) -> String {
                 .and_then(|name| name.to_str())
                 .map(str::to_owned)
         })
-        .unwrap_or_else(|| DEFAULT_INSTALLATION_NAME.to_owned())
+        .unwrap_or_else(|| default_name.to_owned())
 }
 
 fn metadata_if_present(path: &Path) -> Result<Option<fs::Metadata>, RegistryError> {

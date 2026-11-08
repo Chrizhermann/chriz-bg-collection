@@ -12,7 +12,7 @@ use crate::digest::sha256_bytes;
 use crate::error::EngineError;
 use crate::fs_retry;
 use crate::held_folder::{EntryError, EntryErrorKind, HeldFolder};
-use crate::lock::TargetLock;
+use crate::lock::TargetLockNamespace;
 use crate::preflight::{
     recheck_staging_target_before_mutation_with, PreflightHost, SystemPreflight,
 };
@@ -203,7 +203,19 @@ fn preview_with(
         let sources = serde_json::from_slice::<serde_json::Value>(&created.recipe_payload)
             .ok()
             .map(|payload| {
-                ["bg1", "bg2"]
+                // A standalone collection records its game and has one source, `bg2`; an EET
+                // payload, which never records a game, must still name both sources.
+                let standalone = payload
+                    .get("collection")
+                    .and_then(|collection| collection.get("game"))
+                    .and_then(|game| game.as_str())
+                    .is_some_and(|game| game != "eet");
+                let roles: &[&str] = if standalone {
+                    &["bg2"]
+                } else {
+                    &["bg1", "bg2"]
+                };
+                roles
                     .iter()
                     .map(|role| {
                         payload
@@ -213,6 +225,7 @@ fn preview_with(
                             .map(PathBuf::from)
                     })
                     .collect::<Option<Vec<_>>>()
+                    .filter(|_| !standalone || payload.get("bg1").is_none())
                     .map(|sources| (sources, payload))
             });
         let Some(Some((sources, payload))) = sources else {
@@ -276,9 +289,14 @@ fn preview_with(
 }
 
 /// Revalidates the preview under the same cross-process lock used by installation.
-pub fn execute(app_data: &Path, expected: &RemovalPlan) -> Result<RemovalOutcome, RemovalError> {
+pub fn execute(
+    app_data: &Path,
+    locks: &TargetLockNamespace,
+    expected: &RemovalPlan,
+) -> Result<RemovalOutcome, RemovalError> {
     execute_with(
         app_data,
+        locks,
         expected,
         &SystemDocuments,
         &SystemPreflight,
@@ -288,13 +306,13 @@ pub fn execute(app_data: &Path, expected: &RemovalPlan) -> Result<RemovalOutcome
 
 fn execute_with(
     app_data: &Path,
+    locks: &TargetLockNamespace,
     expected: &RemovalPlan,
     locator: &dyn DocumentsLocator,
     host: &dyn PreflightHost,
     before_remove: &mut dyn FnMut(&Path) -> io::Result<()>,
 ) -> Result<RemovalOutcome, RemovalError> {
-    let _lock =
-        TargetLock::try_acquire(app_data.join("locks"), &expected.managed_root).map_err(failure)?;
+    let _lock = locks.try_acquire(&expected.managed_root).map_err(failure)?;
     let current = preview_with(app_data, &expected.install_id, locator)?;
     if current != *expected {
         return Err(failure(
@@ -724,6 +742,8 @@ mod tests {
     struct Fixture {
         _temp: tempfile::TempDir,
         app: PathBuf,
+        local: PathBuf,
+        locks: TargetLockNamespace,
         root: PathBuf,
         cache: PathBuf,
         source: PathBuf,
@@ -734,9 +754,12 @@ mod tests {
         let root = base.join("managed");
         let cache = base.join("cache");
         let source = base.join("source");
-        let app = base.join("app-data");
+        // A registry at a custom path, unrelated to where the target locks live.
+        let app = base.join("Vendor").join("Chriz Easy IWD");
+        let local = base.join("local");
+        let locks = TargetLockNamespace::in_local_application_data(&local).unwrap();
         for path in [&root, &cache, &source, &documents(&app).0] {
-            fs::create_dir(path).unwrap();
+            fs::create_dir_all(path).unwrap();
         }
         fs::write(source.join("original.txt"), "source game").unwrap();
         fs::write(cache.join("archive.zip"), "shared cache").unwrap();
@@ -761,12 +784,13 @@ mod tests {
             normalized_selection: selection,
             plan_sha256: plan_digest(&InstallPlan { runs: vec![] }).unwrap(),
             source_games: SourceGameFingerprints {
-                bg1: "11".repeat(32),
+                bg1: Some("11".repeat(32)),
                 bg2: "22".repeat(32),
+                standalone_role: None,
             },
             artifact_identities: vec![],
             tool_identities: vec![],
-            staged_bg1: root.join("bg1"),
+            staged_bg1: Some(root.join("bg1")),
             staged_bg2: root.join("game"),
         };
         SessionStore::create(&root, SessionEvent::Created(Box::new(created.clone()))).unwrap();
@@ -777,6 +801,8 @@ mod tests {
         Fixture {
             _temp: temp,
             app,
+            local,
+            locks,
             root,
             cache,
             source,
@@ -799,6 +825,7 @@ mod tests {
     fn run(f: &Fixture, plan: &RemovalPlan) -> Result<RemovalOutcome, RemovalError> {
         execute_with(
             &f.app,
+            &f.locks,
             plan,
             &documents(&f.app),
             &Host::default(),
@@ -839,6 +866,7 @@ mod tests {
                 launch_path: f.root.join("game/game.exe"),
                 receipt_sha256: sha256_bytes(b"completed receipt"),
                 completed_at_millis: 1,
+                recipe_id: None,
             })
             .unwrap();
         assert_eq!(
@@ -906,6 +934,7 @@ mod tests {
                 launch_path: f.root.join("game/game.exe"),
                 receipt_sha256: sha256_bytes(b"completed receipt"),
                 completed_at_millis: 1,
+                recipe_id: None,
             })
             .unwrap();
     }
@@ -1167,6 +1196,7 @@ mod tests {
         let plan = preview(&f.app, "fixture-removal").unwrap();
         execute_with(
             &f.app,
+            &f.locks,
             &plan,
             &documents(&f.app),
             &Host::default(),
@@ -1226,13 +1256,26 @@ mod tests {
     fn active_target_lock_and_process_refuse_deletion() {
         let f = fixture();
         let plan = preview(&f.app, "fixture-removal").unwrap();
-        let lock = TargetLock::try_acquire(f.app.join("locks"), &f.root).unwrap();
+        // Held at the legacy path, as an older build or the CLI would hold it.
+        let lock = crate::lock::TargetLock::try_acquire(
+            f.local.join("Chriz BG Collection").join("locks"),
+            &f.root,
+        )
+        .unwrap();
         assert!(run(&f, &plan).is_err());
         drop(lock);
         let host = Host {
             running: vec![f.root.join("game/game.exe")],
         };
-        assert!(execute_with(&f.app, &plan, &documents(&f.app), &host, &mut |_| Ok(())).is_err());
+        assert!(execute_with(
+            &f.app,
+            &f.locks,
+            &plan,
+            &documents(&f.app),
+            &host,
+            &mut |_| Ok(())
+        )
+        .is_err());
         assert!(f.root.join("game/game.exe").exists());
     }
     #[test]
@@ -1241,6 +1284,7 @@ mod tests {
         let plan = preview(&f.app, "fixture-removal").unwrap();
         let error = execute_with(
             &f.app,
+            &f.locks,
             &plan,
             &documents(&f.app),
             &Host::default(),
@@ -1272,6 +1316,7 @@ mod tests {
         let plan = preview(&f.app, "fixture-removal").unwrap();
         execute_with(
             &f.app,
+            &f.locks,
             &plan,
             &documents(&f.app),
             &Host::default(),
@@ -1367,7 +1412,7 @@ mod tests {
         let plan = preview(&f.app, "fixture-removal").unwrap();
         assert_eq!(plan.action, RemovalAction::Unlist);
 
-        let lock = TargetLock::try_acquire(f.app.join("locks"), &f.root).unwrap();
+        let lock = f.locks.try_acquire(&f.root).unwrap();
         assert!(run(&f, &plan).is_err());
         drop(lock);
         assert_eq!(registered_campaigns(&f), 1);
@@ -1565,6 +1610,7 @@ mod tests {
         assert_eq!(plan.action, RemovalAction::Delete);
         execute_with(
             &f.app,
+            &f.locks,
             &plan,
             &documents(&f.app),
             &Host::default(),
@@ -1743,6 +1789,7 @@ mod tests {
         let game = f.root.join("game");
         let error = execute_with(
             &f.app,
+            &f.locks,
             &plan,
             &documents(&f.app),
             &Host::default(),

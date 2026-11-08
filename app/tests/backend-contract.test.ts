@@ -571,3 +571,19 @@ describe("native progress and rename boundaries", () => {
     expect(invoke).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("mod update commands", () => {
+  it("send the registry id and the mod id, never a game path", async () => {
+    const preview = { installId: "managed-one", modId: "buffbot", state: "up-to-date" };
+    const invoke = vi.fn<InvokeCommand>(async () => preview);
+    const backend = new NativeBackend(invoke);
+    await expect(backend.inspectModUpdate("managed-one", "buffbot")).resolves.toBe(preview);
+    await backend.applyModUpdate("managed-one", "buffbot", "bound-review", true, false);
+    await backend.restoreModUpdate("managed-one", "buffbot", true);
+    expect(invoke.mock.calls).toEqual([
+      ["inspect_mod_update", { installId: "managed-one", modId: "buffbot" }],
+      ["apply_mod_update", { installId: "managed-one", modId: "buffbot", reviewToken: "bound-review", fullBackup: true, saveBackup: false }],
+      ["restore_mod_update", { installId: "managed-one", modId: "buffbot", undo: true }],
+    ]);
+  });
+});

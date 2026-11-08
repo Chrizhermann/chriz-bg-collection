@@ -1,0 +1,11 @@
+id = "dusky"
+artifact_id = "dusky-2.5"
+name = "Dusky"
+tp2 = "Dusky/Dusky.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Dusky NPC for IWD:EE"

@@ -125,8 +125,9 @@ impl Fixture {
             normalized_selection: selection,
             plan_sha256: plan_digest(&plan).unwrap(),
             source_games: SourceGameFingerprints {
-                bg1: "11".repeat(32),
+                bg1: Some("11".repeat(32)),
                 bg2: "22".repeat(32),
+                standalone_role: None,
             },
             artifact_identities: vec![
                 frozen("eefix", "33", 10),
@@ -134,7 +135,7 @@ impl Fixture {
                 frozen("eet", "44", 20),
             ],
             tool_identities: vec![frozen("weidu", "55", 30)],
-            staged_bg1: managed_root.join("bg1"),
+            staged_bg1: Some(managed_root.join("bg1")),
             staged_bg2: managed_root.join("game"),
         };
         let request = CampaignRequest {
@@ -149,6 +150,45 @@ impl Fixture {
     }
 }
 
+impl Fixture {
+    /// A standalone Icewind Dale: Enhanced Edition campaign: one source, one staged root, and
+    /// only main-phase runs.
+    fn standalone() -> Self {
+        let mut fixture = Self::new();
+        let managed_root = fixture.request.created.managed_root.clone();
+        let plan = InstallPlan {
+            runs: vec![
+                executable_run(
+                    "iwdfix-main",
+                    "eefix",
+                    GameRoot::Bg2,
+                    Phase::Main,
+                    &[0, 2],
+                    vec![],
+                ),
+                executable_run(
+                    "iwdtweaks-main",
+                    "eet",
+                    GameRoot::Bg2,
+                    Phase::Main,
+                    &[0],
+                    vec![RunArg::StagedRoot(GameRoot::Bg2)],
+                ),
+            ],
+        };
+        let created = &mut fixture.request.created;
+        created.plan_sha256 = plan_digest(&plan).unwrap();
+        created.source_games = SourceGameFingerprints {
+            bg1: None,
+            bg2: "22".repeat(32),
+            standalone_role: Some(GameRole::Iwdee),
+        };
+        created.staged_bg1 = None;
+        created.staged_bg2 = managed_root.join("game");
+        fixture.request.plan = plan;
+        fixture
+    }
+}
 fn frozen(id: &str, byte: &str, length: u64) -> FrozenIdentity {
     FrozenIdentity {
         id: id.to_owned(),
@@ -457,6 +497,7 @@ impl StagingService for FakeDeps {
         let role_name = match role {
             GameRole::BgeeSod => "bg1",
             GameRole::Bg2ee => "bg2",
+            GameRole::Iwdee => "game",
         };
         let operation = format!("stage:{role_name}");
         self.trace.push(operation.clone());
@@ -711,7 +752,7 @@ fn a_new_campaign_creates_missing_destination_ancestors_before_claiming_its_root
         .join("Games")
         .join("NewCollection")
         .join("managed-alpha");
-    fixture.request.created.staged_bg1 = fixture.request.created.managed_root.join("bg1");
+    fixture.request.created.staged_bg1 = Some(fixture.request.created.managed_root.join("bg1"));
     fixture.request.created.staged_bg2 = fixture.request.created.managed_root.join("game");
     let sink = RecordingSink::default();
     let mut deps = FakeDeps::default();
@@ -1181,6 +1222,8 @@ fn first_marker_path(fixture: &Fixture) -> PathBuf {
         .request
         .created
         .staged_bg1
+        .as_ref()
+        .unwrap()
         .join("override/dlc-merge.txt")
 }
 
@@ -1510,7 +1553,7 @@ fn a_file_in_the_missing_destination_chain_is_rejected_without_creating_below_it
     let blocking_parent = fixture._temp.path().join("Games");
     std::fs::write(&blocking_parent, b"not a directory").unwrap();
     fixture.request.created.managed_root = blocking_parent.join("managed-alpha");
-    fixture.request.created.staged_bg1 = fixture.request.created.managed_root.join("bg1");
+    fixture.request.created.staged_bg1 = Some(fixture.request.created.managed_root.join("bg1"));
     fixture.request.created.staged_bg2 = fixture.request.created.managed_root.join("game");
     let sink = RecordingSink::default();
     let mut deps = FakeDeps::default();
@@ -1534,7 +1577,7 @@ fn a_link_in_the_missing_destination_chain_is_rejected_without_creating_below_it
     std::fs::create_dir(&actual_parent).unwrap();
     create_directory_link(&actual_parent, &linked_parent).expect("create linked parent fixture");
     fixture.request.created.managed_root = linked_parent.join("managed-alpha");
-    fixture.request.created.staged_bg1 = fixture.request.created.managed_root.join("bg1");
+    fixture.request.created.staged_bg1 = Some(fixture.request.created.managed_root.join("bg1"));
     fixture.request.created.staged_bg2 = fixture.request.created.managed_root.join("game");
     let sink = RecordingSink::default();
     let mut deps = FakeDeps::default();
@@ -4002,4 +4045,170 @@ fn a_modded_source_game_asks_before_it_is_copied() {
     assert_eq!(decisions.len(), 2);
     assert_eq!(decisions[1].question.kind, QuestionKind::ModdedSource);
     assert_eq!(decisions[1].answer.answer, Answer::Yes);
+}
+
+#[test]
+fn a_modded_iwd_source_asks_once_and_keeps_the_answer_on_resume() {
+    let fixture = Fixture::standalone();
+    let sink = RecordingSink::default();
+    let modded = || {
+        let mut question = modded_bg1_question();
+        question.artifact_id = "source-iwd".to_owned();
+        question.reviewed.id = question.artifact_id.clone();
+        FakeDeps {
+            source_questions: BTreeMap::from([(GameRole::Iwdee, question)]),
+            ..FakeDeps::default()
+        }
+    };
+
+    let mut waiting = modded();
+    let outcome = run_campaign(&fixture.request, &mut waiting, &sink).unwrap();
+    assert!(
+        matches!(outcome, CampaignOutcome::DecisionRequired { step_id, .. } if step_id == "stage:game")
+    );
+    assert!(!waiting
+        .trace
+        .iter()
+        .any(|entry| entry.starts_with("stage:")));
+
+    let mut accepted = FakeDeps {
+        answers: answer(QuestionKind::ModdedSource, Answer::Yes),
+        fail_once: Some("stage:game".to_owned()),
+        ..modded()
+    };
+    assert!(
+        matches!(run_campaign(&fixture.request, &mut accepted, &sink).unwrap(), CampaignOutcome::Failed { step_id, .. } if step_id == "stage:game")
+    );
+
+    let mut resumed = modded();
+    assert_eq!(
+        run_campaign(&fixture.request, &mut resumed, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert_eq!(resumed.answer_requests, 0);
+    assert_eq!(asked(&fixture.request.created.managed_root).len(), 1);
+    let decisions = &resumed.receipts.last().unwrap().decisions;
+    assert_eq!(decisions.len(), 1);
+    assert_eq!(decisions[0].question.artifact_id, "source-iwd");
+    assert_eq!(decisions[0].answer.answer, Answer::Yes);
+}
+
+#[test]
+fn a_failed_iwd_component_uses_the_shared_question_and_can_retry() {
+    let fixture = Fixture::standalone();
+    let sink = RecordingSink::default();
+    let mut failed = FakeDeps {
+        after_results: results_failing_at(&fixture, "iwdfix-main"),
+        ..FakeDeps::default()
+    };
+    let outcome = run_campaign(&fixture.request, &mut failed, &sink).unwrap();
+    assert!(
+        matches!(outcome, CampaignOutcome::DecisionRequired { step_id, .. } if step_id == "install:iwdfix-main")
+    );
+    let questions = asked(&fixture.request.created.managed_root);
+    assert_eq!(questions.len(), 1);
+    assert_eq!(questions[0].2.kind, QuestionKind::FailedComponent);
+    assert!(questions[0].2.offers(Answer::Retry));
+    let mut retried = FakeDeps {
+        answers: answer(QuestionKind::FailedComponent, Answer::Retry),
+        ..FakeDeps::default()
+    };
+    assert_eq!(
+        run_campaign(&fixture.request, &mut retried, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert_eq!(retried.receipts.last().unwrap().installed_plan, None);
+}
+
+#[test]
+fn standalone_campaign_stages_one_game_without_a_bg1_step() {
+    let fixture = Fixture::standalone();
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps::default();
+
+    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+
+    assert_eq!(outcome, CampaignOutcome::Complete);
+    assert_eq!(
+        completed_step_ids(&fixture.request.created.managed_root),
+        vec![
+            "preflight",
+            "acquire:eefix",
+            "acquire:weidu",
+            "acquire:eet",
+            "stage:game",
+            "materialize:eefix:bg2",
+            "materialize:eet:bg2",
+            "install:iwdfix-main",
+            "install:iwdtweaks-main",
+            "identity:final",
+            "verify:final",
+            "receipt",
+        ]
+    );
+    assert!(deps.trace.iter().any(|entry| entry == "stage:game"));
+    assert!(!deps.trace.iter().any(|entry| entry == "stage:bg1"));
+    let labels = sink
+        .events()
+        .into_iter()
+        .filter_map(|event| match event {
+            EngineEvent::StepStarted { label, .. } => Some(label),
+            EngineEvent::PhaseStarted { name } => Some(name),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert!(labels
+        .iter()
+        .any(|label| label == "Stage Icewind Dale: Enhanced Edition"));
+    assert!(labels
+        .iter()
+        .any(|label| label == "Prepare eefix for Icewind Dale: Enhanced Edition"));
+    assert!(
+        labels.iter().all(|label| !label.contains("Baldur")),
+        "a standalone campaign must not name Baldur's Gate: {labels:?}"
+    );
+    assert!(!fixture.request.created.managed_root.join("bg1").exists());
+}
+
+#[test]
+fn standalone_campaign_rejects_runs_outside_the_main_phase_or_game_root() {
+    for (target, phase) in [
+        (GameRoot::Bg1, Phase::Bg1Preparation),
+        (GameRoot::Bg2, Phase::Bg2Preparation),
+        (GameRoot::Bg2, Phase::EetInitialization),
+    ] {
+        let mut fixture = Fixture::standalone();
+        fixture.request.plan.runs[0].target = target;
+        fixture.request.plan.runs[0].phase = phase;
+        fixture.request.created.plan_sha256 = plan_digest(&fixture.request.plan).unwrap();
+        let sink = RecordingSink::default();
+        let mut deps = FakeDeps::default();
+
+        let error = run_campaign(&fixture.request, &mut deps, &sink).unwrap_err();
+
+        let message = error.to_string();
+        assert!(
+            message.contains(
+                "a standalone Icewind Dale: Enhanced Edition installation runs only the main phase"
+            ),
+            "{phase:?}: {message}"
+        );
+        assert!(deps.trace.is_empty(), "{phase:?}: {:?}", deps.trace);
+    }
+}
+
+#[test]
+fn standalone_resume_rejects_a_bg1_folder_in_the_managed_root() {
+    let fixture = Fixture::standalone();
+    seed_unresolved(&fixture.request, &["preflight"], "acquire:eefix");
+    std::fs::create_dir(fixture.request.created.managed_root.join("bg1")).unwrap();
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps::default();
+
+    let error = run_campaign(&fixture.request, &mut deps, &sink).unwrap_err();
+
+    assert!(
+        error.to_string().contains("unowned top-level entry"),
+        "{error}"
+    );
 }

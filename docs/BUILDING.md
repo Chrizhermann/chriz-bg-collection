@@ -1,10 +1,50 @@
-# Building CEBG on Windows
+# Building Chriz Easy BG and Chriz Easy IWD on Windows
 
-This guide describes the public source, including the alpha.15 release build
-`255be75aa232f3af5ad1e1969ccba313fffcccce`. The supported packaging target is Windows x64 MSVC with
+Both products are built and released from `main` in `Chrizhermann/chriz-bg-collection`.
+They share the engine and app code and select product differences through the flavor configuration.
+The supported packaging target is Windows x64 MSVC with
 NSIS. Building the app does not require installed games, mod archives, creator reference
 directories, or production signing credentials. Running a game installation is a separate
 acceptance activity requiring supported game sources and its own disposable destination.
+
+## Two products, two releases from main
+
+| Product | Tauri configuration | Frontend mode | Distribution repository | Update channel |
+|---|---|---|---|---|
+| Chriz Easy BG | `app/src-tauri/tauri.conf.json` | default | `Chrizhermann/chriz-easy-bg` | `alpha/latest.json` |
+| Chriz Easy IWD | base plus `app/src-tauri/tauri.iwd.conf.json` | `iwd` | `Chrizhermann/chriz-easy-iwd` | `updates/latest.json` |
+
+Release each product from a recorded commit on `main`, using its own version, product identity,
+updater feed and signing key. Do not reuse one product's setup or signature for the other.
+The website download buttons should link to the separate [BG release](https://github.com/Chrizhermann/chriz-easy-bg/releases/latest)
+and [IWD release](https://github.com/Chrizhermann/chriz-easy-iwd/releases/latest).
+Website publication is maintained separately; this source merge does not publish either release.
+Follow [BG release steps](cebg-release.md) and [IWD release steps](iwd-release.md).
+The IWD runbook retains the private signing-key location and temporary retrieval procedure;
+pass the key path only and never print or commit its contents.
+
+IWD bundles `recipes/iwd-current` and `hotpatches/iwd`. Every IWD recipe change requires a
+version bump and a new hotpatch base; a merge that leaves the recipe unchanged changes neither.
+The legacy BuffBot 1.8.3 to 1.8.4 Apply route remains retired. IWD has no legacy upgrades.
+
+To check the IWD flavor as well, from the repository root after the ordinary checks:
+
+```powershell
+Push-Location app
+npm.cmd test -- --run --mode iwd tests/iwd-flavor.test.ts tests/iwd-index-html.test.ts tests/hotpatch.test.ts
+npm.cmd run build -- --mode iwd
+Pop-Location
+$env:TAURI_CONFIG = Get-Content -LiteralPath app/src-tauri/tauri.iwd.conf.json -Raw
+cargo test --locked --offline -j 4 -p chriz-bg-app --no-fail-fast
+cargo clippy --locked --offline -j 4 -p chriz-bg-app --all-targets -- -D warnings
+Remove-Item Env:TAURI_CONFIG
+```
+
+For an IWD desktop build, run in `app/`:
+`npm.cmd run tauri -- build --config src-tauri/tauri.iwd.conf.json -- --locked`.
+The overlay selects both the native flavor and the frontend build mode. Clear `TAURI_CONFIG`
+before switching back to BG. Keep each build's output and provenance separate before another
+flavor reuses the workspace's `target/` directory.
 
 ## Prerequisites
 
@@ -105,6 +145,9 @@ $cebgLocalConfig = Join-Path (Resolve-Path ..\target).Path 'cebg-local-build.jso
 npm.cmd run tauri -- build --target x86_64-pc-windows-msvc --bundles nsis --config $cebgLocalConfig -- --locked
 ```
 
+For Chriz Easy IWD, pass its configuration first and the override after it:
+`--config (Resolve-Path src-tauri/tauri.iwd.conf.json).Path --config $cebgLocalConfig`.
+
 This creates a local setup under
 `target/x86_64-pc-windows-msvc/release/bundle/nsis/`. It does not create the Tauri `.sig`
 required by the production updater and does not provide an Authenticode signature. The
@@ -142,7 +185,7 @@ selected by the actual install step.
 
 ## Release identity and signing
 
-Current alpha.15 build source is `255be75aa232f3af5ad1e1969ccba313fffcccce`, with
+Historical alpha.15 build source is `255be75aa232f3af5ad1e1969ccba313fffcccce`, with
 collection alpha.13 and the corrected BG Rebalance v0.3.2 pin. See
 [alpha.15 acceptance](patch-acceptance-alpha15-2026-09-07.md) for package and targeted
 no-SR recovery evidence. Earlier versioned releases below remain unchanged.
@@ -176,6 +219,9 @@ Preserve these existing public locations:
 - [Versioned alpha.14 release](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.14)
 - [Versioned alpha.14 setup](https://github.com/Chrizhermann/chriz-easy-bg/releases/download/v0.1.0-alpha.14/Chriz.Easy.BG_0.1.0-alpha.14_x64-setup.exe)
 - [Alpha update feed](https://github.com/Chrizhermann/chriz-easy-bg/releases/download/alpha/latest.json)
+
+Chriz Easy IWD has its own updater key and feed on `Chrizhermann/chriz-easy-iwd`; its release
+steps are in [Chriz Easy IWD releases](iwd-release.md).
 
 The production build enables Tauri updater artifacts. An authorized release builder supplies
 `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` through external secret
@@ -238,12 +284,13 @@ read-only repository permissions and does not receive production signing keys.
 
 The workflow installs the locked frontend dependencies, runs the frontend check, Rust
 format/tests/Clippy, Python tooling tests and locked-notice verification, then builds an unsigned NSIS package
-using the local updater-artifact override. On the disposable runner it installs the setup,
-leaves files there that an older version could have shipped plus a junction, installs again in
-update mode as the in-app updater does, and checks that the bundled folders hold exactly the
-new version's files (`tools/check-nsis-update-cleanup.ps1`; the preinstall hook in
-`app/src-tauri/windows/hooks.nsh` does the emptying). It does not launch the app, run a game
-installation, publish a release, or edit the live updater feed. These are configured
+using the local updater-artifact override, and one of Chriz Easy IWD the same way. On the
+disposable runner it installs each setup, leaves files there that an older version could have
+shipped plus a junction, installs again in update mode as the in-app updater does, and checks
+that the bundled folders hold exactly the new version's files
+(`tools/check-nsis-update-cleanup.ps1`; the preinstall hook in `app/src-tauri/windows/hooks.nsh`
+does the emptying). It does not launch the app, run a game installation, publish a release, or
+edit the live updater feed. Both unsigned packages are retained separately. These are configured
 checks; consult the actual [Actions run](https://github.com/Chrizhermann/chriz-bg-collection/actions/workflows/ci.yml)
 for a passed or failed result.
 

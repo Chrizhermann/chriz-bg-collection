@@ -1,0 +1,32 @@
+id = "willowisp-3.6"
+name = "Will of the Wisps"
+version = "3.6"
+acquisition = "fetch-only"
+
+[source]
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/will-of-the-wisps/?wpdmdl=91"
+reference = "3.6"
+expected_filename = "willowisp-v3.6.zip"
+expected_length = 52337479
+sha256 = "6643c48ee0374ee291ef2e29a6ab74fc5f8f04e0a4bec6e2b82252a646ef0e89"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["willowisp"]
+tp2_paths = ["willowisp/willowisp.tp2"]
+
+[archive.limits]
+max_depth = 9
+max_entries = 2048
+max_entry_uncompressed_bytes = 33554432
+max_total_uncompressed_bytes = 134217728
+max_compression_ratio = 256
+
+[provenance]
+homepage = "https://downloads.weaselmods.net/download/will-of-the-wisps/"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
+url = "https://downloads.weaselmods.net/download/will-of-the-wisps/"
+reviewed_on = "2026-10-26"

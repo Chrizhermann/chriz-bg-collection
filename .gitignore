@@ -4,5 +4,9 @@
 /app/src-tauri/gen
 /app/src-tauri/icons/*
 !/app/src-tauri/icons/icon.ico
+!/app/src-tauri/icons/iwd/
+/app/src-tauri/icons/iwd/*
+!/app/src-tauri/icons/iwd/icon.ico
+!/app/src-tauri/icons/iwd/icon.svg
 __pycache__/
 *.py[cod]

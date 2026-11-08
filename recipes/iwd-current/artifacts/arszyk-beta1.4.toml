@@ -1,0 +1,32 @@
+id = "arszyk-beta1.4"
+name = "Arszyk's Wonderful Decay"
+version = "BETA1.4"
+acquisition = "fetch-only"
+
+[source]
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/arszyk/?wpdmdl=815"
+reference = "BETA1.4"
+expected_filename = "ArszyksWonderfulDecay-vBETA1.4.zip"
+expected_length = 6293349
+sha256 = "dac219f197ed8acdf53fa4db779704880dbd7ad0d0279b143cf5855ef8c4cc59"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["ArszyksWonderfulDecay"]
+tp2_paths = ["ArszyksWonderfulDecay/ArszyksWonderfulDecay.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 512
+max_entry_uncompressed_bytes = 8388608
+max_total_uncompressed_bytes = 33554432
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://downloads.weaselmods.net/download/arszyk/"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
+url = "https://downloads.weaselmods.net/download/arszyk/"
+reviewed_on = "2026-11-07"

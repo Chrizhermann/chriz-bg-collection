@@ -1,0 +1,32 @@
+id = "vito-1.1"
+name = "Vito"
+version = "1.1"
+acquisition = "fetch-only"
+
+[source]
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/vito/?wpdmdl=878"
+reference = "1.1"
+expected_filename = "Vito-v1.1.zip"
+expected_length = 10748549
+sha256 = "1ec906634f1d509f5d350148efc11b5ca30ca6d1f3d11aef1a0ba443a455c7f3"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["Vito"]
+tp2_paths = ["Vito/Vito.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 512
+max_entry_uncompressed_bytes = 8388608
+max_total_uncompressed_bytes = 33554432
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://downloads.weaselmods.net/download/vito/"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
+url = "https://downloads.weaselmods.net/download/vito/"
+reviewed_on = "2026-10-26"

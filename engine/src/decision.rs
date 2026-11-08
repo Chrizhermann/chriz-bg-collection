@@ -467,16 +467,17 @@ impl Question {
 }
 
 /// The subject a [`QuestionKind::ModdedSource`] question names for the source game of `role`:
-/// `source-bg1` or `source-bg2`, never an artifact id of the recipe.
+/// A source-game subject, never an artifact id of the recipe.
 pub const fn source_subject(role: crate::games::GameRole) -> &'static str {
     match role {
         crate::games::GameRole::BgeeSod => "source-bg1",
         crate::games::GameRole::Bg2ee => "source-bg2",
+        crate::games::GameRole::Iwdee => "source-iwd",
     }
 }
 
 fn is_source_subject(value: &str) -> bool {
-    matches!(value, "source-bg1" | "source-bg2")
+    matches!(value, "source-bg1" | "source-bg2" | "source-iwd")
 }
 
 /// Whether `value` is a decision id: 16 lowercase hexadecimal digits.

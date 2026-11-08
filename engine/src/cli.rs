@@ -18,8 +18,9 @@ use crate::acquire::{
     announce_and_wait_before_asking_again, extract_archive_with_stop, extract_served_archive,
     inspect_manual_archive, plan_materialization, served_length_limit, AcceptedContent,
     AcquireError, ArchiveFormat, ArchiveLimits, ArchiveMode, ArchiveRequirements, ArtifactCache,
-    AuthorizedContent, CacheDisposition, CacheRepair, DownloadRequest, ExtractedArtifact,
-    MaterializationRequest, ServedRedirects, ServedRules, StopSignal, DEFAULT_DOWNLOAD_ATTEMPTS,
+    AuthorizedContent, CacheDisposition, CacheRepair, DownloadRequest, DownloadRoute,
+    ExtractedArtifact, MaterializationRequest, ServedRedirects, ServedRules, StopSignal,
+    DEFAULT_DOWNLOAD_ATTEMPTS,
 };
 use crate::decision::{
     answered_decisions, Answer, AnswerSource, FailedPart, PendingDecision, PresetAnswers, Question,
@@ -103,7 +104,6 @@ const LEGACY_CLI_FROZEN_RECIPE_SCHEMA: u32 = 1;
 const CLI_FROZEN_RECIPE_SCHEMA: u32 = 2;
 const LEGACY_DISPLAY_NAME: &str = "Chriz BG Collection";
 const APPLICATION_DATA_DIRECTORY: &str = "Chriz BG Collection";
-const LOCKS_DIRECTORY: &str = "locks";
 const EVIDENCE_DIRECTORY: &str = "evidence";
 /// Later, accepted acquisitions of an artifact whose final URL differs from its write-once first
 /// acquisition evidence, or that were downloaded anew. Stored as
@@ -133,6 +133,8 @@ const STDERR_FILE: &str = "stderr.log";
 const DEBUG_LOG_FILE: &str = "weidu.debug.log";
 const WEIDU_SILENCE_THRESHOLD: Duration = Duration::from_secs(5 * 60);
 static CAMPAIGN_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+static APPLICATION_DATA_DIRECTORY_OVERRIDE: std::sync::OnceLock<String> =
+    std::sync::OnceLock::new();
 
 /// Which derived cache held a damaged entry.
 #[derive(Clone, Copy, Debug, Serialize)]
@@ -297,9 +299,11 @@ pub struct InstallCommandRequest {
     pub platform: String,
     /// Repeatable semantic feature and typed-input overrides.
     pub overrides: SelectionOverrides,
-    /// Read-only BGEE plus SoD source.
-    pub bg1: PathBuf,
-    /// Read-only BG2EE source.
+    /// Read-only BGEE plus SoD source; required for an EET recipe and `None` for a standalone
+    /// recipe such as Icewind Dale: Enhanced Edition.
+    pub bg1: Option<PathBuf>,
+    /// Read-only primary source: BG2EE for an EET recipe, or the one game of a standalone
+    /// recipe.
     pub bg2: PathBuf,
     /// New isolated managed installation root.
     pub managed_root: PathBuf,
@@ -455,11 +459,54 @@ struct FrozenCliRecipe {
     manual_checkpoints: Vec<crate::manual_checkpoint::FrozenCheckpoint>,
     normalized_selection: crate::recipe_view::NormalizedSelection,
     preset: String,
-    bg1: FrozenSource,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    bg1: Option<FrozenSource>,
+    /// Primary source: BG2EE for EET, or the one standalone game.
     bg2: FrozenSource,
+    /// Stable recipe-family id from the release ledger; frozen only for standalone recipes so
+    /// every EET payload keeps its exact bytes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    recipe_id: Option<String>,
 }
 
 impl FrozenCliRecipe {
+    /// Every frozen source in staging order: BGEE+SoD (EET only), then the primary game.
+    fn sources(&self) -> Vec<&FrozenSource> {
+        self.bg1.iter().chain(std::iter::once(&self.bg2)).collect()
+    }
+
+    /// Every staged root in staging order: BG1 (EET only), then the primary game root.
+    fn targets(&self) -> Vec<GameRoot> {
+        if self.bg1.is_some() {
+            vec![GameRoot::Bg1, GameRoot::Bg2]
+        } else {
+            vec![GameRoot::Bg2]
+        }
+    }
+
+    /// Executable launched when no EEex loader applies. Use the same reference profiles as
+    /// source discovery: an accepted Less tested store/build still launches its own game.
+    fn fallback_executable(&self) -> Result<String, String> {
+        if self.collection.game.standalone_role().is_none() {
+            return Ok("Baldur.exe".to_owned());
+        }
+        let source = &self.bg2;
+        let profiles =
+            crate::games::probe::role_profiles(&self.profiles, source.role, source.storefront);
+        profiles
+            .iter()
+            .copied()
+            .find(|profile| Some(&profile.product_version) == source.build.as_ref())
+            .or_else(|| profiles.first().copied())
+            .map(|profile| profile.executable.clone())
+            .ok_or_else(|| {
+                format!(
+                    "the frozen recipe has no {} profile",
+                    source.role.display_name()
+                )
+            })
+    }
+
     fn recipe_version(&self, digest: &str) -> String {
         self.release_version
             .clone()
@@ -505,6 +552,57 @@ pub fn recipe_release_version(root: &Path) -> Result<Option<String>, CliError> {
     semver::Version::parse(&release.version)
         .map_err(|error| CliError::new("recipe_release_invalid", error.to_string()))?;
     Ok(Some(release.version))
+}
+
+/// Reads the stable recipe-family id from the release ledger of `version`, when the recipe
+/// ships release metadata. A recipe without `release.json` has no recipe id.
+fn recipe_release_id(root: &Path, version: Option<&str>) -> Result<Option<String>, CliError> {
+    let Some(version) = version else {
+        return Ok(None);
+    };
+    let path = root
+        .join("releases")
+        .join(format!("v{version}"))
+        .join("ledger.toml");
+    let release = crate::updates::load_release(&path)
+        .map_err(|error| CliError::new("recipe_release_invalid", error.to_string()))?;
+    if release.version != version {
+        return Err(CliError::new(
+            "recipe_release_invalid",
+            format!(
+                "release ledger {} records version {}, but release.json names {version}",
+                path.display(),
+                release.version
+            ),
+        ));
+    }
+    Ok(Some(release.recipe_id))
+}
+
+/// Every source profile of a recipe must describe a game this collection installs: the two EET
+/// sources for EET, or exactly the standalone game otherwise.
+fn check_profile_roles(
+    game: crate::manifest::CollectionGame,
+    profiles: &GameProfiles,
+) -> Result<(), CliError> {
+    for profile in profiles.iter() {
+        let allowed = match game.standalone_role() {
+            Some(role) => profile.role == role,
+            None => matches!(profile.role, GameRole::BgeeSod | GameRole::Bg2ee),
+        };
+        if !allowed {
+            return Err(CliError::new(
+                "validation_failed",
+                format!(
+                    "game profile {:?} is for {}, which this {} recipe does not install",
+                    profile.id,
+                    profile.role.display_name(),
+                    game.display_name()
+                ),
+            ));
+        }
+    }
+    Ok(())
 }
 
 struct PreparedInstall {
@@ -816,9 +914,12 @@ pub fn install_campaign_reviewed<S: EventSink + Sync>(
 }
 
 fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, CliError> {
-    // Sanitized, never refused; recording the campaign numbers a name another copy has.
-    let display_name = crate::registry::names::normalize_display_name(&request.display_name);
     let manifest = load_recipe(&request.recipe)?;
+    // Sanitized, never refused; recording the campaign numbers a name another copy has.
+    let display_name = crate::registry::names::normalize_display_name_with_default(
+        &request.display_name,
+        manifest.collection.game.default_installation_name(),
+    );
     validate::check(&manifest).map_err(|error| {
         CliError::new(
             "validation_failed",
@@ -828,6 +929,8 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
             ),
         )
     })?;
+    // The folder must agree with this process before anything else is checked.
+    collection_application_data_directory(&manifest.collection)?;
     let unsupported = crate::release_validate::validate_production_invocations(&manifest);
     if !unsupported.is_empty() {
         return Err(CliError::new(
@@ -854,14 +957,60 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
     )
     .map_err(|error| CliError::new("invalid_selection", error.to_string()))?;
     let profiles = load_profiles(&manifest.root)?;
-    let bg1 = inspect_source_for_campaign(&profiles, GameRole::BgeeSod, &request.bg1, "BGEE+SoD")?;
-    let bg2 = inspect_source_for_campaign(&profiles, GameRole::Bg2ee, &request.bg2, "BG2EE")?;
-    let frozen_bg1 = FrozenSource::from_candidate(&bg1, "BGEE+SoD")?;
-    let frozen_bg2 = FrozenSource::from_candidate(&bg2, "BG2EE")?;
+    let game = manifest.collection.game;
+    check_profile_roles(game, &profiles)?;
+    let standalone_role = game.standalone_role();
+    let bg1 = match (standalone_role, &request.bg1) {
+        (None, Some(path)) => Some(inspect_source_for_campaign(
+            &profiles,
+            GameRole::BgeeSod,
+            path,
+            "BGEE+SoD",
+        )?),
+        (None, None) => {
+            return Err(CliError::new(
+                "invalid_sources",
+                "this Enhanced Edition Trilogy recipe needs a Baldur's Gate: Enhanced Edition source",
+            ));
+        }
+        (Some(role), Some(_)) => {
+            return Err(CliError::new(
+                "invalid_sources",
+                format!(
+                    "this {} recipe installs one game; do not supply a Baldur's Gate: Enhanced Edition source",
+                    role.display_name()
+                ),
+            ));
+        }
+        (Some(_), None) => None,
+    };
+    let primary_role = standalone_role.unwrap_or(GameRole::Bg2ee);
+    let primary_label = primary_role.short_label();
+    let bg2 = inspect_source_for_campaign(&profiles, primary_role, &request.bg2, primary_label)?;
+    let frozen_bg1 = bg1
+        .as_ref()
+        .map(|bg1| FrozenSource::from_candidate(bg1, "BGEE+SoD"))
+        .transpose()?;
+    let frozen_bg2 = FrozenSource::from_candidate(&bg2, primary_label)?;
     let managed_root = prospective_direct_path(&request.managed_root, "managed root")?;
     let cache_root = canonical_existing_directory(&request.cache, "cache root")?;
-    reject_campaign_path_overlaps(&managed_root, &cache_root, &bg1.root, &bg2.root)?;
-    let source_plan = without_runs_the_sources_provide(&evaluation.plan, &manifest.mods, &bg1);
+    let mut source_roots = Vec::new();
+    if let Some(bg1) = &bg1 {
+        source_roots.push(("BGEE+SoD", bg1.root.as_path()));
+    }
+    source_roots.push((primary_label, bg2.root.as_path()));
+    reject_campaign_path_overlaps(&managed_root, &cache_root, &source_roots)?;
+    checked_application_data_root(&manifest.collection, &managed_root)?;
+    let release_version = recipe_release_version(&manifest.root)?;
+    let recipe_id = if game.is_standalone() {
+        recipe_release_id(&manifest.root, release_version.as_deref())?
+    } else {
+        None
+    };
+    let source_plan = bg1.as_ref().map_or_else(
+        || evaluation.plan.clone(),
+        |source| without_runs_the_sources_provide(&evaluation.plan, &manifest.mods, source),
+    );
     let (execution_plan, mut manual_checkpoints) =
         crate::manual_checkpoint::split_plan(&source_plan, &request.overrides.manual_breakpoints)
             .map_err(|error| CliError::new("invalid_manual_breakpoint", error))?;
@@ -873,7 +1022,7 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
     }
     let frozen = FrozenCliRecipe {
         schema: CLI_FROZEN_RECIPE_SCHEMA,
-        release_version: recipe_release_version(&manifest.root)?,
+        release_version,
         application_version: request.application_version.clone(),
         display_name: Some(display_name),
         collection: manifest.collection.clone(),
@@ -887,15 +1036,11 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
         preset: request.preset.clone(),
         bg1: frozen_bg1,
         bg2: frozen_bg2,
+        recipe_id,
     };
     let recipe_payload = serialize_frozen_recipe(&frozen)?;
     let recipe_payload_sha256 = sha256_bytes(&recipe_payload);
-    let recipe_envelope = serde_json::to_vec(&FrozenRecipeEnvelope {
-        schema: CLI_FROZEN_RECIPE_SCHEMA,
-        kind: "local-cli-frozen-recipe",
-        payload_sha256: &recipe_payload_sha256,
-    })
-    .map_err(|error| CliError::new("recipe_freeze_failed", error.to_string()))?;
+    let recipe_envelope = frozen_recipe_envelope(&recipe_payload_sha256)?;
     let seed = new_campaign_seed(&managed_root, &recipe_payload_sha256)?;
     let created = CampaignCreated {
         install_id: format!("install-{}", &seed[..20]),
@@ -912,12 +1057,13 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
         plan_sha256: plan_digest(&frozen.plan)
             .map_err(|error| CliError::new("recipe_freeze_failed", error.to_string()))?,
         source_games: SourceGameFingerprints {
-            bg1: frozen.bg1.fingerprint.clone(),
+            bg1: frozen.bg1.as_ref().map(|bg1| bg1.fingerprint.clone()),
             bg2: frozen.bg2.fingerprint.clone(),
+            standalone_role,
         },
         artifact_identities: frozen_payload_identities(&frozen)?,
         tool_identities: frozen_tool_identities(&frozen)?,
-        staged_bg1: managed_root.join("bg1"),
+        staged_bg1: frozen.bg1.as_ref().map(|_| managed_root.join("bg1")),
         staged_bg2: managed_root.join("game"),
     };
     Ok(PreparedInstall { created, frozen })
@@ -1112,6 +1258,9 @@ fn resumable_frozen_recipe(
             )
         })?;
     validate_frozen_cli_recipe(created, &frozen)?;
+    // A campaign is resumed only into its own, safely placed application data folder; this runs
+    // before the deleted-cache repair or anything else writes.
+    checked_application_data_root(&frozen.collection, managed_root)?;
     Ok(frozen)
 }
 
@@ -1168,10 +1317,18 @@ fn recreate_deleted_cache_root(
     }
     // The source games are checked as recorded and where they are now, as resuming checks them
     // next: a source folder that moved behind a link must not receive the cache either.
-    let bg1 = inspect_frozen_source(&frozen.profiles, &frozen.bg1)?;
-    let bg2 = inspect_frozen_source(&frozen.profiles, &frozen.bg2)?;
-    for (bg1_root, bg2_root) in [(&frozen.bg1.root, &frozen.bg2.root), (&bg1.root, &bg2.root)] {
-        crate::preflight::check_cache_root_placement(&resolved, bg1_root, bg2_root, managed_root)
+    let recorded = frozen
+        .sources()
+        .into_iter()
+        .map(|source| source.root.clone())
+        .collect::<Vec<_>>();
+    let current = frozen
+        .sources()
+        .into_iter()
+        .map(|source| inspect_frozen_source(&frozen.profiles, source).map(|found| found.root))
+        .collect::<Result<Vec<_>, _>>()?;
+    for roots in [&recorded, &current] {
+        crate::preflight::check_cache_root_placement(&resolved, roots, managed_root)
             .map_err(|error| unavailable(error.to_string()))?;
     }
     fs::create_dir_all(cache_root).map_err(|error| {
@@ -1223,7 +1380,7 @@ pub fn inspect_manual_checkpoint(
     expected_install_id: &str,
     check_changes: bool,
 ) -> Result<Option<crate::manual_checkpoint::ManualCheckpointStatus>, CliError> {
-    let lock_root = application_data_root()?.join(LOCKS_DIRECTORY);
+    let lock_root = target_lock_root()?;
     let _lock = crate::lock::TargetLock::try_acquire(&lock_root, managed_root)
         .map_err(|error| CliError::new("manual_checkpoint_busy", error.to_string()))?;
     let (replay, frozen) = open_manual_campaign(managed_root, expected_install_id)?;
@@ -1232,10 +1389,7 @@ pub fn inspect_manual_checkpoint(
     };
     if check_changes {
         crate::manual_checkpoint::check_manual_processes().map_err(manual_error)?;
-        recheck_target_before_mutation(&replay.created().staged_bg1, "en_US")
-            .map_err(manual_error)?;
-        recheck_target_before_mutation(&replay.created().staged_bg2, "en_US")
-            .map_err(manual_error)?;
+        recheck_staged_roots(replay.created())?;
         crate::manual_checkpoint::review(
             managed_root,
             checkpoint,
@@ -1259,15 +1413,14 @@ pub fn accept_manual_checkpoint(
     review_token: &str,
     accept_additions: bool,
 ) -> Result<(), CliError> {
-    let lock_root = application_data_root()?.join(LOCKS_DIRECTORY);
+    let lock_root = target_lock_root()?;
     let _lock = crate::lock::TargetLock::try_acquire(&lock_root, managed_root)
         .map_err(|error| CliError::new("manual_checkpoint_busy", error.to_string()))?;
     let (replay, frozen) = open_manual_campaign(managed_root, expected_install_id)?;
     let checkpoint = pending_manual(&replay, &frozen)
         .ok_or_else(|| manual_error("This campaign is not paused for manual mods."))?;
     crate::manual_checkpoint::check_manual_processes().map_err(manual_error)?;
-    recheck_target_before_mutation(&replay.created().staged_bg1, "en_US").map_err(manual_error)?;
-    recheck_target_before_mutation(&replay.created().staged_bg2, "en_US").map_err(manual_error)?;
+    recheck_staged_roots(replay.created())?;
     let reviewed = crate::manual_checkpoint::review(
         managed_root,
         checkpoint,
@@ -1462,7 +1615,7 @@ pub fn inspect_decision(
     managed_root: &Path,
     expected_install_id: &str,
 ) -> Result<Option<DecisionStatus>, CliError> {
-    let lock_root = application_data_root()?.join(LOCKS_DIRECTORY);
+    let lock_root = target_lock_root()?;
     let _lock = crate::lock::TargetLock::try_acquire(&lock_root, managed_root)
         .map_err(|error| CliError::new("decision_busy", error.to_string()))?;
     let managed_root = canonical_existing_directory(managed_root, "managed root")?;
@@ -1499,7 +1652,7 @@ pub fn answer_decision(
     token: &str,
     answer: Answer,
 ) -> Result<(), CliError> {
-    let lock_root = application_data_root()?.join(LOCKS_DIRECTORY);
+    let lock_root = target_lock_root()?;
     let _lock = crate::lock::TargetLock::try_acquire(&lock_root, managed_root)
         .map_err(|error| CliError::new("decision_busy", error.to_string()))?;
     let managed_root = canonical_existing_directory(managed_root, "managed root")?;
@@ -1867,11 +2020,16 @@ fn source_of_question<'a>(
     frozen: &'a FrozenCliRecipe,
     question: &Question,
 ) -> (&'static str, &'a FrozenSource) {
-    if question.artifact_id == crate::decision::source_subject(GameRole::Bg2ee) {
-        ("Baldur's Gate II", &frozen.bg2)
-    } else {
-        ("Baldur's Gate", &frozen.bg1)
+    if let Some(bg1) = &frozen.bg1 {
+        if question.artifact_id == crate::decision::source_subject(GameRole::BgeeSod) {
+            return ("Baldur's Gate", bg1);
+        }
     }
+    let label = match frozen.bg2.role {
+        GameRole::Iwdee => "Icewind Dale",
+        _ => "Baldur's Gate II",
+    };
+    (label, &frozen.bg2)
 }
 
 /// `question` in the player's words, as the app and the command line show it. `earlier` are
@@ -2172,6 +2330,18 @@ fn render_failed_component(
     }
 }
 
+/// Rechecks every staged root of the campaign (BG1 only for EET) before manual-mod review.
+fn recheck_staged_roots(created: &CampaignCreated) -> Result<(), CliError> {
+    for root in created
+        .staged_bg1
+        .iter()
+        .chain(std::iter::once(&created.staged_bg2))
+    {
+        recheck_target_before_mutation(root, "en_US").map_err(manual_error)?;
+    }
+    Ok(())
+}
+
 fn verify_manual_prefix(
     root: &Path,
     frozen_prefix: &InstallPlan,
@@ -2207,9 +2377,13 @@ fn execute_frozen_campaign<S: EventSink + Sync>(
     sink: &S,
     controls: &RunnerControlHandle,
 ) -> Result<CampaignReport, CliError> {
-    let app_data = application_data_root()?;
-    let registry_root = app_data.join(LOCKS_DIRECTORY);
-    let current_bg1 = inspect_frozen_source(&frozen.profiles, &frozen.bg1)?;
+    let app_data = checked_application_data_root(&frozen.collection, &created.managed_root)?;
+    let registry_root = target_lock_root()?;
+    let current_bg1 = frozen
+        .bg1
+        .as_ref()
+        .map(|bg1| inspect_frozen_source(&frozen.profiles, bg1))
+        .transpose()?;
     let current_bg2 = inspect_frozen_source(&frozen.profiles, &frozen.bg2)?;
     let request = CampaignRequest {
         registry_root,
@@ -2226,8 +2400,13 @@ fn execute_frozen_campaign<S: EventSink + Sync>(
         controls.clone(),
     )
     .with_preset_answers(answers.clone());
-    let outcome = run_campaign_controlled(&request, &mut dependencies, sink, controls)
-        .map_err(|error| map_orchestrator_error(error, &created))?;
+    let outcome =
+        run_campaign_controlled(&request, &mut dependencies, sink, controls).map_err(|error| {
+            dependencies
+                .placement_error
+                .take()
+                .unwrap_or_else(|| map_orchestrator_error(error, &created))
+        })?;
     let status = match outcome {
         CampaignOutcome::Complete => CampaignStatus::Complete,
         CampaignOutcome::Paused { after_step_id } => CampaignStatus::Paused { after_step_id },
@@ -2567,12 +2746,11 @@ fn receipt_notes(
                 notes.push(format!("Installed a newer download of {name} ({file})."));
             }
             (QuestionKind::ModdedSource, Answer::Yes) => {
-                let game =
-                    if decision.artifact_id == crate::decision::source_subject(GameRole::Bg2ee) {
-                        "Baldur's Gate II"
-                    } else {
-                        "Baldur's Gate"
-                    };
+                let game = match decision.artifact_id.as_str() {
+                    "source-iwd" => "Icewind Dale",
+                    "source-bg2" => "Baldur's Gate II",
+                    _ => "Baldur's Gate",
+                };
                 notes.push(format!(
                     "You chose to install on top of your {game} game, which looks modded already."
                 ));
@@ -2758,7 +2936,11 @@ fn validate_report_receipt(
         return Err("resolved plan differs from the frozen campaign".to_owned());
     }
 
-    let expected_sources = vec![frozen.bg1.receipt(), frozen.bg2.receipt()];
+    let expected_sources = frozen
+        .sources()
+        .into_iter()
+        .map(FrozenSource::receipt)
+        .collect::<Vec<_>>();
     if receipt.source_games != expected_sources {
         return Err("source-game evidence differs from the frozen campaign".to_owned());
     }
@@ -3096,7 +3278,8 @@ pub enum HotpatchAction {
 }
 
 /// Run `action` on the registered installation at `managed_root` with the hotpatch catalog
-/// folder `catalog`. The registry is this user's; downloads go to `cache`.
+/// folder `catalog`, as the app's Updates screen does. The registry is the one of this
+/// process's application data folder; downloads go to `cache`.
 pub fn hotpatch_managed_install(
     managed_root: &Path,
     catalog: &Path,
@@ -3106,17 +3289,18 @@ pub fn hotpatch_managed_install(
     let failed = |error: String| CliError::new("hotpatch_failed", error);
     let catalog = crate::hotpatch::catalog::load(catalog)
         .map_err(|error| CliError::new("hotpatch_catalog_invalid", error))?;
-    let (record, app_data) = registered_install(managed_root)?;
+    let (record, app_data, locks) = registered_install(managed_root)?;
     let ctx = crate::hotpatch::Context {
         record: &record,
         app_data: &app_data,
+        locks: &locks,
         cache,
     };
     match action {
         HotpatchAction::Check => {
-            let _lock =
-                crate::lock::TargetLock::try_acquire(app_data.join("locks"), &record.managed_root)
-                    .map_err(|error| failed(error.to_string()))?;
+            let _lock = locks
+                .try_acquire(&record.managed_root)
+                .map_err(|error| failed(error.to_string()))?;
             crate::hotpatch::inspect(&ctx, &catalog)
         }
         HotpatchAction::Apply {
@@ -3155,17 +3339,18 @@ pub fn mod_update_managed_install(
     let failed = |error: String| CliError::new("mod_update_failed", error);
     let catalog = crate::hotpatch::catalog::load(catalog)
         .map_err(|error| CliError::new("hotpatch_catalog_invalid", error))?;
-    let (record, app_data) = registered_install(managed_root)?;
+    let (record, app_data, locks) = registered_install(managed_root)?;
     let ctx = crate::hotpatch::Context {
         record: &record,
         app_data: &app_data,
+        locks: &locks,
         cache,
     };
     match action {
         ModUpdateAction::Check => {
-            let _lock =
-                crate::lock::TargetLock::try_acquire(app_data.join("locks"), &record.managed_root)
-                    .map_err(|error| failed(error.to_string()))?;
+            let _lock = locks
+                .try_acquire(&record.managed_root)
+                .map_err(|error| failed(error.to_string()))?;
             crate::hotpatch::update::inspect(&ctx, &catalog, mod_id)
         }
         ModUpdateAction::Apply {
@@ -3184,12 +3369,20 @@ pub fn mod_update_managed_install(
     .map_err(failed)
 }
 
-/// The completed installation at `managed_root` in this user's registry, with the application
-/// data folder.
+/// The completed installation at `managed_root` in this process's registry, with the
+/// application data folder and the installation locks.
 fn registered_install(
     managed_root: &Path,
-) -> Result<(crate::registry::ManagedInstallRecord, PathBuf), CliError> {
-    let app_data = application_data_root()?;
+) -> Result<
+    (
+        crate::registry::ManagedInstallRecord,
+        PathBuf,
+        crate::lock::TargetLockNamespace,
+    ),
+    CliError,
+> {
+    let local = local_application_data()?;
+    let app_data = local.join(application_data_directory());
     let root = fs::canonicalize(managed_root).map_err(|error| {
         CliError::new(
             "managed_install_unavailable",
@@ -3205,10 +3398,16 @@ fn registered_install(
         .ok_or_else(|| {
             CliError::new(
                 "managed_install_unavailable",
-                format!("{} is not a completed installation", root.display()),
+                format!(
+                    "{} is not a completed installation in the {:?} registry",
+                    root.display(),
+                    application_data_directory()
+                ),
             )
         })?;
-    Ok((record, app_data))
+    let locks = crate::lock::TargetLockNamespace::in_local_application_data(local)
+        .map_err(|error| CliError::new("application_data_unavailable", error.to_string()))?;
+    Ok((record, app_data, locks))
 }
 
 impl FrozenSource {
@@ -3242,6 +3441,16 @@ impl FrozenSource {
             fingerprint: self.fingerprint.clone(),
         }
     }
+}
+
+/// The envelope bytes recorded beside a frozen payload with digest `payload_sha256`.
+fn frozen_recipe_envelope(payload_sha256: &str) -> Result<Vec<u8>, CliError> {
+    serde_json::to_vec(&FrozenRecipeEnvelope {
+        schema: CLI_FROZEN_RECIPE_SCHEMA,
+        kind: "local-cli-frozen-recipe",
+        payload_sha256,
+    })
+    .map_err(|error| CliError::new("recipe_freeze_failed", error.to_string()))
 }
 
 fn serialize_frozen_recipe(frozen: &FrozenCliRecipe) -> Result<Vec<u8>, CliError> {
@@ -3311,7 +3520,7 @@ fn validate_frozen_cli_recipe(
             "frozen CLI selection differs from the campaign selection digest",
         ));
     }
-    if frozen.bg1.fingerprint != created.source_games.bg1
+    if frozen.bg1.as_ref().map(|bg1| &bg1.fingerprint) != created.source_games.bg1.as_ref()
         || frozen.bg2.fingerprint != created.source_games.bg2
     {
         return Err(CliError::new(
@@ -3319,10 +3528,44 @@ fn validate_frozen_cli_recipe(
             "frozen CLI source identities differ from the campaign fingerprints",
         ));
     }
-    if frozen.bg1.role != GameRole::BgeeSod || frozen.bg2.role != GameRole::Bg2ee {
+    let standalone_role = frozen.collection.game.standalone_role();
+    if created.source_games.standalone_role != standalone_role {
         return Err(CliError::new(
             "resume_unavailable",
-            "frozen CLI sources do not have the required BGEE+SoD/BG2EE roles",
+            "frozen CLI collection game differs from the campaign source roles",
+        ));
+    }
+    let roles_match = match standalone_role {
+        None => {
+            frozen.bg1.as_ref().map(|bg1| bg1.role) == Some(GameRole::BgeeSod)
+                && frozen.bg2.role == GameRole::Bg2ee
+        }
+        Some(role) => frozen.bg1.is_none() && frozen.bg2.role == role,
+    };
+    if !roles_match {
+        return Err(CliError::new(
+            "resume_unavailable",
+            match standalone_role {
+                None => {
+                    "frozen CLI sources do not have the required BGEE+SoD/BG2EE roles".to_owned()
+                }
+                Some(role) => format!(
+                    "frozen CLI source is not the one {} source this recipe requires",
+                    role.display_name()
+                ),
+            },
+        ));
+    }
+    if standalone_role.is_none() && frozen.recipe_id.is_some() {
+        return Err(CliError::new(
+            "resume_unavailable",
+            "an Enhanced Edition Trilogy frozen recipe unexpectedly records a recipe id",
+        ));
+    }
+    if standalone_role.is_some() != frozen.collection.application_data_directory.is_some() {
+        return Err(CliError::new(
+            "resume_unavailable",
+            "a frozen recipe must name its own application data folder exactly when it installs a standalone game",
         ));
     }
     Ok(())
@@ -3435,7 +3678,45 @@ fn inspect_frozen_source(
     })
 }
 
-fn application_data_root() -> Result<PathBuf, CliError> {
+/// Declares the folder under `LOCALAPPDATA` that this process expects to hold the installation
+/// registry and evidence, instead of the default `Chriz BG Collection`.
+///
+/// The recipe decides the folder (`application_data_directory` in a standalone collection, the
+/// default for EET); this declaration only guards it: installing, resuming or recovering a
+/// collection whose folder differs fails with `application_data_mismatch` before anything is
+/// written. Target locks never depend on it. The name must be one plain folder name. It can be
+/// set once per process; setting the same name again is accepted.
+pub fn set_application_data_directory(name: &str) -> Result<(), CliError> {
+    validate_application_data_directory(name)?;
+    let stored = APPLICATION_DATA_DIRECTORY_OVERRIDE.get_or_init(|| name.to_owned());
+    if stored != name {
+        return Err(CliError::new(
+            "application_data_unavailable",
+            format!("the application data folder is already set to {stored:?}"),
+        ));
+    }
+    Ok(())
+}
+
+/// Folder name under `LOCALAPPDATA` this process was declared for: the value given to
+/// [`set_application_data_directory`], or `Chriz BG Collection`. Each installation still uses
+/// the folder its recipe requires.
+pub fn application_data_directory() -> &'static str {
+    APPLICATION_DATA_DIRECTORY_OVERRIDE
+        .get()
+        .map_or(APPLICATION_DATA_DIRECTORY, String::as_str)
+}
+
+fn validate_application_data_directory(name: &str) -> Result<(), CliError> {
+    crate::registry::names::check_application_data_directory(name).map_err(|reason| {
+        CliError::new(
+            "application_data_unavailable",
+            format!("application data folder {name:?} {reason}"),
+        )
+    })
+}
+
+fn local_application_data() -> Result<PathBuf, CliError> {
     let root = std::env::var_os("LOCALAPPDATA").ok_or_else(|| {
         CliError::new(
             "application_data_unavailable",
@@ -3449,7 +3730,127 @@ fn application_data_root() -> Result<PathBuf, CliError> {
             format!("LOCALAPPDATA is not absolute: {}", root.display()),
         ));
     }
-    Ok(root.join(APPLICATION_DATA_DIRECTORY))
+    Ok(root)
+}
+
+/// Target locks of every application and collection: the legacy Baldur's Gate `locks` folder,
+/// whatever application data folder this process or recipe uses for its registry.
+fn target_lock_root() -> Result<PathBuf, CliError> {
+    crate::lock::TargetLockNamespace::in_local_application_data(local_application_data()?)
+        .map(|locks| locks.root().to_path_buf())
+        .map_err(|error| CliError::new("application_data_unavailable", error.to_string()))
+}
+
+/// The application data folder that holds the registry and evidence of `collection`: its own
+/// folder for a standalone game, the Baldur's Gate folder for EET.
+///
+/// The recipe decides. A folder chosen explicitly for this process (`--app-data-directory` or
+/// [`set_application_data_directory`]) must agree, otherwise this fails before anything is
+/// written, so a standalone installation can never land in another application's registry.
+fn collection_application_data_directory(collection: &Collection) -> Result<&str, CliError> {
+    let required = collection
+        .application_data_directory
+        .as_deref()
+        .unwrap_or(APPLICATION_DATA_DIRECTORY);
+    match APPLICATION_DATA_DIRECTORY_OVERRIDE.get() {
+        Some(chosen) if chosen != required => Err(CliError::new(
+            "application_data_mismatch",
+            format!(
+                "this {} installation keeps its records in the application data folder {required:?}, but this process was started for {chosen:?}",
+                collection.game.display_name()
+            ),
+        )),
+        _ => Ok(required),
+    }
+}
+
+/// The registry folder of `collection` below `LOCALAPPDATA`, after proving that writing it is
+/// safe for the campaign at `managed_root`:
+///
+/// - A standalone collection's folder must not be, contain or lie inside the Baldur's Gate
+///   folder under any name. Its final path is compared, so a DOS 8.3 alias (`CHRIZB~1`), a
+///   junction or a symbolic link is caught, not only the literal name.
+/// - Neither the registry folder nor the shared target-lock folder may overlap the managed
+///   root: the registry would otherwise be written into the campaign before staging, which then
+///   refuses those entries as unowned, and removal refuses the overlap, leaving a registered
+///   campaign that needs manual cleanup.
+///
+/// Every operation that creates campaign state or publishes a registry record calls this first.
+fn checked_application_data_root(
+    collection: &Collection,
+    managed_root: &Path,
+) -> Result<PathBuf, CliError> {
+    let directory = collection_application_data_directory(collection)?;
+    let local = local_application_data()?;
+    let registry = local.join(directory);
+    if collection.game.is_standalone() {
+        let shared = resolved_path_identity(&local.join(APPLICATION_DATA_DIRECTORY))?;
+        let own = resolved_path_identity(&registry)?;
+        if paths_overlap(&own, &shared) {
+            return Err(CliError::new(
+                "application_data_shared",
+                format!(
+                    "the {} application data folder {} resolves to {}, which is or overlaps the Baldur's Gate application data folder {}",
+                    collection.game.display_name(),
+                    registry.display(),
+                    own.display(),
+                    shared.display()
+                ),
+            ));
+        }
+    }
+    let managed = resolved_path_identity(managed_root)?;
+    for (label, folder) in [
+        ("application data", registry.clone()),
+        ("target lock", target_lock_root()?),
+    ] {
+        let resolved = resolved_path_identity(&folder)?;
+        if paths_overlap(&managed, &resolved) {
+            return Err(CliError::new(
+                "application_data_overlap",
+                format!(
+                    "managed root {} overlaps the {label} folder {}; choose a destination outside {}",
+                    managed_root.display(),
+                    folder.display(),
+                    local.display()
+                ),
+            ));
+        }
+    }
+    Ok(registry)
+}
+
+/// The final path of `path`: its deepest existing ancestor resolved by the file system (long
+/// names for 8.3 aliases, junction and link targets), followed by the components that do not
+/// exist yet.
+fn resolved_path_identity(path: &Path) -> Result<PathBuf, CliError> {
+    let unavailable = |error: std::io::Error| {
+        CliError::new(
+            "application_data_unavailable",
+            format!("could not resolve {}: {error}", path.display()),
+        )
+    };
+    let absolute = std::path::absolute(path).map_err(unavailable)?;
+    let mut existing = absolute.as_path();
+    let mut missing = Vec::new();
+    loop {
+        match fs::canonicalize(existing) {
+            Ok(mut resolved) => {
+                for component in missing.iter().rev() {
+                    resolved.push(component);
+                }
+                return Ok(resolved);
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                let (Some(name), Some(parent)) = (existing.file_name(), existing.parent()) else {
+                    return Err(unavailable(error));
+                };
+                missing.push(name.to_os_string());
+                existing = parent;
+            }
+            Err(error) => return Err(unavailable(error)),
+        }
+    }
 }
 
 fn canonical_existing_directory(path: &Path, label: &str) -> Result<PathBuf, CliError> {
@@ -3542,10 +3943,9 @@ fn prospective_direct_path(path: &Path, label: &str) -> Result<PathBuf, CliError
 fn reject_campaign_path_overlaps(
     managed_root: &Path,
     cache_root: &Path,
-    bg1_root: &Path,
-    bg2_root: &Path,
+    sources: &[(&str, &Path)],
 ) -> Result<(), CliError> {
-    for (label, source_root) in [("BGEE+SoD", bg1_root), ("BG2EE", bg2_root)] {
+    for &(label, source_root) in sources {
         if paths_overlap(managed_root, source_root) {
             return Err(CliError::new(
                 "source_target_overlap",
@@ -3577,15 +3977,19 @@ fn reject_campaign_path_overlaps(
             ),
         ));
     }
-    if paths_overlap(bg1_root, bg2_root) {
-        return Err(CliError::new(
-            "source_overlap",
-            format!(
-                "BGEE+SoD source {} overlaps BG2EE source {}",
-                bg1_root.display(),
-                bg2_root.display()
-            ),
-        ));
+    for (index, &(left_label, left)) in sources.iter().enumerate() {
+        for &(right_label, right) in &sources[index + 1..] {
+            if paths_overlap(left, right) {
+                return Err(CliError::new(
+                    "source_overlap",
+                    format!(
+                        "{left_label} source {} overlaps {right_label} source {}",
+                        left.display(),
+                        right.display()
+                    ),
+                ));
+            }
+        }
     }
     Ok(())
 }
@@ -3644,13 +4048,15 @@ fn map_orchestrator_error(
 struct GuardedCliDependencies<'a, S> {
     created: &'a CampaignCreated,
     frozen: &'a FrozenCliRecipe,
-    current_bg1: GameCandidate,
+    current_bg1: Option<GameCandidate>,
     current_bg2: GameCandidate,
     app_data: PathBuf,
     sink: &'a S,
     controls: RunnerControlHandle,
     /// Answers given for this run to the questions it may ask.
     preset_answers: PresetAnswers,
+    /// The placement refusal behind a failed registry recheck, reported with its own code.
+    placement_error: Option<CliError>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -3717,7 +4123,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
     fn new(
         created: &'a CampaignCreated,
         frozen: &'a FrozenCliRecipe,
-        current_bg1: GameCandidate,
+        current_bg1: Option<GameCandidate>,
         current_bg2: GameCandidate,
         app_data: PathBuf,
         sink: &'a S,
@@ -3732,6 +4138,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             sink,
             controls,
             preset_answers: PresetAnswers::none(),
+            placement_error: None,
         }
     }
 
@@ -3798,28 +4205,21 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
     }
 
     fn layout(&self) -> Result<ManagedLayout, StepFailure> {
-        let left_out = |role| {
-            let mut patterns = Vec::<String>::new();
-            for profile in self.frozen.profiles.iter().filter(|p| p.role == role) {
-                for pattern in left_out_root_patterns(profile) {
-                    if !patterns
-                        .iter()
-                        .any(|known| known.eq_ignore_ascii_case(&pattern))
-                    {
-                        patterns.push(pattern);
-                    }
-                }
-            }
-            patterns
-        };
-        Ok(ManagedLayout::prepare(
-            &self.created.managed_root,
-            &self.frozen.bg1.root,
-            &self.frozen.bg2.root,
-        )
-        .map_err(stage_error)?
-        .leaving_out(GameRole::BgeeSod, left_out(GameRole::BgeeSod))
-        .leaving_out(GameRole::Bg2ee, left_out(GameRole::Bg2ee)))
+        frozen_layout(&self.created.managed_root, self.frozen).map_err(stage_error)
+    }
+
+    fn primary_label(&self) -> &'static str {
+        self.frozen.bg2.role.short_label()
+    }
+
+    /// Player-facing name of one staged root. Kept as the historical `Bg1`/`Bg2` spelling for
+    /// EET so existing failure texts are unchanged.
+    fn target_label(&self, target: GameRoot) -> String {
+        if self.frozen.bg1.is_some() {
+            format!("{target:?}")
+        } else {
+            self.frozen.bg2.role.display_name().to_owned()
+        }
     }
 
     fn save_identity(&self, layout: &ManagedLayout) -> Result<ReservedSaveIdentity, StepFailure> {
@@ -3861,6 +4261,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             expected_sha256: artifact.source.sha256.clone(),
             redirect_hosts: artifact.source.redirect_hosts.clone(),
             max_attempts: DEFAULT_DOWNLOAD_ATTEMPTS,
+            route: DownloadRoute::for_source(&artifact.source).map_err(step_error)?,
         })
     }
 
@@ -4675,10 +5076,12 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         }))
     }
 
-    fn target_root(&self, target: GameRoot) -> &Path {
+    fn target_root(&self, target: GameRoot) -> Result<&Path, StepFailure> {
         match target {
-            GameRoot::Bg1 => &self.created.staged_bg1,
-            GameRoot::Bg2 => &self.created.staged_bg2,
+            GameRoot::Bg1 => self.created.staged_bg1.as_deref().ok_or_else(|| {
+                StepFailure::new("this installation stages no Baldur's Gate: Enhanced Edition copy")
+            }),
+            GameRoot::Bg2 => Ok(&self.created.staged_bg2),
         }
     }
 
@@ -4878,9 +5281,47 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
     }
 }
 
+impl<S: EventSink> GuardedCliDependencies<'_, S> {
+    /// Proves again, right before a registry write, that the registry folder is still this
+    /// collection's own and outside the campaign: a folder replaced by an alias or link while
+    /// the campaign ran must not receive its record.
+    fn recheck_application_data(&mut self) -> Result<(), StepFailure> {
+        let current = match checked_application_data_root(
+            &self.frozen.collection,
+            &self.created.managed_root,
+        ) {
+            Ok(current) => current,
+            Err(error) => {
+                let failure = StepFailure::new(error.to_string());
+                // Reported with its own code rather than as a generic campaign error.
+                self.placement_error = Some(error);
+                return Err(failure);
+            }
+        };
+        if current != self.app_data {
+            return Err(StepFailure::new(format!(
+                "the application data folder changed from {} to {} during the campaign",
+                self.app_data.display(),
+                current.display()
+            )));
+        }
+        Ok(())
+    }
+}
+
 impl<S: EventSink> CampaignRecorder for GuardedCliDependencies<'_, S> {
+    fn before_campaign_state(&mut self, _created: &CampaignCreated) -> Result<(), StepFailure> {
+        self.recheck_application_data()
+    }
+
     fn record_campaign(&mut self, created: &CampaignCreated) -> Result<(), StepFailure> {
+        self.recheck_application_data()?;
         ManagedInstallRegistry::open_or_create(&self.app_data)
+            .map(|registry| {
+                registry.with_default_display_name(
+                    self.frozen.collection.game.default_installation_name(),
+                )
+            })
             .and_then(|registry| {
                 registry.publish_campaign_named(created, self.frozen.effective_display_name())
             })
@@ -4895,13 +5336,30 @@ impl<S: EventSink> CampaignPreflight for GuardedCliDependencies<'_, S> {
         request: &CampaignRequest,
         replay: &SessionReplay,
     ) -> Result<(), StepFailure> {
-        Self::ensure_source_fresh(&self.current_bg1, &self.frozen.bg1, "BGEE+SoD")?;
-        Self::ensure_source_fresh(&self.current_bg2, &self.frozen.bg2, "BG2EE")?;
+        match (&self.current_bg1, &self.frozen.bg1) {
+            (Some(current), Some(frozen)) => {
+                Self::ensure_source_fresh(current, frozen, "BGEE+SoD")?;
+            }
+            (None, None) => {}
+            _ => {
+                return Err(StepFailure::new(
+                    "the current BGEE+SoD source does not match the frozen campaign",
+                ));
+            }
+        }
+        Self::ensure_source_fresh(&self.current_bg2, &self.frozen.bg2, self.primary_label())?;
         let required_artifacts = self.required_inputs(&request.created.artifact_identities, false);
         let required_tools = self.required_inputs(&request.created.tool_identities, true);
-        let staged_copies = directory_bytes(&self.frozen.bg1.root)?
-            .checked_add(directory_bytes(&self.frozen.bg2.root)?)
-            .ok_or_else(|| StepFailure::new("source game byte count overflowed u64"))?;
+        let staged_copies = self
+            .frozen
+            .sources()
+            .into_iter()
+            .try_fold(0_u64, |sum, source| {
+                directory_bytes(&source.root).and_then(|bytes| {
+                    sum.checked_add(bytes)
+                        .ok_or_else(|| StepFailure::new("source game byte count overflowed u64"))
+                })
+            })?;
         let downloads = request
             .created
             .artifact_identities
@@ -4926,7 +5384,7 @@ impl<S: EventSink> CampaignPreflight for GuardedCliDependencies<'_, S> {
             .and_then(|sum| sum.checked_add(extraction))
             .ok_or_else(|| StepFailure::new("preflight byte count overflowed u64"))?;
         let report = initial_preflight(&InitialPreflight {
-            bg1_source: &self.current_bg1,
+            bg1_source: self.current_bg1.as_ref(),
             bg2_source: &self.current_bg2,
             destination: &request.created.managed_root,
             space: SpaceRequirement {
@@ -4960,24 +5418,32 @@ impl<S: EventSink> CampaignPreflight for GuardedCliDependencies<'_, S> {
             .as_deref()
             == Some(format!("{}:{}", check.kind.as_str(), check.step_id).as_str())
         {
+            let executable = self
+                .frozen
+                .fallback_executable()
+                .map_err(StepFailure::new)?;
             return Err(step_error(
                 crate::preflight::PreflightError::TargetProcessRunning {
-                    executable: self.target_root(check.target).join("Baldur.exe"),
+                    executable: self.target_root(check.target)?.join(executable),
                 },
             ));
         }
         if matches!(check.kind, crate::orchestrator::MutationKind::Stage) {
-            let bg1 = inspect_frozen_source(&self.frozen.profiles, &self.frozen.bg1)
-                .map_err(step_error)?;
-            let bg2 = inspect_frozen_source(&self.frozen.profiles, &self.frozen.bg2)
-                .map_err(step_error)?;
-            Self::ensure_source_fresh(&bg1, &self.frozen.bg1, "BGEE+SoD")?;
-            Self::ensure_source_fresh(&bg2, &self.frozen.bg2, "BG2EE")?;
-            recheck_staging_target_before_mutation(self.target_root(check.target), "en_US")
+            for source in self.frozen.sources() {
+                let current =
+                    inspect_frozen_source(&self.frozen.profiles, source).map_err(step_error)?;
+                let label = if source.role == GameRole::BgeeSod {
+                    "BGEE+SoD"
+                } else {
+                    source.role.short_label()
+                };
+                Self::ensure_source_fresh(&current, source, label)?;
+            }
+            recheck_staging_target_before_mutation(self.target_root(check.target)?, "en_US")
                 .map_err(step_error)?;
             return Ok(());
         }
-        recheck_target_before_mutation(self.target_root(check.target), "en_US").map_err(step_error)
+        recheck_target_before_mutation(self.target_root(check.target)?, "en_US").map_err(step_error)
     }
 }
 
@@ -5494,13 +5960,25 @@ impl<S: EventSink> StagingService for GuardedCliDependencies<'_, S> {
             GameRole::Bg2ee => stage_game_copy(&layout, GameRole::Bg2ee)
                 .map(|_| ())
                 .map_err(stage_error),
+            GameRole::Iwdee => {
+                // Claim the isolated save folder before copying, as BG1 staging does, so a
+                // collision is reported before the copy; the engine_name is patched once all
+                // runs are complete, at final identity.
+                self.save_identity(&layout)?;
+                stage_game_copy(&layout, role)
+                    .map(|_| ())
+                    .map_err(stage_error)
+            }
         }
     }
 
     fn source_question(&mut self, role: GameRole) -> Result<Option<Question>, StepFailure> {
         let (candidate, frozen) = match role {
-            GameRole::BgeeSod => (&self.current_bg1, &self.frozen.bg1),
-            GameRole::Bg2ee => (&self.current_bg2, &self.frozen.bg2),
+            GameRole::BgeeSod => match (&self.current_bg1, &self.frozen.bg1) {
+                (Some(candidate), Some(frozen)) => (candidate, frozen),
+                _ => return Ok(None),
+            },
+            GameRole::Bg2ee | GameRole::Iwdee => (&self.current_bg2, &self.frozen.bg2),
         };
         // Clearly modded: files that mods change differ from a clean game, or files sit in
         // the override folder, which a clean game leaves empty. Leftovers alone that the copy
@@ -5573,7 +6051,7 @@ impl<S: EventSink> ArtifactMaterializer for GuardedCliDependencies<'_, S> {
         };
         let planned = match plan_materialization(
             &extracted,
-            self.target_root(task.target),
+            self.target_root(task.target)?,
             &request,
         ) {
             Ok(planned) => planned,
@@ -5672,7 +6150,7 @@ impl<S: EventSink> InvocationBuilder for GuardedCliDependencies<'_, S> {
                 expected_output: prompt.expected_output.clone(),
                 answer: sanitize_prompt_answer(
                     &prompt.answer,
-                    &self.created.staged_bg1,
+                    self.created.staged_bg1.as_deref(),
                     &self.created.staged_bg2,
                 ),
                 matched: false,
@@ -5709,7 +6187,7 @@ impl<S: EventSink> InvocationBuilder for GuardedCliDependencies<'_, S> {
             .collect::<Vec<_>>();
         if !config_files.is_empty() {
             let evidence =
-                crate::weidu::config_files::place(self.target_root(run.target), &config_files)
+                crate::weidu::config_files::place(self.target_root(run.target)?, &config_files)
                     .map_err(|error| step_error(error).before_preparation())?;
             write_json_once(
                 &attempt.evidence_root.join(CONFIG_FILES_EVIDENCE_FILE),
@@ -5727,7 +6205,7 @@ impl<S: EventSink> InvocationBuilder for GuardedCliDependencies<'_, S> {
                     .map(|item| item.tp2.as_str()),
             )
             .map_err(step_error)?;
-            let evidence = crate::weidu::ui_compat::prepare(self.target_root(run.target))
+            let evidence = crate::weidu::ui_compat::prepare(self.target_root(run.target)?)
                 .map_err(step_error)?;
             write_json_once(
                 &attempt
@@ -5757,7 +6235,7 @@ impl<S: EventSink> InvocationBuilder for GuardedCliDependencies<'_, S> {
                 target: run.target,
                 tp2: &mod_file.tp2,
                 components,
-                target_root: self.target_root(run.target),
+                target_root: self.target_root(run.target)?,
             })
             .map_err(step_error)?
         {
@@ -5980,7 +6458,7 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
                 || !path_is_within(
                     &executable.canonicalize().map_err(step_error)?,
                     &self
-                        .target_root(run.target)
+                        .target_root(run.target)?
                         .canonicalize()
                         .map_err(step_error)?,
                 )
@@ -5993,7 +6471,7 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
             run.components.clone()
         };
         let before = read_direct_file(&attempt.evidence_root.join(BEFORE_LOG_FILE))?;
-        if before != read_optional_weidu_log(self.target_root(run.target))? {
+        if before != read_optional_weidu_log(self.target_root(run.target)?)? {
             return Err(StepFailure::new(
                 "WeiDU.log changed after the pre-spawn safety guard failed",
             ));
@@ -6022,7 +6500,7 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
             )));
         }
         let before = read_direct_file(&attempt.evidence_root.join(BEFORE_LOG_FILE))?;
-        let after = read_optional_weidu_log(self.target_root(run.target))?;
+        let after = read_optional_weidu_log(self.target_root(run.target)?)?;
         write_bytes_once(&attempt.evidence_root.join(AFTER_LOG_FILE), &after)?;
         let debug = read_direct_file(&attempt.evidence_root.join(DEBUG_LOG_FILE))?;
         let stdout = read_direct_file(&attempt.evidence_root.join(STDOUT_FILE))?;
@@ -6301,10 +6779,10 @@ impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
             .is_some()
         {
             crate::manual_checkpoint::check_manual_processes().map_err(step_error)?;
-            recheck_target_before_mutation(&self.created.staged_bg1, "en_US")
-                .map_err(step_error)?;
-            recheck_target_before_mutation(&self.created.staged_bg2, "en_US")
-                .map_err(step_error)?;
+            for target in self.frozen.targets() {
+                recheck_target_before_mutation(self.target_root(target)?, "en_US")
+                    .map_err(step_error)?;
+            }
             crate::manual_checkpoint::verify_accepted_current(
                 root,
                 checkpoint,
@@ -6373,7 +6851,7 @@ impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
         attempt: &StepAttempt,
     ) -> Result<(), StepFailure> {
         ensure_directories(&attempt.evidence_root)?;
-        let before = read_optional_weidu_log(self.target_root(run.target))?;
+        let before = read_optional_weidu_log(self.target_root(run.target)?)?;
         write_bytes_once(&attempt.evidence_root.join(BEFORE_LOG_FILE), &before)
     }
 
@@ -6454,17 +6932,25 @@ impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
     fn verify_final(&mut self, plan: &InstallPlan) -> Result<(), StepFailure> {
         let layout = self.layout()?;
         let identity = self.save_identity(&layout)?;
-        let bg1_engine_name = read_engine_name(layout.bg1_root()).map_err(step_error)?;
+        let bg1_engine_name = if layout.is_standalone() {
+            None
+        } else {
+            Some(read_engine_name(layout.bg1_root()).map_err(step_error)?)
+        };
         let bg2_engine_name = read_engine_name(layout.game_root()).map_err(step_error)?;
         crate::stage::verify_profile_settings(&layout, &identity).map_err(step_error)?;
-        if bg1_engine_name != identity.engine_name || bg2_engine_name != identity.engine_name {
+        if bg1_engine_name
+            .as_ref()
+            .is_some_and(|name| *name != identity.engine_name)
+            || bg2_engine_name != identity.engine_name
+        {
             return Err(StepFailure::new(
                 "staged game identities differ from the reserved managed save identity",
             ));
         }
         let mut logs = Vec::new();
-        for target in [GameRoot::Bg1, GameRoot::Bg2] {
-            let bytes = read_optional_weidu_log(self.target_root(target))?;
+        for target in self.frozen.targets() {
+            let bytes = read_optional_weidu_log(self.target_root(target)?)?;
             let entries =
                 parse_active_entries(&String::from_utf8_lossy(&bytes)).map_err(step_error)?;
             let expected = crate::manual_checkpoint::expected_components(
@@ -6484,8 +6970,8 @@ impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
                 })
             {
                 return Err(StepFailure::new(format!(
-                    "final {:?} WeiDU.log does not exactly match the frozen plan",
-                    target
+                    "final {} WeiDU.log does not exactly match the frozen plan",
+                    self.target_label(target)
                 )));
             }
             logs.push(FinalLogReceipt {
@@ -6494,7 +6980,16 @@ impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
                 components: entries.iter().map(log_component_receipt).collect(),
             });
         }
-        let launch_path = verified_launch_path(plan, layout.game_root())?;
+        let fallback = self
+            .frozen
+            .fallback_executable()
+            .map_err(StepFailure::new)?;
+        let root_label = if self.frozen.bg1.is_some() {
+            "staged BG2 root".to_owned()
+        } else {
+            format!("staged {} folder", self.frozen.bg2.role.display_name())
+        };
+        let launch_path = verified_launch_path(plan, layout.game_root(), &fallback, &root_label)?;
         let final_state = FinalReceiptState {
             logs,
             bg1_engine_name,
@@ -6514,6 +7009,10 @@ impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
                 )
             },
         };
+        // Game updates later compare the folder with what the installer finished.
+        let game_files =
+            crate::game_files::capture(layout.game_root()).map_err(StepFailure::new)?;
+        self.persist_named_evidence("final", "game-files", &game_files)?;
         self.persist_named_evidence("final", "state", &final_state)
     }
 }
@@ -6522,6 +7021,7 @@ impl<S: EventSink> ReceiptWriter for GuardedCliDependencies<'_, S> {
     fn write(&mut self, draft: &ReceiptDraft) -> Result<(), StepFailure> {
         let store = ReceiptStore::open(&self.created.managed_root, &self.created.install_id)
             .map_err(|error| StepFailure::new(error.to_string()))?;
+        self.recheck_application_data()?;
         let registry = ManagedInstallRegistry::open_or_create(&self.app_data)
             .map_err(|error| StepFailure::new(error.to_string()))?;
         let artifacts = self
@@ -6562,7 +7062,12 @@ impl<S: EventSink> ReceiptWriter for GuardedCliDependencies<'_, S> {
                     .frozen
                     .recipe_version(&self.created.recipe_payload_sha256),
             },
-            source_games: vec![self.frozen.bg1.receipt(), self.frozen.bg2.receipt()],
+            source_games: self
+                .frozen
+                .sources()
+                .into_iter()
+                .map(FrozenSource::receipt)
+                .collect(),
             artifacts,
             weidu_tools,
             runs,
@@ -6574,6 +7079,7 @@ impl<S: EventSink> ReceiptWriter for GuardedCliDependencies<'_, S> {
             self.frozen.effective_display_name().to_owned(),
             evidence,
         )
+        .with_recipe_id(self.frozen.recipe_id.clone())
         .write(draft)
     }
 }
@@ -7217,13 +7723,51 @@ fn acquired_file(receipt: &ArtifactReceipt) -> String {
     }
 }
 
-fn sanitize_prompt_answer(answer: &str, bg1: &Path, bg2: &Path) -> String {
-    answer
-        .replace(&bg1.display().to_string(), "<staged-bg1>")
-        .replace(&bg2.display().to_string(), "<staged-bg2>")
+/// Prepares the managed layout recorded by a frozen recipe: EET with both sources, or one
+/// standalone game.
+fn frozen_layout(
+    managed_root: &Path,
+    frozen: &FrozenCliRecipe,
+) -> crate::error::Result<ManagedLayout> {
+    let mut layout = match &frozen.bg1 {
+        Some(bg1) => ManagedLayout::prepare(managed_root, &bg1.root, &frozen.bg2.root),
+        None => ManagedLayout::prepare_standalone(managed_root, frozen.bg2.role, &frozen.bg2.root),
+    }?;
+    for role in [GameRole::BgeeSod, frozen.bg2.role] {
+        let mut patterns = Vec::<String>::new();
+        for profile in frozen.profiles.iter().filter(|p| p.role == role) {
+            for pattern in left_out_root_patterns(profile) {
+                if !patterns
+                    .iter()
+                    .any(|known| known.eq_ignore_ascii_case(&pattern))
+                {
+                    patterns.push(pattern);
+                }
+            }
+        }
+        layout = layout.leaving_out(role, patterns);
+    }
+    Ok(layout)
 }
 
-fn verified_launch_path(plan: &InstallPlan, game_root: &Path) -> Result<PathBuf, StepFailure> {
+fn sanitize_prompt_answer(answer: &str, bg1: Option<&Path>, bg2: &Path) -> String {
+    match bg1 {
+        Some(bg1) => answer
+            .replace(&bg1.display().to_string(), "<staged-bg1>")
+            .replace(&bg2.display().to_string(), "<staged-bg2>"),
+        None => answer.replace(&bg2.display().to_string(), "<staged-game>"),
+    }
+}
+
+/// The verified launch executable: InfinityLoader when EEex is selected or present, otherwise
+/// the game's own executable named by `fallback` (`Baldur.exe` for EET, or the standalone
+/// game's profile executable such as `icewind.exe`). `root_label` names the folder in errors.
+fn verified_launch_path(
+    plan: &InstallPlan,
+    game_root: &Path,
+    fallback: &str,
+    root_label: &str,
+) -> Result<PathBuf, StepFailure> {
     let infinity_loader = game_root.join("InfinityLoader.exe");
     if plan
         .runs
@@ -7233,18 +7777,18 @@ fn verified_launch_path(plan: &InstallPlan, game_root: &Path) -> Result<PathBuf,
         return direct_regular_file(&infinity_loader)
             .then_some(infinity_loader)
             .ok_or_else(|| {
-                StepFailure::new(
-                    "EEex is selected but InfinityLoader.exe is unavailable in the staged BG2 root",
-                )
+                StepFailure::new(format!(
+                    "EEex is selected but InfinityLoader.exe is unavailable in the {root_label}"
+                ))
             });
     }
     if direct_regular_file(&infinity_loader) {
         return Ok(infinity_loader);
     }
-    let vanilla = game_root.join("Baldur.exe");
+    let vanilla = game_root.join(fallback);
     direct_regular_file(&vanilla)
         .then_some(vanilla)
-        .ok_or_else(|| StepFailure::new("staged BG2 root has no verified launch executable"))
+        .ok_or_else(|| StepFailure::new(format!("{root_label} has no verified launch executable")))
 }
 
 fn direct_regular_file(path: &Path) -> bool {
@@ -7656,11 +8200,11 @@ mod tests {
                 created_for_frozen_recipe(&frozen, serde_json::to_vec(&frozen).unwrap());
             created.managed_root = root.clone();
             created.cache_root = root.join("cache");
-            created.staged_bg1 = root.join("bg1");
+            created.staged_bg1 = Some(root.join("bg1"));
             created.staged_bg2 = root.join("game");
             for path in [
                 &created.cache_root,
-                &created.staged_bg1,
+                created.staged_bg1.as_ref().unwrap(),
                 &created.staged_bg2,
             ] {
                 std::fs::create_dir(path).unwrap();
@@ -7720,7 +8264,7 @@ mod tests {
             let dependencies = GuardedCliDependencies::new(
                 &created,
                 &frozen,
-                candidate.clone(),
+                Some(candidate.clone()),
                 candidate,
                 root.join("app-data"),
                 &sink,
@@ -7782,13 +8326,13 @@ mod tests {
             plan: evaluation.plan,
             normalized_selection: evaluation.normalized_selection,
             preset: "recommended".to_owned(),
-            bg1: FrozenSource {
+            bg1: Some(FrozenSource {
                 role: GameRole::BgeeSod,
                 storefront: Storefront::Steam,
                 root: PathBuf::from(r"C:\Legacy BG1"),
                 build: Some("2.7.3.0".to_owned()),
                 fingerprint: "11".repeat(32),
-            },
+            }),
             bg2: FrozenSource {
                 role: GameRole::Bg2ee,
                 storefront: Storefront::Steam,
@@ -7796,6 +8340,7 @@ mod tests {
                 build: Some("2.7.3.0".to_owned()),
                 fingerprint: "22".repeat(32),
             },
+            recipe_id: None,
         }
     }
 
@@ -7816,12 +8361,13 @@ mod tests {
             normalized_selection: frozen.normalized_selection.clone(),
             plan_sha256: plan_digest(&frozen.plan).expect("digest frozen plan"),
             source_games: SourceGameFingerprints {
-                bg1: frozen.bg1.fingerprint.clone(),
+                bg1: frozen.bg1.as_ref().map(|bg1| bg1.fingerprint.clone()),
                 bg2: frozen.bg2.fingerprint.clone(),
+                standalone_role: None,
             },
             artifact_identities: Vec::new(),
             tool_identities: Vec::new(),
-            staged_bg1: managed.join("bg1"),
+            staged_bg1: frozen.bg1.as_ref().map(|_| managed.join("bg1")),
             staged_bg2: managed.join("game"),
         }
     }
@@ -8358,6 +8904,459 @@ mod tests {
         }
     }
 
+    const LEGACY_EET_GOLDENS: &str = "tests/fixtures/compat/legacy-eet";
+
+    fn legacy_eet_golden(name: &str) -> Vec<u8> {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join(LEGACY_EET_GOLDENS)
+            .join(name);
+        std::fs::read(&path).unwrap_or_else(|error| panic!("read {}: {error}", path.display()))
+    }
+
+    fn pretty_record<T: serde::Serialize>(value: &T) -> Vec<u8> {
+        let mut bytes = serde_json::to_vec_pretty(value).expect("serialize record");
+        bytes.push(b'\n');
+        bytes
+    }
+
+    fn reserialized_pretty<T: serde::Serialize + serde::de::DeserializeOwned>(
+        bytes: &[u8],
+    ) -> Vec<u8> {
+        pretty_record(&serde_json::from_slice::<T>(bytes).expect("read legacy record"))
+    }
+
+    /// The records an Enhanced Edition Trilogy installation of the fixture recipe writes, built
+    /// the same way the goldens in `tests/fixtures/compat/legacy-eet` were produced by the engine
+    /// before standalone games existed (commit 5106b53). Those goldens are never regenerated
+    /// from current code: they are the compatibility contract.
+    fn legacy_eet_records() -> Vec<(&'static str, Vec<u8>)> {
+        use crate::manifest::GameRoot;
+        use crate::receipt::{
+            FinalLogReceipt, FinalReceiptState, InstallReceipt, LogComponentReceipt,
+            ReceiptOutcome, ReceiptVersions, RECEIPT_SCHEMA_VERSION,
+        };
+        use crate::registry::{ManagedInstallRecord, REGISTRY_SCHEMA_VERSION};
+        use crate::session::{LedgerRecord, SessionEvent};
+
+        let frozen = frozen_recipe_fixture();
+        let payload = super::serialize_frozen_recipe(&frozen).expect("freeze fixture recipe");
+        let created = created_for_frozen_recipe(&frozen, payload.clone());
+        let ledger = pretty_record(&LedgerRecord {
+            sequence: 0,
+            previous_sha256: "0".repeat(64),
+            recorded_at: 1_761_400_000_000,
+            event: SessionEvent::Created(Box::new(created.clone())),
+        });
+        let review = serde_json::to_vec(&super::install_review_identity(
+            &created,
+            frozen.effective_display_name(),
+        ))
+        .expect("serialize review identity");
+        let engine_name = "Chriz Easy BG - abc123def456".to_owned();
+        let save_root = PathBuf::from(r"C:\Users\Player\Documents\Chriz Easy BG - abc123def456");
+        let launch_path = created.staged_bg2.join("Baldur.exe");
+        let component = |component| LogComponentReceipt {
+            tp2: "ee_fixpack/ee_fixpack.tp2".to_owned(),
+            language: 0,
+            component,
+        };
+        let receipt = pretty_record(&InstallReceipt {
+            schema_version: RECEIPT_SCHEMA_VERSION,
+            install_id: created.install_id.clone(),
+            attempt_id: created.attempt_id.clone(),
+            evidence_attempt_id: created.attempt_id.clone(),
+            managed_root: created.managed_root.clone(),
+            staged_bg1: created.staged_bg1.clone(),
+            staged_bg2: created.staged_bg2.clone(),
+            started_at_millis: 1_761_400_000_000,
+            completed_at_millis: 1_761_400_900_000,
+            outcome: ReceiptOutcome::Succeeded,
+            left_out: Vec::new(),
+            installed_plan: None,
+            decisions: Vec::new(),
+            versions: ReceiptVersions {
+                application: "0.1.0-alpha.20".to_owned(),
+                engine: "0.1.0".to_owned(),
+                manifest_schema: frozen.collection.schema,
+                recipe: "0.1.0-alpha.20".to_owned(),
+            },
+            source_games: frozen
+                .sources()
+                .into_iter()
+                .map(FrozenSource::receipt)
+                .collect(),
+            recipe_payload_sha256: created.recipe_payload_sha256.clone(),
+            recipe_envelope_sha256: created.recipe_envelope_sha256.clone(),
+            selection_sha256: created.selection_sha256.clone(),
+            normalized_selection: created.normalized_selection.clone(),
+            plan_sha256: created.plan_sha256.clone(),
+            plan: frozen.plan.clone(),
+            artifacts: Vec::new(),
+            weidu_tools: Vec::new(),
+            runs: Vec::new(),
+            final_state: Some(FinalReceiptState {
+                logs: vec![
+                    FinalLogReceipt {
+                        target: GameRoot::Bg1,
+                        sha256: "33".repeat(32),
+                        components: vec![component(0)],
+                    },
+                    FinalLogReceipt {
+                        target: GameRoot::Bg2,
+                        sha256: "44".repeat(32),
+                        components: vec![component(0), component(1)],
+                    },
+                ],
+                bg1_engine_name: Some(engine_name.clone()),
+                bg2_engine_name: engine_name.clone(),
+                managed_save_root: save_root.clone(),
+                launch_path: launch_path.clone(),
+                verification_summary: "exact frozen stack matched across 2 planned WeiDU runs"
+                    .to_owned(),
+            }),
+        });
+        let registry = pretty_record(&ManagedInstallRecord {
+            schema_version: REGISTRY_SCHEMA_VERSION,
+            install_id: created.install_id.clone(),
+            display_name: "Chriz Easy BG".to_owned(),
+            managed_root: created.managed_root.clone(),
+            recipe_version: "0.1.0-alpha.20".to_owned(),
+            recipe_sha256: created.recipe_payload_sha256.clone(),
+            engine_name,
+            managed_save_root: save_root,
+            launch_path,
+            receipt_sha256: "55".repeat(32),
+            completed_at_millis: 1_761_400_900_000,
+            recipe_id: None,
+        });
+        // The ledger fixture above records a literal envelope; the production envelope of the
+        // same payload has its own golden.
+        let envelope =
+            super::frozen_recipe_envelope(&sha256_bytes(&payload)).expect("build envelope");
+        vec![
+            ("recipe-envelope.json", envelope),
+            ("frozen-payload.json", payload),
+            ("ledger-record-0.json", ledger),
+            ("review-identity.json", review),
+            ("install-receipt.json", receipt),
+            ("registry-record.json", registry),
+        ]
+    }
+
+    #[test]
+    fn eet_installations_still_write_their_legacy_bytes_exactly() {
+        for (name, current) in legacy_eet_records() {
+            let golden = legacy_eet_golden(name);
+            assert!(
+                current == golden,
+                "{name} changed for an Enhanced Edition Trilogy installation:\n--- legacy\n{}\n--- current\n{}",
+                String::from_utf8_lossy(&golden),
+                String::from_utf8_lossy(&current)
+            );
+        }
+    }
+
+    #[test]
+    fn legacy_eet_records_read_back_and_reserialize_byte_for_byte() {
+        use crate::receipt::InstallReceipt;
+        use crate::registry::ManagedInstallRecord;
+        use crate::session::{LedgerRecord, SessionEvent};
+
+        let payload = legacy_eet_golden("frozen-payload.json");
+        let frozen: FrozenCliRecipe =
+            serde_json::from_slice(&payload).expect("read legacy frozen payload");
+        assert!(frozen.bg1.is_some());
+        assert!(frozen.recipe_id.is_none());
+        assert_eq!(frozen.collection.game, crate::manifest::CollectionGame::Eet);
+        assert_eq!(serde_json::to_vec(&frozen).unwrap(), payload);
+
+        let ledger = legacy_eet_golden("ledger-record-0.json");
+        assert_eq!(reserialized_pretty::<LedgerRecord>(&ledger), ledger);
+        let record: LedgerRecord = serde_json::from_slice(&ledger).unwrap();
+        let SessionEvent::Created(created) = record.event else {
+            panic!("legacy ledger record 0 is not a campaign creation");
+        };
+        assert!(!created.is_standalone());
+        assert_eq!(created.staged_bg1, Some(created.managed_root.join("bg1")));
+        validate_frozen_cli_recipe(&created, &frozen).expect("legacy campaign stays resumable");
+
+        let review = legacy_eet_golden("review-identity.json");
+        let identity: super::InstallReviewIdentity = serde_json::from_slice(&review).unwrap();
+        assert_eq!(serde_json::to_vec(&identity).unwrap(), review);
+
+        let receipt = legacy_eet_golden("install-receipt.json");
+        assert_eq!(reserialized_pretty::<InstallReceipt>(&receipt), receipt);
+        let registry = legacy_eet_golden("registry-record.json");
+        assert_eq!(
+            reserialized_pretty::<ManagedInstallRecord>(&registry),
+            registry
+        );
+    }
+
+    /// The shipped recipe freezes without any standalone-only key, so its payload digest is
+    /// unchanged by standalone support.
+    #[test]
+    fn shipped_eet_recipe_freezes_without_standalone_keys() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../recipes/curated-full-current");
+        let manifest = Manifest::load(&root).expect("load the shipped recipe");
+        assert_eq!(
+            manifest.collection.game,
+            crate::manifest::CollectionGame::Eet
+        );
+        let choices = selection_choices(
+            &manifest,
+            "chris-recommended",
+            "windows",
+            &SelectionOverrides::default(),
+        )
+        .expect("select the shipped preset");
+        let evaluation = evaluate(
+            &manifest,
+            &Selection {
+                platform: "windows".to_owned(),
+                choices,
+            },
+        )
+        .expect("evaluate the shipped preset");
+        let mut frozen = frozen_recipe_fixture();
+        frozen.collection = manifest.collection.clone();
+        frozen.artifacts = manifest.artifacts.clone();
+        frozen.mods = manifest.mods.clone();
+        frozen.presets = manifest.presets.clone();
+        frozen.profiles = super::load_profiles(&manifest.root).expect("load shipped profiles");
+        frozen.plan = evaluation.plan;
+        frozen.normalized_selection = evaluation.normalized_selection;
+        frozen.preset = "chris-recommended".to_owned();
+
+        let payload = super::serialize_frozen_recipe(&frozen).unwrap();
+        let value: serde_json::Value = serde_json::from_slice(&payload).unwrap();
+        assert!(value.get("recipe_id").is_none());
+        assert!(value["collection"].get("game").is_none());
+        assert!(value["bg1"].is_object());
+        let text = String::from_utf8(payload.clone()).unwrap();
+        assert!(!text.contains("\"standalone_role\""));
+        assert!(!text.contains("\"iwdee\""));
+        let reread: FrozenCliRecipe = serde_json::from_slice(&payload).unwrap();
+        assert_eq!(reread, frozen);
+        assert_eq!(serde_json::to_vec(&reread).unwrap(), payload);
+    }
+
+    fn standalone_frozen_recipe() -> FrozenCliRecipe {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/standalone-iwdee");
+        let manifest = Manifest::load(&root).expect("load standalone recipe fixture");
+        let choices = selection_choices(
+            &manifest,
+            "recommended",
+            "windows",
+            &SelectionOverrides::default(),
+        )
+        .expect("select standalone fixture");
+        let evaluation = evaluate(
+            &manifest,
+            &Selection {
+                platform: "windows".to_owned(),
+                choices,
+            },
+        )
+        .expect("evaluate standalone fixture");
+        FrozenCliRecipe {
+            release_version: Some("0.1.0".to_owned()),
+            manual_checkpoints: Vec::new(),
+            application_version: None,
+            schema: CLI_FROZEN_RECIPE_SCHEMA,
+            display_name: Some("Chriz Easy IWD".to_owned()),
+            collection: manifest.collection,
+            artifacts: manifest.artifacts,
+            mods: manifest.mods,
+            presets: manifest.presets,
+            profiles: GameProfiles::load(
+                Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/games/iwdee-profiles"),
+            )
+            .expect("load IWD:EE profile fixture"),
+            plan: evaluation.plan,
+            normalized_selection: evaluation.normalized_selection,
+            preset: "recommended".to_owned(),
+            bg1: None,
+            bg2: FrozenSource {
+                role: GameRole::Iwdee,
+                storefront: Storefront::Steam,
+                root: PathBuf::from(r"C:\Legacy IWD"),
+                build: Some("2.7.3.0".to_owned()),
+                fingerprint: "33".repeat(32),
+            },
+            recipe_id: Some("chriz-easy-iwd".to_owned()),
+        }
+    }
+
+    fn standalone_created(frozen: &FrozenCliRecipe) -> CampaignCreated {
+        let mut created =
+            created_for_frozen_recipe(frozen, super::serialize_frozen_recipe(frozen).unwrap());
+        created.source_games.standalone_role = Some(GameRole::Iwdee);
+        created
+    }
+
+    #[test]
+    fn standalone_frozen_recipe_round_trips_and_validates() {
+        let frozen = standalone_frozen_recipe();
+        let payload = super::serialize_frozen_recipe(&frozen).unwrap();
+        let value: serde_json::Value = serde_json::from_slice(&payload).unwrap();
+        assert!(value.get("bg1").is_none());
+        assert_eq!(value["recipe_id"], "chriz-easy-iwd");
+        assert_eq!(value["collection"]["game"], "iwdee");
+        assert_eq!(value["bg2"]["role"], "iwdee");
+        let reread: FrozenCliRecipe = serde_json::from_slice(&payload).unwrap();
+        assert_eq!(reread, frozen);
+        assert_eq!(reread.targets(), vec![crate::manifest::GameRoot::Bg2]);
+        assert_eq!(reread.sources().len(), 1);
+
+        let created = standalone_created(&frozen);
+        assert!(created.staged_bg1.is_none());
+        assert!(created.source_games.bg1.is_none());
+        validate_frozen_cli_recipe(&created, &frozen).expect("standalone campaign validates");
+    }
+
+    #[test]
+    fn standalone_frozen_recipe_rejects_mixed_source_identities() {
+        let frozen = standalone_frozen_recipe();
+        let created = standalone_created(&frozen);
+
+        let mut eet_campaign = created.clone();
+        eet_campaign.source_games.standalone_role = None;
+        let mut with_bg1 = frozen.clone();
+        with_bg1.bg1 = frozen_recipe_fixture().bg1;
+        let mut with_bg1_campaign = created.clone();
+        with_bg1_campaign.source_games.bg1 = Some("11".repeat(32));
+        let mut wrong_role = frozen.clone();
+        wrong_role.bg2.role = GameRole::Bg2ee;
+
+        for (case, campaign, recipe) in [
+            (
+                "campaign without the standalone role",
+                &eet_campaign,
+                &frozen,
+            ),
+            ("recipe with a BG1 source", &with_bg1_campaign, &with_bg1),
+            ("source with a Baldur's Gate role", &created, &wrong_role),
+        ] {
+            let error = validate_frozen_cli_recipe(campaign, recipe)
+                .expect_err(&format!("{case} must not resume"));
+            assert_eq!(error.code(), "resume_unavailable", "{case}");
+        }
+
+        let eet = frozen_recipe_fixture();
+        let eet_created =
+            created_for_frozen_recipe(&eet, super::serialize_frozen_recipe(&eet).unwrap());
+        let mut eet_with_id = eet.clone();
+        eet_with_id.recipe_id = Some("chriz-easy-bg".to_owned());
+        let error = validate_frozen_cli_recipe(&eet_created, &eet_with_id)
+            .expect_err("an EET recipe never carries a recipe id");
+        assert!(error.message.contains("recipe id"), "{error:?}");
+    }
+
+    #[test]
+    fn launch_falls_back_to_the_frozen_game_executable() {
+        assert_eq!(
+            frozen_recipe_fixture().fallback_executable().unwrap(),
+            "Baldur.exe"
+        );
+        let frozen = standalone_frozen_recipe();
+        assert_eq!(frozen.fallback_executable().unwrap(), "icewind.exe");
+    }
+
+    #[test]
+    fn less_tested_iwd_sources_finalize_with_the_game_or_eeex_launcher() {
+        let temp = tempfile::tempdir().unwrap();
+        let vanilla = temp.path().join("vanilla");
+        let eeex = temp.path().join("eeex");
+        std::fs::create_dir(&vanilla).unwrap();
+        std::fs::create_dir(&eeex).unwrap();
+        std::fs::write(vanilla.join("icewind.exe"), b"fixture executable").unwrap();
+        std::fs::write(eeex.join("InfinityLoader.exe"), b"fixture loader").unwrap();
+        let mut frozen = standalone_frozen_recipe();
+        let mut eeex_plan = frozen.plan.clone();
+        eeex_plan.runs[0].mod_id = "eeex".to_owned();
+        for store in [
+            Storefront::Steam,
+            Storefront::Gog,
+            Storefront::Beamdog,
+            Storefront::Microsoft,
+            Storefront::Other,
+        ] {
+            for build in [Some("2.7.3.0"), Some("2.6.6.0"), Some("unreviewed"), None] {
+                frozen.bg2.storefront = store;
+                frozen.bg2.build = build.map(str::to_owned);
+                let fallback = frozen.fallback_executable().unwrap();
+                assert_eq!(fallback, "icewind.exe", "{store:?} {build:?}");
+                assert_eq!(
+                    super::verified_launch_path(&frozen.plan, &vanilla, &fallback, "IWD").unwrap(),
+                    vanilla.join("icewind.exe")
+                );
+                assert_eq!(
+                    super::verified_launch_path(&eeex_plan, &eeex, &fallback, "IWD").unwrap(),
+                    eeex.join("InfinityLoader.exe")
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn application_data_directory_defaults_and_accepts_only_plain_folder_names() {
+        // The override is process-global, so library tests only read the default here; the CLI
+        // end-to-end test sets it through `--app-data-directory` in its own process.
+        assert_eq!(super::application_data_directory(), "Chriz BG Collection");
+        for accepted in [
+            "Chriz Easy IWD",
+            "Chriz BG Collection",
+            "IWD.v1",
+            "COMX",
+            "CON1",
+            "A\u{20ac}",
+            // Only superscript one to three are reserved, and only right after COM or LPT.
+            "COM\u{2074}",
+            "COM\u{b9}x",
+            "\u{b9}COM",
+            "Ich\u{b9}",
+            "Eisw\u{fc}ste",
+        ] {
+            super::validate_application_data_directory(accepted)
+                .unwrap_or_else(|error| panic!("{accepted:?} rejected: {error:?}"));
+        }
+        for rejected in [
+            "",
+            " ",
+            ".",
+            "..",
+            "trailing.",
+            "trailing ",
+            " leading",
+            r"nested\folder",
+            "nested/folder",
+            "drive:",
+            "CON",
+            "nul.txt",
+            "COM1",
+            "lpt9",
+            "COM0",
+            "LPT0.dat",
+            // Windows also reserves COM and LPT with superscript digits one to three.
+            "COM\u{b9}",
+            "com\u{b2}",
+            "COM\u{b3}.txt",
+            "LPT\u{b9}",
+            "lpt\u{b2}.log",
+            "LPT\u{b3} ",
+            "CONIN$",
+            "conout$",
+            "CONIN$.txt",
+            "tab\there",
+            &"x".repeat(65),
+        ] {
+            let error = super::validate_application_data_directory(rejected)
+                .expect_err(&format!("{rejected:?} must be rejected"));
+            assert_eq!(error.code(), "application_data_unavailable", "{rejected:?}");
+        }
+    }
+
     /// A deleted download cache is created again only for a campaign that this request may
     /// resume, only where its recorded path still leads to itself, and only where the campaign
     /// checks accept a cache, also next to source games that moved behind a link. Refusals
@@ -8391,14 +9390,14 @@ mod tests {
             let managed = root.join("managed");
             let elsewhere = root.join("elsewhere");
             let mut frozen = frozen_recipe_fixture();
-            frozen.bg1.root = match case {
+            frozen.bg1.as_mut().unwrap().root = match case {
                 "linked-source" => root.join("old-bg1"),
                 "source-behind-link" => root.join("games").join("bg1"),
                 _ => root.join("bg1-source"),
             };
             frozen.bg2.root = root.join("bg2-source");
             let parent = match case {
-                "inside-source" => frozen.bg1.root.clone(),
+                "inside-source" => frozen.bg1.as_ref().unwrap().root.clone(),
                 "inside-managed" => managed.clone(),
                 "linked-ancestor" => root.join("downloads").join("nested"),
                 "source-behind-link" => root.join("downloads").join("bg1"),
@@ -8407,14 +9406,14 @@ mod tests {
             std::fs::create_dir_all(&managed).unwrap();
             std::fs::create_dir_all(&frozen.bg2.root).unwrap();
             if !matches!(case, "linked-source" | "source-behind-link") {
-                std::fs::create_dir_all(&frozen.bg1.root).unwrap();
+                std::fs::create_dir_all(&frozen.bg1.as_ref().unwrap().root).unwrap();
             }
             std::fs::create_dir_all(parent.join("cache")).unwrap();
             let mut created =
                 created_for_frozen_recipe(&frozen, serde_json::to_vec(&frozen).unwrap());
             created.managed_root = managed.clone();
             created.cache_root = parent.join("cache");
-            created.staged_bg1 = managed.join("bg1");
+            created.staged_bg1 = Some(managed.join("bg1"));
             created.staged_bg2 = managed.join("game");
             let store =
                 SessionStore::create(&managed, SessionEvent::Created(Box::new(created.clone())))
@@ -8430,7 +9429,9 @@ mod tests {
                 }
                 // The BG1 game moved to the folder that held the cache, and its recorded folder
                 // now links there.
-                "linked-source" => link(&frozen.bg1.root, &root.join("downloads")),
+                "linked-source" => {
+                    link(&frozen.bg1.as_ref().unwrap().root, &root.join("downloads"))
+                }
                 // A folder above the BG1 game links to the folder that holds it and the cache.
                 "source-behind-link" => link(&root.join("games"), &root.join("downloads")),
                 _ => {}
@@ -9173,7 +10174,7 @@ mod tests {
             GuardedCliDependencies::new(
                 &created,
                 &frozen,
-                candidate.clone(),
+                Some(candidate.clone()),
                 candidate.clone(),
                 root.join("app-data"),
                 &sink,

@@ -1,0 +1,131 @@
+id = "stratagems"
+artifact_id = "stratagems-35.21"
+name = "Sword Coast Stratagems"
+tp2 = "stratagems/setup-stratagems.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 100
+name = "Install in batch mode (ask about all components before starting installation). DO NOT USE WITH PROJECT INFINITY."
+
+[[components]]
+id = 1600
+name = "Use Baldur's Gate-style Insect Plague and Creeping Doom instead of Icewind Dale versions"
+
+[[components]]
+id = 1610
+name = "Use Baldur's Gate-style Mordenkainen's Sword in addition to Icewind Dale version"
+
+[[components]]
+id = 2000
+name = "Install all spell tweaks (if you don't select this, you will be given a chance to choose by category)"
+
+[[components]]
+id = 2010
+name = "Core Stratagems spell-system changes (installed by default by any AI component)"
+
+[[components]]
+id = 2020
+name = "Baldur's Gate-inspired tweaks to Icewind Dale spells"
+
+[[components]]
+id = 2030
+name = "Changes to Restoration"
+
+[[components]]
+id = 2040
+name = "Changes to shapeshift spells"
+
+[[components]]
+id = 2060
+name = "Rebalancings of slightly-too-powerful spells"
+
+[[components]]
+id = 2070
+name = "Spell school changes"
+
+[[components]]
+id = 2080
+name = "Spells increased in power"
+
+[[components]]
+id = 2500
+name = "Add 9 new arcane spells"
+
+[[components]]
+id = 2510
+name = "Add 6 new divine spells (some borrowed from Divine Remix)"
+
+[[components]]
+id = 2520
+name = "Revised elementals and elemental summoning"
+
+[[components]]
+id = 3510
+name = "Wider availability of wizard spell scrolls in Icewind Dale"
+
+[[components]]
+id = 3540
+name = "Reduce the power of Inquisitors' Dispel Magic -> Inquisitors dispel at 1.5 x their level (not twice their level)"
+
+[[components]]
+id = 3541
+name = "Reduce the power of Inquisitors' Dispel Magic -> Inquisitors dispel at their level (not twice their level)"
+
+[[components]]
+id = 4030
+name = "Improved shapeshifting"
+
+[[components]]
+id = 4115
+name = "Thieves assign skill points in multiples of five"
+
+[[components]]
+id = 4140
+name = "Revised inn rooms: more expensive, more benefits"
+
+[[components]]
+id = 4250
+name = "Make spell sequencers and contingencies into innate abilities"
+
+[[components]]
+id = 5000
+name = "Ease-of-use party AI"
+
+[[components]]
+id = 5900
+name = "Initialise AI components (required for all tactical and AI components)"
+
+[[components]]
+id = 6020
+name = "Smarter general AI and better calls for help"
+
+[[components]]
+id = 6030
+name = "Smarter Mages"
+
+[[components]]
+id = 6040
+name = "Smarter Priests"
+
+[[components]]
+id = 6100
+name = "Potions for NPCs"
+
+[[components]]
+id = 6510
+name = "Improved fiends and celestials"
+
+[[components]]
+id = 6540
+name = "Smarter dragons"
+
+[[components]]
+id = 6550
+name = "Smarter beholders"
+
+[[components]]
+id = 6700
+name = "Revised Icewind Dale Undead"

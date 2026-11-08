@@ -1,0 +1,32 @@
+id = "iwdfix"
+name = "Icewind Dale fixes"
+version = "2026.08"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://example.invalid/iwd-fix.zip"
+reference = "2026.08"
+expected_filename = "iwd-fix.zip"
+expected_length = 1
+sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+redirect_hosts = ["downloads.example.invalid"]
+
+[archive]
+kind = "zip"
+root_rule = "direct-or-single-wrapper"
+publish_roots = ["IWD_Fix"]
+tp2_paths = ["IWD_Fix/IWD_Fix.tp2"]
+
+[archive.limits]
+max_depth = 32
+max_entries = 100000
+max_entry_uncompressed_bytes = 2147483648
+max_total_uncompressed_bytes = 8589934592
+max_compression_ratio = 1000
+
+[provenance]
+homepage = "https://example.invalid/iwd-fix"
+license = "MIT"
+url = "https://example.invalid/iwd-fix/releases/2026.08"
+reviewed_on = "2026-09-03"

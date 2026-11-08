@@ -1,5 +1,6 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { decodeOperationProgress } from "./operation-feedback";
+import { flavor } from "./flavor";
 
 import type {
   BackendStatus,
@@ -17,6 +18,7 @@ import type {
   GameLogFile,
   GameLogStatus,
   GameRole,
+  HotpatchPreview,
   InstallationDefaults,
   InstallationRemovalPreview,
   InstallationRemovalResult,
@@ -116,6 +118,15 @@ export interface Backend {
   applyInstallPatch?(installId: string, reviewToken: string, fullBackup: boolean, saveBackup: boolean, onProgress?: (progress: OperationProgress) => void): Promise<PatchPreview>;
   undoInstallPatch?(installId: string, onProgress?: (progress: OperationProgress) => void): Promise<PatchPreview>;
   restoreInstallPatch?(installId: string, onProgress?: (progress: OperationProgress) => void): Promise<PatchPreview>;
+  inspectHotpatch?(installId: string): Promise<HotpatchPreview>;
+  applyHotpatch?(installId: string, reviewToken: string, fullBackup: boolean, saveBackup: boolean, onProgress?: (progress: OperationProgress) => void): Promise<HotpatchPreview>;
+  /** Undo the latest hotpatch (`undo`), or finish restoring one that did not finish. */
+  restoreHotpatch?(installId: string, undo: boolean, onProgress?: (progress: OperationProgress) => void): Promise<HotpatchPreview>;
+  /** Check one whole-mod update, such as BuffBot, for an installation. Never changes the game. */
+  inspectModUpdate?(installId: string, modId: string): Promise<ModUpdatePreview>;
+  applyModUpdate?(installId: string, modId: string, reviewToken: string, fullBackup: boolean, saveBackup: boolean, onProgress?: (progress: OperationProgress) => void): Promise<ModUpdatePreview>;
+  /** Undo the latest change when it is this mod's update (`undo`), or finish restoring a change that did not finish. */
+  restoreModUpdate?(installId: string, modId: string, undo: boolean, onProgress?: (progress: OperationProgress) => void): Promise<ModUpdatePreview>;
 }
 
 export type InvokeCommand = (
@@ -133,7 +144,31 @@ type BootstrapWire = {
   readonly startup_install_id: string | null;
   readonly profiles?: BackendStatus["profiles"];
   readonly selected_profile?: string;
+  readonly collection?: {
+    readonly flavor: string;
+    readonly game: string;
+    readonly product_name: string;
+    readonly sources: readonly { readonly slot: string; readonly role: string; readonly label: string }[];
+  } | null;
 };
+
+function projectStatus(status: BootstrapWire): BackendStatus {
+  return {
+    mode: status.mode,
+    applicationVersion: status.application_version,
+    engineVersion: status.engine_version,
+    recipeVersion: status.recipe_version,
+    startupInstallId: status.startup_install_id,
+    profiles: status.profiles,
+    selectedProfile: status.selected_profile,
+    ...(status.collection == null ? {} : { collection: {
+      flavor: status.collection.flavor,
+      game: status.collection.game,
+      productName: status.collection.product_name,
+      sources: status.collection.sources,
+    } }),
+  };
+}
 
 type GameCandidateWire = {
   readonly id: string;
@@ -454,25 +489,11 @@ export class NativeBackend implements Backend {
   }
 
   async getStatus(): Promise<BackendStatus> {
-    const status = await this.#command<BootstrapWire>("bootstrap");
-    return {
-      mode: status.mode,
-      applicationVersion: status.application_version,
-      engineVersion: status.engine_version,
-      recipeVersion: status.recipe_version,
-      startupInstallId: status.startup_install_id,
-      profiles: status.profiles,
-      selectedProfile: status.selected_profile,
-    };
+    return projectStatus(await this.#command<BootstrapWire>("bootstrap"));
   }
 
   async selectProfile(profileId: string): Promise<BackendStatus> {
-    const status = await this.#command<BootstrapWire>("select_profile", { profileId });
-    return {
-      mode: status.mode, applicationVersion: status.application_version, engineVersion: status.engine_version,
-      recipeVersion: status.recipe_version, startupInstallId: status.startup_install_id,
-      profiles: status.profiles, selectedProfile: status.selected_profile,
-    };
+    return projectStatus(await this.#command<BootstrapWire>("select_profile", { profileId }));
   }
 
   getInstallationDefaults(): Promise<InstallationDefaults> {
@@ -803,6 +824,18 @@ export class NativeBackend implements Backend {
     return this.#commandWithProgress("restore_install_patch", { installId }, onProgress);
   }
 
+  inspectHotpatch(installId: string): Promise<HotpatchPreview> {
+    return this.#command("inspect_hotpatch", { installId });
+  }
+
+  applyHotpatch(installId: string, reviewToken: string, fullBackup: boolean, saveBackup: boolean, onProgress?: (progress: OperationProgress) => void): Promise<HotpatchPreview> {
+    return this.#commandWithProgress("apply_hotpatch", { installId, reviewToken, fullBackup, saveBackup }, onProgress);
+  }
+
+  restoreHotpatch(installId: string, undo: boolean, onProgress?: (progress: OperationProgress) => void): Promise<HotpatchPreview> {
+    return this.#commandWithProgress("restore_hotpatch", { installId, undo }, onProgress);
+  }
+
   inspectModUpdate(installId: string, modId: string): Promise<ModUpdatePreview> {
     return this.#command("inspect_mod_update", { installId, modId });
   }
@@ -859,14 +892,45 @@ const baseControls = [
   { id: "blocked-restoration", title: "Experimental quest restoration", description: "A visible recipe choice that is not ready for this release.", category: "Story", decision: "optional", readiness: "blocked", parent: null, selected: false, interactive: false, unavailableReason: "Deferred until its installer can be reproduced safely.", inputs: [] },
 ] as const;
 
+/** The Icewind Dale fixture: one clean game copy and a small recipe in the IWD collection's shape. */
+const iwdPhases: readonly PhaseSummary[] = [
+  { id: "preparation", title: "Prepare a clean game copy", detail: "Verify the source and create a separate workspace." },
+  { id: "main", title: "Install the collection", detail: "Install curated content and rules in order." },
+];
+
+const iwdControl = (
+  id: string, title: string, description: string, category: string,
+  decision: FeatureControl["decision"], selected: boolean,
+): FeatureControl => ({
+  id, title, description, category, decision, readiness: "ready", parent: null, selected,
+  interactive: decision !== "mandatory", unavailableReason: null, inputs: [],
+});
+
+const iwdControls: readonly FeatureControl[] = [
+  iwdControl("mod:eefixpack", "Enhanced Edition Fixpack", "Fixes for the game itself, installed before every other mod.", "core", "mandatory", true),
+  iwdControl("mod:eeex", "EEex", "Extends the game engine for the mods and tweaks that need it.", "core", "mandatory", true),
+  iwdControl("mod:cdtweaks", "The Tweaks Anthology", "Quality-of-life and rules tweaks from the collection's selection.", "convenience", "default", true),
+  iwdControl("mod:bubb-spell-menu", "Bubb's Spell Menu Extended", "A searchable menu for spells and special abilities.", "convenience", "default", true),
+  iwdControl("mod:stratagems", "Sword Coast Stratagems", "Smarter enemy tactics and spellcasting.", "difficulty", "default", true),
+  iwdControl("mod:minervanpc", "Minerva NPC", "An additional companion who can join your party.", "npcs", "optional", false),
+  iwdControl("mod:karihinpc", "Karihi NPC", "An additional companion who can join your party.", "npcs", "optional", false),
+];
+
+const iwdCandidate: GameCandidate = {
+  id: "iwd-fresh", label: "IWD:EE — clean", path: "C:\\Fixture\\IWDEE", storefront: "steam", build: "2.7.3.0",
+  freshness: "fresh", eligible: true, findings: ["Clean supported installation."],
+};
+
 function wait(milliseconds: number): Promise<void> {
   return new Promise((resolve) => globalThis.setTimeout(resolve, milliseconds));
 }
 
 export class FixtureBackend implements Backend {
   readonly #patches = new Map<string, PatchPreview>();
-  readonly #modUpgrades = new Map<string, ModUpgradePreview>();
+  readonly #hotpatches = new Map<string, HotpatchPreview>();
+  /** Whole-mod update results by installation and mod. */
   readonly #modUpdates = new Map<string, ModUpdatePreview>();
+  readonly #modUpgrades = new Map<string, ModUpgradePreview>();
   /** Installations whose game log is on. */
   readonly #gameLogs = new Set<string>();
   #patchReviewSequence = 0;
@@ -881,10 +945,22 @@ export class FixtureBackend implements Backend {
   }
 
   getStatus(): Promise<BackendStatus> {
-    return Promise.resolve({ mode: "fixture", applicationVersion: "0.1.0-alpha.1", engineVersion: "0.1.0", recipeVersion: "2026.09-fixture", startupInstallId: null });
+    return Promise.resolve({ mode: "fixture", applicationVersion: "0.1.0-alpha.1", engineVersion: "0.1.0", recipeVersion: "2026.09-fixture", startupInstallId: null,
+      ...(flavor.id === "iwd" ? { collection: {
+        flavor: "iwd", game: "iwdee", productName: flavor.productName,
+        sources: flavor.sources.map(source => ({ slot: source.slot, role: source.role, label: source.label })),
+      } } : {}) });
   }
 
   discoverGames(): Promise<GameDiscovery> {
+    if (flavor.id === "iwd") {
+      return Promise.resolve({
+        selectedBg1Id: "",
+        selectedBg2Id: iwdCandidate.id,
+        bg1Candidates: [],
+        bg2Candidates: [{ ...iwdCandidate, path: this.#options.textOverrides?.gamePath ?? iwdCandidate.path }],
+      });
+    }
     return Promise.resolve({
       selectedBg1Id: "bg1-fresh",
       selectedBg2Id: "bg2-fresh",
@@ -907,13 +983,13 @@ export class FixtureBackend implements Backend {
 
   getInstallationDefaults(): Promise<InstallationDefaults> {
     return Promise.resolve({
-      name: "Chriz Easy BG",
-      path: "C:\\Users\\Player\\Games\\Chriz Easy BG",
+      name: flavor.productName,
+      path: `C:\\Users\\Player\\Games\\${flavor.productName}`,
     });
   }
 
   async chooseGameFolder(role: GameRole): Promise<GameCandidate | null> {
-    const path = role === "bgee_sod" ? "C:\\Fixture\\Browsed BGEE" : "C:\\Fixture\\Browsed BG2EE";
+    const path = role === "bgee_sod" ? "C:\\Fixture\\Browsed BGEE" : role === "iwdee" ? "C:\\Fixture\\Browsed IWDEE" : "C:\\Fixture\\Browsed BG2EE";
     return this.inspectGamePath(role, path);
   }
 
@@ -922,7 +998,7 @@ export class FixtureBackend implements Backend {
     const candidates = role === "bgee_sod" ? discovery.bg1Candidates : discovery.bg2Candidates;
     return candidates.find((candidate) => candidate.path === path) ?? {
       id: `fixture-browsed-${role}`,
-      label: role === "bgee_sod" ? "BG:EE + SoD — browsed fixture" : "BGII:EE — browsed fixture",
+      label: role === "bgee_sod" ? "BG:EE + SoD — browsed fixture" : role === "iwdee" ? "IWD:EE — browsed fixture" : "BGII:EE — browsed fixture",
       path,
       storefront: "steam",
       build: null,
@@ -933,7 +1009,8 @@ export class FixtureBackend implements Backend {
   }
 
   chooseDestinationFolder(bg1CandidateId: string, bg2CandidateId: string): Promise<DestinationEvaluation | null> {
-    return this.inspectDestination("D:\\Fixture Campaigns\\Browsed Chriz EET Alpha", bg1CandidateId, bg2CandidateId);
+    const browsed = flavor.id === "iwd" ? `D:\\Fixture Campaigns\\Browsed ${flavor.productName}` : "D:\\Fixture Campaigns\\Browsed Chriz EET Alpha";
+    return this.inspectDestination(browsed, bg1CandidateId, bg2CandidateId);
   }
 
   inspectDestination(path: string, _bg1CandidateId: string, _bg2CandidateId: string): Promise<DestinationEvaluation> {
@@ -947,9 +1024,9 @@ export class FixtureBackend implements Backend {
       path: normalized,
       safe,
       title: safe ? "Ready to install" : "Choose a separate install location",
-      detail: safe ? note ?? "The source games and their saves will remain untouched." : "Choose a complete folder path, such as D:\\Games\\Chriz Easy BG.",
+      detail: safe ? note ?? (flavor.id === "iwd" ? "The source game and its saves will remain untouched." : "The source games and their saves will remain untouched.") : "Choose a complete folder path, such as D:\\Games\\Chriz Easy BG.",
       ...(safe && note !== undefined ? { note } : {}),
-      requiredSpace: "62 GB",
+      requiredSpace: flavor.id === "iwd" ? "9 GB" : "62 GB",
       availableSpace: "184 GB",
     });
   }
@@ -958,6 +1035,16 @@ export class FixtureBackend implements Backend {
     const call = this.#evaluationCall++;
     const delay = this.#options.evaluationDelays?.[call] ?? 0;
     if (delay > 0) await wait(delay);
+    if (flavor.id === "iwd") {
+      const controls = iwdControls.map((control) => ({ ...control, selected: control.decision === "mandatory" || (selection.features[control.id] ?? control.selected) }));
+      return {
+        view: { categories: ["core", "convenience", "difficulty", "npcs"], controls },
+        normalizedSelection: { platform: selection.platform, features: Object.fromEntries(controls.map((control) => [control.id, control.selected])), inputs: selection.inputs },
+        findings: [],
+        plan: { phases: iwdPhases },
+        selectedChoiceCount: controls.filter((control) => control.selected).length,
+      };
+    }
     const controls = baseControls.map((control) => ({
       ...control,
       title: control.id === "companion-conversations" ? this.#options.textOverrides?.featureTitle ?? control.title : control.title,
@@ -979,13 +1066,13 @@ export class FixtureBackend implements Backend {
     destination: string,
     bg1CandidateId: string,
     bg2CandidateId: string,
+    _manualBreakpoints?: readonly ManualBreakpoint[],
   ): Promise<FrozenReview> {
     const evaluation = await this.evaluateBuild(selection);
     const discovery = await this.discoverGames();
-    const gameLabels = [
-      discovery.bg1Candidates.find((candidate) => candidate.id === bg1CandidateId)?.label ?? "Not selected",
-      discovery.bg2Candidates.find((candidate) => candidate.id === bg2CandidateId)?.label ?? "Not selected",
-    ];
+    const gameLabels = flavor.sources.map(source => (source.slot === "bg1"
+      ? discovery.bg1Candidates.find((candidate) => candidate.id === bg1CandidateId)
+      : discovery.bg2Candidates.find((candidate) => candidate.id === bg2CandidateId))?.label ?? "Not selected");
     return { reviewToken: "fixture-review-token", digest: "fixture-review-8d6d75", displayName, destination, gameLabels, evaluation };
   }
 
@@ -1056,12 +1143,12 @@ export class FixtureBackend implements Backend {
     if (this.#buildIndex < 4 || this.#removedInstallations.has("fixture-install")) return Promise.resolve([]);
     return Promise.resolve([{
       id: "fixture-install",
-      name: this.#options.textOverrides?.campaignName ?? "Chriz Easy BG",
-      path: "D:\\Fixture Installations\\Chriz Easy BG",
+      name: this.#options.textOverrides?.campaignName ?? flavor.productName,
+      path: `D:\\Fixture Installations\\${flavor.productName}`,
       status: "Ready to play",
-      receiptPath: "D:\\Fixture Installations\\Chriz Easy BG\\install-receipt.json",
-      launchPath: "D:\\Fixture Installations\\Chriz Easy BG\\InfinityLoader.exe",
-      profilePath: "C:\\Users\\Player\\Documents\\Chriz Easy BG - 0123456789ab",
+      receiptPath: `D:\\Fixture Installations\\${flavor.productName}\\install-receipt.json`,
+      launchPath: `D:\\Fixture Installations\\${flavor.productName}\\InfinityLoader.exe`,
+      profilePath: `C:\\Users\\Player\\Documents\\${flavor.productName} - 0123456789ab`,
       completedAtMillis: 1_788_451_200_000,
       available: true,
       resumable: false,
@@ -1102,7 +1189,7 @@ export class FixtureBackend implements Backend {
     this.#removalTokens.set(token, install.id);
     return { installId, displayName: install.name, managedRoot: install.path,
       action: install.status.toLowerCase().includes("folder moved") || install.status.toLowerCase().includes("not found") ? "forget" : "delete",
-      preservedSavePath: "C:\\Users\\Player\\Documents\\Chriz Easy BG", confirmationToken: token };
+      preservedSavePath: `C:\\Users\\Player\\Documents\\${flavor.productName}`, confirmationToken: token };
   }
 
   async removeInstallation(installId: string, confirmationToken: string): Promise<InstallationRemovalResult> {
@@ -1122,7 +1209,7 @@ export class FixtureBackend implements Backend {
   }
 
   createDesktopShortcut(_installId: string): Promise<{ readonly path: string }> {
-    return Promise.resolve({ path: "C:\\Users\\Player\\Desktop\\Chriz Easy BG.lnk" });
+    return Promise.resolve({ path: `C:\\Users\\Player\\Desktop\\${flavor.productName}.lnk` });
   }
 
   installRadar(_installId: string): Promise<void> {
@@ -1130,6 +1217,7 @@ export class FixtureBackend implements Backend {
   }
 
   getUpdates(): Promise<UpdateSummary> {
+    if (flavor.id === "iwd") return this.#unconfiguredUpdates();
     return Promise.resolve({
       checkedAt: "2026-09-04T12:00:00Z",
       networkState: "online",
@@ -1137,6 +1225,24 @@ export class FixtureBackend implements Backend {
       recipe: { state: "up-to-date", currentVersion: "0.1.0-alpha.1", availableVersion: null, disposition: "up-to-date", detail: "The fixture recipe is current.", changes: [] },
       managedCopies: [{ installId: "fixture-install", name: "Chriz Easy BG", path: "D:\\Fixture Installations\\Chriz Easy BG", installedRecipeVersion: "0.1.0-alpha.1", state: "up-to-date", detail: "This installation uses the current recipe." }],
     });
+  }
+
+  /** The standalone collection has no update channel; mirrors the native unconfigured update center. */
+  async #unconfiguredUpdates(): Promise<UpdateSummary> {
+    const copies = await this.listManagedInstallations();
+    return {
+      checkedAt: null,
+      networkState: "unconfigured",
+      application: { state: "unavailable", currentVersion: "0.1.0-alpha.1", availableVersion: null, detail: "The application update key and endpoint must be supplied at release-time." },
+      recipe: { state: "unavailable", currentVersion: "bundled", availableVersion: null, disposition: "unknown-applicability", detail: "No signed channel is configured; the bundled trusted recipe was kept.", changes: [] },
+      managedCopies: copies.map(copy => ({
+        installId: copy.id, name: copy.name, path: copy.path, installedRecipeVersion: copy.recipeVersion ?? null,
+        state: !copy.available && !copy.resumable ? "stale" : "unknown",
+        detail: !copy.available && !copy.resumable
+          ? "The registered folder moved or changed; no update action is available."
+          : "No signed recipe channel is configured, so update applicability is unknown.",
+      })),
+    };
   }
 
   installAppUpdate(_version: string): Promise<void> {
@@ -1223,6 +1329,45 @@ export class FixtureBackend implements Backend {
     throw new Error("No interrupted fixture patch needs recovery.");
   }
 
+  async inspectHotpatch(installId: string): Promise<HotpatchPreview> {
+    const current = this.#hotpatches.get(installId);
+    if (current) return current;
+    const copy = (await this.getUpdates()).managedCopies.find(entry => entry.installId === installId);
+    if (!copy) throw new Error("Unknown fixture installation.");
+    const preview: HotpatchPreview = {
+      installId, state: "available", detail: "Preview only: Belhifet fights with new tactics.",
+      baseRecipeVersion: copy.installedRecipeVersion ?? "Unknown",
+      hotpatch: {
+        id: "fixture-belhifet", title: "Belhifet fight", summary: "Preview only: Belhifet fights with new tactics.",
+        changes: [{ title: "Belhifet", summary: "New tactics and a fairer fight.", saveApplicability: "before-area-visit", conditionNote: "Games that have not reached the final fight get it." }],
+      },
+      applied: [], refusals: [], notes: ["Your own choices in Tweaks Anthology do not affect hotpatches."],
+      reviewToken: `fixture-hotpatch-${installId}`, canUndo: false, undoTitle: null, canRestore: false,
+      fullBackupBytes: "4294967296", saveBackupBytes: "52428800", availableBytes: "107374182400",
+      backupPath: "C:\\Fixture\\Hotpatch-Backups",
+    };
+    this.#hotpatches.set(installId, preview);
+    return preview;
+  }
+
+  async applyHotpatch(installId: string, reviewToken: string, _fullBackup: boolean, _saveBackup: boolean): Promise<HotpatchPreview> {
+    const preview = this.#hotpatches.get(installId);
+    if (!preview || preview.state !== "available" || preview.reviewToken !== reviewToken || !preview.hotpatch) throw new Error("Check this fixture installation again before applying.");
+    const applied: HotpatchPreview = {
+      ...preview, state: "up-to-date", detail: "Every hotpatch for your collection version is installed.", hotpatch: null,
+      applied: [{ id: preview.hotpatch.id, title: preview.hotpatch.title }], reviewToken: null, canUndo: true, undoTitle: preview.hotpatch.title,
+    };
+    this.#hotpatches.set(installId, applied);
+    return applied;
+  }
+
+  async restoreHotpatch(installId: string, undo: boolean): Promise<HotpatchPreview> {
+    const preview = this.#hotpatches.get(installId);
+    if (!undo || !preview?.canUndo) throw new Error("No fixture hotpatch can be undone or restored.");
+    this.#hotpatches.delete(installId);
+    return this.inspectHotpatch(installId);
+  }
+
   async inspectModUpdate(installId: string, modId: string): Promise<ModUpdatePreview> {
     const current = this.#modUpdates.get(`${installId}/${modId}`);
     if (current) return current;
@@ -1271,12 +1416,13 @@ export class FixtureBackend implements Backend {
       complete: "The installation and its record are ready.",
     } as const;
     const state = states[this.#buildIndex] ?? "complete";
-    const currentIndex = state === "complete" ? phases.length : Math.min(this.#buildIndex, phases.length - 1);
+    const planPhases = flavor.id === "iwd" ? iwdPhases : phases;
+    const currentIndex = state === "complete" ? planPhases.length : Math.min(this.#buildIndex, planPhases.length - 1);
     return {
       state,
       headline: headlines[state],
       detail: details[state],
-      phases: phases.map((phase, index) => ({
+      phases: planPhases.map((phase, index) => ({
         ...phase,
         state: state === "failed" && index === currentIndex ? "failed" : index < currentIndex ? "done" : index === currentIndex ? "current" : "pending",
       })),

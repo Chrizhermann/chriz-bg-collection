@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "install_id": "install-legacy",
+  "display_name": "Chriz Easy BG",
+  "managed_root": "C:\\Legacy Managed Install",
+  "recipe_version": "0.1.0-alpha.20",
+  "recipe_sha256": "9182c61272721e0810f2285bfc2e520367b530dccfb7005f33dac8e7da4acbfa",
+  "engine_name": "Chriz Easy BG - abc123def456",
+  "managed_save_root": "C:\\Users\\Player\\Documents\\Chriz Easy BG - abc123def456",
+  "launch_path": "C:\\Legacy Managed Install\\game\\Baldur.exe",
+  "receipt_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+  "completed_at_millis": 1761400900000
+}

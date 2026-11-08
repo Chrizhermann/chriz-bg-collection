@@ -27,6 +27,7 @@ use chriz_bg_app_lib::bridge::{
     RunEventEnvelope, SequencedEventSink,
 };
 use chriz_bg_app_lib::error::CommandError;
+use chriz_bg_app_lib::flavor::{BG, CURRENT};
 use chriz_bg_app_lib::shortcut::{shortcut_file_name, ShortcutRequest};
 use serde_json::json;
 use tempfile::TempDir;
@@ -73,6 +74,12 @@ fn isolated_documents() {
         std::env::set_var(TEST_DOCUMENTS_VARIABLE, documents.path());
         documents
     });
+}
+
+/// The Baldur's Gate app's production bridge over packaged resources, also in the Icewind Dale
+/// build.
+fn packaged_bg_bridge(resources: &Path) -> NativeBridge {
+    NativeBridge::from_resource_dir_for_flavor(resources, &resources.join(".chriz-cache"), &BG)
 }
 
 fn recipe_with_profiles() -> (TempDir, PathBuf) {
@@ -377,6 +384,7 @@ fn publish_managed_install(app_data: &Path, managed: &Path, install_id: &str) {
             launch_path: launch.canonicalize().unwrap(),
             receipt_sha256: sha256_bytes(b"immutable receipt"),
             completed_at_millis: 1,
+            recipe_id: None,
         })
         .unwrap();
 }
@@ -427,12 +435,13 @@ fn publish_started_campaign_with_payload(
         normalized_selection: selection,
         plan_sha256: plan_digest(&plan).unwrap(),
         source_games: SourceGameFingerprints {
-            bg1: "11".repeat(32),
+            bg1: Some("11".repeat(32)),
             bg2: "22".repeat(32),
+            standalone_role: None,
         },
         artifact_identities: Vec::new(),
         tool_identities: Vec::new(),
-        staged_bg1: managed.join("bg1"),
+        staged_bg1: Some(managed.join("bg1")),
         staged_bg2: managed.join("game"),
     };
     let store =
@@ -519,8 +528,9 @@ impl BridgeEngine for FakeBridgeEngine {
             selection_sha256: "bb".repeat(32),
             plan_sha256: "cc".repeat(32),
             source_games: SourceGameFingerprints {
-                bg1: "11".repeat(32),
+                bg1: Some("11".repeat(32)),
                 bg2: "11".repeat(32),
+                standalone_role: None,
             },
             managed_root: request.managed_root.clone(),
             cache_root: request.cache.clone(),
@@ -862,7 +872,7 @@ fn command_errors_have_one_stable_serialized_shape() {
 #[test]
 fn bootstrap_validates_the_recipe_without_claiming_an_unsigned_version() {
     let (_temp, recipe) = recipe_with_profiles();
-    let bridge = NativeBridge::new(recipe, "recommended");
+    let bridge = NativeBridge::new(recipe, "recommended").with_flavor(&BG);
 
     let status = bridge.bootstrap().expect("bootstrap production recipe");
 
@@ -903,8 +913,15 @@ fn desktop_shortcut_filename_is_unicode_safe_and_windows_compatible() {
         shortcut_file_name(" Ordinary — 이름<>:\"/\\|?*... "),
         "Play Ordinary — 이름.lnk"
     );
-    assert_eq!(shortcut_file_name("CON"), "Play CEBG - CON.lnk");
-    assert_eq!(shortcut_file_name(" ... "), "Play Chriz Easy BG.lnk");
+    // Fallback names come from the compiled app: CEBG / Chriz Easy BG, or Chriz Easy IWD.
+    assert_eq!(
+        shortcut_file_name("CON"),
+        format!("Play {} - CON.lnk", CURRENT.short_name)
+    );
+    assert_eq!(
+        shortcut_file_name(" ... "),
+        format!("Play {}.lnk", CURRENT.product_name)
+    );
     let long = shortcut_file_name(&"이".repeat(200));
     assert!(long.ends_with(".lnk"));
     assert!(long.encode_utf16().count() <= 124);
@@ -917,7 +934,7 @@ fn production_bridge_loads_only_the_recipe_bundled_below_the_resource_directory(
         &workspace_root().join("manifest"),
         &resources.path().join("manifest"),
     );
-    let bridge = NativeBridge::from_resource_dir(resources.path());
+    let bridge = packaged_bg_bridge(resources.path());
 
     let status = bridge.bootstrap().expect("bootstrap packaged recipe");
 
@@ -932,7 +949,7 @@ fn packaged_profiles_are_selected_by_known_identity_only() {
         &workspace_root().join("manifest"),
         &resources.path().join("manifest"),
     );
-    let bridge = NativeBridge::from_resource_dir(resources.path());
+    let bridge = packaged_bg_bridge(resources.path());
     let status = bridge.bootstrap().unwrap();
     assert_eq!(status.profiles.len(), 1);
     assert_eq!(status.profiles[0].id, "public-alpha");
@@ -953,7 +970,7 @@ fn curated_full_profile_is_default_when_packaged_and_keeps_release_validation() 
     );
     let full = resources.path().join("recipes/curated-full-current");
     copy_tree(&workspace_root().join("manifest"), &full);
-    let bridge = NativeBridge::from_resource_dir(resources.path());
+    let bridge = packaged_bg_bridge(resources.path());
     let status = bridge.bootstrap().unwrap();
     assert_eq!(status.selected_profile, "curated-full-current");
     assert_eq!(status.profiles[0].id, "curated-full-current");
@@ -967,9 +984,10 @@ fn curated_full_profile_is_default_when_packaged_and_keeps_release_validation() 
             .selected_profile,
         "public-alpha"
     );
-    let cached = NativeBridge::from_resource_dir_with_cache(
+    let cached = NativeBridge::from_resource_dir_for_flavor(
         resources.path(),
         &resources.path().join("cache"),
+        &BG,
     );
     assert_eq!(
         cached.bootstrap().unwrap().selected_profile,
@@ -985,7 +1003,7 @@ fn historical_full_recipe_is_not_offered_or_selectable_as_curated() {
     assert!(workspace_root()
         .join("recipes/creator-full-current/collection.toml")
         .is_file());
-    let bridge = NativeBridge::from_resource_dir(&workspace_root());
+    let bridge = packaged_bg_bridge(&workspace_root());
     assert!(bridge
         .profiles()
         .iter()
@@ -1219,7 +1237,8 @@ fn evaluate_build_projects_the_challenge_mode_group_and_its_derived_state() {
 
 #[test]
 fn manual_breakpoint_missing_from_selection_is_rejected_before_source_or_destination_work() {
-    let bridge = NativeBridge::new(workspace_root().join("manifest"), "chris-recommended");
+    let bridge =
+        NativeBridge::new(workspace_root().join("manifest"), "chris-recommended").with_flavor(&BG);
     let selection = NormalizedSelection {
         platform: "windows".into(),
         features: Default::default(),
@@ -1310,7 +1329,7 @@ fn destination_review_freezes_exact_server_side_inputs_and_is_single_use() {
     assert!(matches!(first.event, EngineEvent::CampaignStarted { .. }));
     assert_eq!(engine.installs.lock().unwrap().len(), 1);
     let installed = &engine.installs.lock().unwrap()[0];
-    assert_eq!(installed.0.bg1, bg1.canonicalize().unwrap());
+    assert_eq!(installed.0.bg1, Some(bg1.canonicalize().unwrap()));
     assert_eq!(installed.0.bg2, bg2.canonicalize().unwrap());
     assert_eq!(installed.0.managed_root, canonical_destination);
     assert_eq!(installed.0.cache, cache.canonicalize().unwrap());

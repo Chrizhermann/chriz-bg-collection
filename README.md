@@ -1,4 +1,11 @@
-# Chriz Easy BG (CEBG)
+# Chriz Easy BG and Chriz Easy IWD
+
+Both Windows installers share this repository's `main` branch and the same engine and app.
+Chriz Easy IWD installs a curated **Icewind Dale: Enhanced Edition** collection from one game
+source. Product identity, recipes and updater feeds are selected by the existing build flavor.
+The products ship separately: [Chriz Easy BG releases](https://github.com/Chrizhermann/chriz-easy-bg/releases/latest)
+and [Chriz Easy IWD releases](https://github.com/Chrizhermann/chriz-easy-iwd/releases/latest).
+See [BUILDING.md](docs/BUILDING.md) for both builds and release procedures.
 
 Chriz Easy BG is a one-click Windows installer and launcher for a curated, heavily modded
 **Baldur's Gate: Enhanced Edition + Siege of Dragonspear + Baldur's Gate II: Enhanced
@@ -49,9 +56,10 @@ See [docs/handover.md](docs/handover.md) for the maintained development status.
 
 ## Source and downloads
 
-This repository contains CEBG's installer/engine source and recipe authoring data. The
-separate [chriz-easy-bg repository](https://github.com/Chrizhermann/chriz-easy-bg) hosts public
-binary releases and the updater feed; its release downloads are not a source checkout.
+This repository contains both products' installer/engine source and recipe authoring data.
+The separate [chriz-easy-bg](https://github.com/Chrizhermann/chriz-easy-bg) and
+[chriz-easy-iwd](https://github.com/Chrizhermann/chriz-easy-iwd) repositories host their public
+binary releases and updater feeds; their release downloads are not source checkouts.
 CEBG's own source and recipe tooling are available under MIT. Third-party dependencies
 retain their terms, collected in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 The source and binary distribution repositories have separate roles; existing release
@@ -76,6 +84,8 @@ choices; every mod retains its own license.
 app/                    Tauri desktop installer and launcher
 engine/                 Rust discovery, planning, acquisition, install, and verification
 manifest/               Versioned recipe, sources, order, profiles, and release evidence
+recipes/iwd-current/    Icewind Dale recipe and release history
+hotpatches/             Separate BG and IWD update catalogs
 docs/curation/components/
                         Human curation decisions and follow-ups per mod
 docs/handover.md         Live agent/developer entry point

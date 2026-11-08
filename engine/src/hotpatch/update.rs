@@ -775,8 +775,7 @@ pub fn apply_with_progress(
 ) -> Result<ModUpdatePreview, String> {
     crate::operation_progress::stage(progress, "checking");
     let root = &ctx.record.managed_root;
-    let _lock = crate::lock::TargetLock::try_acquire(ctx.app_data.join("locks"), root)
-        .map_err(files::err)?;
+    let _lock = ctx.locks.try_acquire(root).map_err(files::err)?;
     crate::patches::launch_guard(root)?;
     crate::mod_upgrades::launch_guard(root)?;
     super::validate_context(ctx)?;

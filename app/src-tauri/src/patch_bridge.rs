@@ -9,7 +9,7 @@ fn packaged_patch_catalog() -> Result<bg_engine::patches::catalog::Catalog, Comm
         include_bytes!("../../../patches/catalog.json"),
         include_str!("../../../patches/catalog.json.sig"),
         include_str!("../../../patches/public-key.txt"),
-        env!("CARGO_PKG_VERSION"),
+        crate::flavor::APP_VERSION,
     )
     .map_err(patch_error)
 }
@@ -19,17 +19,23 @@ impl NativeBridge {
         &self,
         id: &str,
     ) -> Result<bg_engine::patches::PatchPreview, CommandError> {
+        self.ensure_feature(self.flavor.install_patches, "Game fixes")?;
         let record = self.available_managed_install(id)?.record;
         let app_data = self
             .app_data
             .as_ref()
             .ok_or_else(|| patch_error("Application data unavailable"))?;
-        let _target =
-            bg_engine::lock::TargetLock::try_acquire(app_data.join("locks"), &record.managed_root)
-                .map_err(patch_error)?;
+        let locks = self
+            .target_locks
+            .as_ref()
+            .ok_or_else(|| patch_error("Application data unavailable"))?;
+        let _target = locks
+            .try_acquire(&record.managed_root)
+            .map_err(patch_error)?;
         let ctx = bg_engine::patches::Context {
             record: &record,
             app_data,
+            locks,
             cache: &self.cache,
         };
         bg_engine::patches::inspect(&ctx, &packaged_patch_catalog()?).map_err(patch_error)
@@ -52,15 +58,21 @@ impl NativeBridge {
         saves: bool,
         progress: bg_engine::operation_progress::ProgressSink<'_>,
     ) -> Result<bg_engine::patches::PatchPreview, CommandError> {
+        self.ensure_feature(self.flavor.install_patches, "Game fixes")?;
         let _guard = self.begin_app_update()?;
         let record = self.available_managed_install(id)?.record;
         let app_data = self
             .app_data
             .as_ref()
             .ok_or_else(|| patch_error("Application data unavailable"))?;
+        let locks = self
+            .target_locks
+            .as_ref()
+            .ok_or_else(|| patch_error("Application data unavailable"))?;
         let ctx = bg_engine::patches::Context {
             record: &record,
             app_data,
+            locks,
             cache: &self.cache,
         };
         bg_engine::patches::apply_with_progress(
@@ -87,15 +99,21 @@ impl NativeBridge {
         undo: bool,
         progress: bg_engine::operation_progress::ProgressSink<'_>,
     ) -> Result<bg_engine::patches::PatchPreview, CommandError> {
+        self.ensure_feature(self.flavor.install_patches, "Game fixes")?;
         let _guard = self.begin_app_update()?;
         let record = self.available_managed_install(id)?.record;
         let app_data = self
             .app_data
             .as_ref()
             .ok_or_else(|| patch_error("Application data unavailable"))?;
+        let locks = self
+            .target_locks
+            .as_ref()
+            .ok_or_else(|| patch_error("Application data unavailable"))?;
         let ctx = bg_engine::patches::Context {
             record: &record,
             app_data,
+            locks,
             cache: &self.cache,
         };
         bg_engine::patches::restore_with_progress(&ctx, &packaged_patch_catalog()?, undo, progress)

@@ -24,7 +24,7 @@ a recipe installs anything from his account that the list does not name.
 | Installer | Recipes it ships | Where |
 |---|---|---|
 | Chriz Easy BG | `manifest/` and `recipes/curated-full-current/` | `main` |
-| Chriz Easy IWD | `recipes/iwd-current/` | `claude/iwdee-app`, until it joins `main` |
+| Chriz Easy IWD | `recipes/iwd-current/` | `main` |
 
 `recipes/creator-full-current/` is a historical replay that the app refuses to install.
 Its old pins stay as they are.
@@ -48,9 +48,7 @@ Its old pins stay as they are.
      `recipes/iwd-current/releases/v0.1.0-alpha.1/acceptance.toml` names a commit of the
      pin PR; merge that PR with a merge commit, so that the commit stays on the branch
      ([PR #74](https://github.com/Chrizhermann/chriz-bg-collection/pull/74)).
-   - While Chriz Easy IWD lives on `claude/iwdee-app`, open a matching PR against that
-     branch. Each PR links the other, and they merge together: first the IWD PR, then the
-     BG PR, which ends the hold (step 3).
+   - Both recipes live on `main`; prepare and review their pins in one pull request.
    - A mod only one installer ships today stays there. Adding it to the other installer
      is a curation choice, and curation is Christopher's.
 3. **If the newest release cannot go in yet, record a hold** in `manifest/own-mods.toml`.
@@ -87,13 +85,12 @@ Its old pins stay as they are.
 ## Running the check
 
 ```powershell
-git fetch origin claude/iwdee-app
 $env:GH_TOKEN = (gh auth token --user Chrizhermann); python -I tools/own_mod_pins.py check --base origin/main
 ```
 
 It prints one row per mod: each installer's pin, the newest release and the state. It
-reads Chriz Easy IWD's recipe from `origin/claude/iwdee-app` while that recipe is not in
-the working tree, and says which commit it read. `--offline` skips GitHub and checks only
+reads both installers from this working tree. A missing recipe is an incomplete checkout.
+`--offline` skips GitHub and checks only
 what needs no network.
 
 What turns it red (exit 1):
@@ -133,9 +130,8 @@ $env:GH_TOKEN = (gh auth token --user Chrizhermann); python -I tools/prepare_own
 ```
 
 - It pins the mod's newest release (or `--release <tag>`) in every installer whose
-  recipes are in the working tree; `--installer <id>` narrows that. For Chriz Easy IWD on
-  `claude/iwdee-app`, run it in a checkout of that branch with
-  `--registry <next-release checkout>/manifest/own-mods.toml --installer chriz-easy-iwd`.
+  recipes are in the working tree; `--installer <id>` narrows that. Both products are in
+  the same checkout of `main`; ordinarily prepare their pins together.
 - It downloads the release fresh, checks its length and SHA-256 against the digest GitHub
   publishes, writes the new artifact TOML from the old one (only the release fields
   change), switches the mods, regenerates the curated recipe, runs `artifact verify` and
@@ -159,14 +155,12 @@ once a day, and on demand, and opens draft pull requests for his test. It never 
 closes or approves anything.
 
 - **Where it runs:** `.github/workflows/own-mod-pin-job.yml` on `main`, because GitHub
-  runs scheduled workflows only from the default branch. It checks out the branch that the
-  repository variable `CEBG_NEXT_RELEASE_BRANCH` names (`main` since 2026-11-04) and runs
-  `tools/own_mod_pin_job.py` from there.
+  runs scheduled workflows only from the default branch. It checks out `main` and runs
+  `tools/own_mod_pin_job.py` there for both installers; no branch-routing variable is needed.
 - **What it does:** for each of our mods whose newest release an installer lacks, it runs
-  `tools/prepare_own_mod_pin.py` in a fresh worktree of each installer's branch. It pushes
-  `own-mod-pin/<installers>/<mod>-<release>`, opens a draft pull request against that
-  installer's branch, and starts its checks. While Chriz Easy IWD lives on
-  `claude/iwdee-app`, one release gets two pull requests, which link each other.
+  `tools/prepare_own_mod_pin.py` in a fresh worktree of `main`. It pushes
+  `own-mod-pin/<installers>/<mod>-<release>`, opens one draft pull request against `main`
+  with all affected installers, and starts its checks.
 - **Every installer at once, or none:** each installer that is behind gets the release in
   the same run. If one of them needs an agent, the job opens the issue "Pin <mod> <release>
   by hand" with the reason, and no pull request at all.
@@ -182,10 +176,10 @@ closes or approves anything.
     one says which one it supersedes.
 - **After it opens a pull request:** an agent completes "Left for the agent" on its branch
   (catalog, changelog draft, the tests that freeze the pin, the hold). Then Christopher
-  tests and merges, the pull request into the installer's own branch first.
+  tests and merges the shared pull request into `main`.
 - **By hand:** Actions → Own mod pin job → Run workflow. `mod` limits it to one mod;
   `dry_run` prepares and reports, but pushes, opens and starts nothing. Locally,
-  `python -I tools/own_mod_pin_job.py plan --next-release-branch <branch>` only reads.
+  `python -I tools/own_mod_pin_job.py plan --next-release-branch main` only reads.
 
 The job needs the repository setting "Allow GitHub Actions to create and approve pull
 requests" (Settings → Actions → General). Only Christopher changes it.

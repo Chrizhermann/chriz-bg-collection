@@ -47,6 +47,7 @@ fn check_logs(root: &Path, logs: &[FinalLogReceipt]) -> Result<ConsistencySummar
     let upgrade = bg_engine::mod_upgrades::active_upgrade(root)?;
     // Applied hotpatches add their rows after any fix's, as the engine's baseline check expects.
     let hotpatches = bg_engine::hotpatch::verified_log_suffix(root)?;
+    let hotpatched = !hotpatches.is_empty();
     let mut result = check_logs_with_patch_verifier(root, logs, |root| {
         let mut suffix = bg_engine::patches::verified_log_suffix(root)?;
         suffix.extend(hotpatches);
@@ -58,6 +59,10 @@ fn check_logs(root: &Path, logs: &[FinalLogReceipt]) -> Result<ConsistencySummar
                 "The mod list matches the completed installation, its recorded BuffBot {} update and any verified applied fixes.",
                 upgrade.version
             );
+        } else if hotpatched {
+            result.detail =
+                "The mod list matches the completed installation and its applied hotpatches."
+                    .to_owned();
         }
     }
     Ok(result)
@@ -169,13 +174,16 @@ fn check_logs_with_patch_verifier(
     Ok(ConsistencySummary {
         state: if changed { "changed" } else { "matches" }.to_owned(),
         detail: if changed {
-            "The mod list has changed since CEBG installed this game."
+            format!(
+                "The mod list has changed since {} installed this game.",
+                crate::flavor::CURRENT.short_name
+            )
         } else if !patch_suffix.is_empty() {
             "The mod list matches the completed installation and its verified applied fixes."
+                .to_owned()
         } else {
-            "The mod list matches the completed installation."
-        }
-        .to_owned(),
+            "The mod list matches the completed installation.".to_owned()
+        },
         component_count: count,
         mod_count: mods.len(),
         components,
@@ -230,7 +238,7 @@ mod tests {
                     components: vec![component("bg2/setup.tp2")],
                 },
             ],
-            bg1_engine_name: "Test - abc123".to_owned(),
+            bg1_engine_name: Some("Test - abc123".to_owned()),
             bg2_engine_name: "Test - abc123".to_owned(),
             managed_save_root: root.join("saves"),
             launch_path: root.join("game/InfinityLoader.exe"),
@@ -253,7 +261,7 @@ mod tests {
             attempt_id: "attempt-failed".to_owned(),
             evidence_attempt_id: "attempt-failed".to_owned(),
             managed_root: root.to_path_buf(),
-            staged_bg1: root.join("bg1"),
+            staged_bg1: Some(root.join("bg1")),
             staged_bg2: root.join("game"),
             started_at_millis: 1,
             completed_at_millis: 2,

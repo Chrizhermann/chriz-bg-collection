@@ -36,6 +36,7 @@ struct Fixture {
     _temp: tempfile::TempDir,
     record: ManagedInstallRecord,
     app_data: PathBuf,
+    locks: crate::lock::TargetLockNamespace,
     cache: PathBuf,
     original: BTreeMap<String, Vec<u8>>,
     receipt: Vec<u8>,
@@ -80,6 +81,7 @@ impl Fixture {
             b"synthetic save; immutable",
         );
         let app_data = temp.path().join("app-data");
+        let temp_local = temp.path().join("local");
         fs::create_dir(&app_data).unwrap();
         let cache = temp.path().join("download-cache");
         let install_plan = InstallPlan { runs: Vec::new() };
@@ -90,7 +92,7 @@ impl Fixture {
             attempt_id: "attempt-complete".into(),
             evidence_attempt_id: "attempt-complete".into(),
             managed_root: root.clone(),
-            staged_bg1: root.join("bg1"),
+            staged_bg1: Some(root.join("bg1")),
             staged_bg2: game.clone(),
             started_at_millis: 1,
             completed_at_millis: 2,
@@ -125,7 +127,7 @@ impl Fixture {
                         component: 7004,
                     }],
                 }],
-                bg1_engine_name: ENGINE_NAME.into(),
+                bg1_engine_name: Some(ENGINE_NAME.into()),
                 bg2_engine_name: ENGINE_NAME.into(),
                 managed_save_root: save_root.clone(),
                 launch_path: game.join("Baldur.exe"),
@@ -149,12 +151,14 @@ impl Fixture {
             launch_path: game.join("Baldur.exe"),
             receipt_sha256: sha256_bytes(&receipt),
             completed_at_millis: 2,
+            recipe_id: None,
         };
         let original = file_bytes(&game);
         Self {
             _temp: temp,
             record,
             app_data,
+            locks: crate::lock::TargetLockNamespace::in_local_application_data(temp_local).unwrap(),
             cache,
             original,
             receipt,
@@ -165,6 +169,7 @@ impl Fixture {
         Context {
             record: &self.record,
             app_data: &self.app_data,
+            locks: &self.locks,
             cache: &self.cache,
         }
     }

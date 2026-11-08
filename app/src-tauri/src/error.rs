@@ -39,62 +39,63 @@ impl CommandError {
         if code.starts_with("manual_checkpoint") || code == "invalid_manual_breakpoint" {
             return Self::new(code, error.to_string(), "Close the game and manual installers. Keep all WeiDU.log rows; correct the issue or restore your checkpoint backup, then check again.", error.to_string());
         }
-        let (message, recovery_action) = match code {
+        let app = crate::flavor::CURRENT.short_name;
+        let (message, recovery_action): (String, String) = match code {
             "folder_access_denied" => (
-                "Windows blocked access to an installation or save folder.",
-                "Check the folder in Error details and its Windows permissions. If Windows Security blocked CEBG, allow this app rather than turning protection off.",
+                "Windows blocked access to an installation or save folder.".to_owned(),
+                format!("Check the folder in Error details and its Windows permissions. If Windows Security blocked {app}, allow this app rather than turning protection off."),
             ),
             "folder_unavailable" => (
-                "A folder needed for installation or saves is unavailable.",
-                "Check the exact path in Error details. Reconnect its drive or make a redirected folder available, then retry if offered.",
+                "A folder needed for installation or saves is unavailable.".to_owned(),
+                "Check the exact path in Error details. Reconnect its drive or make a redirected folder available, then retry if offered.".to_owned(),
             ),
             "folder_in_use" => (
-                "Another program is using a folder or file CEBG needs.",
-                "Close the game and any other installer using this copy, then retry if offered.",
+                format!("Another program is using a folder or file {app} needs."),
+                "Close the game and any other installer using this copy, then retry if offered.".to_owned(),
             ),
             "folder_conflict" => (
-                "The installation or save folder conflicts with existing files.",
-                "Keep existing files. Check Error details and choose a new empty installation folder if needed.",
+                "The installation or save folder conflicts with existing files.".to_owned(),
+                "Keep existing files. Check Error details and choose a new empty installation folder if needed.".to_owned(),
             ),
             "folder_failed" => (
-                "CEBG could not prepare an installation or save folder.",
-                "Check the operation and path in Error details. Export diagnostics if it keeps failing.",
+                format!("{app} could not prepare an installation or save folder."),
+                "Check the operation and path in Error details. Export diagnostics if it keeps failing.".to_owned(),
             ),
             "recipe_load_failed" | "validation_failed" => (
-                "The installer recipe could not be verified.",
-                "Repair or replace the installer recipe, then try again.",
+                "The installer recipe could not be verified.".to_owned(),
+                "Repair or replace the installer recipe, then try again.".to_owned(),
             ),
             "game_profiles_failed" => (
-                "Verified game detection data is unavailable.",
-                "Install a release that includes verified game profiles.",
+                "Verified game detection data is unavailable.".to_owned(),
+                "Install a release that includes verified game profiles.".to_owned(),
             ),
             "game_discovery_failed" => (
-                "The installed games could not be detected safely.",
-                "Retry detection or choose a game folder manually.",
+                "The installed games could not be detected safely.".to_owned(),
+                "Retry detection or choose a game folder manually.".to_owned(),
             ),
             "game_inspection_failed" | "ambiguous_storefront" => (
-                "That folder could not be accepted as a clean supported game.",
-                "Choose a different clean game folder and inspect it again.",
+                "That folder could not be accepted as a clean supported game.".to_owned(),
+                "Choose a different clean game folder and inspect it again.".to_owned(),
             ),
             "invalid_selection" => (
-                "The selected collection options are not compatible.",
-                "Review the unavailable options and try again.",
+                "The selected collection options are not compatible.".to_owned(),
+                "Review the unavailable options and try again.".to_owned(),
             ),
             "installer_launch_unsupported" => (
-                "This CEBG release cannot start one of the selected mod installers.",
-                "Install a corrected CEBG release, then retry this installation in the same folder. Keep the existing installation files.",
+                format!("This {app} release cannot start one of the selected mod installers."),
+                format!("Install a corrected {app} release, then retry this installation in the same folder. Keep the existing installation files."),
             ),
             "campaign_error" | "campaign_failed" | "recipe_freeze_failed" => (
-                "The installation could not finish.",
-                "See the technical log for the cause. Retry if available, or return to setup.",
+                "The installation could not finish.".to_owned(),
+                "See the technical log for the cause. Retry if available, or return to setup.".to_owned(),
             ),
             "unsafe_target" => (
-                "The install folder could not be used.",
-                "Return to setup and check the install location. See the technical log for details.",
+                "The install folder could not be used.".to_owned(),
+                "Return to setup and check the install location. See the technical log for details.".to_owned(),
             ),
             _ => (
-                "The installer could not complete that check.",
-                "Retry the check. If it still fails, keep the technical detail for diagnosis.",
+                "The installer could not complete that check.".to_owned(),
+                "Retry the check. If it still fails, keep the technical detail for diagnosis.".to_owned(),
             ),
         };
         let technical_detail = error.to_string();
@@ -128,12 +129,16 @@ mod folder_error_tests {
                 reason: technical.into(),
             },
         }));
+        // Errors name the compiled app: CEBG, or Chriz Easy IWD in the Icewind Dale build.
+        let app = crate::flavor::CURRENT.short_name;
         assert_eq!(error.code, "installer_launch_unsupported");
         assert_eq!(
             error.message,
-            "This CEBG release cannot start one of the selected mod installers."
+            format!("This {app} release cannot start one of the selected mod installers.")
         );
-        assert!(error.recovery_action.contains("corrected CEBG release"));
+        assert!(error
+            .recovery_action
+            .contains(&format!("corrected {app} release")));
         assert!(error.recovery_action.contains("same folder"));
         assert!(!error.recovery_action.contains("Retry the check"));
         assert_eq!(error.technical_detail, technical);

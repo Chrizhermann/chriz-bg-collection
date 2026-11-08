@@ -3,10 +3,7 @@ name: Mod link check
 # Every night: does each pinned mod download link still serve the reviewed file? One issue,
 # "Mod link check", lists what does not; it closes itself when everything is the same again.
 # No AI and no secrets: tools/check_mod_links.py, stdlib only (docs/mod-link-check.md).
-# GitHub runs scheduled workflows only from the default branch, so this file lives on main and
-# reads the recipes from the branches that ship them: the repository variable
-# CEBG_NEXT_RELEASE_BRANCH (Chriz Easy BG, the same variable as the own-mod pin job) and
-# CEBG_IWD_BRANCH (Chriz Easy IWD; claude/iwdee-app until that branch joins the release branch).
+# Both installers ship from main; one checkout supplies both recipes.
 on:
   schedule:
     - cron: '41 3 * * *'
@@ -26,35 +23,13 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
-      BG_BRANCH: ${{ vars.CEBG_NEXT_RELEASE_BRANCH }}
-      IWD_BRANCH: ${{ vars.CEBG_IWD_BRANCH || 'claude/iwdee-app' }}
       GH_TOKEN: ${{ github.token }}
 
     steps:
-      - name: Require the next-release branch
-        run: |
-          if [ -z "$BG_BRANCH" ]; then
-            echo '::error title=Mod link check::Set the repository variable CEBG_NEXT_RELEASE_BRANCH to the next-release branch.'
-            exit 1
-          fi
-
-      - name: Check out the check
+      - name: Check out main and both installers' recipes
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          persist-credentials: false
-
-      - name: Check out the Chriz Easy BG recipes
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: ${{ vars.CEBG_NEXT_RELEASE_BRANCH }}
-          path: recipes-bg
-          persist-credentials: false
-
-      - name: Check out the Chriz Easy IWD recipes
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: ${{ vars.CEBG_IWD_BRANCH || 'claude/iwdee-app' }}
-          path: recipes-iwd
+          ref: main
           persist-credentials: false
 
       - name: Set up Python
@@ -75,8 +50,8 @@ jobs:
       - name: Check the links
         run: |
           python -I tools/check_mod_links.py check \
-            --installer "Chriz Easy BG" recipes-bg manifest recipes/curated-full-current \
-            --installer "Chriz Easy IWD" recipes-iwd recipes/iwd-current \
+            --installer "Chriz Easy BG" . manifest recipes/curated-full-current \
+            --installer "Chriz Easy IWD" . recipes/iwd-current \
             --state link-state.json --report link-report.json --summary "$GITHUB_STEP_SUMMARY"
 
       - name: Save what this night learned

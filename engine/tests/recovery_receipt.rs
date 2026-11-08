@@ -2,10 +2,12 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use bg_engine::digest::{plan_digest, sha256_bytes};
+use bg_engine::games::{GameRole, Storefront};
 use bg_engine::manifest::{GameRoot, Phase};
 use bg_engine::receipt::{
     ArtifactCacheOutcome, ArtifactReceipt, FinalLogReceipt, FinalReceiptState, InstallReceipt,
-    LogComponentReceipt, ReceiptOutcome, ReceiptVersions, RECEIPT_SCHEMA_VERSION,
+    LogComponentReceipt, ReceiptOutcome, ReceiptVersions, SourceGameReceipt,
+    RECEIPT_SCHEMA_VERSION,
 };
 use bg_engine::recipe_view::NormalizedSelection;
 use bg_engine::recovery_receipt::{
@@ -115,7 +117,7 @@ fn final_state(root: &Path, bg1_sha256: &str, bg2_sha256: &str) -> FinalReceiptS
                 ],
             },
         ],
-        bg1_engine_name: "CEBG-Recovery-BG1".to_owned(),
+        bg1_engine_name: Some("CEBG-Recovery-BG1".to_owned()),
         bg2_engine_name: "CEBG-Recovery-BG2".to_owned(),
         managed_save_root: root.parent().unwrap().join("managed-save"),
         launch_path: root.join("Baldur.exe"),
@@ -147,7 +149,7 @@ fn fixture() -> Fixture {
         attempt_id: "base-attempt".to_owned(),
         evidence_attempt_id: "base-attempt".to_owned(),
         managed_root: root.clone(),
-        staged_bg1: root.join("bg1"),
+        staged_bg1: Some(root.join("bg1")),
         staged_bg2: root.clone(),
         started_at_millis: 100,
         completed_at_millis: 200,
@@ -435,6 +437,99 @@ fn final_state_requires_both_logs_unique_components_and_contained_launch_path() 
     assert!(escaped_launch.validate(&fixture.base).is_err());
 }
 
+/// An EET base stages BG1, so its recovery must record BG1's identity and log: a final state
+/// that leaves out both must not pass as a standalone one.
+#[test]
+fn eet_recovery_cannot_drop_its_bg1_identity_and_log() {
+    let fixture = fixture();
+    let mut without_bg1 = fixture.recovery.clone();
+    without_bg1.final_state.bg1_engine_name = None;
+    without_bg1
+        .final_state
+        .logs
+        .retain(|log| log.target == GameRoot::Bg2);
+    let error = without_bg1.validate(&fixture.base).unwrap_err();
+    assert!(error.contains("BG1"), "{error}");
+
+    let mut without_identity = fixture.recovery.clone();
+    without_identity.final_state.bg1_engine_name = None;
+    let error = without_identity.validate(&fixture.base).unwrap_err();
+    assert!(error.contains("BG1"), "{error}");
+}
+
+/// A standalone base (no staged BG1) with its plan, receipt file and recovery lineage.
+fn standalone_fixture() -> Fixture {
+    let mut fixture = fixture();
+    let root = fixture.root.clone();
+    fixture.base.staged_bg1 = None;
+    fixture
+        .base
+        .plan
+        .runs
+        .retain(|run| run.target == GameRoot::Bg2);
+    fixture.base.plan_sha256 = plan_digest(&fixture.base.plan).unwrap();
+    fixture
+        .base
+        .artifacts
+        .retain(|artifact| artifact.id == "changed-artifact");
+    let base_bytes = write_base(&root, &fixture.base);
+    fixture.recovery.base_receipt_sha256 = sha256_bytes(&base_bytes);
+    fixture.recovery.base_plan_sha256 = fixture.base.plan_sha256.clone();
+    fixture.recovery.final_state.bg1_engine_name = None;
+    fixture
+        .recovery
+        .final_state
+        .logs
+        .retain(|log| log.target == GameRoot::Bg2);
+    fixture
+}
+
+#[test]
+fn standalone_recovery_records_one_game_and_no_bg1() {
+    let fixture = standalone_fixture();
+    fixture.recovery.validate(&fixture.base).unwrap();
+
+    let eet_final = final_state(
+        &fixture.root,
+        &"77".repeat(32),
+        &fixture.recovery.final_state.logs[0].sha256,
+    );
+    let mut with_bg1 = fixture.recovery.clone();
+    with_bg1.final_state = eet_final.clone();
+    let error = with_bg1.validate(&fixture.base).unwrap_err();
+    assert!(error.contains("BG1"), "{error}");
+
+    let mut with_bg1_identity = fixture.recovery.clone();
+    with_bg1_identity.final_state.bg1_engine_name = eet_final.bg1_engine_name.clone();
+    let error = with_bg1_identity.validate(&fixture.base).unwrap_err();
+    assert!(error.contains("BG1"), "{error}");
+
+    let mut with_bg1_log = fixture.recovery.clone();
+    with_bg1_log
+        .final_state
+        .logs
+        .insert(0, eet_final.logs[0].clone());
+    let error = with_bg1_log.validate(&fixture.base).unwrap_err();
+    assert!(error.contains("BG1"), "{error}");
+}
+
+#[test]
+fn a_standalone_base_whose_plan_targets_bg1_is_rejected() {
+    let fixture = fixture();
+    let mut base = fixture.base.clone();
+    base.staged_bg1 = None;
+    let base_bytes = write_base(&fixture.root, &base);
+    let mut recovery = fixture.recovery.clone();
+    recovery.base_receipt_sha256 = sha256_bytes(&base_bytes);
+    recovery.final_state.bg1_engine_name = None;
+    recovery
+        .final_state
+        .logs
+        .retain(|log| log.target == GameRoot::Bg2);
+    let error = recovery.validate(&base).unwrap_err();
+    assert!(error.contains("BG1"), "{error}");
+}
+
 #[test]
 fn evidence_verification_detects_tamper_before_publication() {
     let fixture = fixture();
@@ -520,4 +615,67 @@ fn create_directory_symlink(original: &Path, link: &Path) -> std::io::Result<()>
 #[cfg(not(windows))]
 fn create_directory_symlink(original: &Path, link: &Path) -> std::io::Result<()> {
     std::os::unix::fs::symlink(original, link)
+}
+
+fn source(role: GameRole) -> SourceGameReceipt {
+    SourceGameReceipt {
+        role,
+        storefront: Storefront::Steam,
+        version: "2.7.3.0".to_owned(),
+        fingerprint: "ab".repeat(32),
+    }
+}
+
+/// The fixture with `roles` as the base receipt's source evidence, its file and lineage updated.
+fn with_sources(mut fixture: Fixture, roles: &[GameRole]) -> Fixture {
+    fixture.base.source_games = roles.iter().copied().map(source).collect();
+    let bytes = write_base(&fixture.root, &fixture.base);
+    fixture.recovery.base_receipt_sha256 = sha256_bytes(&bytes);
+    fixture
+}
+
+/// A failed attempt may record only part of its source evidence; what it records must belong
+/// to the base installation's staging, once per source.
+#[test]
+fn recovery_checks_recorded_source_evidence_against_the_base_staging() {
+    use GameRole::{Bg2ee, BgeeSod, Iwdee};
+
+    for (case, roles, accepted) in [
+        ("both EET sources", &[BgeeSod, Bg2ee][..], true),
+        (
+            "only the BG2 source of a failed attempt",
+            &[Bg2ee][..],
+            true,
+        ),
+        (
+            "only the BG1 source of a failed attempt",
+            &[BgeeSod][..],
+            true,
+        ),
+        ("a standalone source", &[BgeeSod, Iwdee][..], false),
+        (
+            "a duplicated BG2 source",
+            &[BgeeSod, Bg2ee, Bg2ee][..],
+            false,
+        ),
+    ] {
+        let fixture = with_sources(fixture(), roles);
+        let result = fixture.recovery.validate(&fixture.base);
+        assert_eq!(result.is_ok(), accepted, "EET base with {case}: {result:?}");
+    }
+
+    for (case, roles, accepted) in [
+        ("its one game", &[Iwdee][..], true),
+        ("a BG1 source", &[BgeeSod][..], false),
+        ("a BG2 source", &[Bg2ee][..], false),
+        ("its game twice", &[Iwdee, Iwdee][..], false),
+    ] {
+        let fixture = with_sources(standalone_fixture(), roles);
+        let result = fixture.recovery.validate(&fixture.base);
+        assert_eq!(
+            result.is_ok(),
+            accepted,
+            "standalone base with {case}: {result:?}"
+        );
+    }
 }

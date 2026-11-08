@@ -12,8 +12,8 @@ anyone's PC.
 ## What it checks
 
 - **Which links.** The downloads that the shipped recipes' mods use: Chriz Easy BG
-  (`manifest` and `recipes/curated-full-current`, from the next-release branch) and Chriz Easy
-  IWD (`recipes/iwd-current`, from `claude/iwdee-app`). An artifact file that no mod uses (a
+  (`manifest` and `recipes/curated-full-current`) and Chriz Easy
+  IWD (`recipes/iwd-current`), all from one checkout of `main`. An artifact file that no mod uses (a
   superseded pin kept as history) is not a download anyone makes and is left out, and so is the
   historical `recipes/creator-full-current`. A download that two recipes share is checked once and
   names both recipes. Manual downloads (`manual-user-supplied`) cannot be fetched by link and are
@@ -50,7 +50,7 @@ remembered. Servers have bad nights.
   (and since when), link. The next night updates the same issue; a comment lists links that are
   new or no longer reported.
 - When everything is the same again, the issue gets a closing comment and closes itself.
-- If the run itself fails (the next-release variable is missing, a branch is gone, a recipe
+- If the run itself fails (main cannot be checked out or a recipe
   folder is empty), the workflow run fails and GitHub sends its usual failed-run mail. An
   incomplete checkout never counts as "all links are the same".
 
@@ -59,9 +59,7 @@ recipe folder that has artifacts but is not on the checked list.
 
 ## Setting
 
-- Repository variable `CEBG_NEXT_RELEASE_BRANCH` (already used by the own-mod pin job) names the
-  branch with Chriz Easy BG's recipes. `CEBG_IWD_BRANCH` names Chriz Easy IWD's; it defaults to
-  `claude/iwdee-app`. Set it when that branch is renamed or merged into the release branch.
+- Both installers are read from `main`. No separate IWD branch or routing variable is used.
 - Permissions: `contents: read` and `issues: write`. No secrets; the job's own token only
   raises the GitHub API rate limit and goes to `api.github.com` alone.
 - What earlier nights learned (which links failed, hashes of archives) lives in the Actions
@@ -72,16 +70,13 @@ recipe folder that has artifacts but is not on the checked list.
 
 ## Run it locally
 
-Read-only; it writes nothing into the game or the recipes. Put the recipes of each branch in a
-folder of its own (no checkout needed), then:
+Read-only; it writes nothing into the game or the recipes. From the shared source checkout:
 
 ```powershell
 $env:GH_TOKEN = (gh auth token --user Chrizhermann)   # optional: more GitHub API requests
-git archive origin/<next-release-branch> manifest recipes | tar -x -C $scratch\bg
-git archive origin/claude/iwdee-app manifest recipes | tar -x -C $scratch\iwd
 python -I tools/check_mod_links.py check `
-  --installer "Chriz Easy BG" $scratch\bg manifest recipes/curated-full-current `
-  --installer "Chriz Easy IWD" $scratch\iwd recipes/iwd-current `
+  --installer "Chriz Easy BG" . manifest recipes/curated-full-current `
+  --installer "Chriz Easy IWD" . recipes/iwd-current `
   --state $scratch\state.json --report $scratch\report.json --max-download-mb 100
 ```
 
@@ -97,6 +92,6 @@ touch the network never.
 
 - The own-mod pin check and daily job (#53, #55, #72, #73) look for a **newer release** of our
   own mods and prepare pins. This check asks whether the **pinned file** is still served, for
-  every mod, ours included. They share the `CEBG_NEXT_RELEASE_BRANCH` variable and nothing else.
+  every mod, ours included. They read the same recipes on `main`.
   They stay separate workflows: the pin job needs write access to contents, pull requests and
   actions and a Windows runner; this one needs only `issues: write` and runs on Ubuntu.

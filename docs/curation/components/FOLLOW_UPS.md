@@ -154,9 +154,9 @@ Cross-repository status. Component detail stays in the sections below and in the
     it since 0.1.7; Chriz Easy BG in [PR #115](https://github.com/Chrizhermann/chriz-bg-collection/pull/115),
     lab on a fresh 0.1.1 game green.
   - **A single failed component** (Christopher, 2026-11-04): the installer asks the player
-    instead of deciding by itself. Built for Chriz Easy BG on `main`
-    (`docs/handover.md`, November 5). Chriz Easy IWD does not have it: `claude/iwdee-app` has
-    none of the question system yet (it branched on 2026-10-24, before #69, #80 and #89–#93).
+    instead of deciding by itself. Shared by Chriz Easy BG and Chriz Easy IWD on `main`
+    since the November 8 source merge (`docs/handover.md`). Both use the same questions
+    for failed components, changed downloads and modded sources; release acceptance remains separate.
   - **Recommended: rolled HP and no Maximum HP Creatures** (Christopher, 2026-11-04): done.
     Tweaks Anthology `3000` and `3010` are unchecked options, the way the fight-AI labs run
     it; `docs/curation/components/CDTWEAKS.md` has the details.
@@ -511,8 +511,8 @@ Cross-repository status. Component detail stays in the sections below and in the
       changes Selina's guard, and on the new step.
 - Our own mods in every installer (Christopher, 2026-10-28): a new version of one of
   our own mods (BuffBot, BG Rebalance, SoD Remix, Modpack, the forks, the voicepacks and
-  the like) goes into Chriz Easy BG and Chriz Easy IWD in the same step. While the IWD
-  recipe sits on `claude/iwdee-app`, every such pin needs a matching PR there.
+  the like) goes into Chriz Easy BG and Chriz Easy IWD in the same step. Both recipes live on `main`;
+  every pin PR updates both installers together or records Christopher's hold.
   - The agents follow this by hand for now. A separate session designs the automation
     with Christopher: a marker for our own mods, a check on every PR and before every
     release that their pins are the newest releases and the same in every recipe (holds
@@ -645,8 +645,8 @@ Cross-repository status. Component detail stays in the sections below and in the
   code>`, and the game never creates the `portraits` folder there. My installs gets a
   button that creates it and opens the folder, the folder's path under Installation
   details and a first-play tip. It goes into 0.1.1, the release after 0.1.0 (Christopher,
-  2026-11-02), through the next-release branch. Still open: Chriz Easy IWD
-  (`claude/iwdee-app`) needs the same change afterwards.
+  2026-11-02), through the next-release branch. Chriz Easy IWD gains the same
+  profile-folder action through the November 8 shared-main merge; release acceptance is pending.
 - Fewer installer stops in both installers, as quick patches after the release (blocker
   audit of 2026-10-30; Christopher: as few blockers as possible, only PC and source-game
   safety stays strict):

@@ -1,9 +1,5 @@
 // Included in bridge.rs: whole-mod updates such as BuffBot, recorded in the hotpatch history so
 // that Undo always takes back the latest change. Registered installation IDs only, never paths.
-
-/// Where the catalog of mods this app updates lies, below the packaged resources.
-const MOD_UPDATE_CATALOG: &str = "hotpatches/bg";
-
 fn mod_update_inspection_error(title: Option<&str>, error: impl std::fmt::Display) -> CommandError {
     CommandError::new(
         "mod_update_check_failed",
@@ -50,7 +46,8 @@ impl NativeBridge {
             .resource_root
             .clone()
             .unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("../.."));
-        bg_engine::hotpatch::catalog::load(&root.join(MOD_UPDATE_CATALOG)).map_err(error)
+        bg_engine::hotpatch::catalog::load(&root.join(self.flavor.mod_update_catalog))
+            .map_err(error)
     }
 
     pub fn inspect_mod_update(
@@ -65,20 +62,22 @@ impl NativeBridge {
         let app_data = self.app_data.as_ref().ok_or_else(|| {
             mod_update_inspection_error(Some(&title), "Application data is unavailable.")
         })?;
-        let _target =
-            bg_engine::lock::TargetLock::try_acquire(app_data.join("locks"), &record.managed_root)
-                .map_err(|error| {
-                    CommandError::new(
-                        "mod_update_busy",
-                        "This installation is busy.",
-                        format!("Wait for its current operation to finish, then check for a {title} update again."),
-                        error.to_string(),
-                    )
-                })?;
+        let locks = self.target_locks.as_ref().ok_or_else(|| {
+            mod_update_inspection_error(Some(&title), "Application data is unavailable.")
+        })?;
+        let _target = locks.try_acquire(&record.managed_root).map_err(|error| {
+            CommandError::new(
+                "mod_update_busy",
+                "This installation is busy.",
+                format!("Wait for its current operation to finish, then check for a {title} update again."),
+                error.to_string(),
+            )
+        })?;
         bg_engine::hotpatch::update::inspect(
             &bg_engine::hotpatch::Context {
                 record: &record,
                 app_data,
+                locks,
                 cache: &self.cache,
             },
             &catalog,
@@ -122,11 +121,16 @@ impl NativeBridge {
             .app_data
             .as_ref()
             .ok_or_else(|| mod_update_error("Application data is unavailable."))?;
+        let locks = self
+            .target_locks
+            .as_ref()
+            .ok_or_else(|| mod_update_error("Application data is unavailable."))?;
         // The engine acquires and holds the target lock through backup and mutation.
         bg_engine::hotpatch::update::apply_with_progress(
             &bg_engine::hotpatch::Context {
                 record: &record,
                 app_data,
+                locks,
                 cache: &self.cache,
             },
             &catalog,
@@ -166,9 +170,14 @@ impl NativeBridge {
             .app_data
             .as_ref()
             .ok_or_else(|| mod_update_error("Application data is unavailable."))?;
+        let locks = self
+            .target_locks
+            .as_ref()
+            .ok_or_else(|| mod_update_error("Application data is unavailable."))?;
         let context = bg_engine::hotpatch::Context {
             record: &record,
             app_data,
+            locks,
             cache: &self.cache,
         };
         // Undo takes back the latest change of the shared history, so this card may undo only
@@ -191,9 +200,9 @@ impl NativeBridge {
                 "The game files were put back, but checking {title} afterwards failed: {error}"
             ))
         };
-        let _target =
-            bg_engine::lock::TargetLock::try_acquire(app_data.join("locks"), &record.managed_root)
-                .map_err(|error| checked(error.to_string()))?;
+        let _target = locks
+            .try_acquire(&record.managed_root)
+            .map_err(|error| checked(error.to_string()))?;
         bg_engine::hotpatch::update::inspect(&context, &catalog, mod_id).map_err(checked)
     }
 }
@@ -204,19 +213,36 @@ mod mod_update_bridge_tests {
 
     #[test]
     fn the_app_offers_the_buffbot_update_and_refuses_unknown_mods() {
-        let bridge = NativeBridge::new(PathBuf::from("unused"), "chris-recommended");
-        let catalog = bridge.mod_update_catalog(mod_update_error).unwrap();
-        assert_eq!(offered_mod_update(&catalog, "buffbot").unwrap(), "BuffBot");
-        for refused in [
-            bridge.inspect_mod_update("any", "not-a-mod").unwrap_err(),
-            bridge
-                .apply_mod_update("any", "not-a-mod", "token", true, false)
-                .unwrap_err(),
-            bridge
-                .restore_mod_update("any", "not-a-mod", true)
-                .unwrap_err(),
-        ] {
-            assert_eq!(refused.code, "mod_update_unavailable");
+        for flavor in [&crate::flavor::BG, &crate::flavor::IWD] {
+            let bridge =
+                NativeBridge::new(PathBuf::from("unused"), "chris-recommended").with_flavor(flavor);
+            let catalog = bridge.mod_update_catalog(mod_update_error).unwrap();
+            assert_eq!(offered_mod_update(&catalog, "buffbot").unwrap(), "BuffBot");
+            for refused in [
+                bridge.inspect_mod_update("any", "not-a-mod").unwrap_err(),
+                bridge
+                    .apply_mod_update("any", "not-a-mod", "token", true, false)
+                    .unwrap_err(),
+                bridge
+                    .restore_mod_update("any", "not-a-mod", true)
+                    .unwrap_err(),
+            ] {
+                assert_eq!(refused.code, "mod_update_unavailable");
+            }
         }
+    }
+
+    #[test]
+    fn errors_name_the_mod_when_known() {
+        let check = mod_update_inspection_error(Some("BuffBot"), "offline");
+        assert_eq!(check.code, "mod_update_check_failed");
+        assert_eq!(check.message, "The BuffBot check could not finish.");
+        assert_eq!(
+            mod_update_inspection_error(None, "x").message,
+            "The update check could not finish."
+        );
+        let failed = mod_update_error("boom");
+        assert_eq!(failed.code, "mod_update_failed");
+        assert_eq!(failed.message, "The update could not be completed.");
     }
 }

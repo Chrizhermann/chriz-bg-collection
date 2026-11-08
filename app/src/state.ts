@@ -9,6 +9,7 @@ import type {
   Route,
   SelectionEvaluation,
 } from "./contracts";
+import { flavor, sourceFor, type SourceSlot } from "./flavor";
 
 export interface AppState {
   readonly route: Route;
@@ -51,9 +52,9 @@ export function initialState(): AppState {
   return {
     route: "welcome",
     history: [],
-    selectedBg1Id: "bg1-fresh",
-    selectedBg2Id: "bg2-fresh",
-    installationName: "Chriz Easy BG",
+    selectedBg1Id: sourceFor("bg1") === undefined ? "" : "bg1-fresh",
+    selectedBg2Id: sourceFor("bg2") === undefined ? "" : "bg2-fresh",
+    installationName: flavor.productName,
     destinationPath: "",
     destinationAutomatic: true,
     selection: { platform: "windows", features: {}, inputs: {} },
@@ -144,13 +145,15 @@ export interface InstallationReadinessInput {
   readonly evaluation: SelectionEvaluation | null;
   readonly evaluationPending: boolean;
   readonly manualBreakpoints?: readonly ManualBreakpoint[];
+  /** Source slots this installation needs; both games unless a standalone collection says otherwise. */
+  readonly requiredSlots?: readonly SourceSlot[];
 }
 
 export function installationReadiness(input: InstallationReadinessInput): boolean {
-  // The name never blocks: CEBG saves any name in a usable form (see installationNameNote).
+  const requiredSlots = input.requiredSlots ?? ["bg1", "bg2"];
   return !input.starting
-    && input.bg1?.eligible === true
-    && input.bg2?.eligible === true
+    && requiredSlots.length > 0
+    && requiredSlots.every(slot => input[slot]?.eligible === true)
     && input.destination.safe
     && input.evaluation !== null
     && (input.manualBreakpoints ?? []).every(anchor => input.evaluation?.manualCheckpointOptions?.some(option =>

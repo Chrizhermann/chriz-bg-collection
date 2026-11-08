@@ -1,7 +1,6 @@
 use super::*;
 use crate::{
     held_folder::{EntryError, EntryErrorKind},
-    lock::TargetLock,
     patches::files::Inventory,
 };
 
@@ -446,7 +445,9 @@ pub fn restore_with_progress(
     progress: crate::operation_progress::ProgressSink<'_>,
 ) -> Result<ModUpgradePreview, String> {
     crate::operation_progress::stage(progress, "checking");
-    let _lock = TargetLock::try_acquire(ctx.app_data.join("locks"), &ctx.record.managed_root)
+    let _lock = ctx
+        .locks
+        .try_acquire(&ctx.record.managed_root)
         .map_err(err)?;
     validate_context(ctx)?;
     let h = history(&ctx.record.managed_root)?;

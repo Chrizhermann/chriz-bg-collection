@@ -1,0 +1,15 @@
+id = "skineater"
+artifact_id = "skineater-2.6"
+name = "Terror of the Skineater"
+tp2 = "Skineater/Skineater.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Terror of the Skineater (IWD EE) -> Yes, but don't patch existing save games"
+
+[[components]]
+id = 1
+name = "Terror of the Skineater (IWD EE) -> Yes and patch existing save games"

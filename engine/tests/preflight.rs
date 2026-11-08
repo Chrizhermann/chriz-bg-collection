@@ -156,12 +156,13 @@ impl Fixture {
             normalized_selection: selection,
             plan_sha256: plan_sha256.unwrap_or_else(|| plan_digest(&plan).unwrap()),
             source_games: SourceGameFingerprints {
-                bg1: bg1_fingerprint.clone(),
+                bg1: Some(bg1_fingerprint.clone()),
                 bg2: bg2_fingerprint.clone(),
+                standalone_role: None,
             },
             artifact_identities: identities(&artifacts),
             tool_identities: identities(&tools),
-            staged_bg1: destination.join("bg1"),
+            staged_bg1: Some(destination.join("bg1")),
             staged_bg2: destination.join("game"),
         };
         let store =
@@ -172,6 +173,65 @@ impl Fixture {
             _temp: temp,
             bg1: candidate(GameRole::BgeeSod, bg1_root, bg1_fingerprint),
             bg2: candidate(GameRole::Bg2ee, bg2_root, bg2_fingerprint),
+            destination,
+            replay,
+            plan,
+        }
+    }
+}
+
+impl Fixture {
+    /// A frozen standalone Icewind Dale: Enhanced Edition campaign with its one clean source,
+    /// held in `bg2` as the primary source.
+    fn standalone() -> Self {
+        let temp = tempfile::tempdir().unwrap();
+        let source = temp.path().join("clean-iwd");
+        let destination = temp.path().join("managed");
+        let cache = temp.path().join("cache");
+        for root in [&source, &destination, &cache] {
+            fs::create_dir(root).unwrap();
+        }
+        fs::write(source.join("chitin.key"), b"iwd").unwrap();
+        let source = fs::canonicalize(source).unwrap();
+        let destination = fs::canonicalize(destination).unwrap();
+        let cache = fs::canonicalize(cache).unwrap();
+        let fingerprint = "33".repeat(32);
+        let plan = InstallPlan { runs: Vec::new() };
+        let selection = NormalizedSelection {
+            platform: "windows".to_owned(),
+            features: BTreeMap::new(),
+            inputs: BTreeMap::new(),
+        };
+        let created = CampaignCreated {
+            install_id: "install-iwd".to_owned(),
+            attempt_id: "attempt-001".to_owned(),
+            managed_root: destination.clone(),
+            cache_root: cache,
+            recipe_payload: RECIPE_PAYLOAD.to_vec(),
+            recipe_payload_sha256: sha256_bytes(RECIPE_PAYLOAD),
+            recipe_envelope: RECIPE_ENVELOPE.to_vec(),
+            recipe_envelope_sha256: sha256_bytes(RECIPE_ENVELOPE),
+            selection_sha256: selection_digest(&selection).unwrap(),
+            normalized_selection: selection,
+            plan_sha256: plan_digest(&plan).unwrap(),
+            source_games: SourceGameFingerprints {
+                bg1: None,
+                bg2: fingerprint.clone(),
+                standalone_role: Some(GameRole::Iwdee),
+            },
+            artifact_identities: identities(&artifact_inputs()),
+            tool_identities: identities(&tool_inputs()),
+            staged_bg1: None,
+            staged_bg2: destination.join("game"),
+        };
+        let store =
+            SessionStore::create(&destination, SessionEvent::Created(Box::new(created))).unwrap();
+        let replay = store.replay().unwrap();
+        let unused_bg1 = candidate(GameRole::BgeeSod, source.clone(), "11".repeat(32));
+        Self {
+            _temp: temp,
+            bg1: unused_bg1,
+            bg2: candidate(GameRole::Iwdee, source, fingerprint),
             destination,
             replay,
             plan,
@@ -233,7 +293,7 @@ fn request<'a>(
     tools: &'a [RequiredInput],
 ) -> InitialPreflight<'a> {
     InitialPreflight {
-        bg1_source: &fixture.bg1,
+        bg1_source: Some(&fixture.bg1),
         bg2_source: &fixture.bg2,
         destination: &fixture.destination,
         space: SpaceRequirement {
@@ -313,10 +373,11 @@ fn space_between_the_certain_need_and_the_estimate_warns_and_continues() {
 
 #[cfg(windows)]
 #[test]
-fn only_the_two_creator_reference_roots_are_denylisted_under_c_games() {
+fn only_the_creator_reference_roots_are_denylisted_under_c_games() {
     for protected in [
         r"C:\Games\Baldur's Gate II Enhanced Edition modded",
         r"C:\Games\Baldurs Gate 1 and 2 mods",
+        r"C:\Games\Icewind Dale Enhanced Edition",
     ] {
         assert!(is_creator_protected_destination(Path::new(protected)));
         assert!(is_creator_protected_destination(
@@ -709,7 +770,7 @@ fn less_tested_sources_of_different_versions_pass_and_unusable_ones_stop() {
         paths: Vec::new(),
     }];
     let mut less_tested = request(&fixture, &artifacts, &tools);
-    less_tested.bg1_source = &gog_bg1;
+    less_tested.bg1_source = Some(&gog_bg1);
     initial_preflight_with(&less_tested, &FakeHost::default()).unwrap();
 
     let mut unusable_bg1 = gog_bg1.clone();
@@ -720,7 +781,7 @@ fn less_tested_sources_of_different_versions_pass_and_unusable_ones_stop() {
         paths: Vec::new(),
     });
     let mut unusable = request(&fixture, &artifacts, &tools);
-    unusable.bg1_source = &unusable_bg1;
+    unusable.bg1_source = Some(&unusable_bg1);
     let error = initial_preflight_with(&unusable, &FakeHost::default()).unwrap_err();
     assert!(
         matches!(&error, PreflightError::SourceNotFresh { label: "BGEE+SoD", reason }
@@ -737,7 +798,7 @@ fn current_source_fingerprint_must_match_the_frozen_campaign() {
     let mut changed_bg1 = fixture.bg1.clone();
     changed_bg1.fingerprint = Some("77".repeat(32));
     let mut changed = request(&fixture, &artifacts, &tools);
-    changed.bg1_source = &changed_bg1;
+    changed.bg1_source = Some(&changed_bg1);
 
     let error = initial_preflight_with(&changed, &FakeHost::default()).unwrap_err();
     assert!(matches!(
@@ -817,4 +878,95 @@ fn clean_initial_and_per_run_preflights_pass() {
     let target = fixture.destination.join("game");
     create_target(&target);
     recheck_target_before_mutation_with(&target, "en_US", &host).unwrap();
+}
+
+#[test]
+fn standalone_preflight_accepts_its_one_matching_source() {
+    let fixture = Fixture::standalone();
+    let artifacts = artifact_inputs();
+    let tools = tool_inputs();
+    let mut standalone = request(&fixture, &artifacts, &tools);
+    standalone.bg1_source = None;
+
+    let report = initial_preflight_with(&standalone, &FakeHost::default()).unwrap();
+
+    assert_eq!(report.required_space, 100);
+}
+
+#[test]
+fn standalone_preflight_rejects_a_bg1_source_and_a_wrong_role() {
+    let fixture = Fixture::standalone();
+    let artifacts = artifact_inputs();
+    let tools = tool_inputs();
+
+    let with_bg1 = request(&fixture, &artifacts, &tools);
+    let error = initial_preflight_with(&with_bg1, &FakeHost::default()).unwrap_err();
+    assert!(
+        matches!(
+            error,
+            PreflightError::FrozenCampaignMismatch {
+                field: "source games",
+                ..
+            }
+        ),
+        "{error}"
+    );
+
+    let mut wrong_role = fixture.bg2.clone();
+    wrong_role.role = GameRole::Bg2ee;
+    let mut standalone = request(&fixture, &artifacts, &tools);
+    standalone.bg1_source = None;
+    standalone.bg2_source = &wrong_role;
+    let error = initial_preflight_with(&standalone, &FakeHost::default()).unwrap_err();
+    assert!(
+        matches!(
+            error,
+            PreflightError::SourceNotFresh {
+                label: "IWD:EE",
+                ..
+            }
+        ),
+        "{error}"
+    );
+}
+
+#[test]
+fn eet_preflight_still_requires_its_bg1_source() {
+    let fixture = Fixture::new();
+    let artifacts = artifact_inputs();
+    let tools = tool_inputs();
+    let mut missing = request(&fixture, &artifacts, &tools);
+    missing.bg1_source = None;
+
+    let error = initial_preflight_with(&missing, &FakeHost::default()).unwrap_err();
+
+    assert!(
+        matches!(
+            error,
+            PreflightError::FrozenCampaignMismatch {
+                field: "source games",
+                ..
+            }
+        ),
+        "{error}"
+    );
+}
+
+#[test]
+fn standalone_preflight_rejects_a_destination_inside_its_source() {
+    let fixture = Fixture::standalone();
+    let artifacts = artifact_inputs();
+    let tools = tool_inputs();
+    let mut inside = fixture.bg2.clone();
+    inside.root = fixture.destination.clone();
+    let mut standalone = request(&fixture, &artifacts, &tools);
+    standalone.bg1_source = None;
+    standalone.bg2_source = &inside;
+
+    let error = initial_preflight_with(&standalone, &FakeHost::default()).unwrap_err();
+
+    assert!(
+        matches!(error, PreflightError::DestinationNotWritable { .. }),
+        "{error}"
+    );
 }

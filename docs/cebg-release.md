@@ -1,5 +1,9 @@
 # CEBG Windows releases
 
+
+Build and release this product from a recorded commit on `main` in the source repository.
+The other installer has its own release and updater feed; see [BUILDING](BUILDING.md).
+
 The public distribution repository is `Chrizhermann/chriz-easy-bg`. It is
 for the installer, release notes, signatures and update metadata. It should not
 contain third-party mod archives. The public source lives separately in
@@ -27,6 +31,8 @@ After a successful signed NSIS build, prepare its update files from PowerShell:
 
 Use the actual `.exe` and its matching Tauri `.sig`; keep the signing key outside
 the repository. The helper never reads a private key, builds, or uploads anything.
+Chriz Easy IWD uses the same helper with `-Flavor iwd`, its own key and its own
+feed; see [Chriz Easy IWD releases](iwd-release.md).
 `-RecipeVersion` defaults to the app version and can be supplied separately when
 the bundled collection keeps a different version.
 

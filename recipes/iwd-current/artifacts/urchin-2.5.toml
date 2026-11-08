@@ -1,0 +1,32 @@
+id = "urchin-2.5"
+name = "Urchin"
+version = "2.5"
+acquisition = "fetch-only"
+
+[source]
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/urchin/?wpdmdl=294"
+reference = "2.5"
+expected_filename = "Urchin v2.5.zip"
+expected_length = 37333625
+sha256 = "2c0e4f0f527ba969c0c72b238172c5e23c9a14576c41f8403cb08bb1488d8db3"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["Urchin"]
+tp2_paths = ["Urchin/Urchin.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 512
+max_entry_uncompressed_bytes = 33554432
+max_total_uncompressed_bytes = 134217728
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://downloads.weaselmods.net/download/urchin/"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
+url = "https://downloads.weaselmods.net/download/urchin/"
+reviewed_on = "2026-10-26"

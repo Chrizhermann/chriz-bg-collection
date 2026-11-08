@@ -1,0 +1,65 @@
+/* Chriz Easy BG keeps main's dark theme. The IWD build substitutes iwd.css. */
+:root {
+  color-scheme: dark;
+  --iron: #151819;
+  --charcoal: #23282a;
+  --slate: #343b3e;
+  --slate-light: #4c575b;
+  --vellum: #f1e7d2;
+  --vellum-dim: #c8bfad;
+  --brass: #c59a51;
+  --brass-dark: #806436;
+  --teal: #75bab4;
+  --teal-dark: #325f5c;
+  --ember: #e47b67;
+  --ok: #98c790;
+  --focus: #f1c873;
+  --on-accent: #151819;
+  --danger-surface: #61372f;
+  --header-background: rgba(21, 24, 25, 0.96);
+  --page-background:
+    linear-gradient(rgba(197, 154, 81, 0.035) 1px, transparent 1px),
+    var(--iron);
+  --log-background: #101314;
+  --log-text: #d9dfd4;
+  --font-display: Georgia, "Times New Roman", serif;
+  --font-body: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", Consolas, monospace;
+}
+
+body {
+  background-size: 100% 4rem;
+}
+
+.category-count,
+.badge {
+  font-family: "Segoe UI Variable", "Segoe UI", sans-serif;
+}
+
+/* Keep main's exact translucent surfaces as well as its palette. */
+.manual-download-checking,
+.install-ready.is-ready,
+.shortcut-feedback {
+  background: rgba(117, 186, 180, 0.08);
+}
+
+.manual-download-error,
+.unavailable-reason {
+  background: rgba(228, 123, 103, 0.08);
+}
+
+.install-ready {
+  background: rgba(197, 154, 81, 0.08);
+}
+
+.feature-group-card {
+  background: rgba(197, 154, 81, 0.06);
+}
+
+.category-heading:hover {
+  background: rgba(197, 154, 81, 0.07);
+}
+
+.shortcut-feedback.warning {
+  background: rgba(194, 154, 79, 0.08);
+}

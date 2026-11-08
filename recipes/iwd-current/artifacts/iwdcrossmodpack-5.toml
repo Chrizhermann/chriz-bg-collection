@@ -1,0 +1,32 @@
+id = "iwdcrossmodpack-5"
+name = "Icewind Dale Crossmod Banter Pack"
+version = "5"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Gibberlings3/iwdcrossmod/releases/download/v5/icewind-dale-crossmod-banter-pack-v5.iemod"
+reference = "v5"
+expected_filename = "icewind-dale-crossmod-banter-pack-v5.iemod"
+expected_length = 667051
+sha256 = "658f584697784511975099156e3f20dcb557398a7e588ff450c25bed27adc19b"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "iemod"
+root_rule = "direct"
+publish_roots = ["iwdcrossmodpack"]
+tp2_paths = ["iwdcrossmodpack/iwdcrossmodpack.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 2048
+max_entry_uncompressed_bytes = 1048576
+max_total_uncompressed_bytes = 4194304
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Gibberlings3/iwdcrossmod"
+license = "Fetch-only official asset; upstream permission required for redistribution"
+url = "https://github.com/Gibberlings3/iwdcrossmod/releases/tag/v5"
+reviewed_on = "2026-10-25"

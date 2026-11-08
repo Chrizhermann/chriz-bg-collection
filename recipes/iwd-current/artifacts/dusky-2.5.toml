@@ -1,0 +1,32 @@
+id = "dusky-2.5"
+name = "Dusky"
+version = "2.5"
+acquisition = "fetch-only"
+
+[source]
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/dusky-iwdee-npc/?wpdmdl=129"
+reference = "2.5"
+expected_filename = "Dusky-v2.5.zip"
+expected_length = 6209880
+sha256 = "57fe2c552579c0602e7090068e34c93324e983ab3829bdb6ac12641abf432cb4"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["Dusky"]
+tp2_paths = ["Dusky/Dusky.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://downloads.weaselmods.net/download/dusky-iwdee-npc/"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
+url = "https://downloads.weaselmods.net/download/dusky-iwdee-npc/"
+reviewed_on = "2026-10-26"

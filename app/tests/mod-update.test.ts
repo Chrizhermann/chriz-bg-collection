@@ -6,6 +6,7 @@ import { mountApp } from "../src/app";
 import { FixtureBackend } from "../src/backend";
 import type { ManagedCopyUpdate, ModUpdatePreview } from "../src/contracts";
 import { modUpdateSection, type ModUpdateActions } from "../src/components/mod-update";
+import { updatesScreen } from "../src/screens/updates";
 
 const copy: ManagedCopyUpdate = {
   installId: "first", name: "Chriz Easy BG", path: "D:\\Games\\Chriz Easy BG",
@@ -181,6 +182,30 @@ describe("BuffBot under Updates", () => {
     await app.navigate("updates");
     return root;
   }
+
+  it.each(["patchBusy", "modUpgradeBusy"] as const)("disables every BuffBot action while %s", async (busy) => {
+    const summary = { ...await new FixtureBackend().getUpdates(), managedCopies: [copy] };
+    for (const state of ["available", "up-to-date", "needs-recovery"] as const) {
+      const callbacks = checked({ state, canUndo: state === "up-to-date", canRestore: state === "needs-recovery" });
+      const controls = {
+        ...callbacks, [busy]: true,
+        checkAgain: vi.fn(), installApplication: vi.fn(), buildUpdatedCopy: vi.fn(),
+      };
+      const root = updatesScreen(summary, controls);
+      const card = root.querySelector<HTMLElement>(".mod-update-section")!;
+      const buttons = [...card.querySelectorAll<HTMLButtonElement>("button")];
+      expect(buttons.length).toBeGreaterThan(1);
+      for (const button of buttons) {
+        expect(button.disabled, button.textContent ?? "").toBe(true);
+        fireEvent.click(button);
+      }
+      for (const action of [callbacks.onCheckModUpdate, callbacks.onApplyModUpdate, callbacks.onUndoModUpdate, callbacks.onRestoreModUpdate]) {
+        expect(action).not.toHaveBeenCalled();
+      }
+      const idle = updatesScreen(summary, { ...controls, [busy]: false });
+      expect(idle.querySelector<HTMLButtonElement>(".mod-update-section button")?.disabled).toBe(false);
+    }
+  });
 
   it("checks only when asked, updates and undoes", async () => {
     const backend = new FixtureBackend();

@@ -1,0 +1,11 @@
+id = "hommet"
+artifact_id = "hommet-1.2"
+name = "Hommet"
+tp2 = "Hommet/hommet.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Hommet Shaw for IWD EE... because - hey, why not? I'm STARVING. What do they eat in Icewind Dale? Let's check it out."

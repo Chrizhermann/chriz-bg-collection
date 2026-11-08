@@ -68,6 +68,8 @@ jobs:
             run_attempt = $env:GITHUB_RUN_ATTEMPT
             app_version = (Get-Content app/package.json -Raw | ConvertFrom-Json).version
             recipe_version = (Get-Content recipes/curated-full-current/release.json -Raw | ConvertFrom-Json).version
+            iwd_app_version = (Get-Content app/src-tauri/tauri.iwd.conf.json -Raw | ConvertFrom-Json).version
+            iwd_recipe_version = (Get-Content recipes/iwd-current/release.json -Raw | ConvertFrom-Json).version
             runner_image = $env:ImageOS
             runner_image_version = $env:ImageVersion
             visual_studio = @($cebgVisualStudio | Select-Object displayName, installationVersion)
@@ -121,6 +123,24 @@ jobs:
           cargo clippy --locked --workspace --all-targets -- -D warnings 2>&1 | Tee-Object -FilePath target/ci-evidence/clippy.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # Chriz Easy IWD is this app built with tauri.iwd.conf.json. The Tauri CLI hands that
+      # configuration patch to the build as TAURI_CONFIG, from which build.rs selects the flavor.
+      - name: Test and lint the Chriz Easy IWD build
+        if: ${{ !cancelled() && (steps.native_tests.outcome == 'success' || steps.native_tests.outcome == 'failure') }}
+        run: |
+          $env:TAURI_CONFIG = Get-Content -LiteralPath app/src-tauri/tauri.iwd.conf.json -Raw
+          cargo test --locked -p chriz-bg-app --no-fail-fast 2>&1 | Tee-Object -FilePath target/ci-evidence/cargo-test-iwd.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo clippy --locked -p chriz-bg-app --all-targets -- -D warnings 2>&1 | Tee-Object -FilePath target/ci-evidence/clippy-iwd.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Push-Location app
+          npm.cmd test -- --run --mode iwd tests/iwd-flavor.test.ts tests/iwd-index-html.test.ts tests/hotpatch.test.ts 2>&1 | Tee-Object -FilePath ../target/ci-evidence/frontend-test-iwd.log
+          if ($LASTEXITCODE -ne 0) { Pop-Location; exit $LASTEXITCODE }
+          npm.cmd run build -- --mode iwd 2>&1 | Tee-Object -FilePath ../target/ci-evidence/frontend-iwd.log
+          $cebgIwdBuild = $LASTEXITCODE
+          Pop-Location
+          if ($cebgIwdBuild -ne 0) { exit $cebgIwdBuild }
+
       - name: Test authoring and packaging tools
         if: ${{ !cancelled() && (steps.native_tests.outcome == 'success' || steps.native_tests.outcome == 'failure') }}
         run: |
@@ -170,12 +190,55 @@ jobs:
 
       # The in-app updater runs the setup in update mode, where Tauri's installer keeps files an
       # older version shipped; the preinstall hook in app/src-tauri/windows/hooks.nsh removes them.
-      # The runner is disposable, so this step installs the setup for real.
-      - name: Check that an update install replaces the bundled data
+      # The runner is disposable, so these steps install both apps' setups for real.
+      - name: Check that an update install replaces the bundled data (Chriz Easy BG)
         run: |
           $cebgSetups = @(Get-ChildItem -LiteralPath target/x86_64-pc-windows-msvc/release/bundle/nsis -Filter 'Chriz Easy BG_*_x64-setup.exe' -File)
           if ($cebgSetups.Count -ne 1) { throw 'Expected exactly one Chriz Easy BG setup.' }
           ./tools/check-nsis-update-cleanup.ps1 -SetupPath $cebgSetups[0].FullName -TauriConfiguration app/src-tauri/tauri.conf.json -WorkDirectory (Join-Path $env:RUNNER_TEMP 'cebg-update-check') 2>&1 | Tee-Object -FilePath target/ci-evidence/update-install-bg.log
+
+      - name: Build an unsigned Chriz Easy IWD development package
+        working-directory: app
+        run: |
+          $cebgLocalConfig = Join-Path $env:RUNNER_TEMP 'cebg-unsigned-ci.json'
+          $cebgIwdConfig = (Resolve-Path 'src-tauri/tauri.iwd.conf.json').Path
+          npm.cmd run tauri -- build --target x86_64-pc-windows-msvc --bundles nsis --config $cebgIwdConfig --config $cebgLocalConfig -- --locked 2>&1 | Tee-Object -FilePath ../target/ci-evidence/unsigned-package-iwd.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Check that an update install replaces the bundled data (Chriz Easy IWD)
+        run: |
+          $cebgBundle = 'target/x86_64-pc-windows-msvc/release/bundle/nsis'
+          $cebgSetups = @(Get-ChildItem -LiteralPath $cebgBundle -Filter 'Chriz Easy IWD_*_x64-setup.exe' -File)
+          if ($cebgSetups.Count -ne 1) { throw 'Expected exactly one Chriz Easy IWD setup.' }
+          if (@(Get-ChildItem -LiteralPath $cebgBundle -Filter '*.sig' -File).Count -ne 0) { throw 'CI must not produce production updater signatures.' }
+          ./tools/check-nsis-update-cleanup.ps1 -SetupPath $cebgSetups[0].FullName -TauriConfiguration app/src-tauri/tauri.conf.json, app/src-tauri/tauri.iwd.conf.json -WorkDirectory (Join-Path $env:RUNNER_TEMP 'iwd-update-check') -RecipeFolder recipes/iwd-current -ValidatorPath target/debug/chriz-bg-install.exe 2>&1 | Tee-Object -FilePath target/ci-evidence/update-install-iwd.log
+
+      - name: Record the unsigned Chriz Easy IWD artifact
+        run: |
+          $cebgSetups = @(Get-ChildItem -LiteralPath target/x86_64-pc-windows-msvc/release/bundle/nsis -Filter 'Chriz Easy IWD_*_x64-setup.exe' -File)
+          if ($cebgSetups.Count -ne 1) { throw 'Expected exactly one Chriz Easy IWD setup.' }
+          $cebgSignature = Get-AuthenticodeSignature -LiteralPath $cebgSetups[0].FullName
+          if ($cebgSignature.Status -ne 'NotSigned') { throw 'Expected an unsigned development setup.' }
+          $cebgOutput = Join-Path $env:GITHUB_WORKSPACE 'target/ci-unsigned-package-iwd'
+          New-Item -ItemType Directory -Path $cebgOutput -Force | Out-Null
+          $cebgCommit = (git rev-parse --short=12 HEAD).Trim()
+          $cebgName = "IWD-UNSIGNED-CI-$cebgCommit-x64-setup.exe"
+          Copy-Item -LiteralPath $cebgSetups[0].FullName -Destination (Join-Path $cebgOutput $cebgName)
+          $cebgHash = (Get-FileHash -LiteralPath $cebgSetups[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$cebgHash  $cebgName" | Set-Content -LiteralPath (Join-Path $cebgOutput 'SHA256SUMS') -Encoding utf8
+          'UNSIGNED CI DEVELOPMENT PACKAGE. No Authenticode or Tauri updater signature. No installer, game, or updater acceptance is implied. This is not an official Chriz Easy IWD release.' | Set-Content -LiteralPath (Join-Path $cebgOutput 'README.txt') -Encoding utf8
+          Copy-Item -LiteralPath target/ci-evidence/provenance.json -Destination $cebgOutput
+          [ordered]@{ file = $cebgName; bytes = $cebgSetups[0].Length; sha256 = $cebgHash; authenticode = $cebgSignature.Status.ToString() } | ConvertTo-Json | Set-Content -LiteralPath target/ci-evidence/unsigned-artifact-iwd.json -Encoding utf8
+          git diff --exit-code
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Retain the unsigned Chriz Easy IWD package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: iwd-UNSIGNED-CI-windows-x64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: target/ci-unsigned-package-iwd/
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Retain source-check evidence
         if: ${{ always() }}
