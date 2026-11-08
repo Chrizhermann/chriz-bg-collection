@@ -579,10 +579,16 @@ def prepare(
         if host not in allowed:
             raise NeedsAgent(f"{plan.new_id}: the download ends on {host}, which the old pin "
                              f"does not allow; review redirect_hosts")
+        # A copy that the pin declares as a TP2 path of its own is no rival: SoD Remix ships
+        # its nested TP2 again at the archive root, and its pin lists both paths.
+        declared = {tp2.lower() for tp2 in tp2s}
         for match in plan.inspection["archive"]["expected_tp2_matches"]:
-            if len(match["matches"]) != 1:
+            expected = match["expected"].lower()
+            found = [path for path in match["matches"]
+                     if path.lower() == expected or path.lower() not in declared]
+            if len(found) != 1:
                 raise NeedsAgent(f"{plan.new_id}: the TP2 {match['expected']} matches "
-                                 f"{len(match['matches'])} files")
+                                 f"{len(found)} files")
         if plan.asset is not None:
             if plan.inspection["length"] != plan.asset.size:
                 raise NeedsAgent(f"{plan.new_id}: downloaded {plan.inspection['length']} bytes, "

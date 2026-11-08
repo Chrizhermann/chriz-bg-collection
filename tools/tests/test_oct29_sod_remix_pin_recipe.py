@@ -7,6 +7,8 @@ decision changes (Christopher approved the release and this pin on 2026-10-29).
 
 Static pin, evidence, component, selection and order checks for both recipe profiles only.
 Nothing here is a game installation or gameplay acceptance.
+The November 8 intake (test_nov08_sod_remix_pin_recipe) supersedes this pin with v0.6.17;
+the v0.6.16 record and artifacts stay as verified here.
 """
 
 from pathlib import Path
@@ -25,6 +27,7 @@ PROFILES = ["manifest", "recipes/curated-full-current"]
 MOD = "chriz-sod-remix"
 PIN = "chriz-sod-remix-0.6.16"
 PREVIOUS = "chriz-sod-remix-0.6.15"
+SUCCESSOR = "chriz-sod-remix-0.6.17"
 TAG = "v0.6.16"
 FILENAME = "chriz-sod-remix-v0.6.16.zip"
 SHA256 = "7da50d206e4f0d50dd94d5e60fd985290a245d2dc3bed32068e1eaad0219c2e6"
@@ -121,12 +124,12 @@ class Oct29SodRemixV0616PinTests(unittest.TestCase):
         self.assertEqual(record["native_components"], self.previous["native_components"])
         self.assertEqual(len(record["native_components"]), 49)
 
-    def test_both_profiles_pin_v0616_and_keep_v0615(self):
+    def test_both_profiles_keep_v0616_as_history(self):
         for profile_name, directory in self.directories:
             with self.subTest(profile=str(directory)):
                 self.assertIn(profile_name, self.record["recipe_profiles"])
                 mod = _load(directory / f"mods/{MOD}.toml")
-                self.assertEqual(mod["artifact_id"], PIN)
+                self.assertEqual(mod["artifact_id"], SUCCESSOR)
                 artifact = _load(directory / f"artifacts/{PIN}.toml")
                 previous = _load(directory / f"artifacts/{PREVIOUS}.toml")
                 self.assertEqual(artifact["id"], PIN)
@@ -184,7 +187,7 @@ class Oct29SodRemixV0616PinTests(unittest.TestCase):
 
     def test_catalog_changelog_ledger_and_pin_list_name_the_pin(self):
         catalog = (ROOT / "docs/curation/components/CHRIZ-SOD-REMIX.md").read_text(encoding="utf-8")
-        for phrase in (f"Pinned public release **{TAG}**", f"`{TAG_COMMIT[:7]}`", EVIDENCE,
+        for phrase in ("v0.6.16 lets `290`", f"`{TAG_COMMIT[:7]}`", EVIDENCE,
                        "chriz-sod-rebalance#34", "chriz-sod-rebalance#35", "chriz-sod-rebalance#36",
                        "chriz-sod-rebalance#37", "Sirene NPC for BG:EE"):
             self.assertIn(phrase, catalog)
@@ -193,15 +196,9 @@ class Oct29SodRemixV0616PinTests(unittest.TestCase):
                        "**SoD Remix's victory ending** (Mandatory)"):
             self.assertIn(phrase, changelog)
         self.assertNotIn("SoD Remix v0.6.15 (was", changelog)
-        ledger = (ROOT / "manifest/mod-sources.tsv").read_text(encoding="utf-8").splitlines()
-        (row,) = [line.split("\t") for line in ledger if line.startswith("CHRIZ-SOD-REMIX\t")]
-        self.assertEqual(row[3:5], [TAG, "2026-10-29"])
-        self.assertEqual(row[7], self.record["immutable_source_url"])
-        self.assertIn(f"manifest/artifacts/{PIN}.toml", row[9])
-        self.assertIn(SHA256.upper(), row[9])
         pin_list = (ROOT / "docs/pin-list-2.7.md").read_text(encoding="utf-8")
-        self.assertEqual(pin_list.count(f"| CHRIZ-SOD-REMIX | {TAG.removeprefix('v')} | `{MOD}` | `{SHA256[:12]}…` |"), 2)
         self.assertNotIn("| CHRIZ-SOD-REMIX | 0.6.15 |", pin_list)
+        self.assertNotIn("| CHRIZ-SOD-REMIX | 0.6.16 |", pin_list)
 
 
 if __name__ == "__main__":

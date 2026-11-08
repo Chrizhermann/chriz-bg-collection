@@ -9,6 +9,8 @@ same release in PR #107.
 
 Static pin, evidence, component, selection, order and release-text checks for both recipe
 profiles only. Nothing here is a game installation or gameplay acceptance.
+The November 8 intake (test_nov08_buffbot_pin_recipe) supersedes this pin with v1.16.1;
+the v1.16.0 record and artifacts stay as verified here.
 """
 
 from pathlib import Path
@@ -27,6 +29,7 @@ PROFILES = ["manifest", "recipes/curated-full-current"]
 MOD = "buffbot"
 PIN = "buffbot-1.16.0"
 PREVIOUS = "buffbot-1.12.6"
+SUCCESSOR = "buffbot-1.16.1"
 # Older pins that stay as history next to the superseded one.
 HISTORY = ["buffbot-1.10.1", "buffbot-1.11.0", "buffbot-1.12.1"]
 TAG = "v1.16.0"
@@ -127,12 +130,12 @@ class Nov04BuffBotV1160PinTests(unittest.TestCase):
         self.assertEqual(record["native_components"], self.previous["native_components"])
         self.assertEqual(record["native_components"], [component for component, _ in COMPONENTS])
 
-    def test_both_profiles_pin_v1160_and_keep_the_earlier_pins(self):
+    def test_both_profiles_keep_v1160_as_history(self):
         for profile_name, directory in self.directories:
             with self.subTest(profile=str(directory)):
                 self.assertIn(profile_name, self.record["recipe_profiles"])
                 mod = _load(directory / f"mods/{MOD}.toml")
-                self.assertEqual(mod["artifact_id"], PIN)
+                self.assertEqual(mod["artifact_id"], SUCCESSOR)
                 artifact = _load(directory / f"artifacts/{PIN}.toml")
                 previous = _load(directory / f"artifacts/{PREVIOUS}.toml")
                 self.assertEqual(artifact["id"], PIN)
@@ -223,7 +226,7 @@ class Nov04BuffBotV1160PinTests(unittest.TestCase):
     def test_catalog_changelog_and_pin_list_name_the_pin(self):
         catalog = (ROOT / "docs/curation/components/BUFFBOT.md").read_text(encoding="utf-8")
         folded = " ".join(catalog.split())
-        for phrase in (f"Target release: **{TAG}**", f"`{TAG_COMMIT[:7]}`", EVIDENCE,
+        for phrase in (f"- {TAG} (released", f"`{TAG_COMMIT[:7]}`", EVIDENCE,
                        "Christopher, 2026-11-04", "`FAIL @112`", "`PRINT @114`", "`BfBotSum.lua`",
                        "schema 10", "`cln`", "`430`", "PR #107",
                        *(f"bg-eeex-buffbot#{issue}" for issue in (105, 106, 107, 112, 115, 116, 117)),
@@ -232,15 +235,15 @@ class Nov04BuffBotV1160PinTests(unittest.TestCase):
             self.assertIn(phrase, folded)
         changelog = (ROOT / "docs/plans/2026-10-14-next-release-changelogs.md").read_text(encoding="utf-8")
         draft = changelog[changelog.index("## Collection 0.1.2 (draft)"):changelog.index("## Installer changelog")]
-        for phrase in ("- BuffBot v1.16.0 (was v1.12.6)", "**BuffBot v1.16.0**", "`artifact:buffbot-1.16.0`",
+        for phrase in ("**BuffBot v1.16.0**", "`artifact:buffbot-1.16.0`",
                        *(f"(BuffBot v{version}" for version in
                          ("1.12.7", "1.12.8", "1.12.9", "1.13.0", "1.14.0", "1.15.0", "1.16.0"))):
             self.assertIn(phrase, draft)
         # The 0.1.0 sections keep the version 0.1.0 shipped.
         self.assertIn("BuffBot v1.12.6 (was v1.10.0)", changelog[changelog.index("## Collection changelog"):])
         pin_list = (ROOT / "docs/pin-list-2.7.md").read_text(encoding="utf-8")
-        self.assertEqual(pin_list.count(f"| BuffBot | {TAG.removeprefix('v')} | `{MOD}` | `{SHA256[:12]}…` |"), 2)
         self.assertNotIn("| BuffBot | 1.12.6 |", pin_list)
+        self.assertNotIn("| BuffBot | 1.16.0 |", pin_list)
 
 
 if __name__ == "__main__":

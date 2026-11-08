@@ -12,7 +12,8 @@
 Static pin, evidence, component, selection, order and release-text checks for both recipe
 profiles only. Nothing here is a game installation or gameplay acceptance. The November 3
 intake (test_nov03_rebalance_0810_pin_recipe) supersedes the Rebalance pin with v0.8.10 for
-0.1.2, which changes only Flail of the Ages 302 and no component; the v0.8.9 record,
+0.1.2, and the November 8 intake (test_nov08_rebalance_0811_pin_recipe) supersedes that pin
+with v0.8.11; neither changes a component. The v0.8.9 record,
 artifacts and 0.1.0 texts stay as verified here.
 """
 
@@ -54,8 +55,8 @@ PINS = {
                "chriz-bg-rebalance-v0.8.9-windows.zip",
         "length": 1_844_195,
         "sha256": "da03fe9e2a36f5af155311197e68d6f82ead270426015363fa161ad56e8ea6f2",
-        # The November 3 intake moves both profiles to v0.8.10.
-        "successor": "chriz-bg-rebalance-0.8.10",
+        # The November 8 intake moves both profiles to v0.8.11.
+        "successor": "chriz-bg-rebalance-0.8.11",
     },
 }
 REBALANCE_RUN = "chriz-bg-rebalance-bg2"

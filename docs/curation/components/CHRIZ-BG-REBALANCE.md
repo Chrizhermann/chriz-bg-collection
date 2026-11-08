@@ -14,24 +14,32 @@ The release retains component `120`
 weapon-protection repair, component `121` EEex/SCS ambient-readiness bridge, and the
 component `401` correction for Artisan CLAB cells packed into `ABILITY1`.
 
-The recipe pins **v0.8.10** (published 2026-11-03 18:42 UTC, tag commit `cd0ffa2`; pinned
-2026-11-04 for CEBG 0.1.2, Christopher's OK of that day). It changes only Flail of the Ages
-`302` and adds or removes no component. Without Spell Revisions, SCS's "Haste and Slow
-effects cancel" spell tweak moves each flail's Slow into a helper spell and gives Haste and
-Slow its own secondary types on the spells they cast; `302` now counts such a helper as part
-of the Slow and reads the types from what the installed spells carry and remove. A new
-installation without Spell Revisions therefore no longer stops at `302` with "BLUN14.SPL
-mixes Slow with other effects", the known issue of CEBG 0.1.1. A target that makes the save
-is not slowed and keeps its Haste; a hasted target that fails it loses Haste instead, as SCS
-intends. The +5 flail now also lets Potion of Haste and Haste rings (`SPIN572`) work, with
-and without Spell Revisions, and keeps Free Action and its immunity to Slow, Hold, Web and
-Entangle. The Slow saves stay at -2 (+3), -4 (both +4) and -6 (+5) vs. Breath. A helper with
-damage or other effects still stops the installation with the reason. Its owner suite (840
-tests with WeiDU 249) and dry runs on copies of a CEBG test install without Spell Revisions,
-of Spell Revisions data and of vanilla data passed; the flail has not been tested in a
-running game yet. Evidence:
-`manifest/evidence/release-intake-20261103-chriz-bg-rebalance-chriz-easy-bg.toml`. The
-recipe's selection does not change: `302` stays a default without requirements.
+The recipe pins **v0.8.11** (published 2026-11-08, annotated tag on merge commit `5cd9067`
+of Rebalance PR #27). It keeps the same 36 components, source order and Recommended
+selection as v0.8.10. Every selected component writes the result it decides regardless of
+edited game values, another mod's version of the same spell, item or table, or a missing
+owned piece; none of those conditions stops, warns or skips its installation. Bard progression
+provider `420` copies its tables by their exact file names, so a case-sensitive WeiDU resolves
+them. Fresh-download evidence is
+`manifest/evidence/release-intake-20261108-chriz-bg-rebalance-chriz-easy-bg.toml`; it is
+source/package verification, not a WeiDU installation or gameplay acceptance.
+
+v0.8.10 (published 2026-11-03 18:42 UTC, tag commit `cd0ffa2`; pinned 2026-11-04 for CEBG
+0.1.2, Christopher's OK of that day) changes only Flail of the Ages `302` and adds or removes
+no component. Without Spell Revisions, SCS's "Haste and Slow effects cancel" spell tweak moves
+each flail's Slow into a helper spell and gives Haste and Slow its own secondary types on the
+spells they cast; `302` now counts such a helper as part of the Slow and reads the types from
+what the installed spells carry and remove. A new installation without Spell Revisions therefore
+no longer stops at `302` with "BLUN14.SPL mixes Slow with other effects", the known issue of
+CEBG 0.1.1. A target that makes the save is not slowed and keeps its Haste; a hasted target
+that fails it loses Haste instead, as SCS intends. The +5 flail now also lets Potion of Haste
+and Haste rings (`SPIN572`) work, with and without Spell Revisions, and keeps Free Action and
+its immunity to Slow, Hold, Web and Entangle. The Slow saves stay at -2 (+3), -4 (both +4) and
+-6 (+5) vs. Breath. Its owner suite (840 tests with WeiDU 249) and dry runs on copies of a CEBG
+test install without Spell Revisions, of Spell Revisions data and of vanilla data passed; the
+flail has not been tested in a running game yet. Evidence:
+`manifest/evidence/release-intake-20261103-chriz-bg-rebalance-chriz-easy-bg.toml`. The recipe's
+selection does not change: `302` stays a default without requirements.
 v0.8.9 (2026-11-01 21:45 UTC, tag commit `bb3f11b`; pinned 2026-11-02 for CEBG 0.1.0,
 Christopher's OK of that day) changed no mechanic and no component: Pierce Magic `210` and Spellstrike `211` now write their spell descriptions in
 Spell Revisions' layout (header block, intro, the list of protections removed, the

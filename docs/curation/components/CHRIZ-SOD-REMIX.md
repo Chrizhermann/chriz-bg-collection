@@ -1,7 +1,7 @@
 # CHRIZ-SOD-REMIX — components
 
-Pinned public release **v0.6.16** from `Chrizhermann/chriz-sod-rebalance` (published
-2026-10-29). This catalog has 46 current or historical entries; the recommended EET
+Pinned public release **v0.6.17** from `Chrizhermann/chriz-sod-rebalance` (published
+2026-11-08). This catalog has 46 current or historical entries; the recommended EET
 setup installs 41 components: the 40-row mandatory bundle plus Imoen choice `292`.
 Rows `177`, `198` and `285` arrived with v0.6.13 (October 13 intake, see
 [next batch intake](../../plans/2026-10-13-next-batch-intake.md)) and are mandatory
@@ -11,6 +11,9 @@ install alongside Tweaks Anthology `3500`
 v0.6.16 lets `290` install alongside Sirene NPC for BG:EE and other mods that add a
 victory remark, and lets `265` and six more components read timer names from the
 game's own `GTIMES.IDS`.
+v0.6.17 writes every component's decided result over changed game data: edited values,
+missing owned dialogue states, placements and occupied script slots no longer stop, warn or
+skip a component. No component, order, default or curation decision changed.
 Existing-save repairs `176` and `291` and alternative `901` stay out of the recipe. The [September 16 candidate](../../alpha16-candidate-2026-09-16.md)
 approved normal components `115`, `135`, `256`, `265`, and `266` in the mandatory bundle,
 with `257` optional and unchecked. Component `901` remains the unselected alternative
@@ -53,6 +56,14 @@ The Dev marks below retain their historical scope and do not certify the new add
 
 ## Source/version and follow-up checks
 
+- The pinned `v0.6.17` release (2026-11-08, tag commit `42f1929`; evidence in
+  `manifest/evidence/release-intake-20261108-chriz-sod-remix-chriz-easy-bg.toml`) has the same
+  49 native declarations and the same recipe selection as v0.6.16. It removes game-data
+  shape gates from every component: an edited value, missing owned dialogue state or placement,
+  occupied script slot, or another mod's version is overwritten with the decided result. The
+  source owner reports 537 unit tests and 40 research scripts; a 466-component Recommended
+  installation on BG2:EE 2.7.3.0 started and loaded a save. Playing the changed scenes and
+  other-mod resource variants beyond the fixtures remain untested.
 - The pinned `v0.6.16` release (2026-10-29, tag on merge commit `f0d6c5a`; evidence in
   `manifest/evidence/release-intake-20261029-sodremix.toml`) changes two things against
   v0.6.15, with the same components, order and decisions:

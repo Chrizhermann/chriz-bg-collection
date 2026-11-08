@@ -62,6 +62,11 @@ candidate. It ran on a hidden desktop through the quiet lab runner. The EEex rem
 console started dialogues, moved the party between areas and set the plot variables
 listed below; everything else ran natively.
 
+The current collection pin is SoD Remix v0.6.17. It keeps this recipe selection but writes
+each component's decided result over changed game data; its source verification did not
+repeat this combined Sirene lab, and its changed other-mod resource variants remain
+untested.
+
 - **Install.** Clean.
   - WeiDU.log has Sirene BG1 `0`, `3` and `6` after Kitpack `3005` and before Sirene BG2.
   - KITLIST has exactly one Martyr (`C0ILM`) row. Every one of the seven `K_P_*` tables

@@ -11,8 +11,9 @@ its components and order, and BG Rebalance v0.8.6 (October 28, same test) supers
 v0.8.5 pin, keeps its components and order and adds the Time Stop and Haste effect clocks
 360 after 340. BuffBot v1.12.1 (October 28, test_oct28_buffbot_pin_recipe) supersedes the
 v1.11.0 pin and keeps its components and order, BuffBot v1.12.6 (November 1,
-test_nov01_buffbot_pin_recipe) supersedes v1.12.1 in turn, and BuffBot v1.16.0 (November 4,
-test_nov04_buffbot_pin_recipe) v1.12.6. The chriz.3, v0.8.5 and v1.11.0 records and
+test_nov01_buffbot_pin_recipe) supersedes v1.12.1 in turn, BuffBot v1.16.0 (November 4,
+test_nov04_buffbot_pin_recipe) v1.12.6, and BuffBot v1.16.1 (November 8,
+test_nov08_buffbot_pin_recipe) v1.16.0. The chriz.3, v0.8.5 and v1.11.0 records and
 artifacts stay as verified here. The Kitpack fork chriz.5 (October 29,
 test_oct29_kitpack_chriz5_pin_recipe) then supersedes chriz.4 and adds tweak 7205, which is
 checked against its own record. Chriz BG Modpack alpha.15 (November 3,
@@ -48,9 +49,9 @@ SUCCESSORS["buffbot"] = "buffbot-1.12.1"
 # The November 1 intake (test_nov01_buffbot_pin_recipe) replaces v1.12.1 with v1.12.6, which
 # keeps both components and their order.
 SUCCESSORS["buffbot"] = "buffbot-1.12.6"
-# The November 4 intake (test_nov04_buffbot_pin_recipe) replaces v1.12.6 with v1.16.0, which
-# keeps both components and their order.
-SUCCESSORS["buffbot"] = "buffbot-1.16.0"
+# The November 8 intake (test_nov08_buffbot_pin_recipe) replaces v1.16.0 with v1.16.1, which
+# also keeps both components and their order.
+SUCCESSORS["buffbot"] = "buffbot-1.16.1"
 # Components declared by a successor pin, checked against its own record; none is in a
 # record of this intake.
 LATER_COMPONENTS = {"chriz-bg-rebalance": {360}}
@@ -74,9 +75,9 @@ LATER_ROWS["ARTISANSKITPACK_TWEAK"] = {7205}
 SUCCESSORS.update({mod_id: "artisans-kitpack-4.81a-dev.85928f9-chriz.6"
                    for mod_id in ("artisanskitpack", "artisanskitpack-npc", "artisanskitpack-tweak")})
 SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.9"
-# The November 3 Rebalance intake (test_nov03_rebalance_0810_pin_recipe) replaces v0.8.9 with
-# v0.8.10, which changes only Flail of the Ages 302 and no component or the order.
-SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.10"
+# The November 8 Rebalance intake (test_nov08_rebalance_0811_pin_recipe) replaces v0.8.10 with
+# v0.8.11, which keeps every component and the order.
+SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.11"
 # The November 3 intake (test_nov03_modpack_alpha15_marek_dagger_recipe) replaces Modpack
 # alpha.14 with alpha.15, which declares Marek's Boomerang Dagger 670 between 660 and 650.
 SUCCESSORS["chriz-bg-modpack"] = "chriz-bg-modpack-0.2.0-alpha.15"

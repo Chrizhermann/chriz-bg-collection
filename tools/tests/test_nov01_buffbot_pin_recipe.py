@@ -8,7 +8,7 @@ Against v1.12.1 the TP2 changes only its version and two comments, so no decisio
 
 Static pin, evidence, component, selection, order and release-text checks for both recipe
 profiles only. Nothing here is a game installation or gameplay acceptance. The November 4
-intake (test_nov04_buffbot_pin_recipe) supersedes this pin with v1.16.0, which keeps both
+intake (test_nov08_buffbot_pin_recipe) supersedes this pin with v1.16.1, which keeps both
 components and their order; the v1.12.6 record and artifacts stay as verified here, and 0.1.0
 and 0.1.1 ship v1.12.6.
 """
@@ -29,8 +29,8 @@ PROFILES = ["manifest", "recipes/curated-full-current"]
 MOD = "buffbot"
 PIN = "buffbot-1.12.6"
 PREVIOUS = "buffbot-1.12.1"
-# The November 4 intake (test_nov04_buffbot_pin_recipe) moves both profiles to v1.16.0.
-SUCCESSOR = "buffbot-1.16.0"
+# The November 8 intake (test_nov08_buffbot_pin_recipe) moves both profiles to v1.16.1.
+SUCCESSOR = "buffbot-1.16.1"
 # Older pins that stay as history next to the superseded one.
 HISTORY = ["buffbot-1.10.1", "buffbot-1.11.0"]
 TAG = "v1.12.6"

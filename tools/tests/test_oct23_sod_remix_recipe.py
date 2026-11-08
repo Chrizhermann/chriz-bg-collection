@@ -2,7 +2,7 @@
 
 Static recipe, selection, dependency and order checks for both recipe profiles only.
 The pin follows the October 23 publication; nothing here is a game installation or
-gameplay acceptance. SoD Remix v0.6.16 (October 29, test_oct29_sod_remix_pin_recipe)
+gameplay acceptance. SoD Remix v0.6.17 (November 8, test_nov08_sod_remix_pin_recipe)
 supersedes the v0.6.15 pin and keeps its components and order; the v0.6.15 record and
 artifacts stay as verified here.
 """
@@ -20,8 +20,8 @@ ROOT = Path(__file__).resolve().parents[2]
 MOD_ID = "chriz-sod-remix"
 ARTIFACT_ID = "chriz-sod-remix-0.6.15"
 PREVIOUS_ARTIFACT_ID = "chriz-sod-remix-0.6.13"
-# The October 29 intake replaces v0.6.15 with v0.6.16, which keeps every component and the order.
-SUCCESSOR_ARTIFACT_ID = "chriz-sod-remix-0.6.16"
+# The November 8 intake replaces v0.6.16 with v0.6.17, which keeps every component and the order.
+SUCCESSOR_ARTIFACT_ID = "chriz-sod-remix-0.6.17"
 SOD_RUN = "chriz-sod-remix-bg2"
 SOD = "feature:chriz-sod-remix:component-{}"
 BUNDLE = "feature:chriz-sod-remix:mandatory-components"

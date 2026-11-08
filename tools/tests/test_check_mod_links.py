@@ -33,31 +33,31 @@ from tools.check_mod_links import (
     TransportError,
 )
 
-SHA = "f99781368d64a419a567f48767728a600b8e81e203946217228ee9d61bc8b534"
+SHA = "e116ab16e98f055e398e23b3f1f417f61e37c9d2bf04aefced6c9a3f629ed31d"
 OTHER_SHA = "0" * 63 + "1"
-RELEASE_URL = "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.12.6/buffbot-v1.12.6.zip"
-RELEASE_API = "https://api.github.com/repos/Chrizhermann/bg-eeex-buffbot/releases/tags/v1.12.6"
+RELEASE_URL = "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.16.1/buffbot-v1.16.1.zip"
+RELEASE_API = "https://api.github.com/repos/Chrizhermann/bg-eeex-buffbot/releases/tags/v1.16.1"
 TAG_URL = "https://codeload.github.com/Bubb13/Bubbs-Spell-Menu-Extended/zip/refs/tags/v5.2"
 COMMIT_URL = "https://github.com/Chrizhermann/Kitpack/archive/ac718614991e34b4f720807bec5edc96266c6c5e.zip"
 COMMIT_FINAL = "https://codeload.github.com/Chrizhermann/Kitpack/zip/ac718614991e34b4f720807bec5edc96266c6c5e"
 WEASEL_URL = "https://downloads.weaselmods.net/download/bethany/?wpdmdl=751"
 ETAG = '"8b1b8e85479aebb49f753c24be0ffa3f9e29dcfdbac5602998fe12e85af89c7b"'
-TODAY = "2026-11-02"
+TODAY = "2026-11-08"
 
 
 def response(status: int = 200, url: str = "", body: bytes = b"", **headers: str) -> Response:
     return Response(status, url, {name.replace("_", "-"): value for name, value in headers.items()}, body)
 
 
-def release_json(size: int = 5713218, digest: str | None = f"sha256:{SHA}", name: str = "buffbot-v1.12.6.zip") -> bytes:
+def release_json(size: int = 5797598, digest: str | None = f"sha256:{SHA}", name: str = "buffbot-v1.16.1.zip") -> bytes:
     asset = {"name": name, "size": size, "state": "uploaded", "digest": digest}
-    return json.dumps({"tag_name": "v1.12.6", "assets": [asset]}).encode()
+    return json.dumps({"tag_name": "v1.16.1", "assets": [asset]}).encode()
 
 
-def make_pin(url: str = RELEASE_URL, kind: str = "github-release", length: int = 5713218, sha: str = SHA,
-             filename: str = "buffbot-v1.12.6.zip", hosts: tuple[str, ...] = ("release-assets.githubusercontent.com",)) -> Pin:
+def make_pin(url: str = RELEASE_URL, kind: str = "github-release", length: int = 5797598, sha: str = SHA,
+             filename: str = "buffbot-v1.16.1.zip", hosts: tuple[str, ...] = ("release-assets.githubusercontent.com",)) -> Pin:
     pin = Pin(url, sha, length, kind, filename, hosts)
-    pin.mods.add("BuffBot 1.12.6")
+    pin.mods.add("BuffBot 1.16.1")
     pin.recipes["Chriz Easy BG"] = {"manifest"}
     return pin
 
@@ -114,7 +114,7 @@ class GitHubReleaseTests(unittest.TestCase):
     def test_changed_size_with_digest_reports_both_without_downloading(self):
         result, transport, _ = self.check(response(200, RELEASE_API, release_json(size=9, digest=f"sha256:{OTHER_SHA}")))
         self.assertEqual(result.state, CHANGED)
-        self.assertIn("size differs: serves 9 bytes, pinned 5,713,218", result.detail)
+        self.assertIn("size differs: serves 9 bytes, pinned 5,797,598", result.detail)
         self.assertEqual(transport.downloaded, [])
 
     def test_no_digest_and_same_size_is_same_without_download(self):
@@ -149,7 +149,7 @@ class GitHubReleaseTests(unittest.TestCase):
     def test_rate_limited_api_falls_back_to_the_download_link(self):
         transport = FakeTransport({
             ("GET", RELEASE_API): response(403, RELEASE_API),
-            ("HEAD", RELEASE_URL): response(200, "https://release-assets.githubusercontent.com/x", content_length="5713218"),
+            ("HEAD", RELEASE_URL): response(200, "https://release-assets.githubusercontent.com/x", content_length="5797598"),
         })
         result = checker(transport).check(make_pin())
         self.assertEqual(result.state, SAME)
@@ -158,7 +158,7 @@ class GitHubReleaseTests(unittest.TestCase):
     def test_github_release_asset_host_is_not_a_move(self):
         transport = FakeTransport({
             ("GET", RELEASE_API): response(429, RELEASE_API),
-            ("HEAD", RELEASE_URL): response(200, "https://objects.githubusercontent.com/y", content_length="5713218"),
+            ("HEAD", RELEASE_URL): response(200, "https://objects.githubusercontent.com/y", content_length="5797598"),
         })
         self.assertEqual(checker(transport).check(make_pin(hosts=())).state, SAME)
 
@@ -311,17 +311,17 @@ def build_tree(root: Path) -> list[Installer]:
     """Two recipes that share one download, an unused superseded pin, a manual download."""
     for recipe in ("manifest", "recipes/curated-full-current"):
         base = root / "bg" / recipe
-        write(base / "mods" / "buffbot.toml", 'id = "buffbot"\nartifact_id = "buffbot-1.12.6"\nweidu_artifact_id = "weidu-249"\n')
+        write(base / "mods" / "buffbot.toml", 'id = "buffbot"\nartifact_id = "buffbot-1.16.1"\nweidu_artifact_id = "weidu-249"\n')
         write(base / "mods" / "evandra.toml", 'id = "evandra"\nartifact_id = "evandra-2.2"\n')
-        write(base / "artifacts" / "buffbot-1.12.6.toml", artifact_toml("BuffBot", "1.12.6", RELEASE_URL, 5713218))
-        write(base / "artifacts" / "buffbot-1.12.1.toml", artifact_toml("BuffBot", "1.12.1", RELEASE_URL.replace("1.12.6", "1.12.1"), 1, OTHER_SHA))
+        write(base / "artifacts" / "buffbot-1.16.1.toml", artifact_toml("BuffBot", "1.16.1", RELEASE_URL, 5797598))
+        write(base / "artifacts" / "buffbot-1.12.1.toml", artifact_toml("BuffBot", "1.12.1", RELEASE_URL.replace("1.16.1", "1.12.1"), 1, OTHER_SHA))
         write(base / "artifacts" / "weidu-249.toml", artifact_toml("WeiDU", "249", "https://github.com/weidu/weidu/releases/download/v249.00/WeiDU-Windows-249-amd64.zip", 1000))
         write(base / "artifacts" / "evandra-2.2.toml", artifact_toml("Evandra", "2.2", "https://www.gibberlings3.net/files/file/1008-evandra/?do=download", 2, kind="manual", acquisition="manual-user-supplied"))
     write(root / "bg" / "recipes" / "creator-full-current" / "artifacts" / "old.toml", "")
     write(root / "bg" / "recipes" / "new-recipe" / "artifacts" / "x.toml", "")
     base = root / "iwd" / "recipes" / "iwd-current"
-    write(base / "mods" / "buffbot.toml", 'artifact_id = "buffbot-1.12.6"\nweidu_artifact_id = "weidu-249"\n')
-    write(base / "artifacts" / "buffbot-1.12.6.toml", artifact_toml("BuffBot", "1.12.6", RELEASE_URL, 5713218))
+    write(base / "mods" / "buffbot.toml", 'artifact_id = "buffbot-1.16.1"\nweidu_artifact_id = "weidu-249"\n')
+    write(base / "artifacts" / "buffbot-1.16.1.toml", artifact_toml("BuffBot", "1.16.1", RELEASE_URL, 5797598))
     write(base / "artifacts" / "weidu-249.toml", artifact_toml("WeiDU", "249", "https://github.com/weidu/weidu/releases/download/v249.00/WeiDU-Windows-249-amd64.zip", 1000))
     return [
         Installer("Chriz Easy BG", root / "bg", ("manifest", "recipes/curated-full-current")),
@@ -335,7 +335,7 @@ class LoadPinsTests(unittest.TestCase):
             pins, skipped, notes = links.load_pins(build_tree(Path(folder)))
         self.assertEqual(sorted(pin.url for pin in pins), sorted([RELEASE_URL, "https://github.com/weidu/weidu/releases/download/v249.00/WeiDU-Windows-249-amd64.zip"]))
         buffbot = next(pin for pin in pins if pin.url == RELEASE_URL)
-        self.assertEqual(buffbot.mods, {"BuffBot 1.12.6"})
+        self.assertEqual(buffbot.mods, {"BuffBot 1.16.1"})
         self.assertEqual(buffbot.recipes, {"Chriz Easy BG": {"manifest", "curated-full-current"}, "Chriz Easy IWD": {"iwd-current"}})
         self.assertEqual([item["mod"] for item in skipped], ["Evandra 2.2", "Evandra 2.2"])
         self.assertEqual(notes, ["Chriz Easy BG: recipes/new-recipe has artifacts but is not checked"])

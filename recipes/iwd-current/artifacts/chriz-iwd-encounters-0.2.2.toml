@@ -1,15 +1,15 @@
-id = "chriz-iwd-encounters-0.2.1"
+id = "chriz-iwd-encounters-0.2.2"
 name = "Chriz IWD Encounters"
-version = "0.2.1"
+version = "0.2.2"
 acquisition = "fetch-only"
 
 [source]
 kind = "github-release"
-url = "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/download/v0.2.1/chriz-iwd-encounters-v0.2.1.zip"
-reference = "v0.2.1"
-expected_filename = "chriz-iwd-encounters-v0.2.1.zip"
-expected_length = 331725
-sha256 = "a4899e731f6d7f0fe157dba5c810f233ac3146ada1aa84fc4ee8ffd58271f031"
+url = "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/download/v0.2.2/chriz-iwd-encounters-v0.2.2.zip"
+reference = "v0.2.2"
+expected_filename = "chriz-iwd-encounters-v0.2.2.zip"
+expected_length = 381722
+sha256 = "c9a653aeb61bee0f3b76e230e793b4f835bb2e5ce13de48d5f1dce630a94442c"
 redirect_hosts = ["release-assets.githubusercontent.com"]
 
 [archive]
@@ -20,7 +20,7 @@ tp2_paths = ["chriz-iwd-encounters/setup-chriz-iwd-encounters.tp2"]
 
 [archive.limits]
 max_depth = 8
-max_entries = 64
+max_entries = 256
 max_entry_uncompressed_bytes = 1048576
 max_total_uncompressed_bytes = 4194304
 max_compression_ratio = 100
@@ -28,5 +28,5 @@ max_compression_ratio = 100
 [provenance]
 homepage = "https://github.com/Chrizhermann/chriz-iwd-encounters"
 license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
-url = "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/tag/v0.2.1"
-reviewed_on = "2026-11-07"
+url = "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/tag/v0.2.2"
+reviewed_on = "2026-11-08"

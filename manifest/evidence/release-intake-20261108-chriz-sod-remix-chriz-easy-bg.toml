@@ -1,0 +1,23 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-11-08"
+generator = "tools/prepare_own_mod_pin.py"
+command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 <TP2 path>; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python -I tools/check_native_component_order.py --recipe-root <recipe> --mod-id <mod> --archive <fresh downloaded ZIP>"
+scope = "SoD Remix v0.6.17 (published 2026-11-08 08:20 UTC, a normal GitHub release, tag commit 42f1929) replaces chriz-sod-remix-0.6.16 in manifest, recipes/curated-full-current. Each archive was downloaded anonymously into a fresh cache for the inspection and for each recipe's artifact TOML, and passed the production acquisition and extraction contracts. The superseded evidence records stay as history, and so do the superseded artifact TOMLs in manifest, recipes/curated-full-current. This is automated source/package verification, not a WeiDU install or gameplay acceptance."
+
+# 437 entries, 6,695,800 bytes uncompressed, largest entry 1,364,992 bytes, depth 5, compression ratio at most 15.2.
+[[artifacts]]
+mod_id = "chriz-sod-remix"
+artifact_id = "chriz-sod-remix-0.6.17"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v0.6.17"
+source_commit = "42f1929731db8f18bc095fd44959026f9f9ac307"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.17/chriz-sod-remix-v0.6.17.zip"
+actual_length = 3087264
+actual_sha256 = "d8ce264f4288979bc23b84d501b05eeaf8b2a0462f4a780b9380d062e48c09e3"
+tp2_sha256 = "87fc1dc878483515fa14fb6f6d49ef46645f17359a0266620409162c6e3ecfff"
+native_components = [100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 176, 177, 185, 190, 195, 210, 197, 198, 187, 200, 215, 220, 225, 245, 230, 235, 240, 250, 255, 256, 257, 258, 260, 265, 266, 270, 280, 285, 290, 291, 900, 901, 910, 292, 293, 294]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true

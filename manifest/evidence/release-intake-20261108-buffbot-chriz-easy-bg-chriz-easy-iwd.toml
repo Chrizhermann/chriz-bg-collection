@@ -1,0 +1,40 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-11-08"
+generator = "tools/prepare_own_mod_pin.py"
+command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 <TP2 path>; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python -I tools/check_native_component_order.py --recipe-root <recipe> --mod-id <mod> --archive <fresh downloaded ZIP>"
+scope = "BuffBot v1.16.1 (published 2026-11-08 08:10 UTC, a normal GitHub release, tag commit 377bb1d) replaces buffbot-1.12.6, buffbot-1.16.0 in manifest, recipes/curated-full-current, recipes/iwd-current. Each archive was downloaded anonymously into a fresh cache for the inspection and for each recipe's artifact TOML, and passed the production acquisition and extraction contracts. The superseded evidence records stay as history, and so do the superseded artifact TOMLs in manifest, recipes/curated-full-current; in recipes/iwd-current the new artifact TOML replaces the superseded one. This is automated source/package verification, not a WeiDU install or gameplay acceptance."
+
+# 230 entries, 7,196,477 bytes uncompressed, largest entry 1,364,992 bytes, depth 4, compression ratio at most 7.5.
+[[artifacts]]
+mod_id = "buffbot"
+artifact_id = "buffbot-1.16.1"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.16.1"
+source_commit = "377bb1d40a5a6cd981f3cbdb032920f2fccb6c1e"
+immutable_source_url = "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.16.1/buffbot-v1.16.1.zip"
+actual_length = 5797598
+actual_sha256 = "e116ab16e98f055e398e23b3f1f417f61e37c9d2bf04aefced6c9a3f629ed31d"
+tp2_sha256 = "27c118c76534e53817f94ebe5eb72bd7833aa3200d912193d7032fa2e6b2cdd3"
+native_components = [1, 0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+# 230 entries, 7,196,477 bytes uncompressed, largest entry 1,364,992 bytes, depth 4, compression ratio at most 7.5.
+[[artifacts]]
+mod_id = "buffbot"
+artifact_id = "buffbot-1.16.1"
+recipe_profiles = ["recipes/iwd-current"]
+source_reference = "v1.16.1"
+source_commit = "377bb1d40a5a6cd981f3cbdb032920f2fccb6c1e"
+immutable_source_url = "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.16.1/buffbot-v1.16.1.zip"
+actual_length = 5797598
+actual_sha256 = "e116ab16e98f055e398e23b3f1f417f61e37c9d2bf04aefced6c9a3f629ed31d"
+tp2_sha256 = "27c118c76534e53817f94ebe5eb72bd7833aa3200d912193d7032fa2e6b2cdd3"
+native_components = [1, 0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true

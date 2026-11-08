@@ -752,6 +752,31 @@ class PreparePinTests(unittest.TestCase):
             with self.subTest(message=message):
                 self.assertNeedsAgent(broken(change), message, **options)
 
+    def test_a_tp2_that_the_pin_also_declares_at_the_root_is_no_rival(self) -> None:
+        # SoD Remix ships its nested TP2 again at the archive root, and its pin lists both.
+        fixture = self.fixture()
+        fixture.standard()
+        text = tp2_text("v1.2.0", COMPONENTS)
+        archive = fixture.archive({"testbot/setup-testbot.tp2": text, "setup-testbot.tp2": text,
+                                   "testbot/testbot.lua": "-- Testbot v1.2.0\n"})
+        asset = fixture.github.releases[(TESTBOT, "v1.2.0")]["assets"][0]
+        fixture.serve(asset["browser_download_url"], archive, "release-assets.githubusercontent.com")
+        asset.update(size=archive.stat().st_size, digest=f"sha256:{sha256(archive)}")
+        both = ('publish_roots = ["testbot", "setup-testbot.tp2"]\n'
+                'tp2_paths = ["testbot/setup-testbot.tp2", "setup-testbot.tp2"]')
+        old_pins = sorted(fixture.root.glob("**/artifacts/testbot-*.toml"))
+        self.assertEqual(len(old_pins), 3)
+        for path in old_pins:
+            text_before = path.read_text(encoding="utf-8")
+            path.write_text(text_before.replace(
+                'publish_roots = ["testbot"]\ntp2_paths = ["testbot/setup-testbot.tp2"]', both),
+                encoding="utf-8", newline="\n")
+        fixture.prepare()
+        for recipe in ("manifest", IWD):
+            pin = fixture.read(f"{recipe}/artifacts/testbot-1.2.0.toml")
+            self.assertEqual(pin["archive"]["tp2_paths"],
+                             ["testbot/setup-testbot.tp2", "setup-testbot.tp2"])
+
     def test_a_stop_after_the_first_edit_restores_the_tree(self) -> None:
         cases = [
             (NeedsAgent, "did not verify",

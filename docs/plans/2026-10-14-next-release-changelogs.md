@@ -64,6 +64,18 @@ is described in [`docs/release-notes-0.1.1.md`](../release-notes-0.1.1.md).
     next to him. The target list scrolls and has no limit of six rows any more. A cast at a
     summon cannot be interrupted and does not wait for an aura; items refuse a summon as
     target and say so in the log. (BuffBot v1.16.0)
+- **BuffBot keeps 5E spells in its table** (Default). A hand-edited 5E wrapper whose named
+  target cannot be used no longer hides the row; BuffBot uses the table's usable target or
+  keeps the scanned row and records the exceptional route once in its diagnostic log.
+  Unchanged 5E installations keep their casting behaviour. (BuffBot v1.16.1)
+- **SoD Remix writes its selected scenes on a modded game** (Mandatory). An edited value,
+  missing owned dialogue state or placement, occupied script slot, or another mod's version
+  no longer stops, warns or skips a selected remix component: it writes the decided result.
+  Its components, order and defaults do not change. (SoD Remix v0.6.17)
+- **BG Rebalance writes every selected balance change as decided** (Default). Edited values,
+  another mod's version of the same spell, item or table, and missing pieces no longer stop,
+  warn or skip it. Bard spell-level ceilings also find their tables on case-sensitive installs.
+  Components, order and Chris's Recommended selection stay the same. (BG Rebalance v0.8.11)
 - **Smaller BuffBot changes** (Default):
   - New: five text sizes instead of three. Tiny and Huge join Small, Medium and Large, and
     your setting stays. Large and Huge change only the title and the button captions.
@@ -78,8 +90,9 @@ These changes apply to new installations; existing games and saves are unchanged
 
 ### Mod versions
 
-- BG Rebalance v0.8.10 (was v0.8.9)
-- BuffBot v1.16.0 (was v1.12.6)
+- BG Rebalance v0.8.11 (was v0.8.9)
+- BuffBot v1.16.1 (was v1.12.6)
+- SoD Remix v0.6.17 (was v0.6.16)
 
 ### Notes for the release integrator
 
@@ -90,7 +103,12 @@ These changes apply to new installations; existing games and saves are unchanged
   not been tested in a running game, in a localized game or with other item or spell
   overhauls of the flail (its release notes). The 0.1.1 known issue ends with this pin, so
   0.1.2's release notes drop it, and the 0.1.2 update ledger needs an entry that covers
-  `artifact:chriz-bg-rebalance-0.8.10`.
+  `artifact:chriz-bg-rebalance-0.8.11`.
+- **Rebalance v0.8.11** (pinned 2026-11-08) keeps its 36 components, their source order and
+  the Recommended selection. Every component overwrites its decided spell, item or table
+  result regardless of edited data, another mod's version or missing owned pieces, and `420`
+  copies bard progression tables by exact file name for case-sensitive WeiDU. Its fresh-download
+  evidence is source/package verification only; no WeiDU or gameplay acceptance is claimed.
 - **Rolled HP in Recommended** (Christopher, 2026-11-04): Tweaks Anthology `3000` and `3010`
   are unchecked options. The Recommended plan loses both components (468 to 466), and its 69
   runs and their order stay. The 0.1.2 update ledger needs an entry that covers
@@ -118,6 +136,20 @@ These changes apply to new installations; existing games and saves are unchanged
   ([PR #107](https://github.com/Chrizhermann/chriz-bg-collection/pull/107)), and the PR that
   completes it removes the hold. The 0.1.2 update ledger needs an entry that covers
   `artifact:buffbot-1.16.0`.
+- **BuffBot v1.16.1** (pinned 2026-11-08) keeps its two components, their order, defaults and
+  schema-10 save data. It keeps scanned 5E rows visible when a hand-edited wrapper has no
+  usable named target or an overlay fails, recording the fallback once in the diagnostic log.
+  Its owner records 2,123 offline tests and 909 passing headless BG2:EE 2.7.3.0 / EEex 1.3.1
+  checks; the hand-edited wrapper was not tried in a live game. The completed two-installer pin
+  removes BuffBot's hold. The 0.1.2 update ledger needs an entry covering
+  `artifact:buffbot-1.16.1`.
+- **SoD Remix v0.6.17** (pinned 2026-11-08) keeps the 49 native declarations, components,
+  order and Recommended selection of v0.6.16, while each component overwrites its decided
+  result regardless of edited game data, missing owned targets, occupied script slots or another
+  mod's resource version. The owner reports 537 unit tests, 40 research scripts and a completed
+  466-component BG2:EE 2.7.3.0 Recommended installation that started and loaded a save;
+  playing the changed scenes remains untested. The 0.1.2 update ledger needs an entry covering
+  `artifact:chriz-sod-remix-0.6.17`.
 
 ## Installer changelog
 

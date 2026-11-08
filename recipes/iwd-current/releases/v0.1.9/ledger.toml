@@ -1,0 +1,28 @@
+schema = 1
+recipe_id = "chriz-easy-iwd"
+version = "0.1.9"
+published_at = "2026-11-08T00:00:00Z"
+minimum_app_version = "0.1.1"
+supersedes = "0.1.8"
+
+[[changes]]
+id = "buffbot-1.16.1"
+title = "BuffBot 1.16.1"
+summary = "BuffBot installs version 1.16.1 (was 1.12.6): one table row per buff with the party as columns, a cast order the table sets, planning for a clone before you have it, and summons that can be buffed. What the game files hold no longer hides a spell. A game in progress can get it through the BuffBot update."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = [
+  "artifact:buffbot-1.12.6",
+  "artifact:buffbot-1.16.1",
+]
+
+[[changes]]
+id = "chriz-iwd-encounters-0.2.2"
+title = "Chriz IWD Encounters 0.2.2"
+summary = "The boss fights install whatever the game files hold: edited values, missing placements and occupied script slots no longer stop, warn or skip a fight, and the Idol always gets its three spells. A game in progress keeps the fights it has."
+save_applicability = "new-game-only"
+urgency = "informational"
+covers = [
+  "artifact:chriz-iwd-encounters-0.2.1",
+  "artifact:chriz-iwd-encounters-0.2.2",
+]
