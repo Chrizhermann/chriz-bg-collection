@@ -1,5 +1,5 @@
 id = "chriz-iwd-encounters"
-artifact_id = "chriz-iwd-encounters-0.2.1"
+artifact_id = "chriz-iwd-encounters-0.2.2"
 name = "Chriz IWD Encounters"
 tp2 = "chriz-iwd-encounters/setup-chriz-iwd-encounters.tp2"
 language = 0
