@@ -1,0 +1,32 @@
+id = "voicepack-edwin-bg2-1.0.2"
+name = "Edwin (BG2) player voicepack"
+version = "1.0.2"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/edwin-bg2-player-voicepack-v1.0.2.zip"
+reference = "v1.2.0"
+expected_filename = "edwin-bg2-player-voicepack-v1.0.2.zip"
+expected_length = 2457030
+sha256 = "131d4db31326c377ddfde2f73009d1bc18e8d62ff0f053d66389d6be684b8e3d"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["cd_edwnbg2"]
+tp2_paths = ["cd_edwnbg2/cd_edwnbg2.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-bg-voicepacks"
+license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/tag/v1.2.0"
+reviewed_on = "2026-11-08"

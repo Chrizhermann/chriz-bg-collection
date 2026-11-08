@@ -1,0 +1,32 @@
+id = "voicepack-yeslick-1.0.2"
+name = "Yeslick player voicepack"
+version = "1.0.2"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/yeslick-player-voicepack-v1.0.2.zip"
+reference = "v1.2.0"
+expected_filename = "yeslick-player-voicepack-v1.0.2.zip"
+expected_length = 2713135
+sha256 = "b4118fecf98786bd092056f9039ee6d8591d5419aa09cdb5b8807ba85bd2c7d6"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["cd_yeslick"]
+tp2_paths = ["cd_yeslick/cd_yeslick.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-bg-voicepacks"
+license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/tag/v1.2.0"
+reviewed_on = "2026-11-08"

@@ -1,0 +1,23 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-11-08"
+generator = "tools/prepare_own_mod_pin.py"
+command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 <TP2 path>; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python -I tools/check_native_component_order.py --recipe-root <recipe> --mod-id <mod> --archive <fresh downloaded ZIP>"
+scope = "Chriz BG Modpack v0.2.0-alpha.16 (published 2026-11-08 11:12 UTC, a normal GitHub release, annotated tag on public main squash commit ee82f6b of Modpack PR #19, built by the tagged release workflow) replaces chriz-bg-modpack-0.2.0-alpha.15 in manifest, recipes/curated-full-current. Each archive was downloaded anonymously into a fresh cache for the inspection and for each recipe's artifact TOML, and passed the production acquisition and extraction contracts. The superseded evidence records stay as history, and so do the superseded artifact TOMLs in manifest, recipes/curated-full-current. It keeps the component declarations, their order and Recommended selection: every component writes its decided result regardless of edited game values, another mod's version or missing owned pieces, and the bundled XP table is copied by its tracked name xplevel.2da so case-sensitive WeiDU finds it. This is automated source/package verification, not a WeiDU install or gameplay acceptance."
+
+# 181 entries, 11,478,978 bytes uncompressed, largest entry 7,197,358 bytes, depth 5, compression ratio at most 6.3.
+[[artifacts]]
+mod_id = "chriz-bg-modpack"
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.16"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v0.2.0-alpha.16"
+source_commit = "ee82f6bcc82074c52b3216453e785cfb1a9ac182"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.16/chriz-bg-modpack-v0.2.0-alpha.16.zip"
+actual_length = 9529061
+actual_sha256 = "668937ba7ea468834aad1fd1ecc214be72a9b1b0564109a48fc0827dab09e570"
+tp2_sha256 = "a459256cf88544945a85efbe89f57f5e041a5e31fe9e2fa438ec692af27e3c4c"
+native_components = [110, 130, 135, 140, 160, 170, 188, 189, 190, 192, 193, 194, 195, 196, 197, 198, 199, 220, 221, 222, 223, 224, 225, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 400, 410, 430, 440, 450, 460, 610, 611, 620, 630, 640, 660, 670, 650, 651, 652]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true

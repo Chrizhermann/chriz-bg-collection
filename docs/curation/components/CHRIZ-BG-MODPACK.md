@@ -13,6 +13,14 @@ losing script variables; it adds and removes no component. With the alpha.14 pin
 collection also offers `135`, `460` and `652` (see below). The recipe now pins
 **v0.2.0-alpha.15** (published 2026-11-03), which adds only Marek's Boomerang Dagger `670`,
 a default for 0.1.1 (see below).
+The recipe now pins **v0.2.0-alpha.16** (published 2026-11-08, annotated tag on public-main
+squash commit `ee82f6b` of Modpack PR #19, built by the tagged release workflow). It keeps the
+same components, order and Recommended choices. Every component writes the result it decides
+regardless of edited game values, another mod's version or missing owned pieces; the bundled XP
+table is copied by its tracked name `xplevel.2da`, so a case-sensitive WeiDU finds it. Fresh
+source/package evidence is
+`manifest/evidence/release-intake-20261108-chriz-bg-modpack-chriz-easy-bg.toml`, not a WeiDU
+installation or gameplay acceptance.
 65 current or historical entries; the collection exposes 48. Component `195` already includes the work from standalone component
 `160`; Hexxat's three class routes are one at-most-one choice.
 The four ✓ marks record the old reference install, not the new default recipe.

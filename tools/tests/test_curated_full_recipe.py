@@ -294,8 +294,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.1.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
             modpack = tomllib.loads((output / "mods/chriz-bg-modpack.toml").read_text(encoding="utf-8"))
-            # November 3: alpha.15 (Marek's Boomerang Dagger 670) replaces alpha.14.
-            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.15")
+            # November 8: alpha.16 keeps alpha.15's Marek's Boomerang Dagger 670.
+            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.16")
             collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
             preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))
             mods = {path.stem for path in (output / "mods").glob("*.toml")}

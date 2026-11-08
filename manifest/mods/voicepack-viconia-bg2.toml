@@ -1,5 +1,5 @@
 id = "voicepack-viconia-bg2"
-artifact_id = "voicepack-viconia-bg2-1.0.0"
+artifact_id = "voicepack-viconia-bg2-1.0.1"
 name = "Viconia (BG2) player voicepack"
 tp2 = "cd_vicbg2/cd_vicbg2.tp2"
 language = 0

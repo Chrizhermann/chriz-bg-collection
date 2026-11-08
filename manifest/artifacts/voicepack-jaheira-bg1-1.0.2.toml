@@ -1,0 +1,32 @@
+id = "voicepack-jaheira-bg1-1.0.2"
+name = "Jaheira (BG1) player voicepack"
+version = "1.0.2"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/jaheira-bg1-player-voicepack-v1.0.2.zip"
+reference = "v1.2.0"
+expected_filename = "jaheira-bg1-player-voicepack-v1.0.2.zip"
+expected_length = 2712742
+sha256 = "7167f278446bc9d63485aebf54cefe281d52d6659a496a2c070417fc734322e8"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["cd_jahebg1"]
+tp2_paths = ["cd_jahebg1/cd_jahebg1.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-bg-voicepacks"
+license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/tag/v1.2.0"
+reviewed_on = "2026-11-08"

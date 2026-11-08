@@ -1,5 +1,5 @@
 id = "voicepack-imoen-bg2"
-artifact_id = "voicepack-imoen-bg2-1.0.1"
+artifact_id = "voicepack-imoen-bg2-1.0.2"
 name = "Imoen (BG2) player voicepack"
 tp2 = "cd_imobg2/cd_imobg2.tp2"
 language = 0

@@ -79,8 +79,9 @@ SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.9"
 # v0.8.11, which keeps every component and the order.
 SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.11"
 # The November 3 intake (test_nov03_modpack_alpha15_marek_dagger_recipe) replaces Modpack
-# alpha.14 with alpha.15, which declares Marek's Boomerang Dagger 670 between 660 and 650.
-SUCCESSORS["chriz-bg-modpack"] = "chriz-bg-modpack-0.2.0-alpha.15"
+# alpha.14 with alpha.15, which declares Marek's Boomerang Dagger 670 between 660 and 650;
+# alpha.16 keeps that declaration.
+SUCCESSORS["chriz-bg-modpack"] = "chriz-bg-modpack-0.2.0-alpha.16"
 LATER_COMPONENTS["chriz-bg-modpack"] = {670}
 LATER_ROWS["CHRIZ-BG-MODPACK"] = {670}
 # Per mod: the new pin, the superseded pin (kept as history), its tag, the archive name and

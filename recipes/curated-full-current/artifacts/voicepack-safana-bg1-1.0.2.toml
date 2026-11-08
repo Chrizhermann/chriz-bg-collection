@@ -1,0 +1,32 @@
+id = "voicepack-safana-bg1-1.0.2"
+name = "Safana (BG1) player voicepack"
+version = "1.0.2"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/safana-bg1-player-voicepack-v1.0.2.zip"
+reference = "v1.2.0"
+expected_filename = "safana-bg1-player-voicepack-v1.0.2.zip"
+expected_length = 2949451
+sha256 = "daf45b3d58901509a05f570269e417ad137dcd920cc4cbfc14fbeafe6272f276"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["cd_safana"]
+tp2_paths = ["cd_safana/cd_safana.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-bg-voicepacks"
+license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/tag/v1.2.0"
+reviewed_on = "2026-11-08"

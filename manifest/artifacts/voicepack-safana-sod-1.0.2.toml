@@ -1,0 +1,32 @@
+id = "voicepack-safana-sod-1.0.2"
+name = "Safana (SoD) player voicepack"
+version = "1.0.2"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/safana-sod-player-voicepack-v1.0.2.zip"
+reference = "v1.2.0"
+expected_filename = "safana-sod-player-voicepack-v1.0.2.zip"
+expected_length = 2751308
+sha256 = "eacccb9187a1abaa28d8d8e6171e3437459f1280b04bec9c9c4199e7f33a2be2"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["cd_safsod"]
+tp2_paths = ["cd_safsod/cd_safsod.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-bg-voicepacks"
+license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/tag/v1.2.0"
+reviewed_on = "2026-11-08"

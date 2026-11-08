@@ -1,0 +1,332 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-11-08"
+command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 <TP2 path>; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; source audit of each TP2 declaration (see below)"
+scope = "ChrizFader's voicepacks v1.2.0 (18 player voicepacks, published 2026-11-08) enter both recipe profiles as default features under Voicepacks. Each release ZIP was downloaded anonymously into a fresh cache and passed the production acquisition and extraction contracts; fresh downloads and chriz-bg-author artifact verify passed for each artifact TOML in manifest and recipes/curated-full-current. The owner's installer verification covered all 14 generated packs on BG:EE, SoD, BG2:EE and EET in English and BG:EE and BG2:EE in German, with install, reinstall and uninstall, plus changed-input cases of an old 30-row table and a missing table; the four hand-built packs pass their own verifiers. Their audio is unchanged. This is source/package and owner fixture verification, not a combined collection install or gameplay acceptance."
+
+# Ajantis, Viconia BG1/BG2 and Garithos designate component 0.  The 14 generated TP2s each
+# retain one undesignated line-start BEGIN @0, which WeiDU numbers 0, as the v1.1.0 source audit
+# recorded.  Every recipe run installs that component 0.
+[[artifacts]]
+mod_id = "voicepack-neera"
+artifact_id = "voicepack-neera-1.0.2"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.2.0"
+source_commit = "0afae24b1467d141fca6007b72992fca12ec529e"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/neera-player-voicepack-v1.0.2.zip"
+actual_length = 2363513
+actual_sha256 = "b7d029f839062b5e7763de61f541a4922e2cb73d82b6e6c035d8fcdcff3eac94"
+tp2_path = "cd_neera/cd_neera.tp2"
+tp2_sha256 = "0d2063ca6200556812da39638aa048f3a56367072071510bebd898385a580e25"
+published_roots = ["cd_neera"]
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "voicepack-safana-bg1"
+artifact_id = "voicepack-safana-bg1-1.0.2"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.2.0"
+source_commit = "0afae24b1467d141fca6007b72992fca12ec529e"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/safana-bg1-player-voicepack-v1.0.2.zip"
+actual_length = 2949451
+actual_sha256 = "daf45b3d58901509a05f570269e417ad137dcd920cc4cbfc14fbeafe6272f276"
+tp2_path = "cd_safana/cd_safana.tp2"
+tp2_sha256 = "234fce68c535f24c9ca68cfc17eb01a290a9bbe3ab481194157994577a2b4ce7"
+published_roots = ["cd_safana"]
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "voicepack-safana-sod"
+artifact_id = "voicepack-safana-sod-1.0.2"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.2.0"
+source_commit = "0afae24b1467d141fca6007b72992fca12ec529e"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/safana-sod-player-voicepack-v1.0.2.zip"
+actual_length = 2751308
+actual_sha256 = "eacccb9187a1abaa28d8d8e6171e3437459f1280b04bec9c9c4199e7f33a2be2"
+tp2_path = "cd_safsod/cd_safsod.tp2"
+tp2_sha256 = "14dd9125ee0a40dab6dcf3cd94dc6b63c2cc0d4c2b74d8a385db34ab6f744cee"
+published_roots = ["cd_safsod"]
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "voicepack-jaheira-bg1"
+artifact_id = "voicepack-jaheira-bg1-1.0.2"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.2.0"
+source_commit = "0afae24b1467d141fca6007b72992fca12ec529e"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/jaheira-bg1-player-voicepack-v1.0.2.zip"
+actual_length = 2712742
+actual_sha256 = "7167f278446bc9d63485aebf54cefe281d52d6659a496a2c070417fc734322e8"
+tp2_path = "cd_jahebg1/cd_jahebg1.tp2"
+tp2_sha256 = "2317d3accaf5bd6fa7813c07a0e5e38a1db5a91d73e8aad43995f5e71cf0c686"
+published_roots = ["cd_jahebg1"]
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "voicepack-jaheira-bg2"
+artifact_id = "voicepack-jaheira-bg2-1.0.2"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.2.0"
+source_commit = "0afae24b1467d141fca6007b72992fca12ec529e"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/jaheira-bg2-player-voicepack-v1.0.2.zip"
+actual_length = 2121640
+actual_sha256 = "1c629463c66b0cc377e35356e560e1d26868eab61124fa704c26d61843df8bcf"
+tp2_path = "cd_jahebg2/cd_jahebg2.tp2"
+tp2_sha256 = "c9bce446fb8fbb3c7428e2cb1bfa7cb6e227bb707c42d99fad5bf90f239a0198"
+published_roots = ["cd_jahebg2"]
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "voicepack-yeslick"
+artifact_id = "voicepack-yeslick-1.0.2"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.2.0"
+source_commit = "0afae24b1467d141fca6007b72992fca12ec529e"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/yeslick-player-voicepack-v1.0.2.zip"
+actual_length = 2713135
+actual_sha256 = "b4118fecf98786bd092056f9039ee6d8591d5419aa09cdb5b8807ba85bd2c7d6"
+tp2_path = "cd_yeslick/cd_yeslick.tp2"
+tp2_sha256 = "09333374a0a68601d34dcebacb2ca2e56dd19c6142b26e5f62e7107bb2b1ebe1"
+published_roots = ["cd_yeslick"]
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "voicepack-edwin-bg1"
+artifact_id = "voicepack-edwin-bg1-1.0.2"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.2.0"
+source_commit = "0afae24b1467d141fca6007b72992fca12ec529e"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/edwin-bg1-player-voicepack-v1.0.2.zip"
+actual_length = 2906433
+actual_sha256 = "478b58972a4f247e00c046e02ab6c2c87f3fb520d3b10f037b730ba855061a5b"
+tp2_path = "cd_edwnbg1/cd_edwnbg1.tp2"
+tp2_sha256 = "e0a8e2d5de5c268758931c012aadbfdc166dbcc2ee27143f8011a8b2740a4ce0"
+published_roots = ["cd_edwnbg1"]
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "voicepack-edwin-bg2"
+artifact_id = "voicepack-edwin-bg2-1.0.2"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.2.0"
+source_commit = "0afae24b1467d141fca6007b72992fca12ec529e"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/edwin-bg2-player-voicepack-v1.0.2.zip"
+actual_length = 2457030
+actual_sha256 = "131d4db31326c377ddfde2f73009d1bc18e8d62ff0f053d66389d6be684b8e3d"
+tp2_path = "cd_edwnbg2/cd_edwnbg2.tp2"
+tp2_sha256 = "5510fd043a70ae24585ffc3836cad6c74b5783947e06155cc65b33d4eb7b942a"
+published_roots = ["cd_edwnbg2"]
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "voicepack-aerie"
+artifact_id = "voicepack-aerie-1.0.2"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.2.0"
+source_commit = "0afae24b1467d141fca6007b72992fca12ec529e"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/aerie-player-voicepack-v1.0.2.zip"
+actual_length = 2343511
+actual_sha256 = "a6c0d61b87803df550dd97cdd9e56e443ee268a06e5751e9b6b4cb2cbba93f18"
+tp2_path = "cd_aerie/cd_aerie.tp2"
+tp2_sha256 = "39aa683825b8486f96b1ad8f1ed75847047ed8fc5f018907af910157660ced2f"
+published_roots = ["cd_aerie"]
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "voicepack-imoen-bg1"
+artifact_id = "voicepack-imoen-bg1-1.0.2"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.2.0"
+source_commit = "0afae24b1467d141fca6007b72992fca12ec529e"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/imoen-bg1-player-voicepack-v1.0.2.zip"
+actual_length = 1798679
+actual_sha256 = "7bac3a24dbd5ecdc70afb2b82210c2e6e39061fcb4f2b7803aeb9c911452d098"
+tp2_path = "cd_imobg1/cd_imobg1.tp2"
+tp2_sha256 = "82380c5b130daa42d7e9bc023eb3d716073f5cdedcf7e2a8cf43fd406dad51f2"
+published_roots = ["cd_imobg1"]
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "voicepack-imoen-bg2"
+artifact_id = "voicepack-imoen-bg2-1.0.2"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.2.0"
+source_commit = "0afae24b1467d141fca6007b72992fca12ec529e"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/imoen-bg2-player-voicepack-v1.0.2.zip"
+actual_length = 2048827
+actual_sha256 = "98125ee8e3159ec7c968649e769fa1de0073c0d9dc8c41675c62247586ebe3d7"
+tp2_path = "cd_imobg2/cd_imobg2.tp2"
+tp2_sha256 = "dd90c6eb85984959a41c5097fb1ee1732789a2a65109c5a4611d40b63ff2f7be"
+published_roots = ["cd_imobg2"]
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "voicepack-sarevok"
+artifact_id = "voicepack-sarevok-1.0.2"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.2.0"
+source_commit = "0afae24b1467d141fca6007b72992fca12ec529e"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/sarevok-player-voicepack-v1.0.2.zip"
+actual_length = 2117790
+actual_sha256 = "29589c43eb14191124155b246979270c137af2f1303a70e8df245173d1c31882"
+tp2_path = "cd_sarevok/cd_sarevok.tp2"
+tp2_sha256 = "5a62baed5e3e7c03384fb338aa397bfa0d62d404fd56b71667ffd6afdfb45d65"
+published_roots = ["cd_sarevok"]
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "voicepack-amelyssan"
+artifact_id = "voicepack-amelyssan-1.0.2"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.2.0"
+source_commit = "0afae24b1467d141fca6007b72992fca12ec529e"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/amelyssan-player-voicepack-v1.0.2.zip"
+actual_length = 2450051
+actual_sha256 = "d16ed2b2b773b5e6caf1b67597eab4c1717ea0014ddbf90e969cc1d808b2693a"
+tp2_path = "cd_amely/cd_amely.tp2"
+tp2_sha256 = "b0c439310e698c3517db91180341670f46575c8b12da18e60ae8e167277f01e2"
+published_roots = ["cd_amely"]
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "voicepack-gromnir-il-khan"
+artifact_id = "voicepack-gromnir-il-khan-1.0.2"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.2.0"
+source_commit = "0afae24b1467d141fca6007b72992fca12ec529e"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/gromnir-il-khan-player-voicepack-v1.0.2.zip"
+actual_length = 1974964
+actual_sha256 = "ce709ab49aea5db3e6ac1419995301d66c64c9bf13e79f55be1968926a363e0b"
+tp2_path = "cd_gromn/cd_gromn.tp2"
+tp2_sha256 = "ebc8f35af3e232e0ad4692de03cfd0b01a3dbd0f97e69de358147e5c7e8d6e15"
+published_roots = ["cd_gromn"]
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "voicepack-ajantis"
+artifact_id = "voicepack-ajantis-2.0.1"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.2.0"
+source_commit = "0afae24b1467d141fca6007b72992fca12ec529e"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/ajantis-player-voicepack-v2.0.1.zip"
+actual_length = 4059707
+actual_sha256 = "1c9bb4056e8266b2868a223c22fe9675407763bf8c2796e96a4c1590dc6e73f3"
+tp2_path = "cd_ajanti/cd_ajanti.tp2"
+tp2_sha256 = "7fef8bebc552ff68e806c919c628384aceb7107ce486ed01b739629d089e037b"
+published_roots = ["cd_ajanti"]
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "voicepack-viconia-bg1"
+artifact_id = "voicepack-viconia-bg1-1.0.1"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.2.0"
+source_commit = "0afae24b1467d141fca6007b72992fca12ec529e"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/viconia-bg1-player-voicepack-v1.0.1.zip"
+actual_length = 4122902
+actual_sha256 = "a1f9b57cd841861cc87eec665b862c215089ae51548994b1fc193f45904708f6"
+tp2_path = "cd_vicbg1/cd_vicbg1.tp2"
+tp2_sha256 = "d495018f81f4a8a738b7a0182da49e7d0907f4b6f44d4d1811b64b8dc7f85390"
+published_roots = ["cd_vicbg1"]
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "voicepack-viconia-bg2"
+artifact_id = "voicepack-viconia-bg2-1.0.1"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.2.0"
+source_commit = "0afae24b1467d141fca6007b72992fca12ec529e"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/viconia-bg2-player-voicepack-v1.0.1.zip"
+actual_length = 5060194
+actual_sha256 = "68fbfca869d7d4a5ef795a7b2d8573b886448dd724da873a24d53ced1b74b56f"
+tp2_path = "cd_vicbg2/cd_vicbg2.tp2"
+tp2_sha256 = "14f7c8d68f6dafa873e64fe9cf17e2d86718370fe727bd1d3c1c97b96705f4e8"
+published_roots = ["cd_vicbg2"]
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "voicepack-garithos"
+artifact_id = "voicepack-garithos-1.1.1"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.2.0"
+source_commit = "0afae24b1467d141fca6007b72992fca12ec529e"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.2.0/garithos-player-voicepack-v1.1.1.zip"
+actual_length = 5119782
+actual_sha256 = "84d153f3e7608243ab57b32a3f57d1f34301b602a0196566da48fa7ce646f2a8"
+tp2_path = "cd_garith/cd_garith.tp2"
+tp2_sha256 = "07d5bf2c846a4e77b2be895fdacd2b95e287198c16492d0f50e398c3c9b8d6fe"
+published_roots = ["cd_garith"]
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true

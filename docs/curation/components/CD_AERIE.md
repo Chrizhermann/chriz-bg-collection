@@ -1,12 +1,13 @@
 # CD_AERIE — components
 
-Listed at release version **1.0.1** (ChrizFader's voicepacks v1.1.0).
+Listed at release version **1.0.2** (ChrizFader's voicepacks v1.2.0).
 1 entries, 1 installed. ✓ = installed. Subgroup = choose one.
 
 ## Integration note
 
-A player voicepack: it adds a selectable soundset for player characters by appending one
-`charsnd.2da` column, its `M_cdsnd.lua` menu name and its sound files; it changes no NPC,
+A player voicepack writes its selected registration regardless of what `charsnd.2da` holds:
+one selectable player-character soundset column, its `M_cdsnd.lua` menu name and its sound files.
+Its audio is unchanged and it changes no NPC,
 item or spell. It requires the EE 2.6 soundset layout (99 `charsnd.2da` rows) and installs
 on BG:EE, SoD, BG2:EE and EET. The collection installs only `cd_aerie/` with its pinned
 WeiDU, never the bundled `setup-cd_aerie.exe`, in its own run after EET_end and before

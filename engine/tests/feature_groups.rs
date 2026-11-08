@@ -392,23 +392,23 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // curated recipe changes: the two features' decisions, their preset entries and both
     // components in the cdtweaks-bg2 run of the plan. With both restored as defaults, the
     // previous curated digests return (28812dc1…, 7a1ba97d…, 3cd844e7…).
-    // Re-pinned on November 8 for BuffBot v1.16.1, SoD Remix v0.6.17 and BG Rebalance v0.8.11.
-    // In both recipes only the Recommended plan changes, in the buffbot-bg2,
-    // chriz-sod-remix-bg2 and chriz-bg-rebalance-bg2 artifact ids; components, order and the
-    // selection stay. With v1.16.0, v0.6.16 and v0.8.10 restored, the previous plan digests
-    // return (manifest bd82643d…, curated cbd92586…).
+    // Re-pinned on November 8 for BuffBot v1.16.1, SoD Remix v0.6.17, BG Rebalance v0.8.11,
+    // Modpack alpha.16 and the 18 Voicepacks v1.2.0 release. In both recipes only the
+    // Recommended plan changes, in those runs' artifact ids; components, order and the
+    // selection stay. With their prior pins restored, the November 8 preceding plan digests
+    // return (manifest 666e2cbf…, curated da37cc38…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
             "c90f8f1b57deda983af1eafb2ffdd987eba60c253907f14972d10c3fd144b855",
             "253015344c72b69bd35011cb03f9dbf8ad395999deb9fa5a3278ed7baa943c1e",
-            "666e2cbfff1aacfa81aa05e75a16073e4dcee89771abb3e3beabef3691c79316",
+            "8dd9cf3126669c394047f39f21acb5f116a280a445ee21a2f08493e90351ef5f",
         ),
         (
             "../recipes/curated-full-current",
             "4dcb1fd4fccc2609a013e458d1ddb1434be2dfc0ee9ea7d04544dbb73649a47f",
             "999046f16958aecc0b39f4e9540ec03e5a2d510d81c871368d50f627f12e3fcb",
-            "da37cc3832bfb945b1f5cf7a0263b0c1d9ae9c9bd0d8fdfcddbca25e5b285335",
+            "d5f6d9b9734373de51836509901a65fbf30dee4a56f5992ad0dfaa31d4970d84",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

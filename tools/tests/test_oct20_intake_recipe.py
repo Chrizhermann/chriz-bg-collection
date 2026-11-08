@@ -21,8 +21,9 @@ MOD_ID = "chriz-bg-modpack"
 ARTIFACT_ID = "chriz-bg-modpack-0.2.0-alpha.13"
 PREVIOUS_ARTIFACT_ID = "chriz-bg-modpack-0.2.0-alpha.12"
 # The October 26 alpha.22 pin batch replaced this pin with alpha.14, and the November 3
-# intake (test_nov03_modpack_alpha15_marek_dagger_recipe) with alpha.15.
-SUCCESSOR_ARTIFACT_ID = "chriz-bg-modpack-0.2.0-alpha.15"
+# intake (test_nov03_modpack_alpha15_marek_dagger_recipe) with alpha.15, then the November 8
+# alpha.16 pin (test_nov08_modpack_alpha16_pin_recipe), which keeps its declarations.
+SUCCESSOR_ARTIFACT_ID = "chriz-bg-modpack-0.2.0-alpha.16"
 LATE_RUN = "chriz-bg-modpack-late-companions-bg2"
 CAMPAIGN_RUN = "chriz-bg-modpack-campaign-xp-bg2"
 MODPACK = "feature:chriz-bg-modpack:component-{}"
@@ -189,7 +190,7 @@ class Oct20IntakeTests(unittest.TestCase):
         for profile in (ROOT / "manifest", ROOT / "recipes/curated-full-current", self.output):
             with self.subTest(profile=str(profile)):
                 mod = tomllib.loads((profile / f"mods/{MOD_ID}.toml").read_text(encoding="utf-8"))
-                # Superseded by alpha.14 and alpha.15; this verified pin stays available as
+                # Superseded by alpha.14, alpha.15 and alpha.16; this verified pin stays available as
                 # history.
                 self.assertEqual(mod["artifact_id"], SUCCESSOR_ARTIFACT_ID)
                 artifact = tomllib.loads((profile / f"artifacts/{ARTIFACT_ID}.toml").read_text(encoding="utf-8"))
@@ -205,8 +206,8 @@ class Oct20IntakeTests(unittest.TestCase):
                 collection = tomllib.loads((profile / "collection.toml").read_text(encoding="utf-8"))
                 runs = [run for run in collection["runs"] if run["mod_id"] == MOD_ID]
                 self.assertEqual(len(runs), 9)
-                # Alpha.14 keeps alpha.13's declaration order, and so does alpha.15 apart from
-                # its new 670 (test_nov03_modpack_alpha15_marek_dagger_recipe).
+                # Alpha.14 keeps alpha.13's declaration order; alpha.15 adds 670 and alpha.16
+                # keeps it (test_nov08_modpack_alpha16_pin_recipe).
                 for run in runs:
                     components = [c for c in run["components"] if c != 670]
                     self.assertEqual(components, [c for c in ALPHA13_NATIVE if c in components],

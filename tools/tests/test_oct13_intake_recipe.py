@@ -258,7 +258,7 @@ class Oct13IntakeTests(unittest.TestCase):
         # (test_oct14_intake_recipe), alpha.13 (test_oct20_intake_recipe), alpha.14
         # (test_oct26_alpha22_pins_recipe) and alpha.15
         # (test_nov03_modpack_alpha15_marek_dagger_recipe) supersede alpha.11 and keep these rows.
-        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.15")
+        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.16")
         sod = tomllib.loads((self.output / "mods/chriz-sod-remix.toml").read_text(encoding="utf-8"))
         # SoD Remix v0.6.15 (test_oct23_sod_remix_recipe), v0.6.16
         # (test_oct29_sod_remix_pin_recipe) and v0.6.17 (test_nov08_sod_remix_pin_recipe)
