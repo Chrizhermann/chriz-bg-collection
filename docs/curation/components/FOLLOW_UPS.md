@@ -615,11 +615,23 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Installer link safety, remaining writers: staging publication, mod materialization and
   the WeiDU setup copy, then Radar and the `.chriz` state writers, still check a path and
   then write by path (inventory in PR #16). Moving them over waits for Christopher's go.
+- Campaign XP caps with banked XP (Modpack `650`) and Challenge Mode: Christopher expects it
+  in the group (2026-11-08); today it is a separate optional, experimental choice. Asked on
+  2026-11-08 whether to add it, and with which variant (`651` Shadows of Amn cap, `652`
+  chapter caps, or neither).
 - The [curation queue](#curation-decisions-still-in-chriss-review-queue) at the end of this file.
 
 **Deferred by decision**
 
 - Aura fork work: parked (2026-10-17).
+- Parts that exist only for Spell Revisions, Artisan's Kitpack, Bardic Wonders or Item
+  Randomiser 8.1.1 (Christopher, 2026-11-08): no more maintenance or fixes, in our forks or
+  in our own mods, until our own spell mod, kit mod and the Campaign Item Randomiser replace
+  them. Then each part is rewritten into the new mod or dropped, for the installer version
+  without these mods. An inventory of every such part (the forks, BG Rebalance, Modpack, SoD
+  Remix, BuffBot and both installers) was made from the code on 2026-11-08; Christopher
+  decides what stays. Still open: whether crashes and install stops that hit players of the
+  current version are an exception (asked 2026-11-08). Chriz Easy IWD ships none of these mods.
 - Artisan's Kitpack fork: whether the upstream report also mentions the Eldritch Knight /
   Arcane Trickster kit weapons (fixed in chriz.3); later (Christopher, 2026-10-27).
   Christopher posts the report himself.
