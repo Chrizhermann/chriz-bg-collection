@@ -2,6 +2,32 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 9 — Chriz Easy BG 0.1.2 prepared
+
+Christopher approved the 0.1.2 release on 2026-11-09. Branch `claude/bg-012-prepare`, from
+`main` at `291cc82`, sets the app and the curated collection to **0.1.2** in the files the
+0.1.1 bump changed (`f855441`) and refreshes the notices' lockfile digests. The IWD flavor
+keeps its own version. The new update ledger (`releases/v0.1.2/ledger.toml` in both
+profiles) supersedes 0.1.1, keeps 2026-11-10 as the planned publication date, fixed because
+the setup bundles it, and needs **app 0.1.2**: the 0.1.1 engine rejects the
+`core_components` and `[[component_needs]]` of the failed-component question. Its five
+entries cover all 35 recipe differences since the recipe 0.1.1 shipped, recorded in
+`released-recipe-differences.json` from `fa0edd6` to `c95db24`. The
+[release notes](release-notes-0.1.2.md) cover everything since 0.1.1:
+
+- the failed-component question (#114), the BuffBot section under Updates (#115) and the
+  overwrite rule (#120), with the clean bundled folders on update (#112);
+- rolled HP in Chris's Recommended (#113);
+- BuffBot 1.16.1, BG Rebalance 0.8.10 and 0.8.11, Chriz BG Modpack alpha.16, SoD Remix
+  0.6.17 and the voicepacks 1.2.0 (#103, #106, #123, #124).
+
+The 0.1.2 candidate lab passed on 2026-11-08/09: a full recommended installation from
+`c95db24` ran 183 steps and 463 components, the final verification passed, and no question
+came up and no mod was left out. The start test passed with BuffBot 1.16.1 loaded, the
+scroll fix healthy and no new error lines. The evidence stays in the lead's run folder,
+outside the repository. Building, packaging and publishing follow; nothing is tagged,
+published or uploaded.
+
 ## November 8 — Chriz Easy IWD 0.1.9 released
 
 **IWD app and recipe 0.1.9 are public** on the versioned release and the in-app update

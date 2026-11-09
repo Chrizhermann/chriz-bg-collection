@@ -545,14 +545,10 @@ fn release_0_1_1_supersedes_0_1_0_with_bg1npc_optional_and_marek_s_dagger() {
     let source = load_release(&root.join("manifest/releases/v0.1.1/ledger.toml")).unwrap();
     assert_eq!(ledger, source);
     assert_eq!(ledger.version, "0.1.1");
-    assert_eq!(
-        bg_engine::cli::recipe_release_version(&curated)
-            .unwrap()
-            .as_deref(),
-        Some("0.1.1")
-    );
+    assert_eq!(ledger.published_at, "2026-11-03T00:00:00Z");
+    // The bundled recipe moved on to 0.1.2 (November 9); 0.1.1's ledger stays as published.
     assert_eq!(ledger.supersedes.as_deref(), Some("0.1.0"));
-    // Nothing in this recipe needs a newer app than 0.1.0 yet.
+    // Nothing in this recipe needs a newer app than 0.1.0.
     assert_eq!(ledger.minimum_app_version, "0.1.0");
 
     // A 0.1.0 installation gets the change for its next playthrough, without an app
@@ -609,6 +605,83 @@ fn release_0_1_1_supersedes_0_1_0_with_bg1npc_optional_and_marek_s_dagger() {
 }
 
 #[test]
+fn release_0_1_2_supersedes_0_1_1_requires_the_0_1_2_app_and_waits_for_the_next_playthrough() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+    let curated = root.join("recipes/curated-full-current");
+    let ledger = load_release(&curated.join("releases/v0.1.2/ledger.toml")).unwrap();
+    let source = load_release(&root.join("manifest/releases/v0.1.2/ledger.toml")).unwrap();
+    assert_eq!(ledger, source);
+    assert_eq!(ledger.version, "0.1.2");
+    assert_eq!(ledger.published_at, "2026-11-10T00:00:00Z");
+    assert_eq!(
+        bg_engine::cli::recipe_release_version(&curated)
+            .unwrap()
+            .as_deref(),
+        Some("0.1.2")
+    );
+    assert_eq!(ledger.supersedes.as_deref(), Some("0.1.1"));
+
+    // The 0.1.1 app cannot use this recipe: its engine rejects the features'
+    // `core_components` and the collection's `[[component_needs]]`, which the failed-component
+    // question reads (PR 114).
+    assert_eq!(ledger.minimum_app_version, "0.1.2");
+    let old_app = classify_updates("0.1.1", "0.1.1", std::slice::from_ref(&ledger)).unwrap();
+    assert_eq!(old_app.disposition, UpdateDisposition::AppUpdateRequired);
+    assert_eq!(old_app.minimum_app_version.as_deref(), Some("0.1.2"));
+    let new_app = classify_updates("0.1.1", "0.1.2", std::slice::from_ref(&ledger)).unwrap();
+    assert_eq!(new_app.latest_version.as_deref(), Some("0.1.2"));
+    assert_eq!(
+        new_app.disposition,
+        UpdateDisposition::DeferredForNextPlaythrough
+    );
+    assert_eq!(new_app.changes, ledger.changes);
+    // Everything in this release is install-time content for new installations; a game in
+    // progress gets BuffBot through its own update card, not through this ledger.
+    assert!(ledger
+        .changes
+        .iter()
+        .all(|change| change.save_applicability == SaveApplicability::NextPlaythrough));
+
+    // A 0.1.0 installation that skipped 0.1.1 gets both releases once, in order.
+    let v011 = load_release(&curated.join("releases/v0.1.1/ledger.toml")).unwrap();
+    let skipped = classify_updates("0.1.0", "0.1.2", &[ledger.clone(), v011.clone()]).unwrap();
+    assert_eq!(skipped.latest_version.as_deref(), Some("0.1.2"));
+    assert_eq!(
+        skipped.changes,
+        [v011.changes, ledger.changes.clone()].concat()
+    );
+
+    // The differences since the recipe that 0.1.1 shipped (f855441, whose curated tree differs
+    // from fa0edd6 only in the 0.1.1 ledger, which the recipe diff does not compare) up to
+    // c95db24, the source of the 0.1.2 candidate lab, from which the recipe did not change:
+    // the pins of BuffBot v1.16.1, BG Rebalance v0.8.11, Chriz BG Modpack alpha.16, SoD Remix
+    // v0.6.17 and the voicepacks v1.2.0 (the artifact records of BuffBot v1.16.0 and BG
+    // Rebalance v0.8.10 stay as history), rolled HP in Recommended and the `core_components`
+    // of the failed-component question. They were taken from payloads that chriz-bg-author
+    // package-recipe built from the curated trees of fa0edd6 (and of f855441, with the same
+    // result) and 291cc82, using diff_recipe_packages.
+    let snapshot = released_snapshots()
+        .into_iter()
+        .find(|snapshot| snapshot["version"] == "0.1.2")
+        .expect("the 0.1.2 differences are recorded");
+    assert_eq!(snapshot["from_commit"], "fa0edd6");
+    let differences = snapshot_differences(&snapshot);
+    assert_eq!(differences.len(), 35);
+    ensure_change_coverage(&differences, &ledger).unwrap();
+    assert_eq!(
+        ledger
+            .changes
+            .iter()
+            .flat_map(|change| change.covers.iter().map(String::as_str))
+            .collect::<BTreeSet<_>>(),
+        differences
+            .iter()
+            .map(|difference| difference.subject.as_str())
+            .collect::<BTreeSet<_>>()
+    );
+}
+
+#[test]
 fn coverage_error_names_uncovered_subject() {
     let differences = vec![RecipeDifference {
         subject: "run:missing".to_owned(),
@@ -649,9 +722,9 @@ fn ledger_covers_name_only_subject_kinds_the_recipe_diff_emits() {
                 }
             }
         }
-        // alpha.1, alpha.12 to alpha.20, 0.1.0 and the next 0.1.1; published ledgers are
-        // never removed.
-        assert!(ledgers >= 12, "{profile}: only {ledgers} ledgers found");
+        // alpha.1, alpha.12 to alpha.20, 0.1.0, 0.1.1 and the next 0.1.2; published ledgers
+        // are never removed.
+        assert!(ledgers >= 13, "{profile}: only {ledgers} ledgers found");
         assert_eq!(
             dead, shipped,
             "{profile}: covers that no recipe difference can match (kinds: {DIFF_SUBJECT_KINDS:?})"

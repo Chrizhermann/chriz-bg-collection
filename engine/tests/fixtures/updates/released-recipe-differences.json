@@ -441,5 +441,47 @@
       "feature:mod:bg1npc",
       "run:chriz-bg-modpack-bg2"
     ]
+  },
+  {
+    "version": "0.1.2",
+    "from_commit": "fa0edd6",
+    "to_commit": "c95db24",
+    "subjects": [
+      "artifact:buffbot-1.16.0",
+      "artifact:buffbot-1.16.1",
+      "artifact:chriz-bg-modpack-0.2.0-alpha.16",
+      "artifact:chriz-bg-rebalance-0.8.10",
+      "artifact:chriz-bg-rebalance-0.8.11",
+      "artifact:chriz-sod-remix-0.6.17",
+      "artifact:voicepack-aerie-1.0.2",
+      "artifact:voicepack-ajantis-2.0.1",
+      "artifact:voicepack-amelyssan-1.0.2",
+      "artifact:voicepack-edwin-bg1-1.0.2",
+      "artifact:voicepack-edwin-bg2-1.0.2",
+      "artifact:voicepack-garithos-1.1.1",
+      "artifact:voicepack-gromnir-il-khan-1.0.2",
+      "artifact:voicepack-imoen-bg1-1.0.2",
+      "artifact:voicepack-imoen-bg2-1.0.2",
+      "artifact:voicepack-jaheira-bg1-1.0.2",
+      "artifact:voicepack-jaheira-bg2-1.0.2",
+      "artifact:voicepack-neera-1.0.2",
+      "artifact:voicepack-safana-bg1-1.0.2",
+      "artifact:voicepack-safana-sod-1.0.2",
+      "artifact:voicepack-sarevok-1.0.2",
+      "artifact:voicepack-viconia-bg1-1.0.1",
+      "artifact:voicepack-viconia-bg2-1.0.1",
+      "artifact:voicepack-yeslick-1.0.2",
+      "feature:feature:ascension:mandatory-components",
+      "feature:feature:buffbot:mandatory-components",
+      "feature:feature:cdtweaks:component-3000",
+      "feature:feature:cdtweaks:component-3010",
+      "feature:feature:chriz-bg-rebalance:bard-spell-ceilings",
+      "feature:feature:chriz-bg-rebalance:mandatory-components",
+      "feature:feature:chriz-bg-rebalance:tempus-bundle",
+      "feature:feature:chriz-sod-remix:mandatory-components",
+      "feature:feature:eeex:mandatory-components",
+      "feature:feature:iwdification:mandatory-components",
+      "feature:feature:stratagems:mandatory-components"
+    ]
   }
 ]
