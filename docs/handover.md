@@ -22,8 +22,9 @@ entries cover all 35 recipe differences since the recipe 0.1.1 shipped, recorded
   0.6.17 and the voicepacks 1.2.0 (#103, #106, #123, #124).
 
 The 0.1.2 candidate lab passed on 2026-11-08/09: a full recommended installation from
-`c95db24` ran 183 steps and 463 components, the final verification passed, and no question
-came up and no mod was left out. The start test passed with BuffBot 1.16.1 loaded, the
+`c95db24` ran 183 steps and installed all 466 components (463 in the EET game, 3 in the BG:EE
+copy before EET), the final verification passed, and no question came up and no mod was left
+out. The start test passed with BuffBot 1.16.1 loaded, the
 scroll fix healthy and no new error lines. The evidence stays in the lead's run folder,
 outside the repository. Building, packaging and publishing follow; nothing is tagged,
 published or uploaded.
