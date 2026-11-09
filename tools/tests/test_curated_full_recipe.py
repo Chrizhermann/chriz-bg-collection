@@ -779,8 +779,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 bg_artifact["source"]["sha256"],
                 "c9e9adf57a06b95bac055b4aee983b92690e3dacb2173b6c584cf4f75f059b34",
             )
-            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.1")
-            for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14", "0.1.0-alpha.15", "0.1.0-alpha.16", "0.1.0-alpha.17", "0.1.0-alpha.18", "0.1.0-alpha.19", "0.1.0-alpha.20", "0.1.0", "0.1.1"):
+            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.2")
+            for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14", "0.1.0-alpha.15", "0.1.0-alpha.16", "0.1.0-alpha.17", "0.1.0-alpha.18", "0.1.0-alpha.19", "0.1.0-alpha.20", "0.1.0", "0.1.1", "0.1.2"):
                 generated_ledger = output / f"releases/v{version}/ledger.toml"
                 authored_ledger = self.root / f"manifest/releases/v{version}/ledger.toml"
                 self.assertEqual(

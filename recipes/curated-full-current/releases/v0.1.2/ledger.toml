@@ -1,0 +1,89 @@
+schema = 1
+recipe_id = "chriz-bg-collection"
+version = "0.1.2"
+# The planned publication date (UTC), fixed before packaging because the setup bundles this ledger.
+published_at = "2026-11-10T00:00:00Z"
+# The 0.1.1 app cannot read this recipe: its engine rejects the features' `core_components` and
+# the collection's `[[component_needs]]`, which the failed-component question reads.
+minimum_app_version = "0.1.2"
+supersedes = "0.1.1"
+
+[[changes]]
+id = "failed-component-question"
+title = "The installer asks when one part fails"
+summary = "When the installer of a single component fails, the installation pauses and names the mod and the part. You choose Leave it out and continue, Try again (offered when nothing was installed after it) or Stop the installation. Only that part leaves, together with what needs it; the mod's other parts stay, and the end of the installation names everything left out. A part whose loss would leave only half of a mod's core in the game, such as EEex's runtime, can only be tried again or stopped. For EEex, BuffBot, Ascension, SCS, BG Rebalance, SoD Remix and IWDification the collection now knows which parts stand on their own, so a failure there leaves out no more than it must."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "feature:feature:ascension:mandatory-components",
+  "feature:feature:buffbot:mandatory-components",
+  "feature:feature:chriz-bg-rebalance:bard-spell-ceilings",
+  "feature:feature:chriz-bg-rebalance:mandatory-components",
+  "feature:feature:chriz-bg-rebalance:tempus-bundle",
+  "feature:feature:chriz-sod-remix:mandatory-components",
+  "feature:feature:eeex:mandatory-components",
+  "feature:feature:iwdification:mandatory-components",
+  "feature:feature:stratagems:mandatory-components",
+]
+
+[[changes]]
+id = "rebalance-flail-without-spell-revisions"
+title = "No stop at BG Rebalance without Spell Revisions"
+summary = "New installations without Spell Revisions no longer stop at BG Rebalance's Flail of the Ages balance: it now recognises the Haste and Slow spells SCS uses there. A target that makes its save against the flail's Slow is not slowed and keeps its Haste; a hasted target that fails it loses its Haste instead of being slowed. The Flail of the Ages +5 now also lets Potion of Haste and Haste rings work, not only the Haste and Improved Haste spells. (BG Rebalance v0.8.10)"
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-rebalance-0.8.10",
+]
+
+[[changes]]
+id = "recommended-rolled-hit-points"
+title = "Rolled hit points in Recommended"
+summary = "Chris's Recommended rolls hit points on level-up again and no longer gives every creature maximum hit points: Higher HP on Level Up (Maximum) and Maximum HP Creatures (for all creatures in game) are now unticked options under Customize. Max HP at Level One stays on. (Tweaks Anthology)"
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "feature:feature:cdtweaks:component-3000",
+  "feature:feature:cdtweaks:component-3010",
+]
+
+[[changes]]
+id = "buffbot-1-16-1-party-table-clones-summons"
+title = "BuffBot 1.16.1: party table, clones and summons"
+summary = "New installations get BuffBot 1.16.1 (was 1.12.6). Its panel can show the whole party as a table with one row per buff, where you choose who gets which buff, set the cast order and see what each character receives. You can set up a Project Image or Simulacrum before you conjure it, and summons can receive buffs, such as Stoneskin on a Planetar. It also brings five text sizes, a readable parchment colour scheme again, and 5E spells that stay in the table when a hand-edited wrapper has no usable target. A game in progress can get it in the BuffBot section of the Updates page."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:buffbot-1.16.0",
+  "artifact:buffbot-1.16.1",
+]
+
+[[changes]]
+id = "own-mods-write-the-decided-result"
+title = "Our mods write their decided result"
+summary = "BG Rebalance, Chriz BG Modpack, SoD Remix and the voicepacks now write every selected change as decided, whatever the game files hold: an edited value, another mod's version of the same spell, item, dialogue or table, or a missing piece no longer stops, warns or skips a component. Their components, order and Chris's Recommended selection stay the same, and the voicepacks' audio is unchanged. (BG Rebalance v0.8.11, Chriz BG Modpack v0.2.0-alpha.16, SoD Remix v0.6.17, ChrizFader's voicepacks v1.2.0)"
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-modpack-0.2.0-alpha.16",
+  "artifact:chriz-bg-rebalance-0.8.11",
+  "artifact:chriz-sod-remix-0.6.17",
+  "artifact:voicepack-aerie-1.0.2",
+  "artifact:voicepack-ajantis-2.0.1",
+  "artifact:voicepack-amelyssan-1.0.2",
+  "artifact:voicepack-edwin-bg1-1.0.2",
+  "artifact:voicepack-edwin-bg2-1.0.2",
+  "artifact:voicepack-garithos-1.1.1",
+  "artifact:voicepack-gromnir-il-khan-1.0.2",
+  "artifact:voicepack-imoen-bg1-1.0.2",
+  "artifact:voicepack-imoen-bg2-1.0.2",
+  "artifact:voicepack-jaheira-bg1-1.0.2",
+  "artifact:voicepack-jaheira-bg2-1.0.2",
+  "artifact:voicepack-neera-1.0.2",
+  "artifact:voicepack-safana-bg1-1.0.2",
+  "artifact:voicepack-safana-sod-1.0.2",
+  "artifact:voicepack-sarevok-1.0.2",
+  "artifact:voicepack-viconia-bg1-1.0.1",
+  "artifact:voicepack-viconia-bg2-1.0.1",
+  "artifact:voicepack-yeslick-1.0.2",
+]
