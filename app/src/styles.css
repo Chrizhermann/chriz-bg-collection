@@ -737,6 +737,7 @@ fieldset {
 .source-card-heading p,
 .source-card > p,
 .install-settings h2,
+.main-choices h2,
 .recommended-setup h2,
 .install-ready h2,
 .install-ready p,
@@ -875,6 +876,58 @@ fieldset {
 
 .location-controls .button {
   margin-bottom: 0.02rem;
+}
+
+.main-choices {
+  display: grid;
+  gap: 0.6rem;
+  border-color: var(--brass-dark);
+}
+
+.main-choice {
+  display: grid;
+  grid-template-columns: 1.35rem minmax(0, 1fr) auto;
+  gap: 0.3rem 0.8rem;
+  align-items: center;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--brass);
+  border-left: 4px solid var(--brass);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--brass) 6%, transparent);
+}
+
+.main-choice input {
+  width: 1.35rem;
+  height: 1.35rem;
+  margin: 0;
+  accent-color: var(--teal);
+}
+
+.main-choice-title {
+  cursor: pointer;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.main-choice .main-choice-description,
+.main-choice .main-choice-state {
+  grid-column: 2 / -1;
+  max-width: 70ch;
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.main-choice .main-choice-state {
+  font-weight: 600;
+}
+
+.main-choice.is-on .main-choice-state {
+  color: var(--teal);
+}
+
+.main-choice.is-mixed .main-choice-state {
+  color: var(--focus);
 }
 
 .recommended-setup {

@@ -6,7 +6,10 @@ export function featureGroupControlId(group: FeatureGroup): string {
   return `group-${group.id.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
 }
 
-function stateText(group: FeatureGroup): string {
+export type FeatureGroupChange = (changes: Record<string, boolean>, focusId: string) => void | Promise<void>;
+
+/** One sentence for the group's derived state; the same wherever the group's switch is shown. */
+export function featureGroupStateText(group: FeatureGroup): string {
   if (group.disabledReason) return group.disabledReason;
   // A variant counts as one change, like a member.
   const variants = group.variants ?? [];
@@ -18,13 +21,49 @@ function stateText(group: FeatureGroup): string {
 }
 
 /**
+ * Tri-state checkbox that switches one feature group. The Customize card and the main choice
+ * on the install screen both use it, so the two switches behave alike. `requested` runs
+ * before the batch is sent.
+ */
+export function featureGroupCheckbox(
+  group: FeatureGroup,
+  id: string,
+  change: FeatureGroupChange,
+  requested?: () => void,
+): HTMLInputElement {
+  const checkbox = element("input");
+  checkbox.type = "checkbox";
+  checkbox.id = id;
+  checkbox.checked = group.state === "on";
+  checkbox.indeterminate = group.state === "mixed";
+  checkbox.setAttribute("aria-checked", group.state === "mixed" ? "mixed" : String(group.state === "on"));
+  if (group.disabledReason) {
+    checkbox.setAttribute("aria-disabled", "true");
+    checkbox.addEventListener("click", (event) => {
+      event.preventDefault();
+    });
+  } else {
+    // The checkbox's own state is the requested target: a click on "off" or "mixed" checks it
+    // and a click on "on" unchecks it. Reading it at click time (not the rendered group state)
+    // keeps rapid clicks made before the next evaluation re-renders the switch in step with
+    // the last action.
+    checkbox.addEventListener("change", () => {
+      checkbox.setAttribute("aria-checked", String(checkbox.checked));
+      requested?.();
+      void change(featureGroupChanges(group, checkbox.checked), checkbox.id);
+    });
+  }
+  return checkbox;
+}
+
+/**
  * Prominent tri-state switch for one authored feature group. Its state is derived by the
  * engine from the member features; a click sends all member changes as one batch.
  */
 export function featureGroupCard(
   evaluation: SelectionEvaluation,
   group: FeatureGroup,
-  change: (changes: Record<string, boolean>, focusId: string) => void | Promise<void>,
+  change: FeatureGroupChange,
 ): HTMLElement {
   const id = featureGroupControlId(group);
   const card = element("section", "feature-group-card");
@@ -32,12 +71,7 @@ export function featureGroupCard(
   card.setAttribute("aria-labelledby", `${id}-label`);
 
   const header = element("div", "feature-group-header");
-  const checkbox = element("input");
-  checkbox.type = "checkbox";
-  checkbox.id = id;
-  checkbox.checked = group.state === "on";
-  checkbox.indeterminate = group.state === "mixed";
-  checkbox.setAttribute("aria-checked", group.state === "mixed" ? "mixed" : String(group.state === "on"));
+  const checkbox = featureGroupCheckbox(group, id, change);
   const label = element("label", "feature-group-title", group.title);
   label.id = `${id}-label`;
   label.htmlFor = id;
@@ -45,7 +79,7 @@ export function featureGroupCard(
 
   const description = element("p", "feature-group-description", group.description);
   description.id = `${id}-description`;
-  const state = element("p", group.disabledReason ? "feature-group-state unavailable-reason" : "feature-group-state", stateText(group));
+  const state = element("p", group.disabledReason ? "feature-group-state unavailable-reason" : "feature-group-state", featureGroupStateText(group));
   state.id = `${id}-state`;
   checkbox.setAttribute("aria-describedby", `${description.id} ${state.id}`);
 
@@ -86,22 +120,6 @@ export function featureGroupCard(
   }
   const note = element("p", "feature-group-note",
     `Each change can also be switched on or off by itself under its own mod in “Advanced options by category”, where it is marked “${group.title}”.`);
-
-  if (group.disabledReason) {
-    checkbox.setAttribute("aria-disabled", "true");
-    checkbox.addEventListener("click", (event) => {
-      event.preventDefault();
-    });
-  } else {
-    // The checkbox's own state is the requested target: a click on "off" or "mixed" checks it
-    // and a click on "on" unchecks it. Reading it at click time (not the rendered group state)
-    // keeps rapid clicks made before the next evaluation re-renders the card in step with the
-    // last action.
-    checkbox.addEventListener("change", () => {
-      checkbox.setAttribute("aria-checked", String(checkbox.checked));
-      void change(featureGroupChanges(group, checkbox.checked), checkbox.id);
-    });
-  }
 
   card.append(header, description, state, list, note);
   return card;
