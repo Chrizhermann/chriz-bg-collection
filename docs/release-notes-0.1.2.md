@@ -1,7 +1,7 @@
 # Chriz Easy BG 0.1.2
 
-**Release candidate:** app 0.1.2 / collection 0.1.2, planned for 2026-11-10. The exact
-package and its test results follow in the candidate's package verification record.
+**Released:** app 0.1.2 / collection 0.1.2, on 2026-11-10. The exact package and its test
+results are in the [package verification record](package-acceptance-0.1.2-2026-11-10.md).
 
 0.1.2 asks you what to do when a single part of a mod fails to install, brings BuffBot's
 newest release to new installations and to games in progress, and lets our own mods write
