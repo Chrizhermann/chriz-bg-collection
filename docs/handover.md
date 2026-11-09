@@ -2,6 +2,33 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 10 — Chriz Easy BG 0.1.2 and Chriz Easy IWD 0.1.10 released
+
+**Both are public** since 2026-11-09 UTC (the morning of 2026-11-10 in Korea), built from
+`main` at `8c51eec`, each on its versioned release and its in-app update channel:
+
+- **Chriz Easy BG 0.1.2** (20:31 UTC): the failed-component question, changed and unusable
+  downloads handled without a question, the BuffBot section under Updates, rolled hit points
+  in Chris's Recommended and the new releases of our mods. 466 components in Recommended.
+  See the [package record](package-acceptance-0.1.2-2026-11-10.md) and the
+  [release notes](release-notes-0.1.2.md).
+- **Chriz Easy IWD 0.1.10** (20:28 UTC): thieves use their thieving skills and stealth in
+  any armor (Klatu Tweaks and Fixes 1.7.4, component `2150`, on in the recommended setup,
+  PR 126). 30 mods and 140 components. A full lab installation passed; the lab game was not
+  started. See the [acceptance report](package-acceptance-iwd-0.1.10-2026-11-10.md) and the
+  [release notes](release-notes-iwd-0.1.10.md).
+
+Both setups passed the signature test, the real updater download test from the previous
+version and a Defender scan; every published file was downloaded anonymously and matched.
+The website is maintained separately; its chat was told about both versions.
+
+Decided by Christopher on 2026-11-10, recorded in the
+[follow-ups](curation/components/FOLLOW_UPS.md): campaign XP caps with banked XP join
+Challenge Mode with the chapter caps, for the BG version after 0.1.2; Challenge Mode
+becomes one of the main choices on the install screen; the parts that exist only for Spell
+Revisions, Artisan's Kitpack, Bardic Wonders or Item Randomiser 8.1.1 get only simple fixes
+and fixes for real installer problems that players report.
+
 ## November 9 — Chriz Easy BG 0.1.2 prepared
 
 Christopher approved the 0.1.2 release on 2026-11-09. Branch `claude/bg-012-prepare`, from
@@ -33,8 +60,8 @@ published or uploaded.
 
 **IWD app and recipe 0.1.9 are public** on the versioned release and the in-app update
 channel (12:50 UTC). It is the first IWD release from `main`, built from `3efbada`: the
-download and failed-component questions, Less tested sources, the modded-source question
-and the overwrite rule now reach IWD players. New installations get BuffBot 1.16.1 and
+failed-component question, changed and unusable downloads handled without a question, Less
+tested sources, the modded-source question and the overwrite rule now reach IWD players. New installations get BuffBot 1.16.1 and
 Chriz IWD Encounters 0.2.2; the recommended setup stays at 29 mods and 139 components.
 There is no new hotpatch; the bundled catalog has the new base `iwd-0.1.9`.
 
@@ -52,8 +79,9 @@ product identity, updater feed and catalog. IWD retains its own version and sign
 The two website download destinations are listed in [BUILDING](BUILDING.md); website
 publication and the separate product releases remain release work.
 
-The merge brings main's download and failed-component questions, Less tested source discovery,
-modded-source confirmation and overwrite policy to IWD. Player additions do not block its
+The merge brings main's failed-component question, its handling of changed and unusable
+downloads without a question, Less tested source discovery, modded-source confirmation and
+overwrite policy to IWD. Player additions do not block its
 hotpatches or whole-mod updates. Shared locks, archive checks, install history, backup and Undo
 remain. The obsolete BuffBot 1.8.3 to 1.8.4 Apply route stays removed in both products.
 Recipes, pins, install order, components and versions are unchanged by this merge. Every later
