@@ -20,6 +20,18 @@ Cross-repository status. Component detail stays in the sections below and in the
 Latest releases: Chriz Easy BG 0.1.2 and Chriz Easy IWD 0.1.10, both published on
 2026-11-09 UTC from `main` (see the [handover](../../handover.md)).
 
+On `main` for the next Chriz Easy BG version:
+
+- Campaign XP caps with banked XP in Challenge Mode (Christopher, 2026-11-10): Modpack `650`
+  is a member of the Challenge Mode group together with the chapter caps `652`. `651` (the
+  Shadows of Amn cap alone) excludes `652` and stays a separate choice outside the group.
+  His remark that the Shadows of Amn cap can already be caught up in the Underdark fits
+  `652`'s table: its Chapter 5 cap is 3,250,000, above `651`'s 2,950,000. Switching a group
+  on now also turns on a member that needs only another member of the group, so one switch
+  gives both. Open: the run `chriz-bg-modpack-campaign-xp-bg2` still has no tail approval
+  (see Release records), `650` stays experimental, and the group was not installed in a lab
+  with these two members.
+
 **In progress (separate sessions)**
 
 - CEBG alpha.22, the next release (Christopher's plan of 2026-10-25), in this order. On
@@ -612,17 +624,10 @@ Latest releases: Chriz Easy BG 0.1.2 and Chriz Easy IWD 0.1.10, both published o
   is closed as superseded. Low risk while WeiDU comes from fixed GitHub release files. Also
   small: the changed-download path does not repeat the Weasel Mods link-shape check, which
   recipe validation already makes.
-- Campaign XP caps with banked XP in Challenge Mode (Christopher, 2026-11-10): Modpack `650`
-  joins the Challenge Mode group together with the chapter caps `652`, for the BG version
-  after 0.1.2. `651` (the Shadows of Amn cap alone) excludes `652` and stays outside the
-  group. His remark that the Shadows of Amn cap can already be caught up in the Underdark
-  fits `652`'s table: its Chapter 5 cap is 3,250,000, above `651`'s 2,950,000. The run
-  `chriz-bg-modpack-campaign-xp-bg2` still has no tail approval (see Release records), and
-  `650` stays experimental.
 - Challenge Mode as a main choice on the install screen (Christopher, 2026-11-10): it
   becomes one of the main checkboxes in the window where an installation is started; the
   details stay in Customize. The final layout is open, and he wants suggestions. Design
-  first; a separate design chat is offered.
+  first, in its own design chat (started on 2026-11-10).
 
 **Waiting for Christopher**
 
