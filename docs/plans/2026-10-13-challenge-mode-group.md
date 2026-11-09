@@ -23,7 +23,13 @@ feature in the next-release recipe:
 | Baeloth: normal Sorcerer spells known | Modpack 235 | Legal Sorcerer spell selection, SR or vanilla | — | Settled (Oct 4/7) |
 | Extra Challenge: lethal dragon melee | Rebalance 110 | Stronger SCS dragon melee at high difficulty, including death-protection interactions | SCS Smarter Dragons, EEex | Settled (Oct 13) |
 | Extra Challenge: Insane bridge sequencers | SoD Remix 257 | Harder sequencers for the SoD bridge mages on Insane | SoD Remix | Settled (Oct 13) |
+| Campaign XP caps with banked XP (experimental) | Modpack 650 | BG1 stops usable XP at 161,000 and SoD at 500,000; the rest is banked for a later campaign | EEex | Settled (Nov 10) |
+| Chapter-by-chapter XP caps (experimental) | Modpack 652 | Usable XP is capped chapter by chapter across BG1, SoD, SoA and ToB; the rest stays banked | Modpack 650 (comes on with the group) | Settled (Nov 10) |
 | No stealing from fences | Tweaks Anthology 2760 | Fences can't be stolen from, and reputation no longer changes their prices | Tweaks Anthology (curated profile only) | Settled (Oct 14) |
+
+Christopher, November 10: Challenge Mode includes campaign XP caps with chapter caps
+(Modpack `650` + `652`). The Shadows of Amn cap `651` conflicts with `652` and stays a
+separate optional choice outside the group.
 
 Variant (see [below](#variants-switching-a-choice)): Potion uniqueness picks the strict
 Rebalance `330` (Potions of Genius don't stack either) instead of the recommended `331`.
@@ -53,7 +59,9 @@ The group never changes them.
   recognizable.
 - **On:** selects every member whose own requirements are met. A member whose
   requirement is missing, such as lethal dragon melee without SCS Smarter
-  Dragons, shows as unavailable with the reason. It is never forced on.
+  Dragons, shows as unavailable with the reason. It is never forced on. A member
+  may require another member: it counts as available and comes on with it in the
+  same switch (November 10, chapter caps `652` with campaign XP caps `650`).
 - **Off:** deselects every member.
 - **Mixed:** shown when some, but not all, available members are selected,
   usually after changing a member by hand. Clicking a mixed group selects all

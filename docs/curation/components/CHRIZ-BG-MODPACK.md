@@ -69,7 +69,8 @@ The four ✓ marks record the old reference install, not the new default recipe.
   post-EET_end Modpack run after `450`, in TP2 order, so it follows EET and every party
   AI writer in the earlier runs, as the Modpack README requires.
 - Chapter XP caps `652` (alpha.13) are **optional, unchecked and experimental
-  (Christopher's decision, 2026-10-25)**, because they need `650`. Instead of `651`'s
+  (Christopher's decision, 2026-10-25)**, because they need `650`; since 2026-11-10 they
+  belong to Challenge Mode with `650` (see below). Instead of `651`'s
   single SoA cap they cap usable XP per chapter across BG1, SoD, SoA and ToB, from 16,000
   in BG1 Chapters 1-2 up to 8,900,000 in ToB Chapter 10, and bank the excess. The TP2
   makes `651` and `652` mutually exclusive, and so do their features. `652` also makes
@@ -117,6 +118,12 @@ The four ✓ marks record the old reference install, not the new default recipe.
   ([#19](https://github.com/Chrizhermann/chriz-bg-collection/issues/19)); alpha.14 fixes
   this and writes `650`'s fallbacks to the loader log only. `651` and chapter caps `652`
   are either-or.
+- **Challenge Mode includes `650` and `652` (Christopher, 2026-11-10)**: switching the
+  [group](../../plans/2026-10-13-challenge-mode-group.md) on turns on campaign XP caps with
+  chapter caps; `652` comes on with `650`, which it requires. `651` stays outside the group
+  as a separate optional choice. A player who ticked `651` keeps it when switching Challenge
+  Mode on, and `652` then stays off with its conflict reason. All three stay optional,
+  unchecked and experimental, and Chris's Recommended keeps Challenge Mode off.
 - Degrodel `660` is default: refusing to hand over the Helm of Balduran makes Degrodel
   and his servants attack; handing it over keeps the normal reward. It runs in the main
   post-EET_end Modpack run after `630`.

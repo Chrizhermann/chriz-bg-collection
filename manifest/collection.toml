@@ -10,6 +10,9 @@ members = [
   "feature:chriz-bg-modpack:component-235",
   "feature:chriz-bg-rebalance:component-110",
   "feature:chriz-sod-remix:component-257",
+  # Christopher, 2026-11-10: Challenge Mode includes campaign XP caps with chapter caps (Modpack 650 + 652).
+  "feature:chriz-bg-modpack:component-650",
+  "feature:chriz-bg-modpack:component-652",
 ]
 # Christopher, 2026-10-14: Challenge Mode picks strict potion uniqueness (Rebalance 330);
 # switching the group off restores the recommended 331.

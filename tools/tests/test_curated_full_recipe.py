@@ -464,7 +464,11 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # Creatures) become optional and off, for 0.1.2 (Christopher, 2026-11-04);
                 # with both back on, the alpha.15 pin digest
                 # e43f6d204b3b98c491e290050d065173287082b3717972346e44535528a7fb2d returns.
-                "d5086af1d90ea7199bc4da012f9d745608f6e32fb6cb1637d3481742ebca68f3",
+                # November 10: Challenge Mode includes campaign XP caps with chapter caps
+                # (Modpack 650 + 652, Christopher, 2026-11-10); only the group's members change,
+                # and without the two the November 4 digest
+                # d5086af1d90ea7199bc4da012f9d745608f6e32fb6cb1637d3481742ebca68f3 returns.
+                "452ae6d86c228f1ca830c9f5c1462a7a7643f3316a9d877ca8e0b73f6b5acde6",
             )
 
             legacy_bg1npc_groups = {
@@ -1248,6 +1252,9 @@ class CuratedFullRecipeTests(unittest.TestCase):
             "feature:chriz-bg-modpack:component-235",
             "feature:chriz-bg-rebalance:component-110",
             "feature:chriz-sod-remix:component-257",
+            # Christopher, 2026-11-10: campaign XP caps with chapter caps (Modpack 650 + 652).
+            "feature:chriz-bg-modpack:component-650",
+            "feature:chriz-bg-modpack:component-652",
         ]
         [authored] = base["feature_groups"]
         self.assertEqual(authored["members"], fallback_members)

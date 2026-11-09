@@ -131,7 +131,8 @@ export function bulkCategoryChanges(e: SelectionEvaluation, category: string, se
 
 /**
  * Member changes that switch a feature group on (`on` true) or off. Mirrors the engine's
- * `feature_group_changes`: on selects every currently available member and picks every
+ * `feature_group_changes`: on selects every available member (the engine already counts a
+ * member whose only obstacle is a requirement on another member as available) and picks every
  * available variant option, deselecting its alternatives; off deselects every member and
  * restores each variant's choice group to its recipe default. Unavailable members and
  * variants are never forced on and no other feature is touched.

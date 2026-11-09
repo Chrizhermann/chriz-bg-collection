@@ -7957,7 +7957,8 @@ fn selection_choices(
     })?;
     let mut choices = preset.selections.clone();
     // Explicit `--feature` overrides apply first, so group expansion sees them: a prerequisite
-    // switched on by `--feature` makes a dependent member available to `--group ...=on`.
+    // outside the group switched on by `--feature` makes a dependent member available to
+    // `--group ...=on`. A prerequisite that is itself a member comes on with the group.
     let mut explicit_features = BTreeMap::new();
     for authored in &overrides.features {
         let (id, value) = split_assignment(authored, "feature override")?;

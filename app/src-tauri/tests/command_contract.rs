@@ -1194,6 +1194,10 @@ fn evaluate_build_projects_the_challenge_mode_group_and_its_derived_state() {
         "feature:chriz-bg-modpack:component-235",
         "feature:chriz-bg-rebalance:component-110",
         "feature:chriz-sod-remix:component-257",
+        // Christopher, 2026-11-10: campaign XP caps with chapter caps; 652 requires 650 and
+        // still counts as available, because switching the group on turns on both.
+        "feature:chriz-bg-modpack:component-650",
+        "feature:chriz-bg-modpack:component-652",
     ];
     let evaluate = |features: &[(&str, bool)]| {
         bridge

@@ -190,6 +190,8 @@ struct PlanArgs {
     #[arg(long, default_value = "windows")]
     platform: String,
     /// Switch a feature group as `group-id=on|off`; an explicit `--feature` wins for a member.
+    /// A member's prerequisite that is another member comes on with the group; one outside the
+    /// group must already be on, for example through `--feature`.
     #[arg(long = "group")]
     groups: Vec<String>,
     /// Override one semantic feature as `id=on|off`.
@@ -273,6 +275,8 @@ struct InstallArgs {
     #[arg(long, default_value = "windows")]
     platform: String,
     /// Switch a feature group as `group-id=on|off`; an explicit `--feature` wins for a member.
+    /// A member's prerequisite that is another member comes on with the group; one outside the
+    /// group must already be on, for example through `--feature`.
     #[arg(long = "group")]
     groups: Vec<String>,
     /// Override one semantic feature as `id=on|off`.
