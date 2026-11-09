@@ -197,6 +197,9 @@ impl From<bg_engine::cli::DecisionStatus> for PendingDecisionResponse {
     }
 }
 
+/// Longest report text the bridge redacts; the interface sends far less.
+const MAX_REPORT_TEXT_BYTES: usize = 64 * 1024;
+
 /// Operating-system actions kept behind the native bridge's validated identity boundary.
 #[doc(hidden)]
 pub trait BridgeSystem: Send + Sync {
@@ -424,6 +427,8 @@ struct BridgeRuntime {
     active_runs: HashMap<String, RunnerControlHandle>,
     run_snapshots: HashMap<String, RunSnapshotResponse>,
     known_installs: HashMap<String, PathBuf>,
+    /// The diagnostics ZIP this session exported last, for "Show in folder".
+    last_diagnostics_export: Option<PathBuf>,
 }
 
 #[derive(Clone)]
@@ -627,6 +632,14 @@ pub struct ManualDownloadRequirementResponse {
 #[serde(deny_unknown_fields)]
 pub struct DiagnosticsExportResponse {
     pub path: String,
+}
+
+/// The GitHub issue page was opened with a report filled in.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReportIssueResponse {
+    /// The report did not fit into the address; the page asks for the whole text.
+    pub shortened: bool,
 }
 
 /// Display-only path returned after writing a verified CEBG launcher shortcut.
@@ -1953,6 +1966,7 @@ impl NativeBridge {
                     error,
                 )
             })?;
+        self.runtime_lock().last_diagnostics_export = Some(path.clone());
         let path = display_windows_path(&path).map_err(|error| {
             CommandError::new(
                 "diagnostics_path_invalid",
@@ -1962,6 +1976,75 @@ impl NativeBridge {
             )
         })?;
         Ok(Some(DiagnosticsExportResponse { path }))
+    }
+
+    /// Opens the folder of the diagnostics ZIP this session exported last, and no other folder.
+    pub fn show_diagnostics_export(&self) -> Result<(), CommandError> {
+        let exported = self.runtime_lock().last_diagnostics_export.clone();
+        let folder = exported.as_deref().and_then(Path::parent).ok_or_else(|| {
+            CommandError::new(
+                "diagnostics_export_unknown",
+                "No diagnostics ZIP was exported since the app started.",
+                "Export diagnostics first.",
+                String::new(),
+            )
+        })?;
+        self.system.open_folder(folder).map_err(|error| {
+            CommandError::new(
+                "diagnostics_folder_open_failed",
+                "The folder of the diagnostics ZIP could not be opened.",
+                "Open the folder shown next to the export yourself.",
+                error,
+            )
+        })
+    }
+
+    /// Text for a report as the player may share it: home folder, user names, the computer
+    /// name and common secrets are redacted like text in a diagnostics ZIP.
+    pub fn redact_report_text(&self, text: &str) -> String {
+        let end = text
+            .char_indices()
+            .map(|(index, character)| index + character.len_utf8())
+            .take_while(|end| *end <= MAX_REPORT_TEXT_BYTES)
+            .last()
+            .unwrap_or(0);
+        bg_engine::diagnostics::redact_for_sharing(&text[..end], &[])
+    }
+
+    /// Opens this product's GitHub issue page in the browser with a report filled in. The
+    /// player reads and submits it there; the app transmits nothing.
+    pub fn open_report_issue(
+        &self,
+        title: &str,
+        body: &str,
+    ) -> Result<ReportIssueResponse, CommandError> {
+        let repository = self.flavor.report_repository;
+        let address = crate::report::issue_address(repository, title, body);
+        self.system.open_https(&address.url).map_err(|error| {
+            CommandError::new(
+                "report_page_open_failed",
+                "The GitHub issue page could not be opened.",
+                format!("Use Copy text, then open github.com/{repository}/issues in your browser yourself."),
+                error,
+            )
+        })?;
+        Ok(ReportIssueResponse {
+            shortened: address.shortened,
+        })
+    }
+
+    /// Opens the invitation to the Discord server where reports are read.
+    pub fn open_report_chat(&self) -> Result<(), CommandError> {
+        self.system
+            .open_https(crate::report::CHAT_INVITATION)
+            .map_err(|error| {
+                CommandError::new(
+                    "report_chat_open_failed",
+                    "The Discord invitation could not be opened.",
+                    "Open ChrizFader's Discord yourself and paste the copied text there.",
+                    error,
+                )
+            })
     }
 
     /// Re-inspects exact server-side candidates and freezes a short-lived, single-use review.

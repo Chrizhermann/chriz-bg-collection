@@ -1,0 +1,8 @@
+# Source of .github/ISSUE_TEMPLATE/config.yml in Chrizhermann/chriz-easy-bg and
+# Chrizhermann/chriz-easy-iwd. Blank issues stay enabled: the app's Feedback button opens
+# one with the report filled in. See docs/report-feature.md.
+blank_issues_enabled: true
+contact_links:
+  - name: ChrizFader's Discord
+    url: https://discord.gg/RtXjRzy68k
+    about: Ask a question or report a problem in chat.

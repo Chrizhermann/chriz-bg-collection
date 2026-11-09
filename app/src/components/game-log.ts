@@ -20,6 +20,8 @@ export interface GameLogActions {
   readonly toggle: (open: boolean) => void;
   readonly set: (enabled: boolean) => void | Promise<void>;
   readonly refresh: () => void | Promise<void>;
+  /** Opens the report dialog for a problem in this installation's game. */
+  readonly report?: () => void;
 }
 
 function formatBytes(value: string): string {
@@ -128,6 +130,11 @@ export function troubleshootingSection(view: GameLogView, actions: GameLogAction
   refresh.disabled = view.busy;
   const controls = element("div", "inline-actions");
   controls.append(refresh);
+  if (actions.report) {
+    const report = actionButton("Report a game problem", actions.report, "quiet");
+    report.id = "report-game-problem";
+    controls.append(report);
+  }
   details.append(controls);
   return details;
 }

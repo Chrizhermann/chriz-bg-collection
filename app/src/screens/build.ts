@@ -17,6 +17,8 @@ export interface BuildActions {
   readonly stopNow: () => void | Promise<void>;
   readonly diagnostics: () => void | Promise<void>;
   readonly diagnosticsAvailable: boolean;
+  /** Opens the report dialog with what is known about the stopped installation. */
+  readonly report?: () => void;
   readonly fixture: boolean;
   readonly retryAvailable: boolean;
   readonly resuming?: boolean;
@@ -82,6 +84,11 @@ export function buildScreen(snapshot: BuildSnapshot, actions: BuildActions): HTM
     else if (actions.retryAvailable) controls.append(actionButton("Retry failed step", actions.retry));
     else controls.append(actionButton("Back to setup", actions.backToSetup));
     if (actions.diagnosticsAvailable) controls.append(actionButton("Export diagnostics", actions.diagnostics, "quiet"));
+    if (actions.report) {
+      const report = actionButton("Report this problem", actions.report, "quiet");
+      report.id = "report-installation";
+      controls.append(report);
+    }
   } else if (snapshot.state === "paused") {
     if (actions.manualCheckpoint) {
       stateCard.append(manualCheckpointPanel(actions.manualCheckpoint));

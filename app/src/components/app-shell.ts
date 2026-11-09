@@ -39,6 +39,7 @@ export function createAppShell(
   mode: "fixture" | "native" = "fixture",
   back?: () => void | Promise<void>,
   version = "0.1.0-alpha.1",
+  report?: () => void,
 ): HTMLElement {
   const shell = element("div", "app-shell");
   shell.dataset.mode = mode;
@@ -67,6 +68,13 @@ export function createAppShell(
       continue;
     }
     if (route === item.route) button.setAttribute("aria-current", "page");
+    nav.append(button);
+  }
+  if (report !== undefined) {
+    // Always there: a problem or an idea can come up on any screen.
+    const button = actionButton("Feedback", report, "header-button");
+    button.id = "report-feedback";
+    button.title = "Report a problem or send feedback";
     nav.append(button);
   }
   header.append(brand, nav);

@@ -41,6 +41,8 @@ pub struct AppFlavor {
     pub mod_update_catalog: &'static str,
     /// Hotpatches for completed installations: the catalog folder below the packaged resources.
     pub hotpatches: Option<&'static str>,
+    /// GitHub repository ("owner/name") whose issue page takes reports about this product.
+    pub report_repository: &'static str,
 }
 
 /// The single collection a standalone app bundles and installs from one source game.
@@ -84,6 +86,7 @@ pub const BG: AppFlavor = AppFlavor {
     app_updates: true,
     mod_update_catalog: "hotpatches/bg",
     hotpatches: None,
+    report_repository: "Chrizhermann/chriz-easy-bg",
 };
 
 /// Chriz Easy IWD: Icewind Dale: Enhanced Edition from one source game.
@@ -112,6 +115,7 @@ pub const IWD: AppFlavor = AppFlavor {
     app_updates: true,
     mod_update_catalog: "hotpatches/iwd",
     hotpatches: Some("hotpatches/iwd"),
+    report_repository: "Chrizhermann/chriz-easy-iwd",
 };
 
 /// The flavor this binary was built as.
@@ -146,6 +150,20 @@ mod tests {
         assert_eq!(iwd["app"]["windows"][0]["title"], IWD.product_name);
         let keys = ALL.iter().map(|flavor| flavor.key).collect::<Vec<_>>();
         assert_eq!(keys, ["bg", "iwd"]);
+    }
+
+    /// Reports go to each product's own distribution repository, where its releases are.
+    #[test]
+    fn each_flavor_reports_to_its_own_repository() {
+        assert_eq!(BG.report_repository, "Chrizhermann/chriz-easy-bg");
+        assert_eq!(IWD.report_repository, "Chrizhermann/chriz-easy-iwd");
+        for flavor in ALL {
+            let (owner, name) = flavor.report_repository.split_once('/').unwrap();
+            assert_eq!(owner, "Chrizhermann");
+            assert!(name
+                .bytes()
+                .all(|byte| byte.is_ascii_lowercase() || byte == b'-'));
+        }
     }
 
     /// The version the app reports is the one its installer carries.

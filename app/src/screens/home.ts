@@ -24,6 +24,8 @@ export interface HomeActions {
     readonly toggle: (installId: string, open: boolean) => void;
     readonly set: (installId: string, enabled: boolean) => void | Promise<void>;
     readonly refresh: (installId: string) => void | Promise<void>;
+    /** Opens the report dialog for a problem in this installation's game. */
+    readonly report?: (installId: string) => void;
   };
 }
 
@@ -341,6 +343,7 @@ export function homeScreen(
       toggle: (open) => gameLogActions.toggle(selected.id, open),
       set: (enabled) => gameLogActions.set(selected.id, enabled),
       refresh: () => gameLogActions.refresh(selected.id),
+      report: gameLogActions.report ? () => gameLogActions.report!(selected.id) : undefined,
     }));
   }
   page.append(card);

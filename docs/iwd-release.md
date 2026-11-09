@@ -176,7 +176,9 @@ The example version is `0.1.7`; use the real one throughout.
 
    Then confirm, signed out, that the feed URL above serves the new `latest.json`.
 
-9. **Update the README** of `Chrizhermann/chriz-easy-iwd` for the version, as before. The
+9. **Update the README** of `Chrizhermann/chriz-easy-iwd` for the version, as before, and
+   keep its sentence on reporting and its issue forms as [report-feature.md](report-feature.md)
+   describes. The
    website's IWD download points at the separate IWD release, alongside the BG release.
    Its own website task owns any link update; the two destinations are in `BUILDING.md`.
 
