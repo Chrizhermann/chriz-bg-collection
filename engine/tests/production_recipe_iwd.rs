@@ -145,6 +145,7 @@ const RUNS: &[(&str, &str, Phase, &[u32])] = &[
         Phase::Main,
         &[2310, 2311, 2312],
     ),
+    ("klatu-armor-thieving-main", "klatu", Phase::Main, &[2150]),
     ("buffbot-main", "buffbot", Phase::Main, &[1, 0]),
     ("eeexremote-main", "eeexremote", Phase::Main, &[0]),
 ];
@@ -226,6 +227,7 @@ const INSTALLERS: &[(&str, &str, &str)] = &[
         "iwdgo/iwdgo.tp2",
     ),
     ("karihinpc", "karihinpc-1.02", "KarihiNPC/KarihiNPC.tp2"),
+    ("klatu", "klatu-tweaks-1.7.4", "klatu/setup-klatu.tp2"),
     ("kuldahar", "kuldahar-2.6.1", "Kuldahar/kuldahar.tp2"),
     ("lanna", "lanna-1.8", "Lanna/lanna.tp2"),
     ("leui-iwdee", "leui-iwdee-2.0", "LeUI-IWDEE/LeUI-IWDEE.tp2"),
@@ -490,6 +492,16 @@ const ARTIFACTS: &[Pin] = &[
         sha256: "1491d118bb4100d4c707b1eed0072407e580b63af4f3e426721b8d61ad342722",
     },
     Pin {
+        id: "klatu-tweaks-1.7.4",
+        version: "1.7.4",
+        kind: SourceKind::GithubRelease,
+        url: "https://github.com/The-Gate-Project/klatu-tweaks-and-fixes/releases/download/Version-1.7.4/klatu-tweaks-and-fixes-1.7.4.iemod",
+        reference: "Version-1.7.4",
+        filename: "klatu-tweaks-and-fixes-1.7.4.iemod",
+        length: 2_461_213,
+        sha256: "7393116098ee549d9b53fdd0600d56a779ccc7feb0046667162fd10118856daa",
+    },
+    Pin {
         id: "kuldahar-2.6.1",
         version: "2.6.1",
         kind: SourceKind::WeaselmodsDownload,
@@ -737,6 +749,7 @@ const RECOMMENDED: &[(&str, &[u32])] = &[
         ],
     ),
     ("cdtweaks-spell-save-penalties", &[2312]),
+    ("klatu-armor-thieving-main", &[2150]),
     ("buffbot-main", &[1, 0]),
 ];
 
@@ -757,7 +770,7 @@ fn declares_a_standalone_iwdee_collection_with_its_own_data_folder() {
             .collect::<Vec<_>>(),
         [PRESET]
     );
-    assert_eq!(manifest.collection.features.len(), 319);
+    assert_eq!(manifest.collection.features.len(), 321);
     assert!(
         validate(&manifest).is_empty(),
         "authoring validation findings: {:?}",
@@ -848,6 +861,26 @@ fn pins_the_exact_ordered_runs_and_component_lists() {
     assert_eq!(
         position(&manifest, "stratagems-main") + 1,
         position(&manifest, "chriz-iwd-encounters-main")
+    );
+    // Klatu's thievery in armor patches every armor the game has at that point, so it runs after
+    // every mod that adds armor, directly before BuffBot.
+    for run in [
+        "arszyk-main",
+        "thewarofbloomandrot-main",
+        "iwdcrossmodpack-main",
+        "stratagems-main",
+        "chriz-iwd-encounters-main",
+        "hidden-gameplay-options-main",
+        "cdtweaks-spell-save-penalties",
+    ] {
+        assert!(
+            position(&manifest, run) < position(&manifest, "klatu-armor-thieving-main"),
+            "{run}"
+        );
+    }
+    assert_eq!(
+        position(&manifest, "klatu-armor-thieving-main") + 1,
+        position(&manifest, "buffbot-main")
     );
     // BuffBot after EEex, late as in the BG installer.
     assert!(position(&manifest, "eeex-main") < position(&manifest, "buffbot-main"));
@@ -990,7 +1023,7 @@ fn resolves_the_exact_recommended_plan() {
         .iter()
         .map(|run| run.components.len())
         .sum::<usize>();
-    assert_eq!(components, 139);
+    assert_eq!(components, 140);
 }
 
 #[test]
@@ -1338,6 +1371,34 @@ fn arszyk_is_a_companion_on_by_default_that_can_be_left_out() {
     selection.set_feature("mod:arszyk", false);
     let without = evaluate(&manifest, &selection).unwrap();
     assert_eq!(without.plan.components_for("arszyk-main"), None);
+}
+
+#[test]
+fn thieves_use_their_skills_in_any_armor_by_default() {
+    // Christopher, 2026-11-09: quality of life, as in the BG installer.
+    let manifest = recipe();
+    let evaluation = recommended(&manifest);
+    let parent = evaluation.view.control("mod:klatu").unwrap();
+    assert_eq!(parent.decision, Decision::Default);
+    assert!(parent.selected);
+    let component = evaluation
+        .view
+        .control("feature:klatu:component-2150")
+        .unwrap();
+    assert_eq!(component.parent.as_deref(), Some("mod:klatu"));
+    assert!(component.requires.is_empty() && component.requires_any.is_empty());
+    assert_eq!(
+        evaluation.plan.components_for("klatu-armor-thieving-main"),
+        Some(&[2150][..])
+    );
+
+    let mut selection = Selection::defaults("windows");
+    selection.set_feature("mod:klatu", false);
+    let without = evaluate(&manifest, &selection).unwrap();
+    assert_eq!(
+        without.plan.components_for("klatu-armor-thieving-main"),
+        None
+    );
 }
 
 #[test]

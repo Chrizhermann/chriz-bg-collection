@@ -325,6 +325,16 @@ phase = "main"
 components = [2310, 2311, 2312]
 args = []
 
+# Klatu Tweaks and Fixes #2150: thieves may use their skills in any armor, as in the BG installer
+# (Christopher, 2026-11-09: quality of life, on by default). It patches every armor the game has
+# at that point, so it runs after every mod that adds armor.
+[[runs]]
+run_id = "klatu-armor-thieving-main"
+mod_id = "klatu"
+phase = "main"
+components = [2150]
+args = []
+
 # BuffBot readme: after EEex, its LuaJIT support (#1) before the buff automation (#0); late, as
 # in the BG installer. Added 2026-10-27 (Christopher), after BuffBot 1.12.0 enabled IWD:EE.
 [[runs]]
@@ -4682,3 +4692,24 @@ decision = "mandatory"
 readiness = "ready"
 parent = "mod:iwdgo"
 components = [{ run_id = "iwdgo-main", component = 0 }]
+
+# Thieves use their skills in any armor (Christopher, 2026-11-09), as in the BG installer.
+[[features]]
+id = "mod:klatu"
+title = "Klatu Tweaks and Fixes"
+description = "Lets thieves use their skills in armor."
+category = "convenience"
+source_label = "Klatu Tweaks and Fixes"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:klatu:component-2150"
+title = "Use thief skills in armor"
+description = "No added skill penalties. Allows ordinary thieving and stealth in armor while preserving equipment permissions, spellcasting restrictions, and other kit abilities."
+category = "convenience"
+source_label = "Klatu Tweaks and Fixes"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:klatu"
+components = [{ run_id = "klatu-armor-thieving-main", component = 2150 }]

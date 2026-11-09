@@ -1,0 +1,19 @@
+schema = 1
+recipe_id = "chriz-easy-iwd"
+version = "0.1.10"
+published_at = "2026-11-09T00:00:00Z"
+minimum_app_version = "0.1.1"
+supersedes = "0.1.9"
+
+[[changes]]
+id = "klatu-thievery-in-armor"
+title = "Thieves use their skills in any armor"
+summary = "Klatu Tweaks and Fixes lets thieves use their thieving skills and stealth in any armor, without added skill penalties, as in Chriz Easy BG. Equipment permissions and spellcasting restrictions stay as they are. It comes with new installations; a game in progress keeps its armor rules."
+save_applicability = "new-game-only"
+urgency = "informational"
+covers = [
+  "artifact:klatu-tweaks-1.7.4",
+  "feature:mod:klatu",
+  "feature:feature:klatu:component-2150",
+  "run:klatu-armor-thieving-main",
+]
