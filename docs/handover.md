@@ -29,6 +29,15 @@ becomes one of the main choices on the install screen; the parts that exist only
 Revisions, Artisan's Kitpack, Bardic Wonders or Item Randomiser 8.1.1 get only simple fixes
 and fixes for real installer problems that players report.
 
+**Main choices on the install screen** (PR 130, for the BG version after 0.1.2):
+Christopher chose the layout with its own card from three suggestions. The install screen
+shows "Main choices" between "Your installation" and "Recommended setup", with one switch
+per feature group of the recipe; it shares its state with the group's card in Customize.
+See the [group design](plans/2026-10-13-challenge-mode-group.md#checkbox-behavior). Further
+main choices may follow as further groups: he named a randomizer first, once our own is
+ready, and he will say when. The follow-ups entry still describes the design step; it
+shares lines with PR 129 and is brought up to date after both are merged.
+
 ## November 9 — Chriz Easy BG 0.1.2 prepared
 
 Christopher approved the 0.1.2 release on 2026-11-09. Branch `claude/bg-012-prepare`, from

@@ -621,12 +621,8 @@ Latest releases: Chriz Easy BG 0.1.2 and Chriz Easy IWD 0.1.10, both published o
   `650` stays experimental.
 - Challenge Mode as a main choice on the install screen (Christopher, 2026-11-10): it
   becomes one of the main checkboxes in the window where an installation is started; the
-  details stay in Customize. He chose the layout with its own card "Main choices" from
-  three suggestions; built for the BG version after 0.1.2 (see
-  `docs/plans/2026-10-13-challenge-mode-group.md`). Each feature group in a recipe shows
-  as a main choice. Further main choices may follow: he named a randomizer first, but only
-  once our own randomizer is ready, and he will say when. Chriz Easy IWD has no feature
-  group and shows no such card.
+  details stay in Customize. The final layout is open, and he wants suggestions. Design
+  first; a separate design chat is offered.
 
 **Waiting for Christopher**
 
