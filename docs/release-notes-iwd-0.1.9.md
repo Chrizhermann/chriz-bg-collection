@@ -1,12 +1,12 @@
 # Chriz Easy IWD 0.1.9
 
-**The installer asks instead of stopping.** Chriz Easy IWD now comes from the same code as
-Chriz Easy BG and gets its installer improvements. When a mod's download has changed since
-we reviewed it, or cannot be used at all, the installer asks what to do: install the newer
-file, leave the mod out together with the mods that need it, or stop. If a mod's installer
-fails, the installer asks whether to leave out what did not install and continue, try again
-where that is safe, or stop. A game that looks modded already gets one question before
-anything is copied.
+**Fewer stops during installation.** Chriz Easy IWD now comes from the same code as Chriz
+Easy BG and gets its installer improvements. When a mod's download has changed since we
+reviewed it, the installer installs the newer file; when a download cannot be used at all,
+it leaves that mod out together with the mods that need it. The end of the installation
+names both. If a mod's installer fails, the installer asks whether to leave out what did not
+install and continue, try again where that is safe, or stop. A game that looks modded
+already gets one question before anything is copied.
 Steam's Icewind Dale: Enhanced Edition 2.7.3.0 in English stays the tested setup; other
 usable Windows copies install as **Less tested**, and their details say how they differ.
 

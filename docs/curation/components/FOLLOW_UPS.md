@@ -17,6 +17,9 @@ listed with their evidence under [Done since 2026-09-04](#done-since-2026-09-04)
 
 Cross-repository status. Component detail stays in the sections below and in the catalogs.
 
+Latest releases: Chriz Easy BG 0.1.2 and Chriz Easy IWD 0.1.10, both published on
+2026-11-09 UTC from `main` (see the [handover](../../handover.md)).
+
 **In progress (separate sessions)**
 
 - CEBG alpha.22, the next release (Christopher's plan of 2026-10-25), in this order. On
@@ -609,6 +612,17 @@ Cross-repository status. Component detail stays in the sections below and in the
   is closed as superseded. Low risk while WeiDU comes from fixed GitHub release files. Also
   small: the changed-download path does not repeat the Weasel Mods link-shape check, which
   recipe validation already makes.
+- Campaign XP caps with banked XP in Challenge Mode (Christopher, 2026-11-10): Modpack `650`
+  joins the Challenge Mode group together with the chapter caps `652`, for the BG version
+  after 0.1.2. `651` (the Shadows of Amn cap alone) excludes `652` and stays outside the
+  group. His remark that the Shadows of Amn cap can already be caught up in the Underdark
+  fits `652`'s table: its Chapter 5 cap is 3,250,000, above `651`'s 2,950,000. The run
+  `chriz-bg-modpack-campaign-xp-bg2` still has no tail approval (see Release records), and
+  `650` stays experimental.
+- Challenge Mode as a main choice on the install screen (Christopher, 2026-11-10): it
+  becomes one of the main checkboxes in the window where an installation is started; the
+  details stay in Customize. The final layout is open, and he wants suggestions. Design
+  first; a separate design chat is offered.
 
 **Waiting for Christopher**
 
@@ -623,10 +637,6 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Installer link safety, remaining writers: staging publication, mod materialization and
   the WeiDU setup copy, then Radar and the `.chriz` state writers, still check a path and
   then write by path (inventory in PR #16). Moving them over waits for Christopher's go.
-- Campaign XP caps with banked XP (Modpack `650`) and Challenge Mode: Christopher expects it
-  in the group (2026-11-08); today it is a separate optional, experimental choice. Asked on
-  2026-11-08 whether to add it, and with which variant (`651` Shadows of Amn cap, `652`
-  chapter caps, or neither).
 - The [curation queue](#curation-decisions-still-in-chriss-review-queue) at the end of this file.
 
 **Deferred by decision**
@@ -638,8 +648,9 @@ Cross-repository status. Component detail stays in the sections below and in the
   them. Then each part is rewritten into the new mod or dropped, for the installer version
   without these mods. An inventory of every such part (the forks, BG Rebalance, Modpack, SoD
   Remix, BuffBot and both installers) was made from the code on 2026-11-08; Christopher
-  decides what stays. Still open: whether crashes and install stops that hit players of the
-  current version are an exception (asked 2026-11-08). Chriz Easy IWD ships none of these mods.
+  decides what stays. Decided on 2026-11-10: until then these parts get only simple fixes,
+  and fixes for real installer problems that players report to us. Chriz Easy IWD ships none
+  of these mods.
 - Artisan's Kitpack fork: whether the upstream report also mentions the Eldritch Knight /
   Arcane Trickster kit weapons (fixed in chriz.3); later (Christopher, 2026-10-27).
   Christopher posts the report himself.
@@ -762,6 +773,15 @@ Cross-repository status. Component detail stays in the sections below and in the
   used in every kind of setup, but old, partly not well written, and some items are too
   strong late in the game. The loot of the Chosen of Cyric encounter (`11`, on in
   Recommended) is great to win, but a bit much overall.
+
+**Ideas for later (Christopher, 2026-11-10)**
+
+- Feedback and error reports from the installer: players should be able to report feedback
+  or an error from inside Chriz Easy BG and Chriz Easy IWD. Nothing is designed: where a
+  report goes, what is attached (Export diagnostics exists; logs can hold personal paths)
+  and who reads it are open. It matters more now that the parts tied to the old mods are
+  fixed only when players report installer problems (Deferred by decision). Design first; a
+  separate design chat is offered.
 
 **Larger projects:** Time Stop/Haste (Rebalance `360`, above); script engine / Fight Director
 (design with Christopher; it also takes enemy mages' Dispelling Screen, Christopher,
