@@ -676,7 +676,8 @@ fn group_member_availability(
     for _ in 0..=group.members.len() {
         let base = base_effective_features(manifest, &wanted);
         let effective = effective_features(manifest, &base);
-        // Validation guarantees that every member is a visible optional feature.
+        // Validation guarantees that every member is a visible optional feature outside
+        // exclusive choices, so this is the reason the member's own control shows.
         reasons = group
             .members
             .iter()

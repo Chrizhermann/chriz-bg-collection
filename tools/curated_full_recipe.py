@@ -906,7 +906,7 @@ scope = "Focused static source pin, component, dependency, stale-selection and l
     if unknown:
         raise ValueError(f"curated evidence names runs outside CURATED_SCOPED_BASE_RUNS: {sorted(unknown)}")
     for run_id in CURATED_SCOPED_BASE_RUNS:
-        record =CURATED_SCOPED_RUN_EVIDENCE.get(run_id, {"commit": commit, **_EXPANDED_RELEASE_EVIDENCE})
+        record = CURATED_SCOPED_RUN_EVIDENCE.get(run_id, {"commit": commit, **_EXPANDED_RELEASE_EVIDENCE})
         acceptance += f"""
 
 [[evidence]]
