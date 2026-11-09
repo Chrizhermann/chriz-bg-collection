@@ -760,6 +760,26 @@ CURATED_SCOPED_BASE_RUNS = [
     "spell-rev-lightning-bg2",
 ]
 
+# The curated-output static-test record of a run above, unless a later pin recorded its own
+# here. The generator writes acceptance.toml, so a record edited only in the generated file
+# is lost the next time the recipe is regenerated.
+_EXPANDED_RELEASE_EVIDENCE = {
+    "test_artifact": "tools/tests/test_expanded_release_recipe.py",
+    "date": "2026-09-16",
+    "scope": "Passed focused selection, dependencies, native component ordering and source intake checks; Christopher performs the installation and gameplay acceptance separately.",
+}
+_MODPACK_ALPHA16_EVIDENCE = {
+    "commit": "e0afccd7658c307dca82ad24b1891387b1f16b4d",
+    "test_artifact": "tools/tests/test_nov08_modpack_alpha16_pin_recipe.py",
+    "date": "2026-11-08",
+    "scope": "Static alpha.16 pin, source, component and order assertions only; fresh source/package verification is in release-intake-20261108-chriz-bg-modpack-chriz-easy-bg.toml; not a WeiDU installation or gameplay acceptance.",
+}
+CURATED_SCOPED_RUN_EVIDENCE = {
+    "chriz-bg-modpack-pre-continuity-bg2": _MODPACK_ALPHA16_EVIDENCE,
+    "chriz-bg-modpack-continuity-bg2": _MODPACK_ALPHA16_EVIDENCE,
+    "chriz-bg-modpack-late-companions-bg2": _MODPACK_ALPHA16_EVIDENCE,
+}
+
 
 def _update_release_records(destination: Path, commit: str) -> None:
     limitations_path = destination / "releases/v0.1.0-alpha.1/known-limitations.toml"
@@ -882,7 +902,11 @@ date = "2026-10-13"
 status = "accepted"
 scope = "Focused static source pin, component, dependency, stale-selection and late-order assertions only; not live game acceptance."
 """
+    unknown = set(CURATED_SCOPED_RUN_EVIDENCE) - set(CURATED_SCOPED_BASE_RUNS)
+    if unknown:
+        raise ValueError(f"curated evidence names runs outside CURATED_SCOPED_BASE_RUNS: {sorted(unknown)}")
     for run_id in CURATED_SCOPED_BASE_RUNS:
+        record =CURATED_SCOPED_RUN_EVIDENCE.get(run_id, {"commit": commit, **_EXPANDED_RELEASE_EVIDENCE})
         acceptance += f"""
 
 [[evidence]]
@@ -890,13 +914,13 @@ subject_kind = "run"
 subject_id = {_q(run_id)}
 kind = "static-test"
 repository = "Chrizhermann/chriz-bg-collection"
-commit = {_q(commit)}
-test_artifact = "tools/tests/test_expanded_release_recipe.py"
-date = "2026-09-16"
+commit = {_q(record["commit"])}
+test_artifact = {_q(record["test_artifact"])}
+date = {_q(record["date"])}
 status = "accepted"
-scope = "Passed focused selection, dependencies, native component ordering and source intake checks; Christopher performs the installation and gameplay acceptance separately."
+scope = {_q(record["scope"])}
 """
-    acceptance_path.write_text(acceptance + "\n", encoding="utf-8", newline="\n")
+    acceptance_path.write_text(acceptance.rstrip("\n") + "\n", encoding="utf-8", newline="\n")
 
 
 

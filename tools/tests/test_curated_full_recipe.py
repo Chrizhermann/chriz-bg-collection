@@ -18,6 +18,27 @@ class CuratedFullRecipeTests(unittest.TestCase):
     def setUp(self) -> None:
         self.root = Path(__file__).resolve().parents[2]
 
+    def test_regenerating_reproduces_the_checked_in_curated_recipe(self) -> None:
+        """Every file of the curated recipe comes from the generator; an edit made only in the
+        generated output would be lost on the next regeneration. Line endings aside."""
+        curated = self.root / "recipes/curated-full-current"
+        acceptance = tomllib.loads((curated / "releases/v0.1.0-alpha.1/acceptance.toml").read_text(encoding="utf-8"))
+        commits = {record["commit"] for record in acceptance["evidence"]
+                   if record.get("test_artifact") == "tools/tests/test_curated_full_recipe.py"}
+        self.assertEqual(len(commits), 1, commits)
+
+        def files(root: Path) -> dict[str, bytes]:
+            return {path.relative_to(root).as_posix(): path.read_bytes().replace(b"\r\n", b"\n")
+                    for path in root.rglob("*") if path.is_file()}
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "recipe"
+            build_recipe(self.root, output, commits.pop())
+            generated, checked_in = files(output), files(curated)
+        self.assertEqual(sorted(generated), sorted(checked_in))
+        changed = sorted(path for path in generated if generated[path] != checked_in[path])
+        self.assertEqual(changed, [], "regenerate with tools/curated_full_recipe.py")
+
     def test_the_curated_recipe_has_the_component_needs_of_the_bundled_one(self) -> None:
         shipped = tomllib.loads(
             (self.root / "recipes/curated-full-current/collection.toml").read_text(encoding="utf-8")

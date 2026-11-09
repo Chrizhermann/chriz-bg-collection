@@ -40,7 +40,11 @@ Its old pins stay as they are.
    - Chriz Easy BG: `manifest/artifacts` and `manifest/mods`, then regenerate
      `recipes/curated-full-current` with `tools/curated_full_recipe.py`. Superseded
      artifact TOMLs and evidence records stay as history; the tests that freeze a pin move
-     to the new one.
+     to the new one. Every file of the curated recipe is generated: its static-test records
+     come from `manifest/releases/v0.1.0-alpha.1/acceptance.toml`, except for the runs in
+     `CURATED_SCOPED_BASE_RUNS`, whose records live in `CURATED_SCOPED_RUN_EVIDENCE` in
+     `tools/curated_full_recipe.py`. Change them there, never in the generated file;
+     `tools/tests/test_curated_full_recipe.py` fails when the two differ.
    - Chriz Easy IWD: `recipes/iwd-current`. Its static test
      (`engine/tests/production_recipe_iwd.rs`) lists every artifact file, so the new
      artifact TOML replaces the superseded one (`superseded_artifacts = "remove"` in the
