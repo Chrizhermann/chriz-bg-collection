@@ -1,7 +1,10 @@
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use bg_engine::diagnostics::{export_diagnostics, DiagnosticsRequest};
+use bg_engine::diagnostics::{
+    export_diagnostics, redact_for_sharing, redact_for_sharing_with_names, DiagnosticsError,
+    DiagnosticsRequest,
+};
 use tempfile::TempDir;
 use zip::ZipArchive;
 
@@ -45,9 +48,12 @@ fn pre_spawn_guard_evidence_is_exported_and_personal_paths_are_redacted() {
     );
     export_diagnostics(&DiagnosticsRequest {
         managed_root: fixture.managed.clone(),
-        attempt_id: "attempt-001".to_owned(),
+        attempt_id: Some("attempt-001".to_owned()),
         output_path: fixture.output.clone(),
         redact_roots: vec![fixture.home.clone()],
+        redact_user_names: Vec::new(),
+        redact_computer_names: Vec::new(),
+        missing_receipt_reason: None,
     })
     .unwrap();
     let entries = zip_entries(&fixture.output);
@@ -171,9 +177,12 @@ fn exports_eet_compatibility_hash_evidence_without_mod_payloads() {
     );
     let bundle = export_diagnostics(&DiagnosticsRequest {
         managed_root: fixture.managed,
-        attempt_id: "attempt-001".to_owned(),
+        attempt_id: Some("attempt-001".to_owned()),
         output_path: fixture.output,
         redact_roots: vec![fixture.home],
+        redact_user_names: Vec::new(),
+        redact_computer_names: Vec::new(),
+        missing_receipt_reason: None,
     })
     .unwrap();
     let entries = zip_entries(&bundle.path);
@@ -204,9 +213,12 @@ fn exports_config_file_evidence_without_the_placed_file() {
     );
     let bundle = export_diagnostics(&DiagnosticsRequest {
         managed_root: fixture.managed,
-        attempt_id: "attempt-001".into(),
+        attempt_id: Some("attempt-001".into()),
         output_path: fixture.output,
         redact_roots: vec![fixture.home],
+        redact_user_names: Vec::new(),
+        redact_computer_names: Vec::new(),
+        missing_receipt_reason: None,
     })
     .unwrap();
     let entries = zip_entries(&bundle.path);
@@ -235,9 +247,12 @@ fn exports_ui_launch_correction_evidence_without_mod_payloads() {
     );
     let bundle = export_diagnostics(&DiagnosticsRequest {
         managed_root: fixture.managed,
-        attempt_id: "attempt-001".into(),
+        attempt_id: Some("attempt-001".into()),
         output_path: fixture.output,
         redact_roots: vec![fixture.home],
+        redact_user_names: Vec::new(),
+        redact_computer_names: Vec::new(),
+        missing_receipt_reason: None,
     })
     .unwrap();
     let entries = zip_entries(&bundle.path);
@@ -265,9 +280,12 @@ fn summary_explains_empty_attempts_without_claiming_the_process_never_started() 
     })).unwrap());
     let bundle = export_diagnostics(&DiagnosticsRequest {
         managed_root: fixture.managed,
-        attempt_id: "attempt-001".to_owned(),
+        attempt_id: Some("attempt-001".to_owned()),
         output_path: fixture.output,
         redact_roots: vec![fixture.home],
+        redact_user_names: Vec::new(),
+        redact_computer_names: Vec::new(),
+        missing_receipt_reason: None,
     })
     .unwrap();
     let entries = zip_entries(&bundle.path);
@@ -302,9 +320,12 @@ fn summary_keeps_partial_log_additions_and_redacts_private_failure_details() {
     })).unwrap());
     let bundle = export_diagnostics(&DiagnosticsRequest {
         managed_root: fixture.managed,
-        attempt_id: "attempt-001".to_owned(),
+        attempt_id: Some("attempt-001".to_owned()),
         output_path: fixture.output,
         redact_roots: vec![fixture.home.clone()],
+        redact_user_names: Vec::new(),
+        redact_computer_names: Vec::new(),
+        missing_receipt_reason: None,
     })
     .unwrap();
     let entries = zip_entries(&bundle.path);
@@ -330,9 +351,12 @@ fn success_bundle_uses_an_explicit_allowlist_and_redacts_personal_or_secret_text
     let fixture = fixture(true);
     let result = export_diagnostics(&DiagnosticsRequest {
         managed_root: fixture.managed.clone(),
-        attempt_id: "attempt-001".to_owned(),
+        attempt_id: Some("attempt-001".to_owned()),
         output_path: fixture.output.clone(),
         redact_roots: vec![fixture.home.clone()],
+        redact_user_names: Vec::new(),
+        redact_computer_names: Vec::new(),
+        missing_receipt_reason: None,
     })
     .unwrap();
 
@@ -379,9 +403,12 @@ fn failure_bundle_does_not_require_a_success_receipt_and_never_overwrites_output
     let fixture = fixture(false);
     let request = DiagnosticsRequest {
         managed_root: fixture.managed.clone(),
-        attempt_id: "attempt-001".to_owned(),
+        attempt_id: Some("attempt-001".to_owned()),
         output_path: fixture.output.clone(),
         redact_roots: vec![fixture.home.clone()],
+        redact_user_names: Vec::new(),
+        redact_computer_names: Vec::new(),
+        missing_receipt_reason: None,
     };
 
     export_diagnostics(&request).unwrap();
@@ -410,9 +437,12 @@ fn terminal_failure_bundle_follows_its_receipted_step_evidence_attempt() {
 
     let result = export_diagnostics(&DiagnosticsRequest {
         managed_root: fixture.managed,
-        attempt_id: terminal_id.to_owned(),
+        attempt_id: Some(terminal_id.to_owned()),
         output_path: fixture.output,
         redact_roots: vec![fixture.home],
+        redact_user_names: Vec::new(),
+        redact_computer_names: Vec::new(),
+        missing_receipt_reason: None,
     })
     .unwrap();
 
@@ -436,9 +466,12 @@ fn receipt_evidence_attempt_cannot_escape_the_attempts_directory() {
 
     let error = export_diagnostics(&DiagnosticsRequest {
         managed_root: fixture.managed,
-        attempt_id: terminal_id.to_owned(),
+        attempt_id: Some(terminal_id.to_owned()),
         output_path: fixture.output,
         redact_roots: vec![fixture.home],
+        redact_user_names: Vec::new(),
+        redact_computer_names: Vec::new(),
+        missing_receipt_reason: None,
     })
     .unwrap_err();
 
@@ -460,9 +493,12 @@ fn redacts_serde_escaped_windows_paths_in_json_evidence() {
 
     let result = export_diagnostics(&DiagnosticsRequest {
         managed_root: fixture.managed,
-        attempt_id: "attempt-001".to_owned(),
+        attempt_id: Some("attempt-001".to_owned()),
         output_path: fixture.output,
         redact_roots: vec![windows_home],
+        redact_user_names: Vec::new(),
+        redact_computer_names: Vec::new(),
+        missing_receipt_reason: None,
     })
     .unwrap();
 
@@ -505,9 +541,12 @@ fn structured_evidence_stays_parseable_while_nested_secrets_are_redacted() {
 
     let result = export_diagnostics(&DiagnosticsRequest {
         managed_root: fixture.managed,
-        attempt_id: "attempt-001".to_owned(),
+        attempt_id: Some("attempt-001".to_owned()),
         output_path: fixture.output,
         redact_roots: vec![fixture.home],
+        redact_user_names: Vec::new(),
+        redact_computer_names: Vec::new(),
+        missing_receipt_reason: None,
     })
     .unwrap();
 
@@ -592,9 +631,12 @@ fn exports_only_fixed_evidence_names_at_the_task13_attempt_depth() {
 
     let result = export_diagnostics(&DiagnosticsRequest {
         managed_root: fixture.managed,
-        attempt_id: "attempt-001".to_owned(),
+        attempt_id: Some("attempt-001".to_owned()),
         output_path: fixture.output,
         redact_roots: vec![fixture.home],
+        redact_user_names: Vec::new(),
+        redact_computer_names: Vec::new(),
+        missing_receipt_reason: None,
     })
     .unwrap();
     let names = zip_entries(&result.path)
@@ -627,9 +669,12 @@ safe diagnostic line\n",
 
     let result = export_diagnostics(&DiagnosticsRequest {
         managed_root: fixture.managed,
-        attempt_id: "attempt-001".to_owned(),
+        attempt_id: Some("attempt-001".to_owned()),
         output_path: fixture.output,
         redact_roots: vec![fixture.home],
+        redact_user_names: Vec::new(),
+        redact_computer_names: Vec::new(),
+        missing_receipt_reason: None,
     })
     .unwrap();
     let searchable = zip_entries(&result.path)
@@ -725,9 +770,12 @@ fn check_update_evidence(namespace: &str) {
     }
     let result = export_diagnostics(&DiagnosticsRequest {
         managed_root: fixture.managed.clone(),
-        attempt_id: "attempt-001".to_owned(),
+        attempt_id: Some("attempt-001".to_owned()),
         output_path: fixture.output,
         redact_roots: vec![fixture.home.clone()],
+        redact_user_names: Vec::new(),
+        redact_computer_names: Vec::new(),
+        missing_receipt_reason: None,
     })
     .unwrap();
     let entries = zip_entries(&result.path);
@@ -781,9 +829,12 @@ fn rejects_oversized_patch_evidence_without_publishing_a_bundle() {
         .unwrap();
     let error = export_diagnostics(&DiagnosticsRequest {
         managed_root: fixture.managed,
-        attempt_id: "attempt-001".to_owned(),
+        attempt_id: Some("attempt-001".to_owned()),
         output_path: fixture.output.clone(),
         redact_roots: vec![fixture.home],
+        redact_user_names: Vec::new(),
+        redact_computer_names: Vec::new(),
+        missing_receipt_reason: None,
     })
     .unwrap_err();
     assert!(error.to_string().contains("size limit"), "{error}");
@@ -801,9 +852,12 @@ fn rejects_a_directory_at_a_named_patch_evidence_file() {
     .unwrap();
     let error = export_diagnostics(&DiagnosticsRequest {
         managed_root: fixture.managed,
-        attempt_id: "attempt-001".to_owned(),
+        attempt_id: Some("attempt-001".to_owned()),
         output_path: fixture.output.clone(),
         redact_roots: vec![fixture.home],
+        redact_user_names: Vec::new(),
+        redact_computer_names: Vec::new(),
+        missing_receipt_reason: None,
     })
     .unwrap_err();
     assert!(
@@ -811,4 +865,608 @@ fn rejects_a_directory_at_a_named_patch_evidence_file() {
         "{error}"
     );
     assert!(!fixture.output.exists());
+}
+
+const STEP_EVIDENCE: &str = ".chriz/attempts/attempt-001/steps/0001-0123456789abcdef/attempt-0001";
+
+fn named_request(fixture: &Fixture, users: &[&str], computers: &[&str]) -> DiagnosticsRequest {
+    DiagnosticsRequest {
+        managed_root: fixture.managed.clone(),
+        attempt_id: Some("attempt-001".to_owned()),
+        output_path: fixture.output.clone(),
+        redact_roots: vec![fixture.home.clone()],
+        redact_user_names: users.iter().map(|name| (*name).to_owned()).collect(),
+        redact_computer_names: computers.iter().map(|name| (*name).to_owned()).collect(),
+        missing_receipt_reason: None,
+    }
+}
+
+fn recorded_request(fixture: &Fixture, reason: Option<String>) -> DiagnosticsRequest {
+    DiagnosticsRequest {
+        attempt_id: None,
+        missing_receipt_reason: reason,
+        ..named_request(fixture, &["Max"], &[])
+    }
+}
+
+fn entry_text(entries: &[(String, Vec<u8>)], name: &str) -> String {
+    let (_, bytes) = entries
+        .iter()
+        .find(|(entry, _)| entry == name)
+        .unwrap_or_else(|| panic!("missing {name}"));
+    String::from_utf8(bytes.clone()).unwrap()
+}
+
+fn entry_json(entries: &[(String, Vec<u8>)], name: &str) -> serde_json::Value {
+    serde_json::from_str(&entry_text(entries, name))
+        .unwrap_or_else(|error| panic!("{name} is not valid JSON: {error}"))
+}
+
+#[test]
+fn a_user_name_as_a_path_segment_on_another_drive_is_redacted_in_logs_and_json() {
+    let fixture = fixture(false);
+    write(
+        &fixture.managed,
+        &format!("{STEP_EVIDENCE}/process-output.log"),
+        b"reading D:\\Spiele\\Max\\BG2\\weidu.log\n\
+kept D:\\Maxwell\\x and D:/Max-Saves/y and D:\\Max_old\\z\n\
+max played well\n\
+end at D:/Games/MAX",
+    );
+    write(
+        &fixture.managed,
+        &format!("{STEP_EVIDENCE}/invocation.json"),
+        &serde_json::to_vec(&serde_json::json!({
+            "game_root": "D:\\Spiele\\Max\\BG2",
+            "kept": "D:\\Maxwell\\x",
+            "note": "max played well",
+            "by_path": { "D:\\Spiele\\Max": "keyed by a private path" }
+        }))
+        .unwrap(),
+    );
+
+    let bundle = export_diagnostics(&named_request(&fixture, &["Max"], &[])).unwrap();
+
+    let entries = zip_entries(&bundle.path);
+    let evidence = "logs/steps/0001-0123456789abcdef/attempt-0001";
+    assert_eq!(
+        entry_text(&entries, &format!("{evidence}/process-output.log")),
+        "reading D:\\Spiele\\<redacted-user>\\BG2\\weidu.log\n\
+kept D:\\Maxwell\\x and D:/Max-Saves/y and D:\\Max_old\\z\n\
+max played well\n\
+end at D:/Games/<redacted-user>"
+    );
+    let invocation = entry_json(&entries, &format!("{evidence}/invocation.json"));
+    assert_eq!(invocation["game_root"], "D:\\Spiele\\<redacted-user>\\BG2");
+    assert_eq!(invocation["kept"], "D:\\Maxwell\\x");
+    assert_eq!(invocation["note"], "max played well");
+    assert_eq!(invocation["by_path"], "<redacted-sensitive-object>");
+}
+
+#[test]
+fn the_profile_folder_of_any_user_is_redacted_but_shared_profiles_stay() {
+    let fixture = fixture(false);
+    write(
+        &fixture.managed,
+        &format!("{STEP_EVIDENCE}/process-output.log"),
+        b"opened D:\\Users\\Max Mustermann\\Documents\\x.log\n\
+shared C:\\Users\\Public\\Documents\\a.txt and C:\\users\\DEFAULT USER\\NTUSER.DAT\n\
+also C:\\Users\\All Users\\x and C:\\Users\\Default\\y\n\
+unix /Users/eva/Library/x\n\
+quoted \"C:\\Users\\Ingrid\" and <C:\\Users\\Ole>\n\
+not a segment C:\\MyUsers\\Kai\\x and C:\\Users.old\\Kai\n",
+    );
+    write(
+        &fixture.managed,
+        &format!("{STEP_EVIDENCE}/invocation.json"),
+        &serde_json::to_vec(&serde_json::json!({
+            "documents": "E:\\Users\\Someone Else\\Documents",
+            "shared": "C:\\Users\\Public\\Documents"
+        }))
+        .unwrap(),
+    );
+
+    let bundle = export_diagnostics(&named_request(&fixture, &[], &[])).unwrap();
+
+    let entries = zip_entries(&bundle.path);
+    let evidence = "logs/steps/0001-0123456789abcdef/attempt-0001";
+    assert_eq!(
+        entry_text(&entries, &format!("{evidence}/process-output.log")),
+        "opened D:\\Users\\<redacted-user>\\Documents\\x.log\n\
+shared C:\\Users\\Public\\Documents\\a.txt and C:\\users\\DEFAULT USER\\NTUSER.DAT\n\
+also C:\\Users\\All Users\\x and C:\\Users\\Default\\y\n\
+unix /Users/<redacted-user>/Library/x\n\
+quoted \"C:\\Users\\<redacted-user>\" and <C:\\Users\\<redacted-user>>\n\
+not a segment C:\\MyUsers\\Kai\\x and C:\\Users.old\\Kai\n"
+    );
+    let invocation = entry_json(&entries, &format!("{evidence}/invocation.json"));
+    assert_eq!(
+        invocation["documents"],
+        "E:\\Users\\<redacted-user>\\Documents"
+    );
+    assert_eq!(invocation["shared"], "C:\\Users\\Public\\Documents");
+}
+
+#[test]
+fn json_escaped_double_backslashes_in_a_text_log_are_redacted() {
+    let fixture = fixture(false);
+    write(
+        &fixture.managed,
+        &format!("{STEP_EVIDENCE}/process-output.log"),
+        br#"{"path":"D:\\Users\\Eva\\x","game":"E:\\Spiele\\Max\\BG2","kept":"D:\\Users\\Public\\y"}
+"#,
+    );
+
+    let bundle = export_diagnostics(&named_request(&fixture, &["Max"], &[])).unwrap();
+
+    let entries = zip_entries(&bundle.path);
+    assert_eq!(
+        entry_text(
+            &entries,
+            "logs/steps/0001-0123456789abcdef/attempt-0001/process-output.log"
+        ),
+        r#"{"path":"D:\\Users\\<redacted-user>\\x","game":"E:\\Spiele\\<redacted-user>\\BG2","kept":"D:\\Users\\Public\\y"}
+"#
+    );
+}
+
+#[test]
+fn the_computer_name_is_redacted_as_a_whole_word_only() {
+    let fixture = fixture(false);
+    write(
+        &fixture.managed,
+        &format!("{STEP_EVIDENCE}/process-output.log"),
+        b"host SPIELRECHNER started\n\
+share \\\\spielrechner\\saves\n\
+kept SPIELRECHNER2 and MY-SPIELRECHNER and spielrechner_old\n\
+(SpielRechner)",
+    );
+    write(
+        &fixture.managed,
+        &format!("{STEP_EVIDENCE}/invocation.json"),
+        br#"{"host":"SPIELRECHNER","kept":"SPIELRECHNERS"}"#,
+    );
+
+    let bundle = export_diagnostics(&named_request(&fixture, &[], &["SPIELRECHNER"])).unwrap();
+
+    let entries = zip_entries(&bundle.path);
+    let evidence = "logs/steps/0001-0123456789abcdef/attempt-0001";
+    assert_eq!(
+        entry_text(&entries, &format!("{evidence}/process-output.log")),
+        "host <redacted-computer> started\n\
+share \\\\<redacted-computer>\\saves\n\
+kept SPIELRECHNER2 and MY-SPIELRECHNER and spielrechner_old\n\
+(<redacted-computer>)"
+    );
+    let invocation = entry_json(&entries, &format!("{evidence}/invocation.json"));
+    assert_eq!(invocation["host"], "<redacted-computer>");
+    assert_eq!(invocation["kept"], "SPIELRECHNERS");
+}
+
+#[test]
+fn shared_text_is_redacted_like_diagnostics_text() {
+    let text = "Install failed: D:\\Spiele\\Max\\BG2\\weidu.log on SPIELRECHNER\n\
+Authorization: Bearer invented-share-secret\n\
+saves in E:\\Private Root\\Saves\n\
+profile C:\\Users\\Eva\\AppData\\x";
+    let shared = redact_for_sharing_with_names(
+        text,
+        &[PathBuf::from("E:\\Private Root")],
+        &["Max".to_owned()],
+        &["SPIELRECHNER".to_owned()],
+    );
+    assert_eq!(
+        shared,
+        "Install failed: D:\\Spiele\\<redacted-user>\\BG2\\weidu.log on <redacted-computer>\n\
+<redacted-sensitive-line>\n\
+saves in <redacted-home>\\Saves\n\
+profile C:\\Users\\<redacted-user>\\AppData\\x"
+    );
+
+    // Too short names are never redacted.
+    let short = "D:\\Spiele\\M\\x on PC";
+    assert_eq!(
+        redact_for_sharing_with_names(short, &[], &["M".to_owned()], &["PC".to_owned()]),
+        short
+    );
+
+    // Names and text outside ASCII are matched without splitting a character.
+    assert_eq!(
+        redact_for_sharing_with_names(
+            "C:\\Users\\Jürgen\\ä Max\\x and D:\\Jürgen\\y, Größe. Größe-Rechner äGröße",
+            &[],
+            &["jürgen".to_owned(), "Max".to_owned()],
+            &["Größe".to_owned()],
+        ),
+        "C:\\Users\\<redacted-user>\\ä Max\\x and D:\\<redacted-user>\\y, <redacted-computer>. Größe-Rechner äGröße"
+    );
+
+    // The environment-based variant is public and redacts the authored roots as well.
+    assert_eq!(
+        redact_for_sharing(
+            "at E:\\Private Root\\x",
+            &[PathBuf::from("E:\\Private Root")]
+        ),
+        "at <redacted-home>\\x"
+    );
+}
+
+/// An installation interrupted before its first receipt: ledger, frozen recipe and step
+/// evidence of two attempts, no attempt receipt.
+fn recorded_fixture() -> Fixture {
+    let temp = TempDir::new().unwrap();
+    let managed = temp.path().join("managed");
+    let home = temp.path().join("Users/Player");
+    let output = temp.path().join("exports/diagnostics.zip");
+    std::fs::create_dir_all(output.parent().unwrap()).unwrap();
+    let raw_home = home.to_string_lossy();
+    write(
+        &managed,
+        ".chriz/ledger/0000000000.json",
+        &serde_json::to_vec(&serde_json::json!({
+            "event": "created", "managed_root": home.join("Games")
+        }))
+        .unwrap(),
+    );
+    write(
+        &managed,
+        ".chriz/ledger/0000000001.json",
+        br#"{"event":"step_started"}"#,
+    );
+    write(&managed, ".chriz/recipe/payload.zip", b"PK\x03\x04recipe");
+    write(
+        &managed,
+        ".chriz/recipe/envelope.json",
+        br#"{"version":"alpha-1"}"#,
+    );
+    write(
+        &managed,
+        &format!("{STEP_EVIDENCE}/process-output.log"),
+        format!(
+            "reading D:\\Spiele\\Max\\BG2 and {raw_home}\\Games\n\
+Authorization: Bearer invented-recorded-secret\n\
+first attempt line\n"
+        )
+        .as_bytes(),
+    );
+    // The same step in a later attempt; the attempt id keeps both apart.
+    write(
+        &managed,
+        ".chriz/attempts/attempt-002/steps/0001-0123456789abcdef/attempt-0001/process-output.log",
+        b"second attempt line\n",
+    );
+    write(
+        &managed,
+        ".chriz/attempts/attempt-002/steps/0002-fedcba9876543210/attempt-0001/weidu.debug.log",
+        b"weidu still running\n",
+    );
+    // Neither a folder whose name is no attempt id nor a file is an attempt.
+    write(
+        &managed,
+        ".chriz/attempts/not an id/steps/0001-0123456789abcdef/attempt-0001/process-output.log",
+        b"not an attempt\n",
+    );
+    write(&managed, ".chriz/attempts/stray.json", b"not an attempt\n");
+    write(&managed, ".chriz/unrelated.txt", b"outside allowlist");
+    write(&managed, "game/chitin.key", b"game content");
+    Fixture {
+        _temp: temp,
+        managed,
+        home,
+        output,
+    }
+}
+
+#[test]
+fn an_installation_without_a_terminal_receipt_exports_what_it_recorded() {
+    let fixture = recorded_fixture();
+    let reason = format!(
+        "no immutable attempt receipt exists under {}",
+        fixture.home.join("Games").display()
+    );
+    let request = recorded_request(&fixture, Some(reason));
+
+    let bundle = export_diagnostics(&request).unwrap();
+
+    let entries = zip_entries(&bundle.path);
+    let names = entries
+        .iter()
+        .map(|(name, _)| name.clone())
+        .collect::<Vec<_>>();
+    assert_eq!(bundle.entries, names);
+    assert_eq!(
+        names,
+        [
+            "START-HERE.txt",
+            "ledger/0000000000.json",
+            "ledger/0000000001.json",
+            "logs/attempts/attempt-001/steps/0001-0123456789abcdef/attempt-0001/process-output.log",
+            "logs/attempts/attempt-002/steps/0001-0123456789abcdef/attempt-0001/process-output.log",
+            "logs/attempts/attempt-002/steps/0002-fedcba9876543210/attempt-0001/weidu.debug.log",
+            "recipe/envelope.json",
+            "recipe/payload.zip",
+        ]
+    );
+    let start_here = entry_text(&entries, "START-HERE.txt");
+    assert!(
+        start_here.contains("No finished attempt is recorded for this installation"),
+        "{start_here}"
+    );
+    assert!(
+        start_here.contains("interrupted or is still running"),
+        "{start_here}"
+    );
+    assert!(
+        start_here.contains(
+            "Why no receipt summary: no immutable attempt receipt exists under <redacted-home>"
+        ),
+        "{start_here}"
+    );
+    assert!(start_here.contains("logs/attempts/"), "{start_here}");
+    assert!(
+        start_here.ends_with("Personal paths, your Windows user name, the computer name and common secrets are redacted, but review the ZIP before sharing.\n"),
+        "{start_here}"
+    );
+    let first = entry_text(
+        &entries,
+        "logs/attempts/attempt-001/steps/0001-0123456789abcdef/attempt-0001/process-output.log",
+    );
+    assert_eq!(
+        first,
+        "reading D:\\Spiele\\<redacted-user>\\BG2 and <redacted-home>\\Games\n\
+<redacted-sensitive-line>\n\
+first attempt line\n"
+    );
+    let ledger = entry_json(&entries, "ledger/0000000000.json");
+    assert!(
+        ledger["managed_root"]
+            .as_str()
+            .unwrap()
+            .starts_with("<redacted-home>"),
+        "{ledger}"
+    );
+    assert_eq!(
+        std::fs::read(&bundle.path).unwrap(),
+        std::fs::read(&fixture.output).unwrap()
+    );
+
+    // An existing output is never replaced.
+    let before = std::fs::read(&fixture.output).unwrap();
+    let error = export_diagnostics(&request).unwrap_err();
+    assert!(
+        matches!(error, DiagnosticsError::OutputExists { .. }),
+        "{error}"
+    );
+    assert_eq!(std::fs::read(&fixture.output).unwrap(), before);
+}
+
+#[test]
+fn a_recorded_export_names_no_reason_when_none_is_given_and_needs_no_ledger_or_attempts() {
+    let temp = TempDir::new().unwrap();
+    let managed = temp.path().join("managed");
+    write(
+        &managed,
+        ".chriz/recipe/envelope.json",
+        br#"{"version":"1"}"#,
+    );
+    let output = temp.path().join("diagnostics.zip");
+
+    let bundle = export_diagnostics(&DiagnosticsRequest {
+        managed_root: managed,
+        attempt_id: None,
+        output_path: output,
+        redact_roots: Vec::new(),
+        redact_user_names: Vec::new(),
+        redact_computer_names: Vec::new(),
+        missing_receipt_reason: None,
+    })
+    .unwrap();
+
+    assert_eq!(bundle.entries, ["START-HERE.txt", "recipe/envelope.json"]);
+    let start_here = entry_text(&zip_entries(&bundle.path), "START-HERE.txt");
+    assert!(start_here.contains("No finished attempt is recorded"));
+    assert!(
+        !start_here.contains("Why no receipt summary"),
+        "{start_here}"
+    );
+}
+
+#[test]
+fn a_recorded_export_includes_attempt_receipts_that_exist() {
+    let fixture = recorded_fixture();
+    write(
+        &fixture.managed,
+        ".chriz/attempts/attempt-002/receipt.json",
+        &serde_json::to_vec(&serde_json::json!({
+            "outcome": "failed", "path": fixture.home.join("Games"), "token": "invented-receipt-token"
+        }))
+        .unwrap(),
+    );
+
+    let bundle = export_diagnostics(&recorded_request(&fixture, None)).unwrap();
+
+    let entries = zip_entries(&bundle.path);
+    let receipt = entry_json(
+        &entries,
+        "receipt/attempts/attempt-002/attempt-receipt.json",
+    );
+    assert_eq!(receipt["outcome"], "failed");
+    assert_eq!(receipt["token"], "<redacted-sensitive-value>");
+    assert!(receipt["path"]
+        .as_str()
+        .unwrap()
+        .starts_with("<redacted-home>"));
+    assert!(!entries
+        .iter()
+        .any(|(name, _)| name == "receipt/attempt-receipt.json"));
+}
+
+#[test]
+fn a_recorded_export_with_nothing_selectable_fails_and_publishes_nothing() {
+    let temp = TempDir::new().unwrap();
+    let managed = temp.path().join("managed");
+    write(&managed, ".chriz/unrelated.txt", b"outside allowlist");
+    std::fs::create_dir_all(managed.join(".chriz/ledger")).unwrap();
+    std::fs::create_dir_all(managed.join(".chriz/attempts/attempt-001/steps")).unwrap();
+    let exports = temp.path().join("exports");
+    std::fs::create_dir_all(&exports).unwrap();
+    let output = exports.join("diagnostics.zip");
+
+    let error = export_diagnostics(&DiagnosticsRequest {
+        managed_root: managed.clone(),
+        attempt_id: None,
+        output_path: output.clone(),
+        redact_roots: Vec::new(),
+        redact_user_names: Vec::new(),
+        redact_computer_names: Vec::new(),
+        missing_receipt_reason: Some("interrupted".to_owned()),
+    })
+    .unwrap_err();
+
+    match error {
+        DiagnosticsError::MissingEvidence { path } => {
+            assert!(path.ends_with(".chriz"), "{}", path.display());
+        }
+        other => panic!("unexpected error: {other}"),
+    }
+    assert!(!output.exists());
+    assert_eq!(std::fs::read_dir(&exports).unwrap().count(), 0);
+}
+
+/// Creates a directory link at `link`; `false` when this platform cannot create one.
+fn link_directory(link: &Path, target: &Path) -> bool {
+    #[cfg(windows)]
+    {
+        // A junction needs no privilege, unlike a symbolic link.
+        std::process::Command::new("cmd")
+            .args(["/C", "mklink", "/J"])
+            .arg(link)
+            .arg(target)
+            .output()
+            .is_ok_and(|output| output.status.success())
+    }
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink(target, link).is_ok()
+    }
+    #[cfg(not(any(windows, unix)))]
+    {
+        let _ = (link, target);
+        false
+    }
+}
+
+#[test]
+fn a_link_in_place_of_an_attempt_folder_stops_the_recorded_export() {
+    let fixture = recorded_fixture();
+    let outside = fixture._temp.path().join("outside-attempt");
+    write(
+        &outside,
+        "steps/0001-0123456789abcdef/attempt-0001/process-output.log",
+        b"outside the installation\n",
+    );
+    let link = fixture.managed.join(".chriz/attempts/attempt-009");
+    if !link_directory(&link, &outside) {
+        eprintln!("this platform cannot create a directory link; skipped");
+        return;
+    }
+
+    let error = export_diagnostics(&recorded_request(&fixture, None)).unwrap_err();
+
+    assert!(
+        matches!(error, DiagnosticsError::UnsafePath { .. }),
+        "{error}"
+    );
+    assert!(
+        error
+            .to_string()
+            .contains("links and reparse points are forbidden in diagnostics evidence"),
+        "{error}"
+    );
+    assert!(!fixture.output.exists());
+}
+
+/// A log the running installation holds open without sharing is named in the bundle instead
+/// of stopping an export without a terminal receipt; an export of a terminal receipt still
+/// stops.
+#[cfg(windows)]
+#[test]
+fn a_log_locked_by_a_running_installation_is_named_instead_of_exported() {
+    use std::os::windows::fs::OpenOptionsExt;
+
+    let recorded = recorded_fixture();
+    let locked = recorded
+        .managed
+        .join(format!("{STEP_EVIDENCE}/process-output.log"));
+    let lock = std::fs::OpenOptions::new()
+        .read(true)
+        .share_mode(0)
+        .open(&locked)
+        .unwrap();
+
+    let bundle = export_diagnostics(&recorded_request(&recorded, None)).unwrap();
+
+    let entries = zip_entries(&bundle.path);
+    let text = entry_text(
+        &entries,
+        "logs/attempts/attempt-001/steps/0001-0123456789abcdef/attempt-0001/process-output.log",
+    );
+    assert!(
+        text.starts_with("This file could not be read while diagnostics were exported: "),
+        "{text}"
+    );
+    assert_eq!(text.lines().count(), 1, "{text}");
+    assert_eq!(
+        entry_text(
+            &entries,
+            "logs/attempts/attempt-002/steps/0001-0123456789abcdef/attempt-0001/process-output.log"
+        ),
+        "second attempt line\n"
+    );
+
+    // With a terminal receipt the same lock still stops the export.
+    let receipted = fixture(false);
+    let receipted_lock = std::fs::OpenOptions::new()
+        .read(true)
+        .share_mode(0)
+        .open(
+            receipted
+                .managed
+                .join(format!("{STEP_EVIDENCE}/process-output.log")),
+        )
+        .unwrap();
+    let error = export_diagnostics(&named_request(&receipted, &[], &[])).unwrap_err();
+    assert!(matches!(error, DiagnosticsError::Io { .. }), "{error}");
+    assert!(!receipted.output.exists());
+    drop(receipted_lock);
+    drop(lock);
+}
+
+#[test]
+fn the_cli_export_falls_back_to_recorded_evidence_without_a_receipt() {
+    let fixture = recorded_fixture();
+
+    let bundle =
+        bg_engine::cli::diagnostics_for_managed_install(&fixture.managed, &fixture.output).unwrap();
+
+    let entries = zip_entries(&bundle.path);
+    let start_here = entry_text(&entries, "START-HERE.txt");
+    assert!(
+        start_here.contains("No finished attempt is recorded"),
+        "{start_here}"
+    );
+    assert!(
+        start_here.contains("Why no receipt summary: could not open frozen campaign"),
+        "{start_here}"
+    );
+    assert!(bundle.entries.contains(
+        &"logs/attempts/attempt-002/steps/0002-fedcba9876543210/attempt-0001/weidu.debug.log"
+            .to_owned()
+    ));
+    assert!(!entries
+        .iter()
+        .flat_map(|(_, bytes)| bytes.iter().copied())
+        .collect::<Vec<_>>()
+        .windows(b"invented-recorded-secret".len())
+        .any(|window| window == b"invented-recorded-secret"));
 }

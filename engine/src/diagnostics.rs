@@ -38,6 +38,16 @@ const PATCH_RECORD_FILES: [&str; 6] = [
 ];
 const PATCH_LOG_FILES: [&str; 2] = ["attempt.debug", "output.log"];
 const MAX_PATCH_EVIDENCE_BYTES: u64 = 64 * 1024 * 1024;
+const HOME_MARKER: &str = "<redacted-home>";
+const USER_MARKER: &str = "<redacted-user>";
+const COMPUTER_MARKER: &str = "<redacted-computer>";
+/// Shortest user name and computer name that are redacted; shorter values would hit ordinary
+/// text far too often.
+const MIN_USER_NAME_CHARS: usize = 2;
+const MIN_COMPUTER_NAME_CHARS: usize = 3;
+/// Shared profile folders under `Users` that name no person.
+const SHARED_PROFILE_FOLDERS: [&str; 4] = ["Public", "Default", "Default User", "All Users"];
+const PRIVACY_SENTENCE: &str = "Diagnostics remain local until you share them. Personal paths, your Windows user name, the computer name and common secrets are redacted, but review the ZIP before sharing.\n";
 static TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 /// Inputs for one create-once sanitized diagnostics export.
@@ -45,12 +55,20 @@ static TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 pub struct DiagnosticsRequest {
     /// Existing managed installation root.
     pub managed_root: PathBuf,
-    /// Attempt whose receipt and logs should be included.
-    pub attempt_id: String,
+    /// Terminal attempt whose receipt and logs should be included. `None` exports what the
+    /// installation has recorded so far, for an installation without a terminal receipt
+    /// (interrupted before its first receipt, or still running).
+    pub attempt_id: Option<String>,
     /// New ZIP path; existing output is never replaced.
     pub output_path: PathBuf,
     /// Additional private path prefixes replaced by `<redacted-home>` in text entries.
     pub redact_roots: Vec<PathBuf>,
+    /// Additional user names replaced by `<redacted-user>` where they form a path segment.
+    pub redact_user_names: Vec<String>,
+    /// Additional computer names replaced by `<redacted-computer>` where they form a word.
+    pub redact_computer_names: Vec<String>,
+    /// Without `attempt_id`: why no receipt summary exists, shown in `START-HERE.txt`.
+    pub missing_receipt_reason: Option<String>,
 }
 
 /// Published diagnostics bundle and its deterministic entry inventory.
@@ -128,6 +146,28 @@ struct ReceiptEvidenceLink {
     evidence_attempt_id: Option<String>,
 }
 
+/// What `START-HERE.txt` explains.
+#[derive(Clone, Copy)]
+enum StartHere<'a> {
+    /// The selected terminal attempt receipt.
+    Receipt,
+    /// What an installation without a terminal receipt has recorded so far.
+    Recorded {
+        missing_receipt_reason: Option<&'a str>,
+    },
+}
+
+/// Private values replaced in text before it leaves the installation.
+#[derive(Clone, Debug)]
+struct Redactions {
+    /// Private path prefixes in every spelling, longest first; replaced by `<redacted-home>`.
+    roots: Vec<String>,
+    /// User names, replaced by `<redacted-user>` where they form a path segment.
+    user_names: Vec<String>,
+    /// Computer names, replaced by `<redacted-computer>` where they form a whole word.
+    computer_names: Vec<String>,
+}
+
 /// Export receipt, ledger, frozen recipe, and attempt logs through a fixed allowlist.
 ///
 /// Archives, game content, credentials, key material, and arbitrary state files are never
@@ -135,31 +175,51 @@ struct ReceiptEvidenceLink {
 pub fn export_diagnostics(
     request: &DiagnosticsRequest,
 ) -> Result<DiagnosticsBundle, DiagnosticsError> {
-    validate_identifier(&request.attempt_id, &request.managed_root)?;
+    if let Some(attempt_id) = &request.attempt_id {
+        validate_identifier(attempt_id, &request.managed_root)?;
+    }
     let managed_root = canonical_direct_directory(&request.managed_root)?;
     let state_root = managed_root.join(STATE_DIRECTORY);
     validate_direct_directory(&state_root)?;
 
     let output_path = resolve_new_output(&request.output_path, &managed_root)?;
-    let selected = select_entries(&state_root, &request.attempt_id)?;
+    let (selected, start_here) = match &request.attempt_id {
+        Some(attempt_id) => (select_entries(&state_root, attempt_id)?, StartHere::Receipt),
+        None => {
+            let selected = select_recorded_entries(&state_root)?;
+            if selected.is_empty() {
+                return Err(DiagnosticsError::MissingEvidence { path: state_root });
+            }
+            (
+                selected,
+                StartHere::Recorded {
+                    missing_receipt_reason: request.missing_receipt_reason.as_deref(),
+                },
+            )
+        }
+    };
     let mut archive_names = vec!["START-HERE.txt".to_owned()];
     archive_names.extend(selected.iter().map(|entry| entry.archive_name.clone()));
-    let redactions = collect_redactions(&request.redact_roots);
+    let redactions = collect_redactions(
+        &request.redact_roots,
+        &request.redact_user_names,
+        &request.redact_computer_names,
+        true,
+    );
     let temporary = temporary_sibling(&output_path)?;
 
-    let result =
-        write_bundle(&temporary, &selected, &redactions).and_then(|()| {
-            match fs::hard_link(&temporary, &output_path) {
-                Ok(()) => Ok(()),
-                Err(_source) if output_path.exists() => Err(DiagnosticsError::OutputExists {
-                    path: output_path.clone(),
-                }),
-                Err(source) => Err(DiagnosticsError::Io {
-                    path: output_path.clone(),
-                    source,
-                }),
-            }
-        });
+    let result = write_bundle(&temporary, &selected, &redactions, start_here).and_then(|()| {
+        match fs::hard_link(&temporary, &output_path) {
+            Ok(()) => Ok(()),
+            Err(_source) if output_path.exists() => Err(DiagnosticsError::OutputExists {
+                path: output_path.clone(),
+            }),
+            Err(source) => Err(DiagnosticsError::Io {
+                path: output_path.clone(),
+                source,
+            }),
+        }
+    });
     let cleanup = fs::remove_file(&temporary);
     if let Err(error) = result {
         let _ = cleanup;
@@ -213,30 +273,7 @@ fn select_entries(
 
     let ledger_root = state_root.join("ledger");
     validate_direct_directory(&ledger_root)?;
-    let mut ledger_count = 0_usize;
-    for entry in fs::read_dir(&ledger_root).map_err(|source| DiagnosticsError::Io {
-        path: ledger_root.clone(),
-        source,
-    })? {
-        let entry = entry.map_err(|source| DiagnosticsError::Io {
-            path: ledger_root.clone(),
-            source,
-        })?;
-        let name = entry.file_name();
-        let Some(name) = name.to_str() else {
-            continue;
-        };
-        if is_ledger_record_name(name) {
-            add_required(
-                &mut selected,
-                entry.path(),
-                &format!("ledger/{name}"),
-                false,
-            )?;
-            ledger_count += 1;
-        }
-    }
-    if ledger_count == 0 {
+    if add_ledger_records(&mut selected, &ledger_root)? == 0 {
         return Err(DiagnosticsError::MissingEvidence { path: ledger_root });
     }
 
@@ -245,10 +282,138 @@ fn select_entries(
     let steps_root = evidence_attempt_root.join("steps");
     if steps_root.exists() {
         validate_direct_directory(&steps_root)?;
-        add_step_evidence(&mut selected, &steps_root)?;
+        add_step_evidence(&mut selected, &steps_root, "logs/steps")?;
     }
-    add_patch_evidence(&mut selected, state_root)?;
-    add_upgrade_evidence(&mut selected, state_root, "mod-upgrades", "v1")?;
+    add_shared_evidence(&mut selected, state_root)?;
+    Ok(selected.into_values().collect())
+}
+
+/// Everything an installation without a terminal receipt has recorded so far; every part is
+/// optional, and the result may be empty.
+fn select_recorded_entries(state_root: &Path) -> Result<Vec<SelectedEntry>, DiagnosticsError> {
+    let mut selected = BTreeMap::<String, SelectedEntry>::new();
+    add_optional(
+        &mut selected,
+        state_root.join("install-receipt.json"),
+        "receipt/install-receipt.json",
+        false,
+    )?;
+    let recipe = state_root.join("recipe");
+    if is_present(&recipe)? {
+        validate_direct_directory(&recipe)?;
+        add_optional(
+            &mut selected,
+            recipe.join("payload.zip"),
+            "recipe/payload.zip",
+            true,
+        )?;
+        add_optional(
+            &mut selected,
+            recipe.join("envelope.json"),
+            "recipe/envelope.json",
+            false,
+        )?;
+    }
+    let ledger_root = state_root.join("ledger");
+    if is_present(&ledger_root)? {
+        validate_direct_directory(&ledger_root)?;
+        add_ledger_records(&mut selected, &ledger_root)?;
+    }
+
+    // Step evidence of every attempt, each under its own attempt id so that attempts never
+    // collide. An attempt folder must be a direct folder of the installation.
+    let attempts = state_root.join("attempts");
+    if is_present(&attempts)? {
+        validate_direct_directory(&attempts)?;
+        for entry in read_directory(&attempts)? {
+            let attempt_root = entry.path();
+            let name = entry.file_name();
+            let Some(attempt_id) = name.to_str() else {
+                continue;
+            };
+            if validate_identifier(attempt_id, &attempt_root).is_err() {
+                continue;
+            }
+            let metadata =
+                fs::symlink_metadata(&attempt_root).map_err(|source| DiagnosticsError::Io {
+                    path: attempt_root.clone(),
+                    source,
+                })?;
+            if metadata.file_type().is_symlink() || is_reparse_point(&metadata) {
+                return Err(unsafe_path(
+                    &attempt_root,
+                    "links and reparse points are forbidden in diagnostics evidence",
+                ));
+            }
+            if !metadata.is_dir() {
+                continue;
+            }
+            let steps_root = attempt_root.join("steps");
+            if is_present(&steps_root)? {
+                validate_direct_directory(&steps_root)?;
+                add_step_evidence(
+                    &mut selected,
+                    &steps_root,
+                    &format!("logs/attempts/{attempt_id}/steps"),
+                )?;
+            }
+            add_optional(
+                &mut selected,
+                attempt_root.join("receipt.json"),
+                &format!("receipt/attempts/{attempt_id}/attempt-receipt.json"),
+                false,
+            )?;
+        }
+    }
+    add_shared_evidence(&mut selected, state_root)?;
+    Ok(selected.into_values().collect())
+}
+
+/// Whether anything, a link included, exists at `path`.
+fn is_present(path: &Path) -> Result<bool, DiagnosticsError> {
+    match fs::symlink_metadata(path) {
+        Ok(_) => Ok(true),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(source) => Err(DiagnosticsError::Io {
+            path: path.to_path_buf(),
+            source,
+        }),
+    }
+}
+
+/// Adds every ledger record in `ledger_root` and returns how many there are.
+fn add_ledger_records(
+    selected: &mut BTreeMap<String, SelectedEntry>,
+    ledger_root: &Path,
+) -> Result<usize, DiagnosticsError> {
+    let mut ledger_count = 0_usize;
+    for entry in fs::read_dir(ledger_root).map_err(|source| DiagnosticsError::Io {
+        path: ledger_root.to_path_buf(),
+        source,
+    })? {
+        let entry = entry.map_err(|source| DiagnosticsError::Io {
+            path: ledger_root.to_path_buf(),
+            source,
+        })?;
+        let name = entry.file_name();
+        let Some(name) = name.to_str() else {
+            continue;
+        };
+        if is_ledger_record_name(name) {
+            add_required(selected, entry.path(), &format!("ledger/{name}"), false)?;
+            ledger_count += 1;
+        }
+    }
+    Ok(ledger_count)
+}
+
+/// Patch and mod-upgrade evidence, manual checkpoints and answers to download questions.
+fn add_shared_evidence(
+    selected: &mut BTreeMap<String, SelectedEntry>,
+    state_root: &Path,
+) -> Result<(), DiagnosticsError> {
+    add_patch_evidence(selected, state_root)?;
+    add_upgrade_evidence(selected, state_root, "mod-upgrades", "v1")?;
     let checkpoints = state_root.join("manual-checkpoints");
     if checkpoints.exists() {
         validate_direct_directory(&checkpoints)?;
@@ -260,7 +425,7 @@ fn select_entries(
             validate_direct_directory(&entry.path())?;
             for name in ["baseline.json", "acceptance.json"] {
                 add_optional(
-                    &mut selected,
+                    selected,
                     entry.path().join(name),
                     &format!("manual-checkpoints/{id}/{name}"),
                     false,
@@ -308,14 +473,13 @@ fn select_entries(
                 continue;
             }
             let archive_name = format!("evidence/decisions/{name}");
-            add_optional(&mut selected, entry.path(), &archive_name, false)?;
+            add_optional(selected, entry.path(), &archive_name, false)?;
             if let Some(selected) = selected.get_mut(&archive_name) {
                 selected.contained_in = Some(evidence.clone());
             }
         }
     }
-
-    Ok(selected.into_values().collect())
+    Ok(())
 }
 
 fn add_patch_evidence(
@@ -446,9 +610,12 @@ fn source_path(error: &DiagnosticsError) -> PathBuf {
     }
 }
 
+/// Adds the fixed step evidence files below `steps_root` as
+/// `<archive_prefix>/<step>/<attempt>/<file>`.
 fn add_step_evidence(
     entries: &mut BTreeMap<String, SelectedEntry>,
     steps_root: &Path,
+    archive_prefix: &str,
 ) -> Result<(), DiagnosticsError> {
     for step_entry in read_directory(steps_root)? {
         let step_path = step_entry.path();
@@ -496,7 +663,7 @@ fn add_step_evidence(
                 add_required(
                     entries,
                     evidence_path,
-                    &format!("logs/steps/{portable}"),
+                    &format!("{archive_prefix}/{portable}"),
                     false,
                 )?;
             }
@@ -567,7 +734,8 @@ fn add_optional(
 fn write_bundle(
     temporary: &Path,
     selected: &[SelectedEntry],
-    redactions: &[String],
+    redactions: &Redactions,
+    start_here: StartHere<'_>,
 ) -> Result<(), DiagnosticsError> {
     let file = OpenOptions::new()
         .create_new(true)
@@ -579,23 +747,34 @@ fn write_bundle(
         })?;
     let mut writer = ZipWriter::new(file);
     let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
-    // Explain the selected immutable receipt without changing it or claiming
-    // that missing finalized evidence proves a process was never launched.
-    let receipt = selected
-        .iter()
-        .find(|entry| entry.archive_name == "receipt/attempt-receipt.json")
-        .ok_or_else(|| DiagnosticsError::MissingEvidence {
-            path: temporary.to_path_buf(),
-        })?;
-    let bytes = fs::read(&receipt.source).map_err(|source| DiagnosticsError::Io {
-        path: receipt.source.clone(),
-        source,
-    })?;
-    let value: serde_json::Value =
-        serde_json::from_slice(&bytes).map_err(|source| DiagnosticsError::ReceiptJson {
-            path: receipt.source.clone(),
-            message: source.to_string(),
-        })?;
+    let summary = match start_here {
+        StartHere::Receipt => {
+            // Explain the selected immutable receipt without changing it or claiming
+            // that missing finalized evidence proves a process was never launched.
+            let receipt = selected
+                .iter()
+                .find(|entry| entry.archive_name == "receipt/attempt-receipt.json")
+                .ok_or_else(|| DiagnosticsError::MissingEvidence {
+                    path: temporary.to_path_buf(),
+                })?;
+            let bytes = fs::read(&receipt.source).map_err(|source| DiagnosticsError::Io {
+                path: receipt.source.clone(),
+                source,
+            })?;
+            let value: serde_json::Value =
+                serde_json::from_slice(&bytes).map_err(|source| DiagnosticsError::ReceiptJson {
+                    path: receipt.source.clone(),
+                    message: source.to_string(),
+                })?;
+            receipt_summary(&value)
+        }
+        StartHere::Recorded {
+            missing_receipt_reason,
+        } => recorded_summary(missing_receipt_reason),
+    };
+    // Without a terminal receipt the installation may still be writing its logs: an entry that
+    // cannot be read then says so instead of stopping the export. Safety violations still stop it.
+    let tolerate_unreadable = matches!(start_here, StartHere::Recorded { .. });
     writer
         .start_file("START-HERE.txt", options)
         .map_err(|source| DiagnosticsError::Zip {
@@ -603,7 +782,7 @@ fn write_bundle(
             message: source.to_string(),
         })?;
     writer
-        .write_all(sanitize_text(&receipt_summary(&value), redactions).as_bytes())
+        .write_all(sanitize_text(&summary, redactions).as_bytes())
         .map_err(|source| DiagnosticsError::Io {
             path: temporary.to_path_buf(),
             source,
@@ -615,7 +794,18 @@ fn write_bundle(
                 path: temporary.to_path_buf(),
                 message: source.to_string(),
             })?;
-        let bytes = read_selected_entry(entry)?;
+        let bytes = match read_selected_entry(entry) {
+            Ok(bytes) => bytes,
+            // Evidence read through a containment check reports a violation as an I/O error,
+            // so it is never tolerated.
+            Err(error @ DiagnosticsError::Io { .. })
+                if tolerate_unreadable && !entry.binary && entry.contained_in.is_none() =>
+            {
+                format!("This file could not be read while diagnostics were exported: {error}\n")
+                    .into_bytes()
+            }
+            Err(error) => return Err(error),
+        };
         if entry.binary {
             writer
                 .write_all(&bytes)
@@ -843,12 +1033,41 @@ receipt/attempt-receipt.json contains the full outcome, versions, selected optio
 ledger/ retains durable step transitions. logs/steps/ contains invocation.json, process-result.json, captured output and before/after WeiDU logs where available. Missing files may identify the point where evidence stopped; they do not establish the operating-system cause.\n\
 receipt/install-receipt.json is included when present. An older failure receipt may coexist with a later successful installation; inspect the attempt IDs and timestamps.\n\
 patches/cebg-v1/ contains optional existing-install patch records and captured logs. The base receipt is unchanged by a patch; check these records separately. Backup contents, mod payloads, executables and saves are not included.\n\
-mod-upgrades/v1/ contains whole-mod update and restore history, separate from the original collection receipt. It contains records and logs only, not backup or player-file contents.\n\
-Diagnostics remain local until you share them. Personal paths and common secrets are redacted, but review the ZIP before sharing.\n");
+mod-upgrades/v1/ contains whole-mod update and restore history, separate from the original collection receipt. It contains records and logs only, not backup or player-file contents.\n");
+    summary.push_str(PRIVACY_SENTENCE);
     summary
 }
 
-fn sanitize_evidence(archive_name: &str, bytes: &[u8], redactions: &[String]) -> Vec<u8> {
+/// `START-HERE.txt` for an installation without a terminal attempt receipt.
+fn recorded_summary(missing_receipt_reason: Option<&str>) -> String {
+    let mut summary = String::from(
+        "CEBG installation diagnostics\n\n\
+No finished attempt is recorded for this installation: it was interrupted or is still running.\n\
+This bundle holds what the installation has recorded so far. It is a snapshot, not a live progress screen.\n\
+\n\
+What this bundle can contain\n\
+receipt/install-receipt.json is included when present. It may belong to an earlier installation; inspect the attempt IDs and timestamps.\n\
+receipt/attempts/<attempt>/attempt-receipt.json contains the receipt of an individual attempt, when one was written.\n\
+recipe/ contains the frozen recipe the installation follows.\n\
+ledger/ retains durable step transitions recorded so far.\n\
+logs/attempts/<attempt>/steps/ contains invocation.json, process-result.json, captured output and before/after WeiDU logs of each attempt where available. Missing files may identify the point where evidence stopped; they do not establish the operating-system cause.\n\
+patches/cebg-v1/ contains optional existing-install patch records and captured logs. Backup contents, mod payloads, executables and saves are not included.\n\
+mod-upgrades/v1/ contains whole-mod update and restore history. It contains records and logs only, not backup or player-file contents.\n\
+manual-checkpoints/ contains the baseline and acceptance records of manual WeiDU additions.\n\
+evidence/decisions/ contains answers to questions about downloads; the questions themselves are in ledger/.\n\
+A file that could not be read while diagnostics were exported contains a line saying so instead of its content.\n\
+\n",
+    );
+    if let Some(reason) = missing_receipt_reason {
+        summary.push_str("Why no receipt summary: ");
+        summary.push_str(reason);
+        summary.push_str("\n\n");
+    }
+    summary.push_str(PRIVACY_SENTENCE);
+    summary
+}
+
+fn sanitize_evidence(archive_name: &str, bytes: &[u8], redactions: &Redactions) -> Vec<u8> {
     if archive_name.ends_with(".json")
         || ((archive_name.starts_with("patches/cebg-v1/")
             || archive_name.starts_with("mod-upgrades/v1/"))
@@ -869,7 +1088,7 @@ fn sanitize_evidence(archive_name: &str, bytes: &[u8], redactions: &[String]) ->
     sanitize_text(&String::from_utf8_lossy(bytes), redactions).into_bytes()
 }
 
-fn sanitize_json_lines(bytes: &[u8], redactions: &[String]) -> Option<Vec<u8>> {
+fn sanitize_json_lines(bytes: &[u8], redactions: &Redactions) -> Option<Vec<u8>> {
     let mut values = Vec::new();
     for line in bytes.split(|byte| *byte == b'\n') {
         if line.iter().all(u8::is_ascii_whitespace) {
@@ -888,7 +1107,7 @@ fn sanitize_json_lines(bytes: &[u8], redactions: &[String]) -> Option<Vec<u8>> {
     Some(sanitized)
 }
 
-fn redact_json_value(value: &mut serde_json::Value, redactions: &[String]) {
+fn redact_json_value(value: &mut serde_json::Value, redactions: &Redactions) {
     match value {
         serde_json::Value::String(text) => {
             *text = sanitize_json_string(text, redactions);
@@ -900,9 +1119,9 @@ fn redact_json_value(value: &mut serde_json::Value, redactions: &[String]) {
         }
         serde_json::Value::Object(values)
             if values.keys().any(|key| {
-                redactions.iter().any(|root| {
-                    replace_ascii_case_insensitive(key, root, "<redacted-home>") != *key
-                }) || (!is_sensitive_json_key(key) && sanitize_json_string(key, redactions) != *key)
+                redactions.apply(key) != *key
+                    || (!is_sensitive_json_key(key)
+                        && sanitize_json_string(key, redactions) != *key)
             }) =>
         {
             // Paths and secrets can also occur in map keys. Redact the object rather
@@ -922,11 +1141,8 @@ fn redact_json_value(value: &mut serde_json::Value, redactions: &[String]) {
     }
 }
 
-fn sanitize_json_string(value: &str, redactions: &[String]) -> String {
-    let mut redacted = value.to_owned();
-    for root in redactions {
-        redacted = replace_ascii_case_insensitive(&redacted, root, "<redacted-home>");
-    }
+fn sanitize_json_string(value: &str, redactions: &Redactions) -> String {
+    let redacted = redactions.apply(value);
     let lowercase = redacted.to_ascii_lowercase();
     if contains_sensitive_marker(&redacted)
         || (lowercase.contains("-----begin ") && lowercase.contains("private key-----"))
@@ -963,11 +1179,29 @@ fn is_sensitive_json_key(key: &str) -> bool {
         || matches!(normalized.as_str(), "signature" | "sig")
 }
 
-fn sanitize_text(text: &str, redactions: &[String]) -> String {
-    let mut redacted = text.to_owned();
-    for root in redactions {
-        redacted = replace_ascii_case_insensitive(&redacted, root, "<redacted-home>");
-    }
+/// Text as it may be shared: private path prefixes, user names, the computer name and
+/// common secrets redacted like text evidence in a diagnostics bundle.
+pub fn redact_for_sharing(text: &str, redact_roots: &[PathBuf]) -> String {
+    sanitize_text(text, &collect_redactions(redact_roots, &[], &[], true))
+}
+
+/// [`redact_for_sharing`] with explicit user and computer names and without any value taken
+/// from the environment, so that its result does not depend on the machine.
+#[doc(hidden)]
+pub fn redact_for_sharing_with_names(
+    text: &str,
+    redact_roots: &[PathBuf],
+    user_names: &[String],
+    computer_names: &[String],
+) -> String {
+    sanitize_text(
+        text,
+        &collect_redactions(redact_roots, user_names, computer_names, false),
+    )
+}
+
+fn sanitize_text(text: &str, redactions: &Redactions) -> String {
+    let redacted = redactions.apply(text);
 
     let mut output = String::new();
     let mut private_key = false;
@@ -1072,20 +1306,167 @@ fn replace_ascii_case_insensitive(input: &str, needle: &str, replacement: &str) 
     output
 }
 
-fn collect_redactions(authored: &[PathBuf]) -> Vec<String> {
-    let roots = authored
+impl Redactions {
+    /// `text` with, in this order, private path prefixes, the profile folder of any user,
+    /// known user names as path segments and computer names as whole words replaced.
+    fn apply(&self, text: &str) -> String {
+        let mut redacted = text.to_owned();
+        for root in &self.roots {
+            redacted = replace_ascii_case_insensitive(&redacted, root, HOME_MARKER);
+        }
+        redacted = redact_profile_folders(&redacted);
+        for name in &self.user_names {
+            redacted = replace_bounded(&redacted, name, USER_MARKER, |before, after| {
+                matches!(before, Some('/' | '\\')) && !after.is_some_and(is_word_character)
+            });
+        }
+        for name in &self.computer_names {
+            redacted = replace_bounded(&redacted, name, COMPUTER_MARKER, |before, after| {
+                !before.is_some_and(is_word_character) && !after.is_some_and(is_word_character)
+            });
+        }
+        redacted
+    }
+}
+
+fn is_word_character(character: char) -> bool {
+    character.is_alphanumeric() || matches!(character, '_' | '-')
+}
+
+/// Replaces the folder name after every path segment `Users` (ASCII case-insensitive) by
+/// `<redacted-user>`, except the shared profile folders. A separator is `/`, `\` or a run of
+/// them, so JSON-escaped `\\` counts as one; the folder name ends at the next separator, `"`,
+/// a line break, one of `< > | ? * :` or the end of the text.
+fn redact_profile_folders(input: &str) -> String {
+    let is_separator = |byte: u8| matches!(byte, b'/' | b'\\');
+    let ends_segment = |byte: &u8| {
+        matches!(
+            byte,
+            b'/' | b'\\' | b'"' | b'\n' | b'\r' | b'<' | b'>' | b'|' | b'?' | b'*' | b':'
+        )
+    };
+    let bytes = input.as_bytes();
+    let lowercase = input.to_ascii_lowercase();
+    let mut output = String::new();
+    let mut copied = 0_usize;
+    let mut search = 0_usize;
+    // Every index below is next to an ASCII byte, so it is a character boundary.
+    while let Some(relative) = lowercase[search..].find("users") {
+        let start = search + relative;
+        let after_users = start + "users".len();
+        search = after_users;
+        let preceded = start > 0 && is_separator(bytes[start - 1]);
+        let followed = bytes
+            .get(after_users)
+            .is_some_and(|byte| is_separator(*byte));
+        if !preceded || !followed {
+            continue;
+        }
+        let mut segment_start = after_users;
+        while bytes
+            .get(segment_start)
+            .is_some_and(|byte| is_separator(*byte))
+        {
+            segment_start += 1;
+        }
+        let segment_end = bytes[segment_start..]
+            .iter()
+            .position(ends_segment)
+            .map_or(bytes.len(), |offset| segment_start + offset);
+        let segment = &input[segment_start..segment_end];
+        if segment.is_empty()
+            || SHARED_PROFILE_FOLDERS
+                .iter()
+                .any(|shared| segment.eq_ignore_ascii_case(shared))
+        {
+            continue;
+        }
+        output.push_str(&input[copied..segment_start]);
+        output.push_str(USER_MARKER);
+        copied = segment_end;
+        search = segment_end;
+    }
+    if copied == 0 {
+        return input.to_owned();
+    }
+    output.push_str(&input[copied..]);
+    output
+}
+
+/// Replaces every ASCII case-insensitive occurrence of `needle` whose neighbouring characters
+/// (`None` at either end of the text) satisfy `accept`.
+fn replace_bounded(
+    input: &str,
+    needle: &str,
+    replacement: &str,
+    accept: impl Fn(Option<char>, Option<char>) -> bool,
+) -> String {
+    if needle.is_empty() {
+        return input.to_owned();
+    }
+    let lowercase = input.to_ascii_lowercase();
+    let needle_lower = needle.to_ascii_lowercase();
+    let mut output = String::new();
+    let mut copied = 0_usize;
+    let mut search = 0_usize;
+    // ASCII lowercasing keeps every byte offset, and a match of a whole string always starts
+    // and ends on character boundaries.
+    while let Some(relative) = lowercase[search..].find(&needle_lower) {
+        let start = search + relative;
+        let end = start + needle_lower.len();
+        let before = input[..start].chars().next_back();
+        let after = input[end..].chars().next();
+        if accept(before, after) {
+            output.push_str(&input[copied..start]);
+            output.push_str(replacement);
+            copied = end;
+            search = end;
+        } else {
+            search = start + input[start..].chars().next().map_or(1, char::len_utf8);
+        }
+    }
+    if copied == 0 {
+        return input.to_owned();
+    }
+    output.push_str(&input[copied..]);
+    output
+}
+
+/// Redaction values from the authored ones and, with `environment`, from `USERPROFILE`, `HOME`,
+/// `USERNAME`, `USER`, `COMPUTERNAME` and `HOSTNAME`.
+fn collect_redactions(
+    authored_roots: &[PathBuf],
+    authored_user_names: &[String],
+    authored_computer_names: &[String],
+    environment: bool,
+) -> Redactions {
+    let mut values = authored_roots
         .iter()
         .map(|path| path.to_string_lossy().into_owned())
         .filter(|value| !value.is_empty())
         .collect::<Vec<_>>();
-    let mut values = roots;
-    for variable in ["USERPROFILE", "HOME"] {
-        if let Some(value) = std::env::var_os(variable) {
-            let value = value.to_string_lossy().into_owned();
-            if !value.is_empty() {
+    let mut user_names = authored_user_names.to_vec();
+    let mut computer_names = authored_computer_names.to_vec();
+    if environment {
+        let variable = |name: &str| {
+            std::env::var_os(name)
+                .map(|value| value.to_string_lossy().into_owned())
+                .filter(|value| !value.is_empty())
+        };
+        for name in ["USERPROFILE", "HOME"] {
+            if let Some(value) = variable(name) {
+                if let Some(folder) = Path::new(&value).file_name() {
+                    user_names.push(folder.to_string_lossy().into_owned());
+                }
                 values.push(value);
             }
         }
+        user_names.extend(["USERNAME", "USER"].into_iter().filter_map(variable));
+        computer_names.extend(
+            ["COMPUTERNAME", "HOSTNAME"]
+                .into_iter()
+                .filter_map(variable),
+        );
     }
     values = values
         .into_iter()
@@ -1104,7 +1485,19 @@ fn collect_redactions(authored: &[PathBuf]) -> Vec<String> {
         .collect();
     values.sort_by_key(|value| std::cmp::Reverse(value.len()));
     values.dedup_by(|left, right| left.eq_ignore_ascii_case(right));
-    values
+    Redactions {
+        roots: values,
+        user_names: distinct_names(user_names, MIN_USER_NAME_CHARS),
+        computer_names: distinct_names(computer_names, MIN_COMPUTER_NAME_CHARS),
+    }
+}
+
+/// Names of at least `min_chars` characters, longest first, without case-insensitive duplicates.
+fn distinct_names(mut names: Vec<String>, min_chars: usize) -> Vec<String> {
+    names.retain(|name| name.chars().count() >= min_chars);
+    names.sort_by_cached_key(|name| (std::cmp::Reverse(name.len()), name.to_ascii_lowercase()));
+    names.dedup_by(|left, right| left.eq_ignore_ascii_case(right));
+    names
 }
 
 fn is_ledger_record_name(name: &str) -> bool {
