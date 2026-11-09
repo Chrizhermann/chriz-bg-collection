@@ -145,12 +145,7 @@ const RUNS: &[(&str, &str, Phase, &[u32])] = &[
         Phase::Main,
         &[2310, 2311, 2312],
     ),
-    (
-        "klatu-armor-thieving-main",
-        "klatu",
-        Phase::Main,
-        &[2150],
-    ),
+    ("klatu-armor-thieving-main", "klatu", Phase::Main, &[2150]),
     ("buffbot-main", "buffbot", Phase::Main, &[1, 0]),
     ("eeexremote-main", "eeexremote", Phase::Main, &[0]),
 ];
