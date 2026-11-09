@@ -24,6 +24,9 @@ Added later:
 - Arszyk's Wonderful Decay, 2026-11-07, for the next version and not for his stream game
   ("Kannst du es noch hinzufügen für die nächste Version?"). On by default, as the other
   companions. It is a beta, and its quest also works without recruiting him.
+- Klatu Tweaks and Fixes 1.7.4, component 2150 (thieves use their skills in any armor, no added
+  penalties), 2026-11-09: on by default as in the BG installer ("Es ist einfach Quality of
+  Life"). It runs after every mod that adds armor. His stream game got it the same day.
 
 Notes from the selection:
 - The quest mods' compatibility with each other can be tested later; Christopher said

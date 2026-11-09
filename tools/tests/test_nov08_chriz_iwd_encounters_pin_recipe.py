@@ -61,7 +61,9 @@ class Nov08ChrizIwdEncountersV022PinTests(unittest.TestCase):
             self.assertEqual(artifact["source"][key], self.record[evidence_key], key)
         (run,) = [run for run in load(self.recipe / "collection.toml")["runs"] if run["mod_id"] == MOD]
         self.assertEqual(run["components"], self.record["native_components"])
-        self.assertEqual(json.loads((self.recipe / "release.json").read_text(encoding="utf-8"))["version"], "0.1.9")
+        # 0.1.9 brought the pin; later releases keep it and record their own ledger.
+        version = json.loads((self.recipe / "release.json").read_text(encoding="utf-8"))["version"]
+        self.assertTrue((self.recipe / f"releases/v{version}/ledger.toml").is_file(), version)
         ledger = load(self.recipe / "releases/v0.1.9/ledger.toml")
         self.assertIn(PIN, {change["id"] for change in ledger["changes"]})
 

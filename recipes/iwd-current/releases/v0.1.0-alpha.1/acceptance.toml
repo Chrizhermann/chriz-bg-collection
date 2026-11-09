@@ -303,6 +303,17 @@ scope = "Static recipe source, component, order and recommended-plan assertions 
 
 [[evidence]]
 subject_kind = "run"
+subject_id = "klatu-armor-thieving-main"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "6b5ff4b6f0110be7862404ab696782579ee8f899"
+test_artifact = "engine/tests/production_recipe_iwd.rs"
+date = "2026-11-09"
+status = "accepted"
+scope = "Static recipe source, component, order and recommended-plan assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
 subject_id = "buffbot-main"
 kind = "static-test"
 repository = "Chrizhermann/chriz-bg-collection"
