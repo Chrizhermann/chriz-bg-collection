@@ -213,14 +213,19 @@ class Oct13IntakeTests(unittest.TestCase):
             )
             self.assertEqual(bridge["decision"], "optional")
             group = next(g for g in collection["feature_groups"] if g["id"] == "challenge-mode")
-            # October 14 adds Tweaks 2760 where Tweaks Anthology exists (curated only).
+            # October 14 adds Tweaks 2760 where Tweaks Anthology exists (curated only), always last;
+            # November 10 adds campaign XP caps with chapter caps (Modpack 650 + 652).
             self.assertEqual(group["members"][:4], [
                 "feature:chriz-bg-rebalance:component-301",
                 "feature:chriz-bg-modpack:component-235",
                 "feature:chriz-bg-rebalance:component-110",
                 "feature:chriz-sod-remix:component-257",
             ])
-            self.assertEqual(group["members"][4:], ["feature:cdtweaks:component-2760"] if name == "curated" else [])
+            self.assertEqual(group["members"][4:6], [
+                "feature:chriz-bg-modpack:component-650",
+                "feature:chriz-bg-modpack:component-652",
+            ])
+            self.assertEqual(group["members"][6:], ["feature:cdtweaks:component-2760"] if name == "curated" else [])
 
     def test_release_gate_records_cover_only_what_the_default_selection_installs(self):
         for name, directory, collection, preset in self._each_profile():

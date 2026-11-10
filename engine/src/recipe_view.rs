@@ -257,7 +257,9 @@ pub struct FeatureGroupVariantState {
 pub struct UnavailableGroupMember {
     /// Member feature id.
     pub feature_id: String,
-    /// Player-facing reason, identical to the member control's unavailable reason.
+    /// Player-facing reason the member stays off when the group is switched on. It matches the
+    /// member control's reason unless another member's switch changes it, for example a
+    /// requirement on that member becoming a conflict with the player's own choice.
     pub reason: String,
 }
 
@@ -271,9 +273,10 @@ pub struct FeatureGroupEvaluation {
     pub state: FeatureGroupState,
     /// Members whose effective state is selected, in authored order.
     pub selected_members: Vec<String>,
-    /// Members that can currently be selected, in authored order.
+    /// Members that switching the group on would turn on, in authored order. This includes a
+    /// member whose only obstacle is a requirement on another member of the group.
     pub available_members: Vec<String>,
-    /// Members whose requirements are unmet, in authored order.
+    /// Members that would stay off when the group is switched on, in authored order.
     pub unavailable_members: Vec<UnavailableGroupMember>,
     /// Variant states in authored order; omitted when the group has none.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -517,7 +520,8 @@ pub fn evaluate(manifest: &Manifest, selection: &Selection) -> Result<SelectionE
                 .iter()
                 .map(|variant| evaluate_variant(manifest, variant, &features, &desired, &effective))
                 .collect();
-            evaluate_group(group, &controls, variants)
+            let availability = group_member_availability(manifest, group, &features, &desired);
+            evaluate_group(group, &controls, availability, variants)
         })
         .collect();
     let normalized_selection = NormalizedSelection {
@@ -547,9 +551,10 @@ pub fn evaluate(manifest: &Manifest, selection: &Selection) -> Result<SelectionE
 
 /// Expands a group switch into member feature changes under `selection`.
 ///
-/// `on` selects every member that is available under the current selection and, for each
-/// available variant, picks its option and deselects the choice group's other options; members
-/// and variants whose requirements are unmet are left unchanged and never forced on. `off`
+/// `on` selects every member that is available under the current selection, including one that
+/// needs only another member of the group, and, for each available variant, picks its option and
+/// deselects the choice group's other options; members and variants whose requirements outside
+/// the group are unmet are left unchanged and never forced on. `off`
 /// deselects every member and restores each variant's choice group to its recipe default.
 /// No feature outside the members and the variants' choice groups is ever changed; the caller
 /// applies the result as ordinary feature choices, so later individual feature choices still
@@ -650,34 +655,85 @@ fn evaluate_variant(
     }
 }
 
-fn evaluate_group(
+/// Splits a group's members into those that switching the group on would turn on and the rest,
+/// with each one's reason at the end of that process.
+///
+/// Starting from the player's choices, every available member is wanted and the features are
+/// evaluated again, so a member whose only obstacle was another member becomes available too;
+/// this repeats until nothing new appears. Each round judges all members together, so the
+/// authored order never matters. No other choice changes, so a requirement outside the group or
+/// a conflict with a selected feature still keeps a member unavailable.
+fn group_member_availability(
+    manifest: &Manifest,
     group: &FeatureGroup,
-    controls: &[FeatureControl],
-    variants: Vec<FeatureGroupVariantState>,
-) -> FeatureGroupEvaluation {
-    let mut selected_members = Vec::new();
+    features: &BTreeMap<&str, &Feature>,
+    desired: &BTreeMap<String, bool>,
+) -> (Vec<String>, Vec<UnavailableGroupMember>) {
+    let mut wanted = desired.clone();
+    let mut reasons = BTreeMap::new();
+    // Each round that does not stop wants at least one more member, so the last round never
+    // adds one and its reasons are final.
+    for _ in 0..=group.members.len() {
+        let base = base_effective_features(manifest, &wanted);
+        let effective = effective_features(manifest, &base);
+        // Validation guarantees that every member is a visible optional feature outside
+        // exclusive choices, so this is the reason the member's own control shows.
+        reasons = group
+            .members
+            .iter()
+            .filter_map(|member| {
+                let feature = features.get(member.as_str())?;
+                Some((
+                    member.as_str(),
+                    unavailable_reason(feature, features, &base, &effective),
+                ))
+            })
+            .collect::<BTreeMap<_, _>>();
+        let newly_wanted = reasons
+            .iter()
+            .filter(|(member, reason)| {
+                reason.is_none() && !wanted.get(**member).copied().unwrap_or(false)
+            })
+            .map(|(member, _)| (*member).to_owned())
+            .collect::<Vec<_>>();
+        if newly_wanted.is_empty() {
+            break;
+        }
+        for member in newly_wanted {
+            wanted.insert(member, true);
+        }
+    }
     let mut available_members = Vec::new();
     let mut unavailable_members = Vec::new();
     for member in &group.members {
-        // Validation guarantees that every member is a visible optional feature.
-        let Some(control) = controls.iter().find(|control| control.id == *member) else {
-            continue;
-        };
-        if control.selected {
-            selected_members.push(member.clone());
-        }
-        if control.interactive && control.unavailable_reason.is_none() {
-            available_members.push(member.clone());
-        } else {
-            unavailable_members.push(UnavailableGroupMember {
+        match reasons.get(member.as_str()) {
+            Some(None) => available_members.push(member.clone()),
+            Some(Some(reason)) => unavailable_members.push(UnavailableGroupMember {
                 feature_id: member.clone(),
-                reason: control
-                    .unavailable_reason
-                    .clone()
-                    .unwrap_or_else(|| "Unavailable with the current choices.".to_owned()),
-            });
+                reason: reason.clone(),
+            }),
+            None => {}
         }
     }
+    (available_members, unavailable_members)
+}
+
+fn evaluate_group(
+    group: &FeatureGroup,
+    controls: &[FeatureControl],
+    (available_members, unavailable_members): (Vec<String>, Vec<UnavailableGroupMember>),
+    variants: Vec<FeatureGroupVariantState>,
+) -> FeatureGroupEvaluation {
+    let selected_members = group
+        .members
+        .iter()
+        .filter(|member| {
+            controls
+                .iter()
+                .any(|control| control.id == **member && control.selected)
+        })
+        .cloned()
+        .collect::<Vec<_>>();
     // A variant counts like a member: picked when its option is effective, and an unavailable
     // variant does not hold the group in mixed.
     let state = if selected_members.is_empty() && !variants.iter().any(|variant| variant.selected) {

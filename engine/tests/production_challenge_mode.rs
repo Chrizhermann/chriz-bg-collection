@@ -13,12 +13,21 @@ use bg_engine::resolve::Selection;
 use bg_engine::Manifest;
 
 const GROUP: &str = "challenge-mode";
-const MEMBERS: [&str; 4] = [
+const MEMBERS: [&str; 6] = [
     "feature:chriz-bg-rebalance:component-301",
     "feature:chriz-bg-modpack:component-235",
     "feature:chriz-bg-rebalance:component-110",
     "feature:chriz-sod-remix:component-257",
+    CAMPAIGN_XP_CAPS,
+    CHAPTER_XP_CAPS,
 ];
+/// Christopher, 2026-11-10: Challenge Mode includes campaign XP caps with chapter caps
+/// (Modpack 650 + 652). 652 requires 650 and comes on with the group; the Shadows of Amn cap
+/// 651 conflicts with 652 and stays a separate choice outside the group.
+const CAMPAIGN_XP_CAPS: &str = "feature:chriz-bg-modpack:component-650";
+const SOA_XP_CAP: &str = "feature:chriz-bg-modpack:component-651";
+const CHAPTER_XP_CAPS: &str = "feature:chriz-bg-modpack:component-652";
+const CAMPAIGN_XP_RUN: &str = "chriz-bg-modpack-campaign-xp-bg2";
 /// Normal defaults that are explicitly not Challenge Mode members.
 const NORMAL_DEFAULTS: [&str; 4] = [
     "feature:chriz-bg-rebalance:component-302", // Flail of the Ages balance
@@ -423,5 +432,135 @@ fn without_scs_dragon_melee_is_unavailable_and_never_forced_on() {
         );
         assert!(!on.view.control(DRAGON_MELEE).unwrap().selected, "{dir}");
         assert!(!on.normalized_selection.features[DRAGON_MELEE], "{dir}");
+    }
+}
+
+#[test]
+fn one_switch_from_recommended_turns_on_campaign_xp_caps_with_chapter_caps() {
+    for (dir, manifest) in profiles() {
+        let base = recommended_selection(&manifest);
+        let recommended = evaluate(&manifest, &base).unwrap();
+        assert_eq!(
+            recommended.plan.components_for(CAMPAIGN_XP_RUN),
+            None,
+            "{dir}"
+        );
+        // Alone, chapter caps still say they need campaign XP caps.
+        assert_eq!(
+            recommended
+                .view
+                .control(CHAPTER_XP_CAPS)
+                .unwrap()
+                .unavailable_reason
+                .as_deref(),
+            Some("Requires Campaign XP caps with banked XP (experimental)."),
+            "{dir}"
+        );
+        let state = recommended.group(GROUP).unwrap();
+        assert!(
+            state
+                .available_members
+                .contains(&CHAPTER_XP_CAPS.to_owned()),
+            "{dir}"
+        );
+        assert!(
+            !state.available_members.contains(&SOA_XP_CAP.to_owned()),
+            "{dir}"
+        );
+
+        let changes =
+            feature_group_changes(&manifest, &base, GROUP, FeatureGroupTarget::On).unwrap();
+        assert_eq!(changes.get(CAMPAIGN_XP_CAPS), Some(&true), "{dir}");
+        assert_eq!(changes.get(CHAPTER_XP_CAPS), Some(&true), "{dir}");
+        assert!(!changes.contains_key(SOA_XP_CAP), "{dir}");
+        let on_selection = apply(&base, &changes);
+        let on = evaluate(&manifest, &on_selection).unwrap();
+        assert_eq!(
+            on.group(GROUP).unwrap().state,
+            FeatureGroupState::On,
+            "{dir}"
+        );
+        assert_eq!(
+            on.plan.components_for(CAMPAIGN_XP_RUN),
+            Some(&[650, 652][..]),
+            "{dir}"
+        );
+
+        let off_changes =
+            feature_group_changes(&manifest, &on_selection, GROUP, FeatureGroupTarget::Off)
+                .unwrap();
+        let off = evaluate(&manifest, &apply(&on_selection, &off_changes)).unwrap();
+        assert_eq!(
+            off.normalized_selection, recommended.normalized_selection,
+            "{dir}"
+        );
+        assert_eq!(off.plan, recommended.plan, "{dir}");
+    }
+}
+
+#[test]
+fn a_ticked_shadows_of_amn_cap_stays_and_keeps_chapter_caps_out() {
+    for (dir, manifest) in profiles() {
+        let mut base = recommended_selection(&manifest);
+        base.set_feature(CAMPAIGN_XP_CAPS, true);
+        base.set_feature(SOA_XP_CAP, true);
+        let before = evaluate(&manifest, &base).unwrap();
+        let state = before.group(GROUP).unwrap();
+        assert_eq!(state.state, FeatureGroupState::Mixed, "{dir}");
+        let conflict = "Choose either chapter-by-chapter XP caps or the Shadows of Amn cap.";
+        let unavailable = state
+            .unavailable_members
+            .iter()
+            .map(|member| (member.feature_id.as_str(), member.reason.as_str()))
+            .collect::<Vec<_>>();
+        assert_eq!(unavailable, [(CHAPTER_XP_CAPS, conflict)], "{dir}");
+
+        let changes =
+            feature_group_changes(&manifest, &base, GROUP, FeatureGroupTarget::On).unwrap();
+        assert!(!changes.contains_key(CHAPTER_XP_CAPS), "{dir}");
+        assert!(!changes.contains_key(SOA_XP_CAP), "{dir}");
+        let on = evaluate(&manifest, &apply(&base, &changes)).unwrap();
+        let state = on.group(GROUP).unwrap();
+        assert_eq!(state.state, FeatureGroupState::On, "{dir}");
+        assert_eq!(state.unavailable_members.len(), 1, "{dir}");
+        assert_eq!(state.unavailable_members[0].reason, conflict, "{dir}");
+        assert!(on.view.control(SOA_XP_CAP).unwrap().selected, "{dir}");
+        assert_eq!(
+            on.plan.components_for(CAMPAIGN_XP_RUN),
+            Some(&[650, 651][..]),
+            "{dir}"
+        );
+    }
+}
+
+#[test]
+fn a_ticked_shadows_of_amn_cap_alone_takes_effect_when_the_group_turns_on_campaign_caps() {
+    for (dir, manifest) in profiles() {
+        let mut base = recommended_selection(&manifest);
+        base.set_feature(SOA_XP_CAP, true);
+        let before = evaluate(&manifest, &base).unwrap();
+        let state = before.group(GROUP).unwrap();
+        assert_eq!(state.state, FeatureGroupState::Off, "{dir}");
+        // Once the group turns on 650, the player's 651 takes effect and 652 reports the
+        // conflict rather than its requirement.
+        assert_eq!(state.unavailable_members.len(), 1, "{dir}");
+        assert_eq!(
+            state.unavailable_members[0].reason,
+            "Choose either chapter-by-chapter XP caps or the Shadows of Amn cap.",
+            "{dir}"
+        );
+        let changes =
+            feature_group_changes(&manifest, &base, GROUP, FeatureGroupTarget::On).unwrap();
+        let on = evaluate(&manifest, &apply(&base, &changes)).unwrap();
+        assert_eq!(
+            on.group(GROUP).unwrap().state,
+            FeatureGroupState::On,
+            "{dir}"
+        );
+        assert_eq!(
+            on.plan.components_for(CAMPAIGN_XP_RUN),
+            Some(&[650, 651][..]),
+            "{dir}"
+        );
     }
 }

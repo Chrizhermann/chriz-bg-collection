@@ -854,6 +854,217 @@ fn an_individual_member_change_never_changes_another_member() {
     assert_eq!(again.values().filter(|selected| **selected).count(), 3);
 }
 
+fn requires(manifest: &mut Manifest, owner: &str, required: &[&str]) {
+    feature_mut(manifest, owner).requires = required
+        .iter()
+        .map(|required| (*required).to_owned())
+        .collect();
+}
+
+fn planned(evaluation: &SelectionEvaluation, component: u32) -> bool {
+    evaluation
+        .plan
+        .components_for(RUN)
+        .is_some_and(|components| components.contains(&component))
+}
+
+/// Switches the group on from `base` in one step and returns the evaluation afterwards.
+fn switch_on(
+    manifest: &Manifest,
+    base: &Selection,
+) -> (BTreeMap<String, bool>, SelectionEvaluation) {
+    let changes =
+        feature_group_changes(manifest, base, "challenge-mode", FeatureGroupTarget::On).unwrap();
+    let evaluation = evaluate(manifest, &with_changes(base, &changes)).unwrap();
+    (changes, evaluation)
+}
+
+#[test]
+fn a_member_that_requires_another_member_comes_on_with_the_group_in_any_order() {
+    for members in [["a", "b"], ["b", "a"]] {
+        let mut manifest = grouped_manifest();
+        requires(&mut manifest, "b", &["a"]);
+        manifest.collection.feature_groups = vec![group("challenge-mode", &members)];
+        let base = selection(&[]);
+
+        let off = evaluate(&manifest, &base).unwrap();
+        let state = off.group("challenge-mode").unwrap();
+        assert_eq!(state.state, FeatureGroupState::Off, "{members:?}");
+        assert_eq!(state.available_members, members, "{members:?}");
+        assert!(state.unavailable_members.is_empty(), "{members:?}");
+        assert_eq!(state.disabled_reason, None, "{members:?}");
+        // The member's own control is unchanged: alone, `b` still needs `a`.
+        let control = off.view.control("b").unwrap();
+        assert_eq!(
+            control.unavailable_reason.as_deref(),
+            Some("Requires Title a."),
+            "{members:?}"
+        );
+        assert!(!control.interactive, "{members:?}");
+
+        let (changes, on) = switch_on(&manifest, &base);
+        assert_eq!(
+            changes,
+            BTreeMap::from([("a".to_owned(), true), ("b".to_owned(), true)]),
+            "{members:?}"
+        );
+        let state = on.group("challenge-mode").unwrap();
+        assert_eq!(state.state, FeatureGroupState::On, "{members:?}");
+        assert_eq!(state.selected_members, members, "{members:?}");
+        assert!(planned(&on, 1) && planned(&on, 2), "{members:?}");
+
+        // Switching off deselects both and restores the starting plan.
+        let off_changes = feature_group_changes(
+            &manifest,
+            &with_changes(&base, &changes),
+            "challenge-mode",
+            FeatureGroupTarget::Off,
+        )
+        .unwrap();
+        let back = evaluate(
+            &manifest,
+            &with_changes(&with_changes(&base, &changes), &off_changes),
+        )
+        .unwrap();
+        assert_eq!(back.plan, off.plan, "{members:?}");
+        assert_eq!(
+            back.group("challenge-mode").unwrap().state,
+            FeatureGroupState::Off,
+            "{members:?}"
+        );
+    }
+}
+
+#[test]
+fn a_chain_of_member_requirements_comes_on_with_one_switch() {
+    // c needs b, b needs a; `c` no longer needs the outside `gate`.
+    for members in [["a", "b", "c"], ["c", "b", "a"], ["b", "c", "a"]] {
+        let mut manifest = grouped_manifest();
+        requires(&mut manifest, "b", &["a"]);
+        requires(&mut manifest, "c", &["b"]);
+        manifest.collection.feature_groups = vec![group("challenge-mode", &members)];
+        let base = selection(&[]);
+        let state = evaluate(&manifest, &base)
+            .unwrap()
+            .group("challenge-mode")
+            .unwrap()
+            .clone();
+        assert_eq!(state.available_members, members, "{members:?}");
+        let (changes, on) = switch_on(&manifest, &base);
+        assert_eq!(changes.len(), 3, "{members:?}");
+        assert!(changes.values().all(|selected| *selected), "{members:?}");
+        let state = on.group("challenge-mode").unwrap();
+        assert_eq!(state.state, FeatureGroupState::On, "{members:?}");
+        assert_eq!(state.selected_members, members, "{members:?}");
+        assert!(
+            planned(&on, 1) && planned(&on, 2) && planned(&on, 3),
+            "{members:?}"
+        );
+    }
+}
+
+#[test]
+fn a_requirement_outside_the_group_still_keeps_a_member_unavailable() {
+    // b needs the member a; c needs the outside `gate`, which is off.
+    let mut manifest = grouped_manifest();
+    requires(&mut manifest, "b", &["a"]);
+    let base = selection(&[]);
+    let evaluation = evaluate(&manifest, &base).unwrap();
+    let state = evaluation.group("challenge-mode").unwrap();
+    assert_eq!(state.available_members, ["a", "b"]);
+    assert_eq!(state.unavailable_members.len(), 1);
+    assert_eq!(state.unavailable_members[0].feature_id, "c");
+    assert_eq!(state.unavailable_members[0].reason, "Requires Title gate.");
+    let (changes, on) = switch_on(&manifest, &base);
+    assert!(!changes.contains_key("c"));
+    let state = on.group("challenge-mode").unwrap();
+    assert_eq!(state.state, FeatureGroupState::On);
+    assert_eq!(state.selected_members, ["a", "b"]);
+    assert!(!planned(&on, 3));
+    assert!(!on.normalized_selection.features["gate"]);
+}
+
+#[test]
+fn a_member_needing_an_unavailable_member_stays_unavailable_too() {
+    // a conflicts with the player's own `gate`; b needs a. Existing choices win.
+    let mut manifest = grouped_manifest();
+    requires(&mut manifest, "b", &["a"]);
+    add_conflict(&mut manifest, "a", "gate");
+    manifest.collection.feature_groups = vec![group("challenge-mode", &["a", "b"])];
+    let base = selection(&[("gate", "on")]);
+    let evaluation = evaluate(&manifest, &base).unwrap();
+    let state = evaluation.group("challenge-mode").unwrap();
+    assert!(state.available_members.is_empty());
+    let reasons = state
+        .unavailable_members
+        .iter()
+        .map(|member| (member.feature_id.as_str(), member.reason.as_str()))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        reasons,
+        [("a", "Incompatible with gate."), ("b", "Requires Title a.")]
+    );
+    assert_eq!(
+        state.disabled_reason.as_deref(),
+        Some("No Challenge Mode change is available with the current choices.")
+    );
+    assert!(
+        feature_group_changes(&manifest, &base, "challenge-mode", FeatureGroupTarget::On).is_err()
+    );
+}
+
+#[test]
+fn a_member_reason_is_the_one_left_after_the_other_members_come_on() {
+    // b needs a and conflicts with the outside `gate`, which needs a too. The player asked for
+    // `gate`; once the group turns a on, `gate` takes effect and b reports the conflict.
+    let mut manifest = grouped_manifest();
+    requires(&mut manifest, "b", &["a"]);
+    requires(&mut manifest, "gate", &["a"]);
+    add_conflict(&mut manifest, "b", "gate");
+    manifest.collection.feature_groups = vec![group("challenge-mode", &["a", "b"])];
+    let base = selection(&[("gate", "on")]);
+    let evaluation = evaluate(&manifest, &base).unwrap();
+    assert_eq!(
+        evaluation
+            .view
+            .control("b")
+            .unwrap()
+            .unavailable_reason
+            .as_deref(),
+        Some("Requires Title a.")
+    );
+    let state = evaluation.group("challenge-mode").unwrap();
+    assert_eq!(state.available_members, ["a"]);
+    assert_eq!(state.unavailable_members[0].feature_id, "b");
+    assert_eq!(
+        state.unavailable_members[0].reason,
+        "Incompatible with gate."
+    );
+    let (changes, on) = switch_on(&manifest, &base);
+    assert_eq!(changes, BTreeMap::from([("a".to_owned(), true)]));
+    let state = on.group("challenge-mode").unwrap();
+    assert_eq!(state.state, FeatureGroupState::On);
+    assert!(planned(&on, 4) && !planned(&on, 2));
+}
+
+#[test]
+fn only_the_prerequisite_ticked_by_hand_leaves_the_group_mixed() {
+    let mut manifest = grouped_manifest();
+    requires(&mut manifest, "b", &["a"]);
+    manifest.collection.feature_groups = vec![group("challenge-mode", &["a", "b"])];
+    let base = selection(&[("a", "on")]);
+    let evaluation = evaluate(&manifest, &base).unwrap();
+    let state = evaluation.group("challenge-mode").unwrap();
+    assert_eq!(state.state, FeatureGroupState::Mixed);
+    assert_eq!(state.selected_members, ["a"]);
+    assert_eq!(state.available_members, ["a", "b"]);
+    let (_, on) = switch_on(&manifest, &base);
+    assert_eq!(
+        on.group("challenge-mode").unwrap().state,
+        FeatureGroupState::On
+    );
+}
+
 #[test]
 fn unknown_group_lists_the_valid_ids() {
     let manifest = grouped_manifest();

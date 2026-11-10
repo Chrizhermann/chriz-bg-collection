@@ -18,6 +18,27 @@ class CuratedFullRecipeTests(unittest.TestCase):
     def setUp(self) -> None:
         self.root = Path(__file__).resolve().parents[2]
 
+    def test_regenerating_reproduces_the_checked_in_curated_recipe(self) -> None:
+        """Every file of the curated recipe comes from the generator; an edit made only in the
+        generated output would be lost on the next regeneration. Line endings aside."""
+        curated = self.root / "recipes/curated-full-current"
+        acceptance = tomllib.loads((curated / "releases/v0.1.0-alpha.1/acceptance.toml").read_text(encoding="utf-8"))
+        commits = {record["commit"] for record in acceptance["evidence"]
+                   if record.get("test_artifact") == "tools/tests/test_curated_full_recipe.py"}
+        self.assertEqual(len(commits), 1, commits)
+
+        def files(root: Path) -> dict[str, bytes]:
+            return {path.relative_to(root).as_posix(): path.read_bytes().replace(b"\r\n", b"\n")
+                    for path in root.rglob("*") if path.is_file()}
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "recipe"
+            build_recipe(self.root, output, commits.pop())
+            generated, checked_in = files(output), files(curated)
+        self.assertEqual(sorted(generated), sorted(checked_in))
+        changed = sorted(path for path in generated if generated[path] != checked_in[path])
+        self.assertEqual(changed, [], "regenerate with tools/curated_full_recipe.py")
+
     def test_the_curated_recipe_has_the_component_needs_of_the_bundled_one(self) -> None:
         shipped = tomllib.loads(
             (self.root / "recipes/curated-full-current/collection.toml").read_text(encoding="utf-8")
@@ -443,7 +464,11 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # Creatures) become optional and off, for 0.1.2 (Christopher, 2026-11-04);
                 # with both back on, the alpha.15 pin digest
                 # e43f6d204b3b98c491e290050d065173287082b3717972346e44535528a7fb2d returns.
-                "d5086af1d90ea7199bc4da012f9d745608f6e32fb6cb1637d3481742ebca68f3",
+                # November 10: Challenge Mode includes campaign XP caps with chapter caps
+                # (Modpack 650 + 652, Christopher, 2026-11-10); only the group's members change,
+                # and without the two the November 4 digest
+                # d5086af1d90ea7199bc4da012f9d745608f6e32fb6cb1637d3481742ebca68f3 returns.
+                "452ae6d86c228f1ca830c9f5c1462a7a7643f3316a9d877ca8e0b73f6b5acde6",
             )
 
             legacy_bg1npc_groups = {
@@ -1227,6 +1252,9 @@ class CuratedFullRecipeTests(unittest.TestCase):
             "feature:chriz-bg-modpack:component-235",
             "feature:chriz-bg-rebalance:component-110",
             "feature:chriz-sod-remix:component-257",
+            # Christopher, 2026-11-10: campaign XP caps with chapter caps (Modpack 650 + 652).
+            "feature:chriz-bg-modpack:component-650",
+            "feature:chriz-bg-modpack:component-652",
         ]
         [authored] = base["feature_groups"]
         self.assertEqual(authored["members"], fallback_members)

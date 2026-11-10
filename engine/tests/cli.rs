@@ -1659,6 +1659,45 @@ fn plan_group_switch_sees_an_explicit_prerequisite_override() {
 }
 
 #[test]
+fn plan_group_switch_alone_selects_a_member_with_its_member_prerequisite() {
+    let temp = fixture_tempdir();
+    let recipe = recipe_with_feature_group(&temp);
+    // `challenge-c` requires the member `challenge-b`, which is off in the preset.
+    let collection = recipe.join("collection.toml");
+    let text = fs::read_to_string(&collection).unwrap();
+    let block = "components = [{ run_id = \"eefixpack-bg2\", component = 0 }]";
+    assert_eq!(text.matches(block).count(), 1);
+    fs::write(
+        &collection,
+        text.replace(block, &format!("requires = [\"challenge-b\"]\n{block}")),
+    )
+    .unwrap();
+    let recipe = recipe.to_str().unwrap();
+
+    let output = run(&[
+        "--json",
+        "plan",
+        recipe,
+        "--preset",
+        "recommended",
+        "--group",
+        "challenge-mode=on",
+    ]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    let on = json_stdout(&output);
+    assert_eq!(
+        planned_components(&on),
+        vec![
+            ("eefixpack-bg1".to_owned(), vec![0, 2]),
+            ("eefixpack-bg2".to_owned(), vec![0]),
+        ]
+    );
+    assert_eq!(on["groups"][0]["state"], "on");
+    assert_eq!(on["normalized_selection"]["features"]["challenge-b"], true);
+    assert_eq!(on["normalized_selection"]["features"]["challenge-c"], true);
+}
+
+#[test]
 fn plan_group_whose_only_member_needs_an_explicit_prerequisite_turns_on() {
     let temp = fixture_tempdir();
     let recipe = recipe_with_gated_group(&temp, &["challenge-c"]);

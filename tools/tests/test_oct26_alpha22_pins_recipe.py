@@ -433,7 +433,10 @@ class Oct26Alpha22PinBatchTests(unittest.TestCase):
             soa = self._selected(collection, preset, **{CAMPAIGN_CAPS: "on", SOA_CAP: "on"})
             self.assertEqual(soa - baseline, {(CAMPAIGN_RUN, 650), (CAMPAIGN_RUN, 651)})
             group = next(g for g in collection["feature_groups"] if g["id"] == "challenge-mode")
-            self.assertNotIn(CHAPTER_CAPS, group["members"])
+            # 652 joined Challenge Mode with 650 on 2026-11-10 (Christopher); the Shadows of Amn
+            # cap 651 stays outside the group.
+            self.assertIn(CHAPTER_CAPS, group["members"])
+            self.assertNotIn(SOA_CAP, group["members"])
         self.assertEqual(NATIVE_RUN_ORDERS[CAMPAIGN_RUN], [650, 651, 652])
         self.assertEqual(NATIVE_RUN_ORDERS[MODPACK_MAIN_RUN],
                          [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660, 670])
