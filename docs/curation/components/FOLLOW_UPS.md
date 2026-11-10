@@ -789,13 +789,22 @@ On `main` for the next Chriz Easy BG version:
 **Ideas for later (Christopher, 2026-11-10)**
 
 - Feedback and error reports from the installer: designed and approved by Christopher on
-  2026-11-10 and built for the next app versions (Feedback button, report buttons at
-  failures, prefilled GitHub issue, text for Discord, better diagnostics ZIP; see
-  [report-feature.md](../../report-feature.md)). Left to do: Christopher creates the
-  Discord channel for reports and names it, then `chatChannel` is set; the issue forms and
-  the README sentence go to `chriz-easy-bg` and `chriz-easy-iwd`. A service of ours for
-  reports without an account was left out and comes up again only if reports fail at the
-  account requirement.
+  2026-11-10, built and merged for the next app versions (Feedback button, report buttons
+  at failures, prefilled GitHub issue, text for Discord, better diagnostics ZIP; see
+  [report-feature.md](../../report-feature.md)). The issue forms are in `chriz-easy-bg` and
+  `chriz-easy-iwd` since 2026-11-10, without the sentence that names Feedback in the app,
+  because the released apps do not have the button yet. Left to do:
+  - Christopher creates the Discord channel for reports and names it, then `chatChannel`
+    is set.
+  - With the release that ships the dialog (each product): put the sentence "The quickest
+    way is Feedback in the app…" from `docs/releases/issue-templates/problem.yml` into the
+    repository's `problem.yml`, and the README sentence into its README.
+  - Open the prefilled blank issue signed in to GitHub once (check in report-feature.md);
+    signed out, GitHub asks for the sign-in and keeps title and text in the address.
+  - Check the dialog in the packaged app: a long report opens the browser, Copy text works.
+
+  A service of ours for reports without an account was left out and comes up again only if
+  reports fail at the account requirement.
 
 **Larger projects:** Time Stop/Haste (Rebalance `360`, above); script engine / Fight Director
 (design with Christopher; it also takes enemy mages' Dispelling Screen, Christopher,
