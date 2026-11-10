@@ -23,8 +23,13 @@ in-place game hot-patching is not included in the first alpha.
 
 This repository hosts public distributions, update metadata and player-facing
 information. Mod credit belongs to the original authors; source and project links
-are retained in the recipe. Please report problems with the CEBG version and logs,
-after checking logs for personal paths or other information you do not wish to share.
+are retained in the recipe.
+
+Report problems and ideas with **Feedback** at the top of the app, in
+[ChrizFader's Discord](https://discord.gg/RtXjRzy68k) or as an issue in this repository.
+Feedback fills in the versions and what went wrong, and you send the report yourself. For a
+problem with an installation, attach its diagnostics ZIP after checking it for information
+you do not wish to share.
 
 The updater signature is not a Windows Authenticode publisher certificate. The
 installer may show an unknown-publisher warning. Obtain downloads only from the

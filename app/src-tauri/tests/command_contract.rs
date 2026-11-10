@@ -27,7 +27,7 @@ use chriz_bg_app_lib::bridge::{
     RunEventEnvelope, SequencedEventSink,
 };
 use chriz_bg_app_lib::error::CommandError;
-use chriz_bg_app_lib::flavor::{BG, CURRENT};
+use chriz_bg_app_lib::flavor::{BG, CURRENT, IWD};
 use chriz_bg_app_lib::shortcut::{shortcut_file_name, ShortcutRequest};
 use serde_json::json;
 use tempfile::TempDir;
@@ -3150,6 +3150,113 @@ fn diagnostics_and_manual_page_use_native_choices_plus_trusted_recipe_identity()
             .unwrap_err()
             .code,
         "manual_source_unknown"
+    );
+}
+
+#[test]
+fn reports_open_only_fixed_pages_and_the_folder_of_the_last_export() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let root = recipe.parent().unwrap().to_path_buf();
+    let cache = root.join("cache");
+    let app_data = root.join("app-data");
+    let managed = root.join("managed-campaign");
+    let output = root.join("exports/report-diagnostics.zip");
+    fs::create_dir(&cache).unwrap();
+    fs::create_dir_all(output.parent().unwrap()).unwrap();
+    publish_managed_install(&app_data, &managed, "install-report");
+    let engine = Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2")));
+    let system = Arc::new(RecordingBridgeSystem::default());
+    let bridge = NativeBridge::with_engine_and_system(
+        recipe,
+        "recommended",
+        cache,
+        app_data,
+        engine,
+        system.clone(),
+    );
+
+    // Before an export there is no folder to show, and none is opened.
+    assert_eq!(
+        bridge.show_diagnostics_export().unwrap_err().code,
+        "diagnostics_export_unknown"
+    );
+    assert!(system.folders.lock().unwrap().is_empty());
+    bridge
+        .export_diagnostics("install-report", Some(output.clone()))
+        .unwrap()
+        .unwrap();
+    bridge.show_diagnostics_export().unwrap();
+    assert_eq!(
+        system.folders.lock().unwrap().as_slice(),
+        &[output.parent().unwrap().to_path_buf()]
+    );
+
+    let opened = bridge
+        .open_report_issue("[Problem] It broke", "First line\nSecond & third")
+        .unwrap();
+    assert!(!opened.shortened);
+    assert!(
+        bridge
+            .open_report_issue("[Problem] Long", &"word ".repeat(2000))
+            .unwrap()
+            .shortened
+    );
+    bridge.open_report_chat().unwrap();
+    bridge
+        .clone()
+        .with_flavor(&IWD)
+        .open_report_issue("[Feedback] Idea", "Text")
+        .unwrap();
+    let urls = system.urls.lock().unwrap();
+    assert_eq!(urls.len(), 4);
+    assert_eq!(
+        urls[0],
+        "https://github.com/Chrizhermann/chriz-easy-bg/issues/new?title=%5BProblem%5D%20It%20broke&body=First%20line%0ASecond%20%26%20third"
+    );
+    assert!(urls[1]
+        .starts_with("https://github.com/Chrizhermann/chriz-easy-bg/issues/new?title=%5BProblem%5D%20Long&body=word%20word"));
+    assert!(urls[1].len() <= chriz_bg_app_lib::report::MAX_ADDRESS_LENGTH);
+    assert_eq!(urls[2], "https://discord.gg/RtXjRzy68k");
+    assert_eq!(
+        urls[3],
+        "https://github.com/Chrizhermann/chriz-easy-iwd/issues/new?title=%5BFeedback%5D%20Idea&body=Text"
+    );
+}
+
+#[test]
+fn report_text_is_redacted_like_diagnostics_text_and_bounded() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let root = recipe.parent().unwrap().to_path_buf();
+    let engine = Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2")));
+    let bridge = NativeBridge::with_engine_and_system(
+        recipe,
+        "recommended",
+        root.join("cache"),
+        root.join("app-data"),
+        engine,
+        Arc::new(RecordingBridgeSystem::default()),
+    );
+
+    let redacted = bridge.redact_report_text(
+        "Step: install:tweaks-bg2\nReason: could not open D:\\Users\\Eva Example\\Documents\\save.gam\nDetail: password=hunter2\nApp: Chriz Easy BG 0.1.3",
+    );
+    assert_eq!(
+        redacted,
+        "Step: install:tweaks-bg2\nReason: could not open D:\\Users\\<redacted-user>\\Documents\\save.gam\n<redacted-sensitive-line>\nApp: Chriz Easy BG 0.1.3"
+    );
+    if let Some(home) = std::env::var_os("USERPROFILE").and_then(|home| home.into_string().ok()) {
+        let redacted =
+            bridge.redact_report_text(&format!("Reason: {home}\\Games\\x could not be read"));
+        assert_eq!(
+            redacted,
+            "Reason: <redacted-home>\\Games\\x could not be read"
+        );
+    }
+
+    // Far more text than a report holds is cut at a character, never rejected.
+    assert_eq!(
+        bridge.redact_report_text(&"ä".repeat(40_000)).len(),
+        64 * 1024
     );
 }
 

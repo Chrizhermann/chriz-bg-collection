@@ -396,6 +396,22 @@ describe("Chriz Easy IWD build flavor", () => {
     expect(radar).toHaveBeenCalledTimes(1);
   });
 
+  it("reports to its own repository, in its own words", async () => {
+    const { mountApp, FixtureBackend } = await iwd();
+    const backend = new FixtureBackend({ managedInstallations: [installation()] });
+    const issue = vi.spyOn(backend, "openReportIssue");
+    const root = rootElement();
+    await mountApp(root, backend);
+    fireEvent.click(getByRole(root, "button", { name: "Feedback" }));
+    const dialog = getByRole(root, "dialog", { name: "Report a problem or send feedback" });
+    await waitFor(() => expect(dialog.querySelector("#report-details")?.textContent).toContain("App: Chriz Easy IWD"));
+    expect(dialog.textContent).toContain("Opens github.com/Chrizhermann/chriz-easy-iwd in your browser.");
+    expectNoBgWords(dialog, "report dialog");
+    fireEvent.click(getByRole(dialog, "button", { name: "Open GitHub issue" }));
+    await waitFor(() => expect(issue).toHaveBeenCalledTimes(1));
+    expect(issue.mock.calls[0]![1]).toContain("Details from Chriz Easy IWD:");
+  });
+
   it("pauses for manual mods in the one game folder without naming BG1 or BG2", async () => {
     const m = await iwd();
     const backend = new m.FixtureBackend();
@@ -642,6 +658,7 @@ describe("Baldur's Gate flavor", () => {
       ],
       features: { radar: true, installPatches: true, modUpgrades: true, hotpatches: false, manualPauses: true, appUpdates: true, buffBotTip: true, radarTip: true },
       modUpdates: [{ modId: "buffbot", title: "BuffBot" }],
+      report: { issuesLabel: "github.com/Chrizhermann/chriz-easy-bg", chatLabel: "ChrizFader's Discord", chatChannel: null },
       text: {
         lookingForGames: "Looking for your Baldur's Gate games…",
         preparingSetupDetail: "Checking your game folders and mod choices. Your original games stay unchanged.",

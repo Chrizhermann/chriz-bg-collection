@@ -3241,21 +3241,30 @@ fn validate_receipt_identities<'a>(
     Ok(())
 }
 
-/// Export diagnostics for the newest immutable terminal attempt.
+/// Export diagnostics for the newest immutable terminal attempt. Without a readable terminal
+/// receipt (the installation was interrupted before its first receipt or is still running),
+/// export what the installation has recorded so far and say why no receipt summary exists.
 pub fn diagnostics_for_managed_install(
     managed_root: &Path,
     output_path: &Path,
 ) -> Result<DiagnosticsBundle, CliError> {
-    let report = report_managed_install(managed_root)?;
     let redact_roots = std::env::var_os("USERPROFILE")
         .map(PathBuf::from)
         .into_iter()
         .collect();
+    let (managed_root, attempt_id, missing_receipt_reason) =
+        match report_managed_install(managed_root) {
+            Ok(report) => (report.managed_root, Some(report.receipt.attempt_id), None),
+            Err(error) => (managed_root.to_path_buf(), None, Some(error.to_string())),
+        };
     export_diagnostics(&DiagnosticsRequest {
-        managed_root: report.managed_root,
-        attempt_id: report.receipt.attempt_id,
+        managed_root,
+        attempt_id,
         output_path: output_path.to_path_buf(),
         redact_roots,
+        redact_user_names: Vec::new(),
+        redact_computer_names: Vec::new(),
+        missing_receipt_reason,
     })
     .map_err(|error| CliError::new("diagnostics_failed", error.to_string()))
 }

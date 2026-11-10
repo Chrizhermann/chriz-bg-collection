@@ -21,7 +21,14 @@ export function progressDisplay(progress?: OperationProgress, label = progressLa
   return region;
 }
 
-export function operationFeedback(feedback: OperationFeedback, dismiss: () => void): HTMLElement {
+/** A follow-up that a finished operation offers next to Dismiss. */
+export interface OperationFollowUp {
+  readonly id: string;
+  readonly label: string;
+  readonly run: () => void;
+}
+
+export function operationFeedback(feedback: OperationFeedback, dismiss: () => void, followUp?: OperationFollowUp): HTMLElement {
   const panel = element("section", `operation-feedback operation-${feedback.state}`);
   panel.setAttribute("aria-label", feedback.title);
   const heading = element("h2", undefined, feedback.title);
@@ -31,5 +38,12 @@ export function operationFeedback(feedback: OperationFeedback, dismiss: () => vo
   if (feedback.state !== "working") row.append(actionButton("Dismiss", dismiss, "quiet compact"));
   panel.append(row, element("p", undefined, feedback.detail));
   if (feedback.state === "working") panel.append(progressDisplay(feedback.progress));
+  else if (followUp) {
+    const button = actionButton(followUp.label, followUp.run, "quiet");
+    button.id = followUp.id;
+    const actions = element("div", "inline-actions");
+    actions.append(button);
+    panel.append(actions);
+  }
   return panel;
 }

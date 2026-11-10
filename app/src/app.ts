@@ -38,6 +38,8 @@ import type { GameLogStatus, LaunchInstallResult } from "./contracts";
 import type { GameLogView } from "./components/game-log";
 import { RadarLaunchPreferences } from "./radar-launch-preference";
 import { collectionMismatch, flavor, sourceFor, sourceSlots, type SourceSlot } from "./flavor";
+import { copyText, createReportDialog, type ReportDialog, type ReportDialogModel, type ReportDiagnostics } from "./components/report-dialog";
+import { environmentFacts, failedComponentSubject, failedInstallationSubject, gameProblemSubject, generalSubject, leftOutSubject, reportBody, reportTitle, type ReportKind, type ReportSubject } from "./report";
 
 export interface AppHandle {
   navigate(route: Route): Promise<void>;
@@ -48,7 +50,21 @@ const LOG_RENDER_INTERVAL_MS = 100;
 /** The card state of an installation that waits for an answer about a download. */
 const WAITING_FOR_ANSWER = "Waiting for your answer";
 const ENGINE_REPORT_HINT = "If something does not work as expected, please report it so the collection can be fixed.";
-const APP_REPORT_HINT = "If something does not work as expected, please report it so the collection can be fixed; export diagnostics from My installs and attach them.";
+const APP_REPORT_HINT = "If something does not work as expected, please report it so the collection can be fixed: use Report this below, or Feedback at the top at any time.";
+
+/** The report dialog while it is open: what it is about and what its actions have done so far. */
+interface ReportSession {
+  readonly subject: ReportSubject;
+  /** App, collection and game versions; they hold no paths. */
+  readonly environment: readonly string[];
+  readonly dialog: ReportDialog;
+  kind: ReportKind;
+  details: string | null;
+  diagnostics: ReportDiagnostics;
+  status: ReportDialogModel["status"];
+  manualCopy: string | null;
+  busy: boolean;
+}
 
 function readRememberedInstallId(): string | null {
   try {
@@ -162,6 +178,9 @@ class AppController implements AppHandle {
   readonly #gameLogErrors = new Map<string, NonNullable<GameLogView["error"]>>();
   #troubleshootingOpen = false;
   #logRenderTimer: number | null = null;
+  #report: ReportSession | null = null;
+  // What the finished installation left out or changed; its completion message offers to report it.
+  #completionNotes: { readonly installId: string; readonly notes: readonly string[] } | null = null;
   #removalPreview: InstallationRemovalPreview | null = null;
   #removalBusy = false;
   #removalError: string | null = null;
@@ -529,6 +548,7 @@ class AppController implements AppHandle {
 
   #beginOperation(title: string, installId?: string): (progress: OperationProgress) => void {
     const revision = ++this.#operationRevision;
+    this.#completionNotes = null;
     this.#operationFeedback = { title, installId, state: "working", detail: `Keep ${flavor.shortName} open and the game closed.` };
     return (progress) => {
       if (revision !== this.#operationRevision || this.#operationFeedback?.state !== "working") return;
@@ -539,6 +559,7 @@ class AppController implements AppHandle {
 
   #finishOperation(title: string, detail: string, success: boolean, installId?: string): void {
     ++this.#operationRevision;
+    this.#completionNotes = null;
     this.#operationFeedback = { title, detail, installId, state: success ? "success" : "error" };
   }
 
@@ -1417,7 +1438,8 @@ class AppController implements AppHandle {
         await this.#installCompletionRadar(completed);
         if (this.#createDesktopShortcutAfterInstall) await this.#createDesktopShortcut(completed.id);
         const extrasFailed = this.#addonFeedback?.state === "failed" || this.#shortcutFeedback?.state === "failed";
-        this.#finishOperation("Installation complete", `${completed.name} is ready to play.${summary}${extrasFailed ? " An optional finishing step needs attention below." : ""}`, true, completed.id);
+        this.#finishOperation("Installation complete", `${completed.name} is ready to play.${summary.text}${extrasFailed ? " An optional finishing step needs attention below." : ""}`, true, completed.id);
+        if (summary.findings.length > 0) this.#completionNotes = { installId: completed.id, notes: summary.findings };
       }
     } catch (error: unknown) {
       ++this.#operationRevision;
@@ -1437,16 +1459,20 @@ class AppController implements AppHandle {
   /**
    * The end summary of a completed installation, as sentences to append to its completion
    * message: mods left out because their downloads could not be used, and downloads that
-   * differed from their reviewed versions. Empty when there is nothing to report.
+   * differed from their reviewed versions. Empty when there is nothing to report. `findings`
+   * are those sentences without the closing hint, for a report.
    */
-  async #installationSummary(installId: string): Promise<string> {
-    if (!this.backend.installationSummary) return "";
+  async #installationSummary(installId: string): Promise<{ readonly text: string; readonly findings: readonly string[] }> {
+    if (!this.backend.installationSummary) return { text: "", findings: [] };
     try {
       const notes = await this.backend.installationSummary(installId);
-      // The engine's closing hint, in the app's own words: it names where diagnostics come from.
-      return notes.map((note) => ` ${note === ENGINE_REPORT_HINT ? APP_REPORT_HINT : note}`).join("");
+      return {
+        // The engine's closing hint, in the app's own words: it names where to report.
+        text: notes.map((note) => ` ${note === ENGINE_REPORT_HINT ? APP_REPORT_HINT : note}`).join(""),
+        findings: notes.filter((note) => note !== ENGINE_REPORT_HINT),
+      };
     } catch {
-      return " Its summary of left-out mods and changed downloads could not be read; export diagnostics from My installs to see it.";
+      return { text: " Its summary of left-out mods and changed downloads could not be read; export diagnostics from My installs to see it.", findings: [] };
     }
   }
 
@@ -1529,8 +1555,187 @@ class AppController implements AppHandle {
     announcement.className = "diagnostics-result";
     announcement.textContent = `Diagnostics exported to ${result.path}`;
     announcement.tabIndex = -1;
-    this.root.querySelector("main")?.append(announcement);
+    const show = document.createElement("button");
+    show.type = "button";
+    show.className = "button quiet compact";
+    show.id = "show-diagnostics-export";
+    show.textContent = "Show in folder";
+    show.addEventListener("click", () => this.#safely(() => this.backend.showDiagnosticsExport()));
+    this.root.querySelector("main")?.append(announcement, show);
     announcement.focus();
+  }
+
+  /** Opens the report dialog over the current screen. The installation behind it keeps running. */
+  #openReport(subject: ReportSubject): void {
+    if (this.#report !== null) return;
+    const installation = this.#installations.find(candidate => candidate.id === subject.installId) ?? null;
+    // The games chosen for a new installation; an earlier installation does not record its sources here.
+    const games = installation?.available ? [] : sourceSlots.flatMap((slot) => {
+      const candidate = this.#selectedCandidate(slot);
+      return candidate === undefined ? [] : [{ slot, candidate }];
+    });
+    const session = {
+      subject,
+      environment: environmentFacts(this.#status, games, installation),
+      kind: subject.kind ?? "problem",
+      details: null,
+      diagnostics: subject.installId === null ? { state: "none" } : { state: "ready" },
+      status: null,
+      manualCopy: null,
+      busy: false,
+    } satisfies Omit<ReportSession, "dialog">;
+    const dialog = createReportDialog(this.#reportModel(session), {
+      setKind: (kind) => this.#updateReport({ kind }),
+      openIssue: (text) => void this.#reportOpenIssue(text),
+      copy: (text) => void this.#reportCopy(text),
+      openChat: () => void this.#reportOpenChat(),
+      saveDiagnostics: () => void this.#reportSaveDiagnostics(),
+      showDiagnostics: () => void this.#reportShowDiagnostics(),
+      close: () => this.#closeReport(),
+    });
+    this.#report = { ...session, dialog };
+    this.#render();
+    dialog.focus();
+    void this.#prepareReportDetails();
+  }
+
+  #reportModel(session: Omit<ReportSession, "dialog">): ReportDialogModel {
+    return {
+      kind: session.kind,
+      kindSelectable: session.subject.kind === null,
+      details: session.details,
+      diagnostics: session.diagnostics,
+      status: session.status,
+      manualCopy: session.manualCopy,
+      busy: session.busy,
+    };
+  }
+
+  #updateReport(changes: Partial<Pick<ReportSession, "kind" | "details" | "diagnostics" | "status" | "manualCopy" | "busy">>): void {
+    const report = this.#report;
+    if (report === null) return;
+    Object.assign(report, changes);
+    report.dialog.update(this.#reportModel(report));
+  }
+
+  #closeReport(): void {
+    const report = this.#report;
+    if (report === null || report.busy) return;
+    this.#report = null;
+    report.dialog.overlay.remove();
+    this.#render();
+    Array.from(this.root.querySelectorAll<HTMLElement>("[id]"))
+      .find(candidate => candidate.id === report.subject.returnFocusId)?.focus({ preventScroll: true });
+  }
+
+  /** The details as they will be shared: private paths, names and secrets removed by the backend. */
+  async #prepareReportDetails(): Promise<void> {
+    const report = this.#report;
+    if (report === null) return;
+    let details: string;
+    try {
+      details = (await this.backend.redactReportText([...report.subject.facts, ...report.environment].join("\n"))).trim();
+    } catch {
+      // Without the redaction, only the facts that never hold a path are shared.
+      details = [
+        ...(report.subject.facts.length > 0 ? ["What happened: the details could not be prepared; please describe it in your own words."] : []),
+        ...report.environment,
+      ].join("\n");
+    }
+    if (this.#report === report) this.#updateReport({ details });
+  }
+
+  #reportFailure(error: unknown): NonNullable<ReportDialogModel["status"]> {
+    return {
+      tone: "warning",
+      text: error instanceof BackendCommandError ? `${error.message} ${error.recoveryAction}`.trim()
+        : error instanceof Error ? error.message : String(error),
+    };
+  }
+
+  /** The whole report: its title line, then the player's words and the details. */
+  #reportText(report: ReportSession, text: string): { readonly title: string; readonly body: string; readonly whole: string } {
+    const title = reportTitle(report.kind, report.subject.summary, text);
+    const body = reportBody(report.kind, text, report.details ?? "", report.diagnostics.state !== "none");
+    return { title, body, whole: `${title}\n\n${body}` };
+  }
+
+  async #reportOpenIssue(text: string): Promise<void> {
+    const report = this.#report;
+    if (report === null || report.details === null || report.busy) return;
+    const { title, body, whole } = this.#reportText(report, text);
+    this.#updateReport({ busy: true, status: null, manualCopy: null });
+    let status: ReportDialogModel["status"];
+    let manualCopy: string | null = null;
+    try {
+      const { shortened } = await this.backend.openReportIssue(title, body);
+      if (!shortened) {
+        status = { tone: "ok", text: "Your browser opens the GitHub issue page. Check the text there, then submit it." };
+      } else if (await copyText(whole)) {
+        status = { tone: "ok", text: "The report was too long for the link, so the whole text is on your clipboard: paste it into the issue with Ctrl+V, then submit it." };
+      } else {
+        manualCopy = whole;
+        status = { tone: "warning", text: "The report was too long for the link. Copy the whole text below and paste it into the issue." };
+      }
+    } catch (error: unknown) {
+      status = this.#reportFailure(error);
+    }
+    if (this.#report === report) this.#updateReport({ busy: false, status, manualCopy });
+  }
+
+  async #reportCopy(text: string): Promise<void> {
+    const report = this.#report;
+    if (report === null || report.details === null || report.busy) return;
+    const { whole } = this.#reportText(report, text);
+    const copied = await copyText(whole);
+    if (this.#report !== report) return;
+    this.#updateReport(copied
+      ? { status: { tone: "ok", text: "Report text copied. Paste it where you want to send it." }, manualCopy: null }
+      : { status: { tone: "warning", text: "The text couldn't be copied for you. It is selected below: press Ctrl+C." }, manualCopy: whole });
+  }
+
+  async #reportOpenChat(): Promise<void> {
+    const report = this.#report;
+    if (report === null || report.busy) return;
+    this.#updateReport({ busy: true, status: null });
+    let status: ReportDialogModel["status"];
+    try {
+      await this.backend.openReportChat();
+      status = { tone: "ok", text: `Your browser opens the invitation to ${flavor.report.chatLabel}.` };
+    } catch (error: unknown) {
+      status = this.#reportFailure(error);
+    }
+    if (this.#report === report) this.#updateReport({ busy: false, status });
+  }
+
+  async #reportSaveDiagnostics(): Promise<void> {
+    const report = this.#report;
+    const installId = report?.subject.installId ?? null;
+    if (report === null || installId === null || report.busy) return;
+    const before = report.diagnostics;
+    this.#updateReport({ busy: true, status: null, diagnostics: { state: "saving" } });
+    let diagnostics = before;
+    let status: ReportDialogModel["status"] = null;
+    try {
+      const result = await this.backend.exportDiagnostics(installId);
+      if (result !== null) {
+        diagnostics = { state: "saved", path: result.path };
+        status = { tone: "ok", text: "Diagnostics ZIP saved. Attach it to your report yourself." };
+      }
+    } catch (error: unknown) {
+      status = this.#reportFailure(error);
+    }
+    if (this.#report === report) this.#updateReport({ busy: false, status, diagnostics });
+  }
+
+  async #reportShowDiagnostics(): Promise<void> {
+    const report = this.#report;
+    if (report === null || report.busy) return;
+    try {
+      await this.backend.showDiagnosticsExport();
+    } catch (error: unknown) {
+      if (this.#report === report) this.#updateReport({ status: this.#reportFailure(error) });
+    }
   }
 
   async #launchInstall(installId: string, startRadar: boolean): Promise<void> {
@@ -2113,6 +2318,10 @@ class AppController implements AppHandle {
           toggle: (installId, open) => this.#toggleTroubleshooting(installId, open),
           set: (installId, enabled) => this.#gameLogOperation(installId, enabled),
           refresh: (installId) => this.#gameLogOperation(installId),
+          report: (installId) => {
+            const installation = this.#installations.find(candidate => candidate.id === installId);
+            if (installation !== undefined) this.#openReport(gameProblemSubject(installation, this.#gameLogStatus.get(installId) ?? null));
+          },
         },
       },
       this.#shortcutFeedback,
@@ -2282,6 +2491,8 @@ class AppController implements AppHandle {
           stopNow: () => safely(() => this.#cancelBuild()),
           diagnostics: () => safely(() => this.#exportDiagnostics()),
           diagnosticsAvailable: this.#installId !== null,
+          report: this.#state.build === null ? undefined
+            : () => this.#openReport(failedInstallationSubject(this.#state.build!, this.#activeStepId, this.#installId)),
           fixture: this.#status.mode === "fixture",
           retryAvailable: this.#status.mode === "fixture" || this.#retryAvailable,
           resuming: this.#resuming || this.#manualCheckpointBusy || this.#decisionBusy,
@@ -2338,20 +2549,46 @@ class AppController implements AppHandle {
       ? selectedUpdateCopy(this.#updates.managedCopies, this.#installedUpdateInstallId || this.#installId || undefined)?.installId
       : this.#installId;
     if (feedback && (!feedback.installId || feedback.installId === selectedFeedbackId)) {
+      const leftOut = feedback.state === "success" && this.#completionNotes?.installId === feedback.installId ? this.#completionNotes : null;
       content.prepend(operationFeedback(feedback, () => {
         this.#operationFeedback = null;
+        this.#completionNotes = null;
         clearAppUpdate();
         this.#render();
+      }, leftOut === null ? undefined : {
+        id: "report-summary",
+        label: "Report this",
+        run: () => this.#openReport(leftOutSubject(leftOut.notes, leftOut.installId)),
       }));
     }
-    this.root.replaceChildren(createAppShell(
+    const shell = createAppShell(
       this.#state.route,
       content,
       (route) => safely(() => navigate(route)),
       this.#status.mode,
       ["home", "updates"].includes(this.#state.route) ? () => safely(() => this.#backFromSecondary()) : undefined,
       this.#status.applicationVersion ?? this.#status.engineVersion,
-    ));
+      // The selected installation's diagnostics are offered where that installation is in view.
+      () => this.#openReport(generalSubject(["home", "updates", "build", "complete"].includes(this.#state.route) ? this.#installId : null)),
+    );
+    const reportOverlay = this.#report?.dialog.overlay ?? null;
+    if (reportOverlay?.parentElement === this.root) {
+      // The open report dialog keeps its nodes, so the text being written and its focus stay.
+      for (const child of Array.from(this.root.children)) if (child !== reportOverlay) child.remove();
+      this.root.insertBefore(shell, reportOverlay);
+    } else {
+      this.root.replaceChildren(shell);
+      if (reportOverlay !== null) this.root.append(reportOverlay);
+    }
+    // Other dialogs go below an open report dialog, which the player closes first.
+    const addOverlay = (overlay: HTMLElement): void => {
+      if (reportOverlay === null) this.root.append(overlay);
+      else {
+        overlay.inert = true;
+        this.root.insertBefore(overlay, reportOverlay);
+      }
+    };
+    if (reportOverlay !== null) shell.inert = true;
     if (this.#modUpgradeBusy) {
       this.root.querySelectorAll<HTMLButtonElement>(".header-actions button, .screen-navigation button")
         .forEach(button => { button.disabled = true; });
@@ -2359,7 +2596,7 @@ class AppController implements AppHandle {
     this.#updateBadge();
     const main = this.root.querySelector("main");
     if (main !== null) main.scrollTop = scrollTop;
-    if (focusTargetId || !sameRoute) {
+    if (reportOverlay === null && (focusTargetId || !sameRoute)) {
       // Recipe IDs contain CSS punctuation. Match the literal ID inside this
       // app root instead of interpreting it as a selector or searching globally.
       const target = focusTargetId
@@ -2370,23 +2607,25 @@ class AppController implements AppHandle {
       if (focusTargetId && !sameRoute) target?.closest("section")?.scrollIntoView?.({ block: "nearest" });
     }
     if (this.#removalPreview !== null) {
-      this.root.querySelector<HTMLElement>(".app-shell")!.inert = true;
-      this.root.append(installationRemovalDialog(this.#removalPreview, this.#removalBusy, this.#removalError,
+      shell.inert = true;
+      addOverlay(installationRemovalDialog(this.#removalPreview, this.#removalBusy, this.#removalError,
         () => { void this.#confirmInstallationRemoval(); },
         () => { this.#removalPreview = null; this.#removalError = null; this.#render("remove-installation"); }));
-      this.root.querySelector<HTMLButtonElement>('[data-action="cancel-removal"]')?.focus({ preventScroll: true });
+      if (reportOverlay === null) this.root.querySelector<HTMLButtonElement>('[data-action="cancel-removal"]')?.focus({ preventScroll: true });
     } else if (this.#decision !== null && this.#state.route === "build" && this.#state.build?.state === "decision") {
       // The installation waits for this answer: the question is modal.
-      this.root.querySelector<HTMLElement>(".app-shell")!.inert = true;
-      const model = { decision: this.#decision, busy: this.#decisionBusy, error: this.#decisionError };
-      this.root.append(downloadDecisionDialog({
+      shell.inert = true;
+      const decision = this.#decision;
+      const model = { decision, busy: this.#decisionBusy, error: this.#decisionError };
+      addOverlay(downloadDecisionDialog({
         ...model,
         detailsOpen: this.#decisionDetailsOpen,
         onDetailsOpen: (open) => { this.#decisionDetailsOpen = open; },
         answer: (answer) => this.#safely(() => this.#answerDecision(answer)),
         later: () => this.#safely(() => this.#decideLater()),
+        report: () => this.#openReport(failedComponentSubject(decision)),
       }));
-      focusDownloadDecision(this.root, model, decisionFocusId);
+      if (reportOverlay === null) focusDownloadDecision(this.root, model, decisionFocusId);
     }
   }
 }

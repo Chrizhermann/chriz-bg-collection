@@ -2360,3 +2360,21 @@ input[type="search"] {
 .installation-name-form p { font-size: 0.85rem; margin-block: 0.4rem; }
 .installation-name-form .error-message { color: var(--ember); }
 .installation-name-form .success-message { color: var(--teal); }
+.report-dialog { width: min(100%, 44rem); }
+.report-dialog h3 { margin: 1.1rem 0 0.4rem; font-size: 1rem; }
+.report-kind { display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; margin: 0.8rem 0; padding: 0; border: 0; }
+.report-kind legend { padding: 0; margin-bottom: 0.3rem; font-weight: 750; }
+.report-kind label { display: inline-flex; align-items: center; gap: 0.45rem; min-height: 44px; cursor: pointer; }
+.report-label { display: block; margin-top: 0.8rem; font-weight: 750; }
+.report-text { display: block; width: 100%; margin-top: 0.5rem; padding: 0.55rem 0.75rem; border: 1px solid var(--slate-light); border-radius: var(--radius); color: var(--vellum); background: var(--iron); font: inherit; line-height: 1.45; resize: vertical; }
+.report-text:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.report-details { max-height: 11rem; margin: 0; padding: 0.7rem; overflow: auto; border: 1px solid var(--slate-light); border-radius: var(--radius); color: var(--vellum-dim); background: var(--iron); font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
+.report-channel { margin-top: 0.7rem; }
+.report-channel p { margin: 0.35rem 0 0; }
+.report-status { min-height: 1.4rem; margin: 1rem 0 0; font-weight: 750; }
+.report-status.ok { color: var(--teal); }
+.report-status.warning { color: var(--ember); }
+.report-footer { justify-content: flex-end; margin-top: 0.6rem; }
+.report-copy-buffer { position: fixed; inset: 0 auto auto 0; width: 1px; height: 1px; opacity: 0; }
+.decision-report { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-top: 0.9rem; font-size: 0.85rem; }
+.diagnostics-result { overflow-wrap: anywhere; }

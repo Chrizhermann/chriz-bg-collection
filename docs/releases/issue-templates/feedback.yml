@@ -1,0 +1,17 @@
+# Source of .github/ISSUE_TEMPLATE/feedback.yml in Chrizhermann/chriz-easy-bg and
+# Chrizhermann/chriz-easy-iwd. See docs/report-feature.md before changing or publishing it.
+name: Feedback or idea
+description: Something you like, miss or would change in the installer or the collection.
+title: "[Feedback] "
+body:
+  - type: textarea
+    id: feedback
+    attributes:
+      label: Your feedback or idea
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Shown at the top left of the app, for example 0.1.2. Leave empty if it does not matter.

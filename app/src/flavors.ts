@@ -70,6 +70,16 @@ export interface ModUpdateOffer {
   readonly title: string;
 }
 
+/** Where reports about this product go, as the report dialog names it; the bridge holds the addresses. */
+export interface FlavorReport {
+  /** The GitHub issue page that "Open GitHub issue" leads to. */
+  readonly issuesLabel: string;
+  /** The Discord server where reports are read. */
+  readonly chatLabel: string;
+  /** The channel for reports on that server; null while it has no fixed name. */
+  readonly chatChannel: string | null;
+}
+
 export interface Flavor {
   readonly id: FlavorId;
   /** Full product name, e.g. in titles and on the Play button. */
@@ -82,6 +92,7 @@ export interface Flavor {
   readonly features: FlavorFeatures;
   /** Whole-mod updates offered under Updates, one card each, below the hotpatch section. */
   readonly modUpdates: readonly ModUpdateOffer[];
+  readonly report: FlavorReport;
   readonly text: FlavorText;
 }
 
@@ -106,6 +117,7 @@ export const FLAVORS: Readonly<Record<FlavorId, Flavor>> = {
       radarTip: true,
     },
     modUpdates: [{ modId: "buffbot", title: "BuffBot" }],
+    report: { issuesLabel: "github.com/Chrizhermann/chriz-easy-bg", chatLabel: "ChrizFader's Discord", chatChannel: null },
     text: {
       lookingForGames: "Looking for your Baldur's Gate games…",
       preparingSetupDetail: "Checking your game folders and mod choices. Your original games stay unchanged.",
@@ -147,6 +159,7 @@ export const FLAVORS: Readonly<Record<FlavorId, Flavor>> = {
       radarTip: true,
     },
     modUpdates: [{ modId: "buffbot", title: "BuffBot" }],
+    report: { issuesLabel: "github.com/Chrizhermann/chriz-easy-iwd", chatLabel: "ChrizFader's Discord", chatChannel: null },
     text: {
       lookingForGames: "Looking for your Icewind Dale game…",
       preparingSetupDetail: "Checking your game folder and mod choices. Your original game stays unchanged.",

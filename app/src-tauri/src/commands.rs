@@ -16,8 +16,8 @@ use crate::bridge::{
     DiagnosticsExportResponse, EvaluateBuildResponse, FrozenReviewResponse, GameCandidateResponse,
     GameDiscoveryResponse, GameLogStatusResponse, InstallationDefaultsResponse,
     LaunchInstallResponse, ManagedInstallationResponse, ManualArchiveResponse,
-    ManualDownloadRequirementResponse, NativeBridge, RunEventEnvelope, RunSnapshotResponse,
-    StartBuildResponse,
+    ManualDownloadRequirementResponse, NativeBridge, ReportIssueResponse, RunEventEnvelope,
+    RunSnapshotResponse, StartBuildResponse,
 };
 use crate::error::CommandError;
 use crate::updates::UpdateCenterResponse;
@@ -638,11 +638,63 @@ pub async fn export_diagnostics(
             app.dialog()
                 .file()
                 .set_title("Save installer diagnostics")
+                .set_file_name(crate::report::diagnostics_file_name(
+                    crate::flavor::CURRENT.product_name,
+                    time::OffsetDateTime::now_utc(),
+                ))
+                .add_filter("ZIP archive", &["zip"])
                 .blocking_save_file(),
         )?;
         bridge.export_diagnostics(&install_id, selected)
     })
     .await
+}
+
+#[tauri::command]
+pub async fn show_diagnostics_export(state: State<'_, BridgeState>) -> Result<(), CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .clone();
+    background(move || bridge.show_diagnostics_export()).await
+}
+
+#[tauri::command]
+pub async fn redact_report_text(
+    state: State<'_, BridgeState>,
+    text: String,
+) -> Result<String, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .clone();
+    background(move || Ok(bridge.redact_report_text(&text))).await
+}
+
+#[tauri::command]
+pub async fn open_report_issue(
+    state: State<'_, BridgeState>,
+    title: String,
+    body: String,
+) -> Result<ReportIssueResponse, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .clone();
+    background(move || bridge.open_report_issue(&title, &body)).await
+}
+
+#[tauri::command]
+pub async fn open_report_chat(state: State<'_, BridgeState>) -> Result<(), CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .clone();
+    background(move || bridge.open_report_chat()).await
 }
 
 #[tauri::command]

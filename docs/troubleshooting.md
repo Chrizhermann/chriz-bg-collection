@@ -165,6 +165,12 @@ are and how many crash reports there are.
 
 ## What to send when asking for help
 
+**Feedback** at the top of CEBG collects most of this for you: it fills in the versions and
+what went wrong, then opens a GitHub issue or ChrizFader's Discord, where you send the report
+yourself. CEBG sends nothing by itself. A stopped installation, a mod part that could not be
+installed, a finished installation with left-out mods and the Troubleshooting section each
+have their own report button with the matching details.
+
 - Your CEBG version and the step/action that failed.
 - The exact error or a screenshot, plus the selected installation name.
 - The diagnostics export, if available.
@@ -175,6 +181,9 @@ are and how many crash reports there are.
   `InfinityLoader-previous.log` if you have started the game again since. The
   `_big.dmp` files take gigabytes; send one only when asked.
 
-Exports stay local until you share them. Review the ZIP first; do not include
-passwords, a whole game folder or saved games unless specifically needed.
-Use the support link on the [collection page](https://bg.chrizfader.org/collection).
+Exports stay local until you share them. CEBG replaces your home folder, your Windows user
+name and the computer name in them; review the ZIP anyway, and do not include passwords, a
+whole game folder or saved games unless specifically needed. An installation that was
+interrupted before it finished its first attempt exports what it had recorded until then.
+Without the app, use the support link on the
+[collection page](https://bg.chrizfader.org/collection).

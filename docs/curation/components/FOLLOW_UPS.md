@@ -788,12 +788,14 @@ On `main` for the next Chriz Easy BG version:
 
 **Ideas for later (Christopher, 2026-11-10)**
 
-- Feedback and error reports from the installer: players should be able to report feedback
-  or an error from inside Chriz Easy BG and Chriz Easy IWD. Nothing is designed: where a
-  report goes, what is attached (Export diagnostics exists; logs can hold personal paths)
-  and who reads it are open. It matters more now that the parts tied to the old mods are
-  fixed only when players report installer problems (Deferred by decision). Design first; a
-  separate design chat is offered.
+- Feedback and error reports from the installer: designed and approved by Christopher on
+  2026-11-10 and built for the next app versions (Feedback button, report buttons at
+  failures, prefilled GitHub issue, text for Discord, better diagnostics ZIP; see
+  [report-feature.md](../../report-feature.md)). Left to do: Christopher creates the
+  Discord channel for reports and names it, then `chatChannel` is set; the issue forms and
+  the README sentence go to `chriz-easy-bg` and `chriz-easy-iwd`. A service of ours for
+  reports without an account was left out and comes up again only if reports fail at the
+  account requirement.
 
 **Larger projects:** Time Stop/Haste (Rebalance `360`, above); script engine / Fight Director
 (design with Christopher; it also takes enemy mages' Dispelling Screen, Christopher,

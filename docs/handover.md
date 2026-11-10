@@ -2,6 +2,22 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 10 — Feedback and problem reports from the app (for the next versions)
+
+Christopher's idea of 2026-11-10, designed and approved the same day: both apps get a
+**Feedback** button in the header and report buttons at a stopped installation, at the
+question about a failed mod part, at a completion with left-out mods and under
+Troubleshooting. The dialog shows the whole report and opens a prefilled GitHub issue in
+`chriz-easy-bg` or `chriz-easy-iwd`, or copies the text for ChrizFader's Discord. The app
+sends nothing itself and has no service, token or webhook. The diagnostics ZIP gets a
+suggested file name and "Show in folder", also replaces the Windows user name and the
+computer name, and can be exported before an installation has a finished attempt.
+[report-feature.md](report-feature.md) has the rules and what is left outside this
+repository: the issue forms and README sentences in the two distribution repositories, and
+the name of the Discord channel for reports, which Christopher creates.
+
+It reaches players with the next app versions; nothing is released by this change.
+
 ## November 10 — Chriz Easy BG 0.1.2 and Chriz Easy IWD 0.1.10 released
 
 **Both are public** since 2026-11-09 UTC (the morning of 2026-11-10 in Korea), built from

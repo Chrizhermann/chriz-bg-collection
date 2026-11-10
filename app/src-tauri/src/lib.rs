@@ -6,6 +6,7 @@ pub mod error;
 pub mod flavor;
 mod installation_lookup_trace;
 mod removal_size;
+pub mod report;
 pub mod shortcut;
 pub mod updates;
 
@@ -85,6 +86,10 @@ pub fn run() -> tauri::Result<()> {
             commands::preview_installation_removal,
             commands::remove_installation,
             commands::export_diagnostics,
+            commands::show_diagnostics_export,
+            commands::redact_report_text,
+            commands::open_report_issue,
+            commands::open_report_chat,
             commands::launch_install,
             commands::game_log_status,
             commands::set_game_log,

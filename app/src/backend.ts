@@ -88,6 +88,17 @@ export interface Backend {
   advanceBuild(): Promise<BuildSnapshot>;
   retryBuild(): Promise<BuildSnapshot>;
   exportDiagnostics(installId: string): Promise<{ readonly path: string } | null>;
+  /** Opens the folder of the diagnostics ZIP that this session exported last. */
+  showDiagnosticsExport(): Promise<void>;
+  /** The text as it may be shared: home folder, user name, computer name and secrets removed. */
+  redactReportText(text: string): Promise<string>;
+  /**
+   * Opens the product's GitHub issue page in the browser with the report filled in; the player
+   * sends it there. `shortened` when the text did not fit into the link.
+   */
+  openReportIssue(title: string, body: string): Promise<{ readonly shortened: boolean }>;
+  /** Opens the invitation to the Discord server where reports are read. */
+  openReportChat(): Promise<void>;
   listManagedInstallations(): Promise<ManagedInstallation[]>;
   /** End-summary lines of a completed installation: mods left out and changed downloads. */
   installationSummary?(installId: string): Promise<readonly string[]>;
@@ -660,6 +671,22 @@ export class NativeBackend implements Backend {
     return this.#command("export_diagnostics", { installId });
   }
 
+  async showDiagnosticsExport(): Promise<void> {
+    await this.#command("show_diagnostics_export");
+  }
+
+  redactReportText(text: string): Promise<string> {
+    return this.#command("redact_report_text", { text });
+  }
+
+  openReportIssue(title: string, body: string): Promise<{ readonly shortened: boolean }> {
+    return this.#command("open_report_issue", { title, body });
+  }
+
+  async openReportChat(): Promise<void> {
+    await this.#command("open_report_chat");
+  }
+
   async listManagedInstallations(): Promise<ManagedInstallation[]> {
     const installations = await this.#command<ManagedInstallationWire[]>("list_managed_installations");
     return installations.map(({
@@ -1134,6 +1161,22 @@ export class FixtureBackend implements Backend {
 
   exportDiagnostics(_installId: string): Promise<{ readonly path: string } | null> {
     return Promise.resolve({ path: "C:\\Fixture\\diagnostics\\build-report.zip" });
+  }
+
+  showDiagnosticsExport(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  redactReportText(text: string): Promise<string> {
+    return Promise.resolve(text);
+  }
+
+  openReportIssue(_title: string, _body: string): Promise<{ readonly shortened: boolean }> {
+    return Promise.resolve({ shortened: false });
+  }
+
+  openReportChat(): Promise<void> {
+    return Promise.resolve();
   }
 
   listManagedInstallations(): Promise<ManagedInstallation[]> {

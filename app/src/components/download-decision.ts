@@ -18,6 +18,8 @@ export interface DownloadDecisionModel {
   readonly answer: (answer: DecisionAnswer) => void;
   /** Closes the dialog without an answer; the installation keeps waiting. Never the initial focus. */
   readonly later?: () => void;
+  /** Opens the report dialog for a part that could not be installed. Answers nothing. */
+  readonly report?: () => void;
 }
 
 export function decisionAnswerId(answer: DecisionAnswer): string {
@@ -86,6 +88,14 @@ export function downloadDecisionDialog(model: DownloadDecisionModel): HTMLElemen
     actions.append(button);
   }
   dialog.append(actions);
+  if (model.report && decision.kind === "failed_component") {
+    const report = actionButton("Report this problem", model.report, "quiet compact");
+    report.id = "decision-report";
+    report.disabled = model.busy;
+    const row = element("div", "decision-report");
+    row.append(report, element("span", "muted", "Reporting does not answer the question."));
+    dialog.append(row);
+  }
   dialog.addEventListener("keydown", (event) => {
     // Escape does not dismiss the question; only an answer or "Decide later" does.
     if (event.key === "Escape") {
