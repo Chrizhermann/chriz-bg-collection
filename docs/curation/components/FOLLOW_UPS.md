@@ -31,6 +31,13 @@ On `main` for the next Chriz Easy BG version:
   gives both. Open: the run `chriz-bg-modpack-campaign-xp-bg2` still has no tail approval
   (see Release records), `650` stays experimental, and the group was not installed in a lab
   with these two members.
+- Challenge Mode as a main choice on the install screen (Christopher, 2026-11-10; PR 130):
+  the window where an installation is started shows a card "Main choices" between "Your
+  installation" and "Recommended setup", with one switch per feature group of the recipe.
+  He chose this layout from three suggestions. The switch shares its state with the group's
+  card in Customize, and "Details" opens that card. Chriz Easy IWD has no feature group and
+  shows no card. See `docs/plans/2026-10-13-challenge-mode-group.md`. Open: no packaged app
+  was built and no installation was run with it.
 
 **In progress (separate sessions)**
 
@@ -624,10 +631,10 @@ On `main` for the next Chriz Easy BG version:
   is closed as superseded. Low risk while WeiDU comes from fixed GitHub release files. Also
   small: the changed-download path does not repeat the Weasel Mods link-shape check, which
   recipe validation already makes.
-- Challenge Mode as a main choice on the install screen (Christopher, 2026-11-10): it
-  becomes one of the main checkboxes in the window where an installation is started; the
-  details stay in Customize. The final layout is open, and he wants suggestions. Design
-  first, in its own design chat (started on 2026-11-10).
+- Further main choices on the install screen (Christopher, 2026-11-10): a randomizer first,
+  but only once our own randomizer is properly ready, and he will say when; other things may
+  follow. A main choice is a feature group in the recipe, so it needs no app change. Whether
+  Chriz Easy IWD gets a group is his decision.
 
 **Waiting for Christopher**
 
