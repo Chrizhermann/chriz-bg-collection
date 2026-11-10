@@ -1,6 +1,7 @@
 import type {
   BackendStatus,
   DestinationEvaluation,
+  FeatureGroup,
   GameCandidate,
   GameDiscovery,
   ManualDownloadRequirement,
@@ -10,6 +11,7 @@ import type {
 import { actionButton, element, screenIntro } from "../components/app-shell";
 import { installationReadiness, sourceStatus, sourceVersionNote } from "../state";
 import { invalidBreakpoints } from "../components/manual-checkpoints";
+import { mainChoicesCard } from "../components/main-choices";
 import { flavor, sourceSlots, type SourceDefinition } from "../flavor";
 
 export interface InstallScreenModel {
@@ -41,6 +43,10 @@ export interface InstallScreenActions {
   readonly changeLocation: (path: string) => void | Promise<void>;
   readonly browseLocation: () => void | Promise<void>;
   readonly customize: () => void | Promise<void>;
+  /** Switches a main choice: all member changes of one feature group as one batch. */
+  readonly changeFeatures?: (changes: Record<string, boolean>, focusId: string) => void | Promise<void>;
+  /** Opens Customize at the feature group's card. */
+  readonly showGroupDetails?: (group: FeatureGroup) => void | Promise<void>;
   readonly install: () => void | Promise<void>;
   readonly changeDesktopShortcut: (selected: boolean) => void | Promise<void>;
   readonly selectProfile?: (profileId: string) => void | Promise<void>;
@@ -260,10 +266,8 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
 
   const recipe = element("section", "recommended-setup card");
   const recipeCopy = element("div");
-  recipeCopy.append(
-    element("h2", undefined, "Recommended setup"),
-    element("p", "choice-summary", model.evaluation === null ? "Checking the recommended choices…" : `${model.evaluation.selectedChoiceCount} choices included`),
-  );
+  const recipeSummary = element("p", "choice-summary", model.evaluation === null ? "Checking the recommended choices…" : `${model.evaluation.selectedChoiceCount} choices included`);
+  recipeCopy.append(element("h2", undefined, "Recommended setup"), recipeSummary);
   const customize = actionButton("Customize", actions.customize, "quiet");
   customize.disabled = model.starting;
   recipe.append(recipeCopy);
@@ -319,10 +323,9 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
   const ready = selectionReady && !manualDownloadPending;
   const finish = element("section", `install-ready ${ready ? "is-ready" : "needs-attention"}`);
   const readiness = element("div");
-  readiness.append(
-    element("h2", undefined, model.starting ? "Starting installation" : model.evaluationPending ? "Checking your choices" : ready ? "Ready to install" : "Needs attention"),
-    element("p", undefined, model.starting ? "Preparing your selected setup…" : model.evaluationPending ? "This will only take a moment." : ready ? "Everything required for this installation is ready." : "Resolve the highlighted item before installing."),
-  );
+  const readinessTitle = element("h2", undefined, model.starting ? "Starting installation" : model.evaluationPending ? "Checking your choices" : ready ? "Ready to install" : "Needs attention");
+  const readinessDetail = element("p", undefined, model.starting ? "Preparing your selected setup…" : model.evaluationPending ? "This will only take a moment." : ready ? "Everything required for this installation is ready." : "Resolve the highlighted item before installing.");
+  readiness.append(readinessTitle, readinessDetail);
   const install = actionButton(model.starting ? "Starting installation…" : `Install ${flavor.productName}`, actions.install);
   install.disabled = !ready;
   const finishActions = element("div", "install-finish-actions");
@@ -336,7 +339,27 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
   finishActions.append(shortcutChoice, install);
   finish.append(readiness, finishActions);
 
-  page.append(sources, settings, recipe);
+  page.append(sources, settings);
+  // Main choices (Challenge Mode) sit above the setup they change. A recipe without feature
+  // groups, like Chriz Easy IWD's, shows no such card.
+  const groups = model.evaluation?.featureGroups ?? [];
+  const { changeFeatures, showGroupDetails } = actions;
+  if (groups.length > 0 && changeFeatures !== undefined && showGroupDetails !== undefined) {
+    page.append(mainChoicesCard(groups, {
+      change: changeFeatures,
+      details: showGroupDetails,
+      // The engine checks the changed choices before this screen is drawn again. Until then
+      // the old result must not look installable.
+      requested: () => {
+        install.disabled = true;
+        finish.className = "install-ready needs-attention";
+        readinessTitle.textContent = "Checking your choices";
+        readinessDetail.textContent = "This will only take a moment.";
+        recipeSummary.textContent = "Checking your choices…";
+      },
+    }, model.starting || model.changingProfile === true));
+  }
+  page.append(recipe);
   if (model.manualDownloadGateVisible && model.manualDownloads.length > 0) {
     page.append(manualDownloadPanel(model, actions));
   }

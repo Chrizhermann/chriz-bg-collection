@@ -54,6 +54,16 @@ The group never changes them.
   and its members listed (Christopher, October 13; replaces the September 29
   placement among the mod checkboxes). It is not an advanced setting and not
   an indivisible bundle.
+- **Main choice on the install screen** (Christopher, November 10): the window
+  where an installation is started shows a card "Main choices" between "Your
+  installation" and "Recommended setup", with one switch per feature group. The
+  switch shows the group's title, the recipe's description and the same state
+  sentence as the card in Customize; "Details" opens Customize at that card.
+  Both switches read the engine's derived group state and send the same batch
+  of member changes, so they cannot disagree. A recipe without feature groups,
+  like Chriz Easy IWD's today, shows no card. Every feature group is a main
+  choice; a further main choice (he named a randomizer, once our own is ready)
+  is a further group in the recipe, not app code.
 - **Marking:** each member keeps its normal place under its own mod and shows a
   visible "Challenge Mode" mark there, so a hand-picked member is still
   recognizable.

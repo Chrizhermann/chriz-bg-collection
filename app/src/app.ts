@@ -8,6 +8,7 @@ import { destinationScreen } from "./screens/destination";
 import { gamesScreen } from "./screens/games";
 import { homeScreen, type AddonFeedback, type ShortcutFeedback } from "./screens/home";
 import { reviewScreen } from "./screens/review";
+import { featureGroupControlId } from "./components/feature-group-card";
 import { installScreen } from "./screens/install";
 import { loadingScreen, startupFailureScreen } from "./screens/loading";
 import { setupScreen, type SetupViewState } from "./screens/setup";
@@ -332,7 +333,8 @@ class AppController implements AppHandle {
     });
   }
 
-  async navigate(route: Route): Promise<void> {
+  /** `focusTargetId` names the control to focus on the new screen instead of its heading. */
+  async navigate(route: Route, focusTargetId?: string): Promise<void> {
     if ((this.#manualCheckpointBusy || this.#resuming) && route !== "build") return;
     if ((this.#modUpgradeBusy || this.#modUpdateBusy) && route !== "updates") return;
     const buildNeedsControls = this.#state.build !== null
@@ -355,7 +357,7 @@ class AppController implements AppHandle {
       this.#dispatch({ type: "build-updated", build: await this.backend.getBuildSnapshot() });
     }
     this.#dispatch({ type: "navigate", route });
-    this.#render();
+    this.#render(focusTargetId);
   }
 
   #dispatch(action: AppAction): void {
@@ -988,9 +990,9 @@ class AppController implements AppHandle {
     this.#render();
   }
 
-  async #customizeInstallation(): Promise<void> {
+  async #customizeInstallation(focusTargetId?: string): Promise<void> {
     if (!this.#beginIdentityEdit()) return;
-    await this.navigate("setup");
+    await this.navigate("setup", focusTargetId);
   }
 
   #beginIdentityEdit(): boolean {
@@ -2208,6 +2210,8 @@ class AppController implements AppHandle {
           changeLocation: (path) => safely(() => this.#changeInstallLocation(path)),
           browseLocation: () => safely(() => this.#chooseDestinationFolder()),
           customize: () => safely(() => this.#customizeInstallation()),
+          changeFeatures: (changes, focusId) => safely(() => this.#changeFeatures(changes, focusId)),
+          showGroupDetails: (group) => safely(() => this.#customizeInstallation(featureGroupControlId(group))),
           selectProfile: (profileId) => safely(() => this.#selectProfile(profileId)),
           install: () => safely(() => this.#startInstallation()),
           openManualSource: (artifactId) => safely(() => this.#openUpfrontManualSource(artifactId)),
@@ -2362,6 +2366,8 @@ class AppController implements AppHandle {
         ? Array.from(this.root.querySelectorAll<HTMLElement>("[id]")).find(element => element.id === focusTargetId)
         : this.root.querySelector<HTMLElement>("h1");
       target?.focus({ preventScroll: true });
+      // A control opened from another screen (a main choice's Details) may sit below the fold.
+      if (focusTargetId && !sameRoute) target?.closest("section")?.scrollIntoView?.({ block: "nearest" });
     }
     if (this.#removalPreview !== null) {
       this.root.querySelector<HTMLElement>(".app-shell")!.inert = true;

@@ -153,6 +153,8 @@ describe("Chriz Easy IWD build flavor", () => {
     expect(cards).toHaveLength(1);
     expect(cards[0].dataset.source).toBe("bg2");
     expect(cards[0].querySelector(".source-title")?.textContent).toBe("Icewind Dale: Enhanced Edition");
+    // A recipe without feature groups, like this one, shows no main choices.
+    expect(root.querySelector(".main-choices")).toBeNull();
     expect(destination).toHaveBeenCalled();
     for (const call of destination.mock.calls) expect(call.slice(1)).toEqual(["", "iwd-fresh"]);
 
