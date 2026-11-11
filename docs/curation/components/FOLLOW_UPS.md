@@ -806,6 +806,19 @@ On `main` for the next Chriz Easy BG version:
   A service of ours for reports without an account was left out and comes up again only if
   reports fail at the account requirement.
 
+**Ideas for later (Christopher, 2026-11-11)**
+
+- Future expansion of the chapter/campaign XP feature (today Modpack `650` + `652`) into
+  three mutually exclusive progression modes:
+  1. **Chapter/campaign XP caps with XP banking** (today's `650` + `652`: XP above the
+     chapter cap is banked and paid out when the cap rises).
+  2. **Hard chapter/campaign XP caps without XP banking** (same chapter/campaign XP caps,
+     but excess XP is not banked).
+  3. **Uncapped XP, class-specific level cap per chapter** (XP remains uncapped, while the
+     maximum character level in each chapter is bounded per class — for example capping a
+     Fighter at a specific level in BG1 Chapter 2 — because classes level at different XP
+     rates; exact per-class chapter tables to be designed with Christopher).
+
 **Larger projects:** Time Stop/Haste (Rebalance `360`, above); script engine / Fight Director
 (design with Christopher; it also takes enemy mages' Dispelling Screen, Christopher,
 2026-10-27); configurable Spell Revisions (recover branch
