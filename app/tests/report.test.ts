@@ -265,6 +265,7 @@ describe("report dialog", () => {
   it("copies the report for Discord and shows it for copying by hand when the clipboard refuses", async () => {
     const { root, backend, user } = await mounted(new ReportBackend());
     const opened = await openFromHeader(root, user);
+    expect(getByText(opened, /paste it in ChrizFader's Discord, channel #mod-feedback\./)).toBeTruthy();
     await user.type(getByLabelText(opened, "What happened, and what did you expect?"), "It crashed");
     const copied: string[] = [];
     stubClipboard((text) => { copied.push(text); return Promise.resolve(); });
@@ -484,6 +485,7 @@ describe("report commands", () => {
     for (const flavor of Object.values(FLAVORS)) {
       const repository = flavor.report.issuesLabel.replace(/^github\.com\//u, "");
       expect(flavor.report.issuesLabel).toMatch(/^github\.com\/Chrizhermann\/chriz-easy-(bg|iwd)$/u);
+      expect(flavor.report.chatChannel).toBe("#mod-feedback");
       expect(bridgeFlavor).toContain(`report_repository: "${repository}"`);
     }
   });
