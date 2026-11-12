@@ -39,7 +39,7 @@ pub fn provide_manual_archive(
         path: path.to_path_buf(),
         source,
     })?;
-    if !metadata.is_file() || metadata.file_type().is_symlink() {
+    if !metadata.is_file() || crate::reparse::metadata_is_link(path, &metadata) {
         return Err(AcquireError::InvalidRequest(
             "manual archive path must name a regular non-symlink file".to_owned(),
         ));
@@ -154,16 +154,19 @@ pub fn publish_manual_archive(
         path: parent.to_path_buf(),
         source,
     })?;
-    let parent_metadata = fs::symlink_metadata(parent).map_err(|source| AcquireError::Io {
-        action: "inspect manual archive cache directory",
-        path: parent.to_path_buf(),
-        source,
+    crate::reparse::ensure_existing_ancestors_are_directories(parent).map_err(|source| {
+        if source.kind() == io::ErrorKind::InvalidInput {
+            AcquireError::InvalidRequest(
+                "manual archive cache directory must be a direct directory".to_owned(),
+            )
+        } else {
+            AcquireError::Io {
+                action: "inspect manual archive cache directory",
+                path: parent.to_path_buf(),
+                source,
+            }
+        }
     })?;
-    if parent_metadata.file_type().is_symlink() || !parent_metadata.is_dir() {
-        return Err(AcquireError::InvalidRequest(
-            "manual archive cache directory must be a direct directory".to_owned(),
-        ));
-    }
 
     let replaces_invalid = match inspect_existing_destination(destination)? {
         Some(existing)
@@ -213,7 +216,7 @@ fn inspect_existing_destination(
             })
         }
     };
-    if metadata.file_type().is_symlink() || !metadata.is_file() {
+    if crate::reparse::metadata_is_link(destination, &metadata) || !metadata.is_file() {
         return Err(AcquireError::InvalidRequest(
             "manual archive cache path must be a regular non-symlink file".to_owned(),
         ));
@@ -230,10 +233,9 @@ fn inspect_existing_destination(
 /// nothing but that regular file is ever changed.
 #[cfg(windows)]
 fn allow_replacing_invalid_cache_file(destination: &Path) -> Result<(), AcquireError> {
-    use std::os::windows::fs::{MetadataExt, OpenOptionsExt};
+    use std::os::windows::fs::OpenOptionsExt;
     use windows_sys::Win32::Storage::FileSystem::{
-        FILE_ATTRIBUTE_REPARSE_POINT, FILE_FLAG_OPEN_REPARSE_POINT, FILE_READ_ATTRIBUTES,
-        FILE_WRITE_ATTRIBUTES,
+        FILE_FLAG_OPEN_REPARSE_POINT, FILE_READ_ATTRIBUTES, FILE_WRITE_ATTRIBUTES,
     };
 
     let io_error = |source| AcquireError::Io {
@@ -247,19 +249,12 @@ fn allow_replacing_invalid_cache_file(destination: &Path) -> Result<(), AcquireE
         .open(destination)
         .map_err(io_error)?;
     let metadata = file.metadata().map_err(io_error)?;
-    if !metadata.is_file() || metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+    if !metadata.is_file() || crate::reparse::handle_is_link(&file, &metadata) {
         return Err(AcquireError::InvalidRequest(
             "manual archive cache path must be a regular non-symlink file".to_owned(),
         ));
     }
-    let mut permissions = metadata.permissions();
-    if !permissions.readonly() {
-        return Ok(());
-    }
-    // On Windows this clears only FILE_ATTRIBUTE_READONLY; no Unix mode bits are involved.
-    #[allow(clippy::permissions_set_readonly_false)]
-    permissions.set_readonly(false);
-    file.set_permissions(permissions).map_err(io_error)
+    crate::reparse::clear_readonly_handle(&file).map_err(io_error)
 }
 
 /// A rename onto a read-only file is allowed elsewhere, so nothing needs to change.

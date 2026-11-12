@@ -163,7 +163,7 @@ fn update_replaces_owned_files_removes_retired_ones_and_preserves_config() {
 }
 
 #[test]
-fn modified_owned_file_blocks_update_before_download() {
+fn modified_owned_file_reports_modified_status_and_install_overwrites_cleanly() {
     let temp = TempDir::new().unwrap();
     let archive = radar_archive(&temp, "v1", b"radar-v1", false);
     let (url, server) = one_shot_server(archive.clone(), "application/octet-stream");
@@ -173,21 +173,34 @@ fn modified_owned_file_blocks_update_before_download() {
     install(temp.path().join("cache"), &managed, &game, &first, &sink).unwrap();
     server.join().unwrap();
 
-    let executable = game.join(RADAR_INSTALL_DIRECTORY).join(RADAR_EXECUTABLE);
+    let install_root = game.join(RADAR_INSTALL_DIRECTORY);
+    let executable = install_root.join(RADAR_EXECUTABLE);
     std::fs::write(&executable, b"locally modified").unwrap();
-    let next = RadarRelease {
-        tag: "2.1.0.0".to_owned(),
-        asset_url: "http://127.0.0.1:9/radar.7z".to_owned(),
-        ..first
-    };
+    let settings = install_root.join("appsettings.json");
+    std::fs::write(&settings, b"{\"user\":true}").unwrap();
+    let archive_v2 = radar_archive(&temp, "v2", b"radar-v2", false);
+    let (next_url, next_server) = one_shot_server(archive_v2.clone(), "application/octet-stream");
+    let next = release("2.1.0.0", next_url, &archive_v2);
 
-    let error = install(temp.path().join("cache"), &managed, &game, &next, &sink).unwrap_err();
-    assert!(matches!(error, RadarError::ModifiedFiles { .. }));
-    assert_eq!(std::fs::read(executable).unwrap(), b"locally modified");
     assert_eq!(
         status(&managed, &game, Some(&next)).unwrap().state,
         RadarState::Modified
     );
+
+    let updated = install(temp.path().join("cache"), &managed, &game, &next, &sink).unwrap();
+    next_server.join().unwrap();
+    assert_eq!(updated.version, "2.1.0.0");
+    assert_eq!(std::fs::read(&executable).unwrap(), b"radar-v2");
+    assert_eq!(std::fs::read(&settings).unwrap(), b"{\"user\":true}");
+    assert_eq!(
+        status(&managed, &game, Some(&next)).unwrap().state,
+        RadarState::UpToDate
+    );
+
+    // Deleting the overlay folder with an existing receipt also repairs cleanly.
+    std::fs::remove_dir_all(&install_root).unwrap();
+    let repaired = install(temp.path().join("cache"), &managed, &game, &next, &sink).unwrap();
+    assert_eq!(std::fs::read(repaired.executable).unwrap(), b"radar-v2");
 }
 
 #[test]

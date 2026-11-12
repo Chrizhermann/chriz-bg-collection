@@ -140,11 +140,11 @@ pub fn capture(root: &Path) -> Result<GameFiles, String> {
     for entry in walkdir::WalkDir::new(root).follow_links(false) {
         let entry = entry.map_err(files::err)?;
         let path = entry.path();
-        if path == root {
+        if path == root || crate::reparse::is_benign_os_metadata_filename(entry.file_name()) {
             continue;
         }
         let metadata = fs::symlink_metadata(path).map_err(files::err)?;
-        if metadata.file_type().is_symlink() || reparse(&metadata) {
+        if crate::reparse::metadata_is_link(path, &metadata) {
             return Err(format!("Linked path is not supported: {}", path.display()));
         }
         let name = path
@@ -237,16 +237,6 @@ pub fn read_completed(managed_root: &Path) -> Result<GameFiles, String> {
         serde_json::from_slice(&files::read(&path, RECORD_LIMIT)?).map_err(files::err)?;
     record.validate()?;
     Ok(record)
-}
-
-#[cfg(windows)]
-fn reparse(metadata: &fs::Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    metadata.file_attributes() & 0x400 != 0
-}
-#[cfg(not(windows))]
-fn reparse(_: &fs::Metadata) -> bool {
-    false
 }
 
 #[cfg(test)]

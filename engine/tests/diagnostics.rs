@@ -399,7 +399,7 @@ fn success_bundle_uses_an_explicit_allowlist_and_redacts_personal_or_secret_text
 }
 
 #[test]
-fn failure_bundle_does_not_require_a_success_receipt_and_never_overwrites_output() {
+fn failure_bundle_does_not_require_a_success_receipt_and_replaces_existing_zip() {
     let fixture = fixture(false);
     let request = DiagnosticsRequest {
         managed_root: fixture.managed.clone(),
@@ -412,11 +412,7 @@ fn failure_bundle_does_not_require_a_success_receipt_and_never_overwrites_output
     };
 
     export_diagnostics(&request).unwrap();
-    let before = std::fs::read(&fixture.output).unwrap();
-    let error = export_diagnostics(&request).unwrap_err();
-
-    assert!(error.to_string().contains("already exists"), "{error}");
-    assert_eq!(std::fs::read(&fixture.output).unwrap(), before);
+    export_diagnostics(&request).unwrap();
     let names = zip_entries(&fixture.output)
         .into_iter()
         .map(|(name, _)| name)
@@ -1230,14 +1226,23 @@ first attempt line\n"
         std::fs::read(&fixture.output).unwrap()
     );
 
-    // An existing output is never replaced.
-    let before = std::fs::read(&fixture.output).unwrap();
+    // Re-exporting to the same regular .zip path atomically overwrites it.
+    let overwritten = export_diagnostics(&request).unwrap();
+    assert!(bg_engine::reparse::same_normalized_windows_path(
+        &overwritten.path,
+        &fixture.output
+    ));
+    assert!(overwritten.path.is_file());
+
+    // An existing directory at the output path is still refused.
+    std::fs::remove_file(&fixture.output).unwrap();
+    std::fs::create_dir(&fixture.output).unwrap();
     let error = export_diagnostics(&request).unwrap_err();
     assert!(
-        matches!(error, DiagnosticsError::OutputExists { .. }),
+        matches!(error, DiagnosticsError::UnsafePath { .. }),
         "{error}"
     );
-    assert_eq!(std::fs::read(&fixture.output).unwrap(), before);
+    assert!(fixture.output.is_dir());
 }
 
 #[test]

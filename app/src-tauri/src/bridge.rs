@@ -221,6 +221,8 @@ struct SystemBridgeSystem;
 
 impl BridgeSystem for SystemBridgeSystem {
     fn launch(&self, executable: &Path, working_directory: &Path) -> Result<(), String> {
+        let executable = bg_engine::reparse::display_windows_path(executable);
+        let working_directory = bg_engine::reparse::display_windows_path(working_directory);
         Command::new(executable)
             .current_dir(working_directory)
             .spawn()
@@ -237,6 +239,7 @@ impl BridgeSystem for SystemBridgeSystem {
     }
 
     fn open_folder(&self, path: &Path) -> Result<(), String> {
+        let path = bg_engine::reparse::display_windows_path(path);
         open_with_shell(path.as_os_str())
     }
 
@@ -1564,12 +1567,18 @@ impl NativeBridge {
                 format!("artifact {artifact_id:?} is {:?}", artifact.acquisition),
             ));
         }
-        let extension = match artifact.archive.kind {
+        let first = match artifact.archive.kind {
             ArchiveKind::Zip => "zip",
             ArchiveKind::Iemod => "iemod",
             ArchiveKind::SelfExtractingRar => "exe",
         };
-        Ok(vec![extension.to_owned()])
+        let mut extensions = vec![first.to_owned()];
+        for extra in ["zip", "iemod", "exe", "rar", "7z"] {
+            if extra != first {
+                extensions.push(extra.to_owned());
+            }
+        }
+        Ok(extensions)
     }
 
     /// Opens only the HTTPS manual-download page declared by a verified recipe artifact.
@@ -1759,10 +1768,17 @@ impl NativeBridge {
         self.system
             .launch(&record.launch_path, working_directory)
             .map_err(|error| {
+                let recovery = if launch_name.eq_ignore_ascii_case("InfinityLoader.exe")
+                    && !record.launch_path.is_file()
+                {
+                    "InfinityLoader.exe may have been quarantined by Windows Security or antivirus software. Restore it in Windows Security Protection history and add an exclusion for this game folder, or run diagnostics."
+                } else {
+                    "Close any running game instance, then try again."
+                };
                 CommandError::new(
                     "managed_launch_failed",
                     "The managed campaign could not be launched.",
-                    "Close any running game instance, then try again.",
+                    recovery,
                     error,
                 )
             })?;
@@ -2111,7 +2127,7 @@ impl NativeBridge {
                 error.to_string(),
             )
         })?;
-        let cache = self.cache.canonicalize().map_err(|error| {
+        let cache = bg_engine::reparse::canonicalize_flexible(&self.cache).map_err(|error| {
             path_error(
                 "cache_unavailable",
                 "The installer cache could not be resolved safely.",
@@ -2650,10 +2666,23 @@ impl NativeBridge {
             .find(|card| card.record.install_id == install_id)
             .ok_or_else(|| unknown_managed_install(install_id))?;
         if card.availability != InstallAvailability::Available {
+            let quarantined_loader = card.record.managed_root.is_dir()
+                && card
+                    .record
+                    .launch_path
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .is_some_and(|name| name.eq_ignore_ascii_case("InfinityLoader.exe"))
+                && !card.record.launch_path.is_file();
+            let recovery = if quarantined_loader {
+                "InfinityLoader.exe may have been quarantined by Windows Security or antivirus software. Restore it in Windows Security Protection history and add an exclusion for this game folder, or build a new managed campaign copy."
+            } else {
+                "Restore the exact folder or build a new managed campaign copy."
+            };
             return Err(CommandError::new(
                 "managed_install_stale",
                 "That managed campaign folder moved or changed after it was registered.",
-                "Restore the exact folder or build a new managed campaign copy.",
+                recovery,
                 format!("managed install {install_id:?} is stale"),
             ));
         }
@@ -3141,14 +3170,15 @@ fn project_evaluation(
 }
 
 fn canonical_candidate(mut candidate: GameCandidate) -> Result<GameCandidate, CommandError> {
-    candidate.root = candidate.root.canonicalize().map_err(|error| {
-        path_error(
-            "game_path_unavailable",
-            "A selected game folder is no longer available.",
-            &candidate.root,
-            error,
-        )
-    })?;
+    candidate.root =
+        bg_engine::reparse::canonicalize_flexible(&candidate.root).map_err(|error| {
+            path_error(
+                "game_path_unavailable",
+                "A selected game folder is no longer available.",
+                &candidate.root,
+                error,
+            )
+        })?;
     Ok(candidate)
 }
 
@@ -3192,7 +3222,7 @@ fn inspect_destination_path(
     let normalized = normalize_prospective_path(destination)?;
     let mut protected = Vec::with_capacity(sources.len() + 1);
     for (label, source) in sources {
-        let root = source.canonicalize().map_err(|error| {
+        let root = bg_engine::reparse::canonicalize_flexible(source).map_err(|error| {
             path_error(
                 "game_path_unavailable",
                 &format!("The selected {label} source is no longer available."),
@@ -3235,13 +3265,13 @@ fn inspect_destination_path(
                 error,
             )
         })?;
-        if !metadata.is_dir() || metadata_is_reparse(&metadata) {
+        if !metadata.is_dir() || bg_engine::reparse::metadata_is_link(&normalized, &metadata) {
             return Err(unsafe_destination(
                 destination,
                 "the destination must be a direct ordinary directory",
             ));
         }
-        let mut entries = fs::read_dir(&normalized).map_err(|error| {
+        let entries = fs::read_dir(&normalized).map_err(|error| {
             path_error(
                 "destination_unavailable",
                 "The destination could not be inspected safely.",
@@ -3249,19 +3279,22 @@ fn inspect_destination_path(
                 error,
             )
         })?;
-        if entries
-            .next()
-            .transpose()
-            .map_err(|error| {
+        let mut has_real_entries = false;
+        for entry in entries {
+            let entry = entry.map_err(|error| {
                 path_error(
                     "destination_unavailable",
                     "The destination could not be inspected safely.",
                     &normalized,
                     error,
                 )
-            })?
-            .is_some()
-        {
+            })?;
+            if !bg_engine::reparse::is_benign_os_metadata_filename(&entry.file_name()) {
+                has_real_entries = true;
+                break;
+            }
+        }
+        if has_real_entries {
             // Never write into a folder that already has files: install into a new folder
             // inside it. The new-root claim at installation start stays strict. Another CEBG
             // installation's folder is never the parent of a new one.
@@ -3377,26 +3410,18 @@ fn normalize_prospective_path(path: &Path) -> Result<PathBuf, CommandError> {
             }
         }
     }
-    for ancestor in cursor.ancestors() {
-        let metadata = fs::symlink_metadata(ancestor).map_err(|error| {
-            path_error(
-                "destination_unavailable",
-                "A destination ancestor could not be inspected safely.",
-                ancestor,
-                error,
-            )
-        })?;
-        if metadata_is_reparse(&metadata) {
-            return Err(unsafe_destination(
-                path,
-                &format!(
-                    "destination ancestor {} is a reparse point",
-                    ancestor.display()
-                ),
-            ));
+    if let Err(error) = bg_engine::reparse::ensure_existing_ancestors_are_directories(path) {
+        if error.kind() == io::ErrorKind::InvalidInput {
+            return Err(unsafe_destination(path, &error.to_string()));
         }
+        return Err(path_error(
+            "destination_unavailable",
+            "A destination ancestor could not be inspected safely.",
+            path,
+            error,
+        ));
     }
-    let mut normalized = cursor.canonicalize().map_err(|error| {
+    let mut normalized = bg_engine::reparse::canonicalize_flexible(&cursor).map_err(|error| {
         path_error(
             "destination_unavailable",
             "The destination could not be resolved safely.",
@@ -3436,21 +3461,8 @@ fn component_eq(left: &std::ffi::OsStr, right: &std::ffi::OsStr) -> bool {
     }
 }
 
-#[cfg(windows)]
-fn metadata_is_reparse(metadata: &fs::Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-
-    const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
-    metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
-}
-
-#[cfg(not(windows))]
-fn metadata_is_reparse(metadata: &fs::Metadata) -> bool {
-    metadata.file_type().is_symlink()
-}
-
 fn recipe_directory_digest(root: &Path) -> Result<String, CommandError> {
-    let root = root.canonicalize().map_err(|error| {
+    let root = bg_engine::reparse::canonicalize_flexible(root).map_err(|error| {
         path_error(
             "recipe_load_failed",
             "The installer recipe could not be resolved safely.",
@@ -3515,7 +3527,7 @@ fn collect_recipe_files(
                 error,
             )
         })?;
-        if metadata_is_reparse(&metadata) {
+        if bg_engine::reparse::metadata_is_link(&path, &metadata) {
             return Err(CommandError::new(
                 "recipe_load_failed",
                 "The installer recipe contains an unsafe redirected path.",
@@ -3718,7 +3730,7 @@ fn inspect_manual_cache_file(
             );
         }
     };
-    if metadata.file_type().is_symlink() || !metadata.is_file() {
+    if bg_engine::reparse::metadata_is_link(path, &metadata) || !metadata.is_file() {
         return (
             false,
             Some(format!("{filename} is not a regular cache file")),

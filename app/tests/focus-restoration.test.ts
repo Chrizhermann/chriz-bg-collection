@@ -65,3 +65,44 @@ describe("focus after changing production-style component IDs", () => {
     expect(start).not.toHaveBeenCalled();
   });
 });
+
+describe("live typing focus and selection preservation", () => {
+  it("inspects #install-location after debounced input without losing focus, typed text, or selection", async () => {
+    const inspectedPaths: string[] = [];
+    class LiveDestinationBackend extends FixtureBackend {
+      override inspectDestination(path: string) {
+        inspectedPaths.push(path);
+        return Promise.resolve({
+          path,
+          safe: true,
+          title: "Ready",
+          detail: "Location is ready.",
+        });
+      }
+    }
+    const backend = new LiveDestinationBackend();
+    const root = document.createElement("div");
+    document.body.append(root);
+    await mountApp(root, backend);
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    const input = root.querySelector<HTMLInputElement>("#install-location")!;
+    input.focus();
+    const typed = "C:\\Games\\LiveTypedBG";
+    input.value = typed;
+    input.setSelectionRange(9, 13);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+
+    expect(inspectedPaths).toEqual([]);
+    await new Promise(resolve => setTimeout(resolve, 320));
+
+    await waitFor(() => {
+      expect(inspectedPaths).toContain(typed);
+      const current = root.querySelector<HTMLInputElement>("#install-location")!;
+      expect(document.activeElement).toBe(current);
+      expect(current.value).toBe(typed);
+      expect(current.selectionStart).toBe(9);
+      expect(current.selectionEnd).toBe(13);
+    });
+  });
+});

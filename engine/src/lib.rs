@@ -33,6 +33,7 @@ pub mod recovery_receipt;
 pub mod registry;
 pub mod release_validate;
 pub mod removal;
+pub mod reparse;
 pub mod resolve;
 pub mod session;
 pub mod stage;

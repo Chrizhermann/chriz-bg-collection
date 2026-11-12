@@ -1925,3 +1925,52 @@ fn served_limits_let_a_grown_update_through_but_keep_the_bomb_and_depth_guards()
     let extracted = extract_served(&archive, &cache, &served).unwrap();
     assert!(extracted.root.join("mod/new/file-7.txt").is_file());
 }
+
+#[test]
+fn allows_dot_slash_duplicate_directories_and_high_ratio_small_files_under_general_limits() {
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("flexible.zip");
+    let repetitive_text = vec![b'A'; 128 * 1024];
+    write_zip(
+        &archive,
+        &[
+            Entry::Directory("mod/"),
+            Entry::Directory("./MOD/"),
+            Entry::File("./mod//setup-mod.tp2", TP2, CompressionMethod::Stored),
+            Entry::File(
+                "mod/./dialogue.tra",
+                &repetitive_text,
+                CompressionMethod::Deflated,
+            ),
+        ],
+    );
+    let cache = temp.path().join("extract");
+    let mut request = requirements(&archive);
+    request.limits = ArchiveLimits::GENERAL;
+    let extracted = extract_archive(&archive, &cache, &request).unwrap();
+    assert!(extracted.root.join("mod/setup-mod.tp2").is_file());
+    assert_eq!(
+        std::fs::read(extracted.root.join("mod/dialogue.tra")).unwrap(),
+        repetitive_text
+    );
+}
+
+#[test]
+fn served_extraction_sniffs_zip_container_even_when_recipe_declared_rar_and_vice_versa() {
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("repacked-as-zip.exe");
+    write_zip(
+        &archive,
+        &[Entry::File(
+            "mod/setup-mod.tp2",
+            TP2,
+            CompressionMethod::Stored,
+        )],
+    );
+    let cache = temp.path().join("extract");
+    let mut request = served_requirements(&archive);
+    request.format = bg_engine::acquire::ArchiveFormat::SelfExtractingRar;
+
+    let extracted = extract_served(&archive, &cache, &request).unwrap();
+    assert!(extracted.root.join("mod/setup-mod.tp2").is_file());
+}

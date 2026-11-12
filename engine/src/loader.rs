@@ -55,10 +55,11 @@ impl Manifest {
         }
 
         let collection: Collection = parse_toml(&collection_path, &collection_text)?;
-        let root = std::fs::canonicalize(dir).map_err(|source| EngineError::Io {
-            path: dir.to_path_buf(),
-            source,
-        })?;
+        let root =
+            crate::reparse::canonicalize_flexible(dir).map_err(|source| EngineError::Io {
+                path: dir.to_path_buf(),
+                source,
+            })?;
         let artifacts = load_entries(
             &root.join("artifacts"),
             EntryKind::Artifact,

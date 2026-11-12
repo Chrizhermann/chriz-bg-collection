@@ -1983,19 +1983,19 @@ fn manual_picker_filter_accepts_each_declared_archive_kind_without_executing_sfx
         bridge
             .manual_archive_filter_extensions("manual-zip")
             .unwrap(),
-        vec!["zip"]
+        vec!["zip", "iemod", "exe", "rar", "7z"]
     );
     assert_eq!(
         bridge
             .manual_archive_filter_extensions("manual-iemod")
             .unwrap(),
-        vec!["iemod"]
+        vec!["iemod", "zip", "exe", "rar", "7z"]
     );
     assert_eq!(
         bridge
             .manual_archive_filter_extensions("manual-sfx")
             .unwrap(),
-        vec!["exe"]
+        vec!["exe", "zip", "iemod", "rar", "7z"]
     );
     let supplied = bridge
         .supply_manual_archive("manual-sfx", Some(selected))
@@ -3602,4 +3602,58 @@ fn a_resume_that_stops_for_a_question_is_waiting_not_failed() {
     let wire = serde_json::to_value(snapshot.report.unwrap()).unwrap();
     assert_eq!(wire["status"]["status"], "decision_required");
     assert_eq!(wire["status"]["step_id"], "acquire:weidu");
+}
+
+#[test]
+fn destination_containing_only_benign_os_metadata_is_treated_as_empty() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let base = recipe.parent().unwrap().to_path_buf();
+    let cache = base.join("cache");
+    let bg1 = base.join("clean-bg1");
+    let bg2 = base.join("clean-bg2");
+    fs::create_dir_all(&cache).unwrap();
+    fs::create_dir_all(&bg1).unwrap();
+    fs::create_dir_all(&bg2).unwrap();
+    let bridge = NativeBridge::with_engine(
+        recipe,
+        "recommended",
+        &cache,
+        Arc::new(FakeBridgeEngine::new(bg1, bg2)),
+    );
+    let discovery = bridge.discover_games().expect("register discovered games");
+    let dest = base.join("metadata-only-dest");
+    fs::create_dir_all(&dest).unwrap();
+    fs::write(dest.join("desktop.ini"), "[.ShellClassInfo]\r\n").unwrap();
+    fs::write(dest.join("Thumbs.db"), b"thumb").unwrap();
+
+    let checked = bridge
+        .inspect_destination(
+            &dest,
+            &discovery.selected_bg1_id,
+            &discovery.selected_bg2_id,
+        )
+        .expect("inspect metadata-only destination");
+    assert!(checked.safe);
+    assert_eq!(
+        checked.path,
+        display_windows_path(&dest.canonicalize().unwrap()).unwrap()
+    );
+    assert!(checked.note.is_none(), "{:?}", checked.note);
+}
+
+#[test]
+fn missing_infinity_loader_launch_reports_antivirus_quarantine_hint() {
+    let fixture = RadarLaunchFixture::new();
+    let loader = fixture.managed.join("game/InfinityLoader.exe");
+    fs::remove_file(&loader).unwrap();
+    let error = fixture
+        .bridge
+        .launch_install("radar-fixture", false)
+        .unwrap_err();
+    assert_eq!(error.code, "managed_install_stale");
+    assert!(
+        error.recovery_action.contains("Windows Security"),
+        "{}",
+        error.recovery_action
+    );
 }

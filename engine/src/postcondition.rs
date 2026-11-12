@@ -88,16 +88,17 @@ pub fn verify(root: &Path, postconditions: &[Postcondition]) -> Result<(), Postc
     }
 
     let root_metadata = metadata_without_link(root)?;
-    if !root_metadata.is_dir() || is_link_or_reparse(&root_metadata) {
+    if !root_metadata.is_dir() || crate::reparse::metadata_is_link(root, &root_metadata) {
         return Err(PostconditionError::NotRegularFile {
             path: root.to_path_buf(),
             reason: "staged target must be a direct non-symlink directory",
         });
     }
-    let canonical_root = fs::canonicalize(root).map_err(|source| PostconditionError::Io {
-        path: root.to_path_buf(),
-        source,
-    })?;
+    let canonical_root =
+        crate::reparse::canonicalize_flexible(root).map_err(|source| PostconditionError::Io {
+            path: root.to_path_buf(),
+            source,
+        })?;
 
     for postcondition in postconditions {
         verify_one(&canonical_root, postcondition)?;
@@ -129,18 +130,22 @@ fn verify_text_file_markers(
     validate_specification(relative_path, required, forbidden, max_bytes)?;
     let candidate = canonical_root.join(relative_path);
     let candidate_metadata = metadata_without_link(&candidate)?;
-    if !candidate_metadata.is_file() || is_link_or_reparse(&candidate_metadata) {
+    if !candidate_metadata.is_file()
+        || crate::reparse::metadata_is_link(&candidate, &candidate_metadata)
+    {
         return Err(PostconditionError::NotRegularFile {
             path: candidate,
             reason: "selected path is not a direct non-symlink file",
         });
     }
 
-    let canonical_path = fs::canonicalize(&candidate).map_err(|source| PostconditionError::Io {
-        path: candidate.clone(),
-        source,
+    let canonical_path = crate::reparse::canonicalize_flexible(&candidate).map_err(|source| {
+        PostconditionError::Io {
+            path: candidate.clone(),
+            source,
+        }
     })?;
-    if !canonical_path.starts_with(canonical_root) {
+    if !crate::reparse::windows_path_starts_with(&canonical_path, canonical_root) {
         return Err(PostconditionError::EscapesTarget {
             path: candidate,
             root: canonical_root.to_path_buf(),
@@ -222,7 +227,7 @@ fn verify_direct_ancestors(
         }
         ancestor.push(component);
         let metadata = metadata_without_link(&ancestor)?;
-        if !metadata.is_dir() || is_link_or_reparse(&metadata) {
+        if !metadata.is_dir() || crate::reparse::metadata_is_link(&ancestor, &metadata) {
             return Err(PostconditionError::UnsafeAncestor {
                 path: candidate.to_path_buf(),
                 ancestor,
@@ -295,18 +300,4 @@ fn metadata_without_link(path: &Path) -> Result<Metadata, PostconditionError> {
         path: path.to_path_buf(),
         source,
     })
-}
-
-#[cfg(not(windows))]
-fn is_link_or_reparse(metadata: &Metadata) -> bool {
-    metadata.file_type().is_symlink()
-}
-
-#[cfg(windows)]
-fn is_link_or_reparse(metadata: &Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    use windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT;
-
-    metadata.file_type().is_symlink()
-        || metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
 }

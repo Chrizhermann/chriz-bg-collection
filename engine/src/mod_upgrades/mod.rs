@@ -96,7 +96,10 @@ fn validate_context(ctx: &Context<'_>) -> Result<(), String> {
     // No folder-name heuristic (such as `steamapps` or Program Files): what keeps an update
     // inside a CEBG copy is that the root is a registered installation whose receipt matches.
     if !r.managed_root.is_absolute()
-        || fs::canonicalize(&r.managed_root).map_err(err)? != r.managed_root
+        || !crate::reparse::same_normalized_windows_path(
+            &crate::reparse::canonicalize_flexible(&r.managed_root).map_err(err)?,
+            &r.managed_root,
+        )
         || crate::preflight::is_creator_protected_destination(&r.managed_root)
     {
         return Err("Updates require a separate, registered game folder.".into());

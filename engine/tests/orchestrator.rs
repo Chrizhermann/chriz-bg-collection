@@ -1570,13 +1570,17 @@ fn a_file_in_the_missing_destination_chain_is_rejected_without_creating_below_it
 }
 
 #[test]
-fn a_link_in_the_missing_destination_chain_is_rejected_without_creating_below_it() {
+fn a_link_at_the_managed_root_itself_is_rejected_while_a_junction_parent_is_allowed() {
     let mut fixture = Fixture::new();
     let actual_parent = fixture._temp.path().join("actual-parent");
     let linked_parent = fixture._temp.path().join("linked-parent");
+    let actual_root = fixture._temp.path().join("actual-root");
     std::fs::create_dir(&actual_parent).unwrap();
+    std::fs::create_dir(&actual_root).unwrap();
     create_directory_link(&actual_parent, &linked_parent).expect("create linked parent fixture");
-    fixture.request.created.managed_root = linked_parent.join("managed-alpha");
+    create_directory_link(&actual_root, &actual_parent.join("linked-root"))
+        .expect("create linked root fixture");
+    fixture.request.created.managed_root = linked_parent.join("linked-root");
     fixture.request.created.staged_bg1 = Some(fixture.request.created.managed_root.join("bg1"));
     fixture.request.created.staged_bg2 = fixture.request.created.managed_root.join("game");
     let sink = RecordingSink::default();
@@ -1588,8 +1592,17 @@ fn a_link_in_the_missing_destination_chain_is_rejected_without_creating_below_it
         error.to_string().contains("direct non-reparse directory"),
         "{error}"
     );
-    assert!(!actual_parent.join("managed-alpha").exists());
     assert!(deps.trace.is_empty());
+
+    // Meanwhile, a junction above a normal non-link managed root is permitted.
+    let mut allowed = Fixture::new();
+    allowed.request.created.managed_root = linked_parent.join("managed-alpha");
+    allowed.request.created.staged_bg1 = Some(allowed.request.created.managed_root.join("bg1"));
+    allowed.request.created.staged_bg2 = allowed.request.created.managed_root.join("game");
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps::default();
+    run_campaign(&allowed.request, &mut deps, &sink).unwrap();
+    assert!(actual_parent.join("managed-alpha/.chriz").is_dir());
 }
 
 #[test]

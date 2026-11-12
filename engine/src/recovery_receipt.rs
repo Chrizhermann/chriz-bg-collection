@@ -673,20 +673,21 @@ fn read_base_receipt(root: &Path, attempt_id: &str) -> Result<(InstallReceipt, V
         .join(ATTEMPT_RECEIPT_FILE);
     let path = direct_file_below(root, relative)?;
     let bytes = read_file(&path)?;
-    let receipt = serde_json::from_slice(&bytes)
+    let receipt = serde_json::from_slice(bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes))
         .map_err(|error| format!("{}: invalid base receipt: {error}", path.display()))?;
     Ok((receipt, bytes))
 }
 
 fn canonical_direct_directory(path: &Path) -> Result<PathBuf, String> {
     validate_direct_directory(path)?;
-    fs::canonicalize(path).map_err(|error| format!("{}: {error}", path.display()))
+    crate::reparse::canonicalize_flexible(path)
+        .map_err(|error| format!("{}: {error}", path.display()))
 }
 
 fn validate_direct_directory(path: &Path) -> Result<(), String> {
     let metadata =
         fs::symlink_metadata(path).map_err(|error| format!("{}: {error}", path.display()))?;
-    if !metadata.is_dir() || is_link_or_reparse(&metadata) {
+    if !metadata.is_dir() || crate::reparse::metadata_is_link(path, &metadata) {
         return Err(format!(
             "{} is not a direct non-reparse directory",
             path.display()
@@ -720,7 +721,7 @@ fn direct_file_below(root: &Path, relative: impl AsRef<Path>) -> Result<PathBuf,
         current.push(name);
         let metadata = fs::symlink_metadata(&current)
             .map_err(|error| format!("{}: {error}", current.display()))?;
-        if is_link_or_reparse(&metadata) {
+        if crate::reparse::metadata_is_link(&current, &metadata) {
             return Err(format!(
                 "{} is a symbolic link or reparse point",
                 current.display()
@@ -760,7 +761,7 @@ fn sha256_file(path: &Path) -> Result<String, String> {
 fn reconcile_existing(path: &Path, expected: &[u8]) -> Result<(), String> {
     match fs::symlink_metadata(path) {
         Ok(metadata) => {
-            if !metadata.is_file() || is_link_or_reparse(&metadata) {
+            if !metadata.is_file() || crate::reparse::metadata_is_link(path, &metadata) {
                 return Err(format!(
                     "{} is not a direct recovery receipt file",
                     path.display()
@@ -863,23 +864,6 @@ fn component_eq(left: &Component<'_>, right: &Component<'_>) -> bool {
     {
         left == right
     }
-}
-
-fn is_link_or_reparse(metadata: &fs::Metadata) -> bool {
-    metadata.file_type().is_symlink() || has_windows_reparse_attribute(metadata)
-}
-
-#[cfg(windows)]
-fn has_windows_reparse_attribute(metadata: &fs::Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    use windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT;
-
-    metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
-}
-
-#[cfg(not(windows))]
-fn has_windows_reparse_attribute(_metadata: &fs::Metadata) -> bool {
-    false
 }
 
 #[cfg(windows)]

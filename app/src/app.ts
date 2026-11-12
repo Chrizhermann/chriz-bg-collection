@@ -163,6 +163,7 @@ class AppController implements AppHandle {
   #shortcutFeedback: ShortcutFeedback | null = null;
   #checkingUpdates = false;
   #installingUpdate = false;
+  #liveTypingDepth = 0;
   #operationFeedback: OperationFeedback | null = null;
   #operationRevision = 0;
   #setupView: SetupViewState = { search: "", category: "" };
@@ -787,46 +788,56 @@ class AppController implements AppHandle {
     await this.navigate("welcome");
   }
 
-  async #inspectDestination(path: string, automatic = this.#state.destinationAutomatic, render = true): Promise<void> {
-    const revision = ++this.#destinationRevision;
-    this.#dispatch({ type: "set-destination", path, automatic });
-    if (this.#selectedGames().length !== sourceSlots.length) {
+  async #inspectDestination(
+    path: string,
+    automatic = this.#state.destinationAutomatic,
+    render = true,
+    liveTyping = false,
+  ): Promise<void> {
+    if (liveTyping) ++this.#liveTypingDepth;
+    try {
+      const revision = ++this.#destinationRevision;
+      this.#dispatch({ type: "set-destination", path, automatic });
+      if (this.#selectedGames().length !== sourceSlots.length) {
+        this.#destination = {
+          path,
+          safe: false,
+          title: flavor.text.sourcesMissingTitle,
+          detail: flavor.text.sourcesMissingDetail,
+        };
+        if (render) this.#render();
+        return;
+      }
       this.#destination = {
         path,
         safe: false,
-        title: flavor.text.sourcesMissingTitle,
-        detail: flavor.text.sourcesMissingDetail,
+        title: "Checking this location",
+        detail: "The folder has not completed native safety inspection yet.",
       };
       if (render) this.#render();
-      return;
-    }
-    this.#destination = {
-      path,
-      safe: false,
-      title: "Checking this location",
-      detail: "The folder has not completed native safety inspection yet.",
-    };
-    if (render) this.#render();
-    let inspected: DestinationEvaluation;
-    try {
-      inspected = await this.backend.inspectDestination(
-        path,
-        this.#sourceCandidateId("bg1"),
-        this.#sourceCandidateId("bg2"),
-      );
-    } catch (error: unknown) {
+      let inspected: DestinationEvaluation;
+      try {
+        inspected = await this.backend.inspectDestination(
+          path,
+          this.#sourceCandidateId("bg1"),
+          this.#sourceCandidateId("bg2"),
+        );
+      } catch (error: unknown) {
+        if (revision !== this.#destinationRevision) return;
+        this.#destination = error instanceof BackendCommandError
+          ? { path, safe: false, title: error.message, detail: error.recoveryAction }
+          : { path, safe: false, title: "This install location could not be checked", detail: "Choose another folder or try this location again." };
+        this.#dispatch({ type: "set-destination", path, automatic });
+        if (render) this.#render();
+        return;
+      }
       if (revision !== this.#destinationRevision) return;
-      this.#destination = error instanceof BackendCommandError
-        ? { path, safe: false, title: error.message, detail: error.recoveryAction }
-        : { path, safe: false, title: "This install location could not be checked", detail: "Choose another folder or try this location again." };
-      this.#dispatch({ type: "set-destination", path, automatic });
+      this.#destination = inspected;
+      this.#dispatch({ type: "set-destination", path: inspected.path, automatic });
       if (render) this.#render();
-      return;
+    } finally {
+      if (liveTyping) --this.#liveTypingDepth;
     }
-    if (revision !== this.#destinationRevision) return;
-    this.#destination = inspected;
-    this.#dispatch({ type: "set-destination", path: inspected.path, automatic });
-    if (render) this.#render();
   }
 
   #selectedGames(): readonly GameCandidate[] {
@@ -974,23 +985,33 @@ class AppController implements AppHandle {
     await this.#inspectDestination(this.#state.destinationPath);
   }
 
-  async #changeInstallationName(name: string): Promise<void> {
+  async #changeInstallationName(name: string, liveTyping = false): Promise<void> {
     if (!this.#beginIdentityEdit()) return;
-    this.#dispatch({ type: "set-installation-name", name });
-    this.#dispatch({ type: "review-cleared" });
-    if (this.#state.destinationAutomatic) {
-      // The folder takes the name CEBG will save, which is always usable as a folder name.
-      const saved = savedInstallationName(name, this.#namedInstallations());
-      await this.#inspectDestination(automaticInstallationPath(this.#defaultInstallationPath, saved), true);
-      return;
+    if (liveTyping) ++this.#liveTypingDepth;
+    try {
+      this.#dispatch({ type: "set-installation-name", name });
+      this.#dispatch({ type: "review-cleared" });
+      if (this.#state.destinationAutomatic) {
+        // The folder takes the name CEBG will save, which is always usable as a folder name.
+        const saved = savedInstallationName(name, this.#namedInstallations());
+        await this.#inspectDestination(automaticInstallationPath(this.#defaultInstallationPath, saved), true, true, liveTyping);
+        return;
+      }
+      this.#render();
+    } finally {
+      if (liveTyping) --this.#liveTypingDepth;
     }
-    this.#render();
   }
 
-  async #changeInstallLocation(path: string): Promise<void> {
+  async #changeInstallLocation(path: string, liveTyping = false): Promise<void> {
     if (!this.#beginIdentityEdit()) return;
-    this.#dispatch({ type: "review-cleared" });
-    await this.#inspectDestination(path, false);
+    if (liveTyping) ++this.#liveTypingDepth;
+    try {
+      this.#dispatch({ type: "review-cleared" });
+      await this.#inspectDestination(path, false, true, liveTyping);
+    } finally {
+      if (liveTyping) --this.#liveTypingDepth;
+    }
   }
 
   async #chooseDestinationFolder(): Promise<void> {
@@ -2289,6 +2310,17 @@ class AppController implements AppHandle {
     }
     const previousRoute = this.root.querySelector<HTMLElement>(".app-shell")?.dataset.route;
     const sameRoute = previousRoute === this.#state.route;
+    const activeInput = sameRoute && this.#liveTypingDepth > 0 && document.activeElement instanceof HTMLInputElement
+      && (document.activeElement.id === "install-name"
+        || document.activeElement.id === "install-location"
+        || document.activeElement.id === "destination-path")
+      ? {
+          id: document.activeElement.id,
+          value: document.activeElement.value,
+          selectionStart: document.activeElement.selectionStart,
+          selectionEnd: document.activeElement.selectionEnd,
+        }
+      : null;
     const scrollTop = sameRoute ? this.root.querySelector("main")?.scrollTop ?? 0 : 0;
     const liveLog = this.root.querySelector<HTMLDetailsElement>(".technical-log");
     const previousDialog = this.root.querySelector(".decision-dialog");
@@ -2424,8 +2456,8 @@ class AppController implements AppHandle {
         }, {
           selectSource: (game, id) => safely(() => this.#selectGame(game, id)),
           browseSource: (game) => safely(() => this.#chooseGameFolder(game)),
-          changeName: (name) => safely(() => this.#changeInstallationName(name)),
-          changeLocation: (path) => safely(() => this.#changeInstallLocation(path)),
+          changeName: (name, liveTyping) => safely(() => this.#changeInstallationName(name, liveTyping)),
+          changeLocation: (path, liveTyping) => safely(() => this.#changeInstallLocation(path, liveTyping)),
           browseLocation: () => safely(() => this.#chooseDestinationFolder()),
           customize: () => safely(() => this.#customizeInstallation()),
           changeFeatures: (changes, focusId) => safely(() => this.#changeFeatures(changes, focusId)),
@@ -2461,7 +2493,7 @@ class AppController implements AppHandle {
       case "destination":
         content = destinationScreen(
           this.#destination,
-          (path) => safely(() => this.#inspectDestination(path)),
+          (path, liveTyping) => safely(() => this.#inspectDestination(path, this.#state.destinationAutomatic, true, liveTyping)),
           () => safely(() => this.#chooseDestinationFolder()),
           () => this.#back(),
           () => safely(() => navigate("setup")),
@@ -2616,6 +2648,16 @@ class AppController implements AppHandle {
       target?.focus({ preventScroll: true });
       // A control opened from another screen (a main choice's Details) may sit below the fold.
       if (focusTargetId && !sameRoute) target?.closest("section")?.scrollIntoView?.({ block: "nearest" });
+    } else if (reportOverlay === null && activeInput !== null) {
+      const target = Array.from(this.root.querySelectorAll<HTMLInputElement>("input[id]"))
+        .find(element => element.id === activeInput.id);
+      if (target !== undefined && !target.disabled) {
+        target.value = activeInput.value;
+        target.focus({ preventScroll: true });
+        if (activeInput.selectionStart !== null && activeInput.selectionEnd !== null) {
+          target.setSelectionRange(activeInput.selectionStart, activeInput.selectionEnd);
+        }
+      }
     }
     if (this.#removalPreview !== null) {
       shell.inert = true;

@@ -1383,7 +1383,7 @@ fn validate_identifier(value: &str, label: &str, path: &Path) -> Result<(), Rece
 
 fn canonical_direct_directory(path: &Path) -> Result<PathBuf, ReceiptError> {
     validate_direct_directory(path)?;
-    fs::canonicalize(path).map_err(|source| ReceiptError::Io {
+    crate::reparse::canonicalize_flexible(path).map_err(|source| ReceiptError::Io {
         path: path.to_path_buf(),
         source,
     })
@@ -1394,7 +1394,7 @@ fn validate_direct_directory(path: &Path) -> Result<(), ReceiptError> {
         path: path.to_path_buf(),
         source,
     })?;
-    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+    if crate::reparse::metadata_is_link(path, &metadata) || !metadata.is_dir() {
         return Err(unsafe_path(path, "expected a direct non-symlink directory"));
     }
     Ok(())

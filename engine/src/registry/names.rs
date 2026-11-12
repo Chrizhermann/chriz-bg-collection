@@ -486,14 +486,7 @@ fn metadata_if_present(path: &Path) -> Result<Option<fs::Metadata>, RegistryErro
 }
 
 fn reject_reparse(path: &Path, metadata: &fs::Metadata) -> Result<(), RegistryError> {
-    #[cfg(windows)]
-    let reparse = {
-        use std::os::windows::fs::MetadataExt;
-        metadata.file_attributes() & 0x400 != 0
-    };
-    #[cfg(not(windows))]
-    let reparse = false;
-    if metadata.file_type().is_symlink() || reparse {
+    if crate::reparse::metadata_is_link(path, metadata) {
         return Err(unsafe_path(
             path,
             "name metadata must not use symbolic links or reparse points",

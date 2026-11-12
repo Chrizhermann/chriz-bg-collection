@@ -39,8 +39,8 @@ export interface InstallScreenModel {
 export interface InstallScreenActions {
   readonly selectSource: (game: "bg1" | "bg2", id: string) => void | Promise<void>;
   readonly browseSource: (game: "bg1" | "bg2") => void | Promise<void>;
-  readonly changeName: (name: string) => void | Promise<void>;
-  readonly changeLocation: (path: string) => void | Promise<void>;
+  readonly changeName: (name: string, liveTyping?: boolean) => void | Promise<void>;
+  readonly changeLocation: (path: string, liveTyping?: boolean) => void | Promise<void>;
   readonly browseLocation: () => void | Promise<void>;
   readonly customize: () => void | Promise<void>;
   /** Switches a main choice: all member changes of one feature group as one batch. */
@@ -231,7 +231,21 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
   nameHelp.setAttribute("aria-live", "polite");
   name.input.setAttribute("aria-describedby", nameHelp.id);
   name.wrapper.append(nameHelp);
-  name.input.addEventListener("change", () => void actions.changeName(name.input.value));
+  let nameTimer: number | null = null;
+  name.input.addEventListener("input", () => {
+    if (nameTimer !== null) window.clearTimeout(nameTimer);
+    nameTimer = window.setTimeout(() => {
+      nameTimer = null;
+      if (name.input.isConnected) void actions.changeName(name.input.value, true);
+    }, 250);
+  });
+  name.input.addEventListener("change", () => {
+    if (nameTimer !== null) {
+      window.clearTimeout(nameTimer);
+      nameTimer = null;
+    }
+    void actions.changeName(name.input.value, false);
+  });
   const locationControls = element("div", "location-controls");
   const changeLocation = actionButton("Browse…", actions.browseLocation, "quiet");
   changeLocation.setAttribute("aria-label", "Change install location");
@@ -263,7 +277,21 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
     location.input.setAttribute("aria-describedby", `${locationHelp.id} ${locationFinding.id}`);
     location.wrapper.append(locationFinding);
   }
-  location.input.addEventListener("change", () => void actions.changeLocation(location.input.value));
+  let locationTimer: number | null = null;
+  location.input.addEventListener("input", () => {
+    if (locationTimer !== null) window.clearTimeout(locationTimer);
+    locationTimer = window.setTimeout(() => {
+      locationTimer = null;
+      if (location.input.isConnected) void actions.changeLocation(location.input.value, true);
+    }, 250);
+  });
+  location.input.addEventListener("change", () => {
+    if (locationTimer !== null) {
+      window.clearTimeout(locationTimer);
+      locationTimer = null;
+    }
+    void actions.changeLocation(location.input.value, false);
+  });
   fields.append(name.wrapper, location.wrapper);
   settings.append(fields, element("p", "safety-note", flavor.text.installSafetyNote));
 

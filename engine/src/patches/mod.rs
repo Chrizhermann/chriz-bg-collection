@@ -158,7 +158,10 @@ fn plan(ctx: &Context<'_>, catalog: &catalog::Catalog) -> Result<Plan, String> {
     paths.extend(description::TABLES.iter().map(|p| format!("override/{p}")));
     for entry in walkdir::WalkDir::new(game.join("lang")).follow_links(false) {
         let entry = entry.map_err(err)?;
-        if entry.file_type().is_symlink() {
+        if entry
+            .metadata()
+            .is_ok_and(|meta| crate::reparse::metadata_is_link(entry.path(), &meta))
+        {
             return Err("Linked language resources are unsupported.".into());
         }
         if entry
@@ -339,24 +342,193 @@ pub(crate) fn close_check_in(
         })?;
     #[cfg(windows)]
     {
-        use std::os::windows::process::CommandExt;
-        // Target-specific external WeiDU processes must count too; unrelated modding is allowed.
-        let script="$t=$env:CEBG_PATCH_TARGET; $p=@(Get-CimInstance Win32_Process -ErrorAction Stop | Where-Object { $_.Name -match '^(weidu|setup-.+)\\.exe$' -and $_.CommandLine -and $_.CommandLine.IndexOf($t,[StringComparison]::OrdinalIgnoreCase) -ge 0 }); if($p.Count){exit 2}";
-        let target = game
-            .to_string_lossy()
-            .trim_start_matches("\\\\?\\")
-            .to_owned();
-        let status = std::process::Command::new("powershell.exe")
-            .args(["-NoProfile", "-NonInteractive", "-Command", script])
-            .env("CEBG_PATCH_TARGET", target)
-            .creation_flags(0x08000000)
-            .status()
-            .map_err(err)?;
-        if !status.success() {
+        if has_running_installer_targeting(game)? {
             return Err("Close any installer targeting this game before patching.".into());
         }
     }
     Ok(())
+}
+
+#[cfg(windows)]
+fn is_weidu_installer_exe_name(name: &str) -> bool {
+    name.eq_ignore_ascii_case("weidu.exe")
+        || (name.len() > "setup-.exe".len()
+            && name
+                .get(..6)
+                .is_some_and(|p| p.eq_ignore_ascii_case("setup-"))
+            && name
+                .get(name.len() - 4..)
+                .is_some_and(|s| s.eq_ignore_ascii_case(".exe")))
+}
+
+#[cfg(windows)]
+fn normalize_win32_match_text(text: &str) -> String {
+    text.replace('/', "\\")
+        .trim_start_matches("\\\\?\\")
+        .to_ascii_lowercase()
+}
+
+#[cfg(windows)]
+fn process_command_line(process: windows_sys::Win32::Foundation::HANDLE) -> Option<String> {
+    #[repr(C)]
+    struct UnicodeString {
+        length: u16,
+        maximum_length: u16,
+        buffer: *const u16,
+    }
+    #[link(name = "ntdll")]
+    unsafe extern "system" {
+        fn NtQueryInformationProcess(
+            process_handle: windows_sys::Win32::Foundation::HANDLE,
+            process_information_class: u32,
+            process_information: *mut core::ffi::c_void,
+            process_information_length: u32,
+            return_length: *mut u32,
+        ) -> i32;
+    }
+    const PROCESS_COMMAND_LINE_INFORMATION: u32 = 60;
+    const STATUS_INFO_LENGTH_MISMATCH: i32 = 0xC000_0004_u32 as i32;
+    const STATUS_BUFFER_TOO_SMALL: i32 = 0xC000_0023_u32 as i32;
+    const STATUS_BUFFER_OVERFLOW: i32 = 0x8000_0005_u32 as i32;
+
+    let mut words = vec![0_u64; 512]; // 4096 bytes, 8-byte aligned
+    let mut needed = 0_u32;
+    let mut status = unsafe {
+        NtQueryInformationProcess(
+            process,
+            PROCESS_COMMAND_LINE_INFORMATION,
+            words.as_mut_ptr().cast(),
+            (words.len() * std::mem::size_of::<u64>()) as u32,
+            &mut needed,
+        )
+    };
+    if matches!(
+        status,
+        STATUS_INFO_LENGTH_MISMATCH | STATUS_BUFFER_TOO_SMALL | STATUS_BUFFER_OVERFLOW
+    ) && needed > 0
+        && needed <= 1024 * 1024
+    {
+        words.resize((needed as usize).div_ceil(std::mem::size_of::<u64>()), 0);
+        status = unsafe {
+            NtQueryInformationProcess(
+                process,
+                PROCESS_COMMAND_LINE_INFORMATION,
+                words.as_mut_ptr().cast(),
+                (words.len() * std::mem::size_of::<u64>()) as u32,
+                &mut needed,
+            )
+        };
+    }
+    if status < 0 {
+        return None;
+    }
+    let header = unsafe { &*(words.as_ptr() as *const UnicodeString) };
+    if header.buffer.is_null() || header.length == 0 {
+        return Some(String::new());
+    }
+    let byte_start = words.as_ptr() as usize;
+    let byte_end = byte_start + words.len() * std::mem::size_of::<u64>();
+    let ptr = header.buffer as usize;
+    let byte_len = header.length as usize;
+    if ptr < byte_start || ptr.saturating_add(byte_len) > byte_end {
+        return None;
+    }
+    let slice = unsafe { std::slice::from_raw_parts(header.buffer, byte_len / 2) };
+    Some(String::from_utf16_lossy(slice))
+}
+
+#[cfg(windows)]
+fn has_running_installer_targeting(game: &Path) -> Result<bool, String> {
+    use std::os::windows::ffi::OsStringExt;
+    use windows_sys::Win32::Foundation::{
+        CloseHandle, GetLastError, ERROR_ACCESS_DENIED, ERROR_INVALID_PARAMETER,
+        ERROR_NO_MORE_FILES, HANDLE, INVALID_HANDLE_VALUE,
+    };
+    use windows_sys::Win32::System::Diagnostics::ToolHelp::{
+        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
+        TH32CS_SNAPPROCESS,
+    };
+    use windows_sys::Win32::System::Threading::{
+        OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32,
+        PROCESS_QUERY_LIMITED_INFORMATION,
+    };
+
+    struct HandleGuard(HANDLE);
+    impl Drop for HandleGuard {
+        fn drop(&mut self) {
+            unsafe { CloseHandle(self.0) };
+        }
+    }
+
+    let target =
+        normalize_win32_match_text(&crate::reparse::display_windows_path(game).to_string_lossy());
+    let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
+    if snapshot == INVALID_HANDLE_VALUE {
+        return Err(err(std::io::Error::last_os_error()));
+    }
+    let _snapshot = HandleGuard(snapshot);
+    let mut entry = PROCESSENTRY32W {
+        dwSize: std::mem::size_of::<PROCESSENTRY32W>() as u32,
+        ..Default::default()
+    };
+    let mut has_entry = unsafe { Process32FirstW(snapshot, &mut entry) } != 0;
+    if !has_entry {
+        let error = unsafe { GetLastError() };
+        if error != ERROR_NO_MORE_FILES {
+            return Err(err(std::io::Error::from_raw_os_error(error as i32)));
+        }
+    }
+    while has_entry {
+        let name_len = entry
+            .szExeFile
+            .iter()
+            .position(|unit| *unit == 0)
+            .unwrap_or(entry.szExeFile.len());
+        let process_name = String::from_utf16_lossy(&entry.szExeFile[..name_len]);
+        if is_weidu_installer_exe_name(&process_name) {
+            let handle =
+                unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, entry.th32ProcessID) };
+            if handle.is_null() {
+                let code = unsafe { GetLastError() };
+                if !matches!(code, ERROR_ACCESS_DENIED | ERROR_INVALID_PARAMETER) {
+                    return Err(err(std::io::Error::from_raw_os_error(code as i32)));
+                }
+            } else {
+                let _guard = HandleGuard(handle);
+                let mut image_buf = vec![0_u16; 4096];
+                let mut image_len = image_buf.len() as u32;
+                if unsafe {
+                    QueryFullProcessImageNameW(
+                        handle,
+                        PROCESS_NAME_WIN32,
+                        image_buf.as_mut_ptr(),
+                        &mut image_len,
+                    )
+                } != 0
+                {
+                    let image_path = PathBuf::from(std::ffi::OsString::from_wide(
+                        &image_buf[..image_len as usize],
+                    ));
+                    if crate::reparse::windows_path_starts_with(&image_path, game) {
+                        return Ok(true);
+                    }
+                }
+                if let Some(cmd) = process_command_line(handle) {
+                    if !target.is_empty() && normalize_win32_match_text(&cmd).contains(&target) {
+                        return Ok(true);
+                    }
+                }
+            }
+        }
+        has_entry = unsafe { Process32NextW(snapshot, &mut entry) } != 0;
+        if !has_entry {
+            let error = unsafe { GetLastError() };
+            if error != ERROR_NO_MORE_FILES {
+                return Err(err(std::io::Error::from_raw_os_error(error as i32)));
+            }
+        }
+    }
+    Ok(false)
 }
 
 fn changed(before: &Inventory, after: &Inventory) -> Vec<String> {
@@ -406,4 +578,28 @@ fn allowed(name: &str) -> bool {
             "akcb_kit_descriptions/backup/0/uninstall.0",
         ]
         .contains(&name)
+}
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn installer_process_name_filter_matches_weidu_and_setup_exes() {
+        assert!(is_weidu_installer_exe_name("WeiDU.exe"));
+        assert!(is_weidu_installer_exe_name("setup-eet.exe"));
+        assert!(is_weidu_installer_exe_name("Setup-Stratagems.EXE"));
+        assert!(!is_weidu_installer_exe_name("setup-.exe"));
+        assert!(!is_weidu_installer_exe_name("notepad.exe"));
+        assert!(!is_weidu_installer_exe_name("setup-eet.txt"));
+    }
+
+    #[test]
+    fn nt_query_process_command_line_reads_current_process() {
+        use windows_sys::Win32::System::Threading::GetCurrentProcess;
+
+        let cmd = process_command_line(unsafe { GetCurrentProcess() })
+            .expect("NtQueryInformationProcess(60) should read current process command line");
+        assert!(!cmd.is_empty());
+    }
 }

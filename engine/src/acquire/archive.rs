@@ -93,6 +93,22 @@ impl ArchiveLimits {
     }
 }
 
+/// Small files (`<= 1 MiB`) often compress extremely well with DEFLATE or LZMA (text/BMP/2DA).
+const SMALL_ENTRY_COMPRESSION_LIMIT_BYTES: u64 = 1024 * 1024;
+const SMALL_ENTRY_MIN_GENERAL_RATIO: u64 = 2_048;
+
+fn effective_compression_ratio(limits: &ArchiveLimits, uncompressed_bytes: u64) -> u64 {
+    if limits.max_compression_ratio >= ArchiveLimits::GENERAL.max_compression_ratio
+        && uncompressed_bytes <= SMALL_ENTRY_COMPRESSION_LIMIT_BYTES
+    {
+        limits
+            .max_compression_ratio
+            .max(SMALL_ENTRY_MIN_GENERAL_RATIO)
+    } else {
+        limits.max_compression_ratio
+    }
+}
+
 /// Extraction policy selected by the recipe source.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -330,6 +346,12 @@ pub(super) fn served_container_problem(
     match format {
         ArchiveFormat::Zip | ArchiveFormat::Iemod => {
             if !start.starts_with(b"PK\x03\x04") {
+                if start.starts_with(b"MZ") {
+                    drop(file);
+                    if rar_container_problem(path, limits, stop)?.is_none() {
+                        return Ok(None);
+                    }
+                }
                 return Ok(Some(format!(
                     "it does not begin like a ZIP archive but with {}",
                     describe_start(start)
@@ -359,6 +381,9 @@ pub(super) fn served_container_problem(
         }
         ArchiveFormat::SelfExtractingRar => {
             if !start.starts_with(b"MZ") {
+                if start.starts_with(b"PK\x03\x04") && ZipArchive::new(file).is_ok() {
+                    return Ok(None);
+                }
                 return Ok(Some(format!(
                     "it does not begin like a self-extracting RAR archive but with {}",
                     describe_start(start)
@@ -777,10 +802,19 @@ fn extract_with_rule(
             actual: actual_digest,
         });
     }
-    if matches!(
-        requirements.format,
-        ArchiveFormat::Zip | ArchiveFormat::Iemod
-    ) && (archive_length < 4 || prefix != *b"PK\x03\x04")
+    let effective_format = if matches!(rule, LayoutRule::Served) {
+        if archive_length >= 4 && prefix == *b"PK\x03\x04" {
+            ArchiveFormat::Zip
+        } else if archive_length >= 2 && prefix[..2] == *b"MZ" {
+            ArchiveFormat::SelfExtractingRar
+        } else {
+            requirements.format
+        }
+    } else {
+        requirements.format
+    };
+    if matches!(effective_format, ArchiveFormat::Zip | ArchiveFormat::Iemod)
+        && (archive_length < 4 || prefix != *b"PK\x03\x04")
     {
         let message = if matches!(requirements.mode, ArchiveMode::Public) {
             "self-extracting/prefixed ZIP files are not accepted"
@@ -789,7 +823,7 @@ fn extract_with_rule(
         };
         return Err(AcquireError::PublicArchiveRejected(message.to_owned()));
     }
-    if matches!(requirements.format, ArchiveFormat::SelfExtractingRar)
+    if matches!(effective_format, ArchiveFormat::SelfExtractingRar)
         && (archive_length < 2 || prefix[..2] != *b"MZ")
     {
         return Err(AcquireError::PublicArchiveRejected(
@@ -841,7 +875,7 @@ fn extract_with_rule(
         }
     }
 
-    let (entries, wrapper_directory) = match requirements.format {
+    let (entries, wrapper_directory) = match effective_format {
         ArchiveFormat::Zip | ArchiveFormat::Iemod => {
             let file = File::open(snapshot.path()).map_err(|source| AcquireError::Io {
                 action: "open archive",
@@ -878,7 +912,7 @@ fn extract_with_rule(
         source,
     })?;
     let temporary = create_temporary_directory(&temporary_parent, &digest)?;
-    let result = match requirements.format {
+    let result = match effective_format {
         ArchiveFormat::Zip | ArchiveFormat::Iemod => extract_zip_entries(
             snapshot.path(),
             &entries,
@@ -1149,15 +1183,19 @@ fn validate_central_directory<R: Read + std::io::Seek>(
                 )));
             }
             let compressed = entry.compressed_size().max(1);
-            let allowed = compressed.saturating_mul(limits.max_compression_ratio);
+            let max_ratio = effective_compression_ratio(limits, entry.size());
+            let allowed = compressed.saturating_mul(max_ratio);
             if entry.size() > allowed {
                 return Err(AcquireError::ArchiveLimitExceeded(format!(
                     "entry `{archive_name}` exceeds compression ratio {}",
-                    limits.max_compression_ratio
+                    max_ratio
                 )));
             }
         }
         let key = casefold(&normalized);
+        if entry.is_dir() && destination_kinds.get(&key) == Some(&true) {
+            continue;
+        }
         if destination_kinds.insert(key, entry.is_dir()).is_some() {
             return Err(AcquireError::UnsafeArchiveEntry {
                 entry: archive_name,
@@ -1329,27 +1367,31 @@ fn validate_rar_entries(
                     limits.max_total_uncompressed_bytes
                 )));
             }
-            if size > packed.max(1).saturating_mul(limits.max_compression_ratio) {
+            let max_ratio = effective_compression_ratio(limits, size);
+            if size > packed.max(1).saturating_mul(max_ratio) {
                 return Err(AcquireError::ArchiveLimitExceeded(format!(
                     "entry `{normalized}` exceeds compression ratio {}",
-                    limits.max_compression_ratio
+                    max_ratio
                 )));
             }
         }
         let key = casefold(&normalized);
-        if destination_kinds.insert(key, is_directory).is_some() {
+        if is_directory && destination_kinds.get(&key) == Some(&true) {
+            // Skip duplicate directory entries; still call RARProcessFileW below.
+        } else if destination_kinds.insert(key, is_directory).is_some() {
             return Err(AcquireError::UnsafeArchiveEntry {
                 entry: normalized,
                 message: "case-insensitive duplicate destination".to_owned(),
             });
+        } else {
+            entries.push(ValidatedEntry {
+                index: entries.len(),
+                archive_path: normalized.clone(),
+                relative_path: normalized,
+                size,
+                is_directory,
+            });
         }
-        entries.push(ValidatedEntry {
-            index: entries.len(),
-            archive_path: normalized.clone(),
-            relative_path: normalized,
-            size,
-            is_directory,
-        });
         let process = unsafe {
             unrar_sys::RARProcessFileW(
                 handle,
@@ -2593,10 +2635,13 @@ pub(super) fn normalize_relative_path(
     }
     let mut components = Vec::new();
     for component in trimmed.split('/') {
-        if component.is_empty() || matches!(component, "." | "..") {
+        if component.is_empty() || component == "." {
+            continue;
+        }
+        if component == ".." {
             return Err(AcquireError::UnsafeArchiveEntry {
                 entry: value.to_owned(),
-                message: "empty, current, and parent components are forbidden".to_owned(),
+                message: "parent components are forbidden".to_owned(),
             });
         }
         if component.ends_with('.') || component.ends_with(' ') {
@@ -2621,6 +2666,12 @@ pub(super) fn normalize_relative_path(
             });
         }
         components.push(component);
+    }
+    if components.is_empty() {
+        return Err(AcquireError::UnsafeArchiveEntry {
+            entry: value.to_owned(),
+            message: "empty paths are forbidden".to_owned(),
+        });
     }
     Ok(components.join("/"))
 }

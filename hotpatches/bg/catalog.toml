@@ -25,6 +25,7 @@ runtime_files = [
     "override/bfbotbg*.mos",
     "override/bfbtch.spl",
     "override/bfbtcr.spl",
+    "override/bfbt*.spl",
     "override/bfbot_presets/**",
     # EEex Remote Console, an optional developer tool: its command, result and handshake files.
     "override/eeex_remote_*",

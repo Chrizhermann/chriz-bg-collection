@@ -337,7 +337,7 @@ fn validate_directory(path: &Path, label: &str) -> Result<(), AcquireError> {
         path: path.to_path_buf(),
         source,
     })?;
-    if !metadata.is_dir() || metadata.file_type().is_symlink() {
+    if !metadata.is_dir() || crate::reparse::metadata_is_link(path, &metadata) {
         return Err(AcquireError::InvalidMaterialization(format!(
             "{label} must be an existing non-symlink directory"
         )));
@@ -428,7 +428,9 @@ fn collect_payload(
             path: source_root.clone(),
             source,
         })?;
-        if metadata.file_type().is_symlink() || (!metadata.is_dir() && !metadata.is_file()) {
+        if crate::reparse::metadata_is_link(&source_root, &metadata)
+            || (!metadata.is_dir() && !metadata.is_file())
+        {
             return Err(AcquireError::InvalidMaterialization(format!(
                 "declared payload root `{root}` must be a regular file or non-symlink directory"
             )));
@@ -446,13 +448,21 @@ fn collect_payload(
         for entry in WalkDir::new(&source_root).follow_links(false) {
             let entry =
                 entry.map_err(|error| AcquireError::InvalidMaterialization(error.to_string()))?;
-            if entry.file_type().is_symlink() {
+            let entry_is_link = entry.file_type().is_symlink()
+                || entry
+                    .metadata()
+                    .ok()
+                    .as_ref()
+                    .is_some_and(|meta| crate::reparse::metadata_is_link(entry.path(), meta));
+            if entry_is_link {
                 return Err(AcquireError::InvalidMaterialization(format!(
                     "payload symlink `{}` is forbidden",
                     entry.path().display()
                 )));
             }
-            if !entry.file_type().is_file() {
+            if !entry.file_type().is_file()
+                || crate::reparse::is_benign_os_metadata_filename(entry.file_name())
+            {
                 continue;
             }
             let relative = entry.path().strip_prefix(&artifact.root).map_err(|_| {
@@ -481,7 +491,7 @@ fn collect_payload(
             path: source.clone(),
             source: source_error,
         })?;
-        if !metadata.is_file() || metadata.file_type().is_symlink() {
+        if !metadata.is_file() || crate::reparse::metadata_is_link(&source, &metadata) {
             return Err(AcquireError::InvalidMaterialization(format!(
                 "declared TP2 `{tp2}` is not a regular file"
             )));
@@ -542,7 +552,9 @@ fn components_to_portable(path: &Path) -> Result<String, AcquireError> {
 
 fn validate_optional_state_directory(path: &Path) -> Result<(), AcquireError> {
     match fs::symlink_metadata(path) {
-        Ok(metadata) if metadata.is_dir() && !metadata.file_type().is_symlink() => Ok(()),
+        Ok(metadata) if metadata.is_dir() && !crate::reparse::metadata_is_link(path, &metadata) => {
+            Ok(())
+        }
         Ok(_) => Err(AcquireError::InvalidMaterialization(format!(
             "state path `{}` is not a regular directory",
             path.display()
@@ -670,7 +682,8 @@ fn validate_destination_ancestors(
     for component in components.iter().take(components.len().saturating_sub(1)) {
         current.push(component);
         match fs::symlink_metadata(&current) {
-            Ok(metadata) if metadata.is_dir() && !metadata.file_type().is_symlink() => {}
+            Ok(metadata)
+                if metadata.is_dir() && !crate::reparse::metadata_is_link(&current, &metadata) => {}
             Ok(_) => {
                 return Err(AcquireError::InvalidMaterialization(format!(
                     "destination ancestor `{}` is not a regular directory",
@@ -705,8 +718,11 @@ fn inspect_payload_destination(
     for (depth, component) in components.iter().enumerate().take(ancestors) {
         current.push(component);
         match fs::symlink_metadata(&current) {
-            Ok(metadata) if metadata.is_dir() && !metadata.file_type().is_symlink() => {}
-            Ok(metadata) if is_ordinary(&metadata) && metadata.is_file() => {
+            Ok(metadata)
+                if metadata.is_dir() && !crate::reparse::metadata_is_link(&current, &metadata) => {}
+            Ok(metadata)
+                if !crate::reparse::metadata_is_link(&current, &metadata) && metadata.is_file() =>
+            {
                 return Err(AcquireError::DestinationKindConflict {
                     path: relative_path.to_owned(),
                     message: format!(
@@ -733,7 +749,9 @@ fn inspect_payload_destination(
     }
     let target = join_relative(destination, relative_path);
     match fs::symlink_metadata(&target) {
-        Ok(metadata) if metadata.is_dir() && is_ordinary(&metadata) => {
+        Ok(metadata)
+            if metadata.is_dir() && !crate::reparse::metadata_is_link(&target, &metadata) =>
+        {
             Err(AcquireError::DestinationKindConflict {
                 path: relative_path.to_owned(),
                 message: "the game or an earlier mod already placed a folder of that name"
@@ -744,27 +762,11 @@ fn inspect_payload_destination(
     }
 }
 
-/// Neither a link nor another reparse point.
-fn is_ordinary(metadata: &fs::Metadata) -> bool {
-    !metadata.file_type().is_symlink() && !is_reparse_point(metadata)
-}
-
-#[cfg(windows)]
-fn is_reparse_point(metadata: &fs::Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    metadata.file_attributes()
-        & windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT
-        != 0
-}
-
-#[cfg(not(windows))]
-fn is_reparse_point(_metadata: &fs::Metadata) -> bool {
-    false
-}
-
 fn inspect_optional_regular_file(path: &Path) -> Result<Option<(u64, String)>, AcquireError> {
     match fs::symlink_metadata(path) {
-        Ok(metadata) if metadata.is_file() && !metadata.file_type().is_symlink() => {
+        Ok(metadata)
+            if metadata.is_file() && !crate::reparse::metadata_is_link(path, &metadata) =>
+        {
             hash_regular_file(path).map(Some)
         }
         Ok(_) => Err(AcquireError::InvalidMaterialization(format!(
@@ -808,7 +810,10 @@ fn remove_owned_temporary(
     let target = join_relative(destination, &plan.payload.relative_path);
     let temporary = temporary_sibling(&target, materialization_id)?;
     match fs::symlink_metadata(&temporary) {
-        Ok(metadata) if metadata.is_file() && !metadata.file_type().is_symlink() => {
+        Ok(metadata)
+            if metadata.is_file() && !crate::reparse::metadata_is_link(&temporary, &metadata) =>
+        {
+            let _ = crate::reparse::clear_readonly(&temporary);
             fs::remove_file(&temporary).map_err(|source| AcquireError::Io {
                 action: "remove owned materialization temporary",
                 path: temporary,
@@ -876,17 +881,20 @@ fn publish_one(
         }
         PublishAction::Replace {
             expected_input_sha256,
-        } => match fs_retry::rename_checked(&temporary, &target, || {
-            check_replacement_input(&target, expected_input_sha256, &plan.payload.relative_path)
-        }) {
-            Ok(()) => Ok(()),
-            Err(CheckedRenameError::Check(error)) => Err(error),
-            Err(CheckedRenameError::Rename(source)) => Err(AcquireError::Io {
-                action: "publish signed collision replacement",
-                path: target,
-                source,
-            }),
-        },
+        } => {
+            let _ = crate::reparse::clear_readonly(&target);
+            match fs_retry::rename_checked(&temporary, &target, || {
+                check_replacement_input(&target, expected_input_sha256, &plan.payload.relative_path)
+            }) {
+                Ok(()) => Ok(()),
+                Err(CheckedRenameError::Check(error)) => Err(error),
+                Err(CheckedRenameError::Rename(source)) => Err(AcquireError::Io {
+                    action: "publish signed collision replacement",
+                    path: target,
+                    source,
+                }),
+            }
+        }
         PublishAction::Identical { .. } => unreachable!(),
     };
     if publication.is_err() {
@@ -993,7 +1001,10 @@ fn persist_manifest(
     validate_directory(state_directory, "publication state directory")?;
     let temporary = temporary_sibling(manifest_path, materialization_id)?;
     match fs::symlink_metadata(&temporary) {
-        Ok(metadata) if metadata.is_file() && !metadata.file_type().is_symlink() => {
+        Ok(metadata)
+            if metadata.is_file() && !crate::reparse::metadata_is_link(&temporary, &metadata) =>
+        {
+            let _ = crate::reparse::clear_readonly(&temporary);
             fs::remove_file(&temporary).map_err(|source| AcquireError::Io {
                 action: "remove owned manifest temporary",
                 path: temporary.clone(),
@@ -1041,6 +1052,7 @@ fn persist_manifest(
         source,
     })?;
     drop(file);
+    let _ = crate::reparse::clear_readonly(manifest_path);
     fs_retry::rename(&temporary, manifest_path).map_err(|source| AcquireError::Io {
         action: "publish publication manifest",
         path: manifest_path.to_path_buf(),
@@ -1054,7 +1066,7 @@ fn hash_regular_file(path: &Path) -> Result<(u64, String), AcquireError> {
         path: path.to_path_buf(),
         source,
     })?;
-    if !metadata.is_file() || metadata.file_type().is_symlink() {
+    if !metadata.is_file() || crate::reparse::metadata_is_link(path, &metadata) {
         return Err(AcquireError::InvalidMaterialization(format!(
             "`{}` is not a regular file",
             path.display()

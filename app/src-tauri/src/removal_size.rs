@@ -23,7 +23,7 @@ fn estimate_with_limits(root: &Path, deadline: Instant, mut entries_left: usize)
         }
         // Recheck queued directories before opening them, including the root.
         let metadata = fs::symlink_metadata(&directory).ok()?;
-        if linked(&metadata) || !metadata.is_dir() {
+        if bg_engine::reparse::metadata_is_link(&directory, &metadata) || !metadata.is_dir() {
             return None;
         }
         for entry in fs::read_dir(&directory).ok()? {
@@ -32,14 +32,15 @@ fn estimate_with_limits(root: &Path, deadline: Instant, mut entries_left: usize)
             }
             entries_left = entries_left.checked_sub(1)?;
             let entry = entry.ok()?;
+            let entry_path = entry.path();
             // DirEntry metadata does not follow links and reuses enumeration metadata
             // on Windows, avoiding a separate path lookup for every game resource.
             let metadata = entry.metadata().ok()?;
-            if linked(&metadata) {
+            if bg_engine::reparse::metadata_is_link(&entry_path, &metadata) {
                 return None;
             }
             if metadata.is_dir() {
-                pending.push(entry.path());
+                pending.push(entry_path);
             } else if metadata.is_file() {
                 total = total.checked_add(metadata.len())?;
             } else {
@@ -48,18 +49,6 @@ fn estimate_with_limits(root: &Path, deadline: Instant, mut entries_left: usize)
         }
     }
     (Instant::now() < deadline).then_some(total)
-}
-
-fn linked(metadata: &fs::Metadata) -> bool {
-    #[cfg(windows)]
-    {
-        use std::os::windows::fs::MetadataExt;
-        metadata.file_type().is_symlink() || metadata.file_attributes() & 0x400 != 0
-    }
-    #[cfg(not(windows))]
-    {
-        metadata.file_type().is_symlink()
-    }
 }
 
 #[cfg(test)]

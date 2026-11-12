@@ -16,8 +16,11 @@ pub fn err(e: impl std::fmt::Display) -> String {
 }
 pub fn direct(path: &Path) -> Result<(), String> {
     for part in path.ancestors() {
+        if part.as_os_str().is_empty() {
+            continue;
+        }
         let metadata = fs::symlink_metadata(part).map_err(err)?;
-        if metadata.file_type().is_symlink() || reparse(&metadata) {
+        if crate::reparse::metadata_is_link(part, &metadata) {
             return Err(format!("Linked path is not supported: {}", part.display()));
         }
     }
@@ -313,8 +316,11 @@ pub fn inventory(root: &Path, profile: bool) -> Result<Inventory, String> {
     for entry in walkdir::WalkDir::new(root).follow_links(false) {
         let entry = entry.map_err(err)?;
         let path = entry.path();
+        if path != root && crate::reparse::is_benign_os_metadata_filename(entry.file_name()) {
+            continue;
+        }
         let meta = fs::symlink_metadata(path).map_err(err)?;
-        if meta.file_type().is_symlink() || (reparse(&meta) && !(profile && cloud(path)?)) {
+        if crate::reparse::metadata_is_link(path, &meta) {
             return Err(format!("Unsupported linked path: {}", path.display()));
         }
         if !meta.is_file() && !meta.is_dir() {
@@ -337,8 +343,8 @@ pub fn inventory(root: &Path, profile: bool) -> Result<Inventory, String> {
                 meta.modified()
                     .map_err(err)?
                     .duration_since(UNIX_EPOCH)
-                    .map_err(err)?
-                    .as_nanos()
+                    .map(|duration| duration.as_nanos())
+                    .unwrap_or(0)
             },
             directory: meta.is_dir(),
         };
@@ -415,15 +421,6 @@ pub fn copy_tree_with_progress(
 }
 
 #[cfg(windows)]
-fn reparse(meta: &fs::Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    meta.file_attributes() & 0x400 != 0
-}
-#[cfg(not(windows))]
-fn reparse(_: &fs::Metadata) -> bool {
-    false
-}
-#[cfg(windows)]
 fn links(path: &Path, _: &fs::Metadata) -> Result<u64, String> {
     use std::os::windows::io::AsRawHandle;
     use windows_sys::Win32::Storage::FileSystem::{
@@ -444,35 +441,6 @@ fn links(_: &Path, meta: &fs::Metadata) -> Result<u64, String> {
 #[cfg(not(any(unix, windows)))]
 fn links(_: &Path, _: &fs::Metadata) -> Result<u64, String> {
     Err("Platform not supported.".into())
-}
-#[cfg(windows)]
-fn cloud(path: &Path) -> Result<bool, String> {
-    use std::os::windows::{fs::OpenOptionsExt, io::AsRawHandle};
-    use windows_sys::Win32::Storage::FileSystem::{
-        FileAttributeTagInfo, GetFileInformationByHandleEx, FILE_ATTRIBUTE_TAG_INFO,
-    };
-    let file = OpenOptions::new()
-        .read(true)
-        .custom_flags(0x02000000 | 0x00200000)
-        .open(path)
-        .map_err(err)?;
-    let mut info = FILE_ATTRIBUTE_TAG_INFO::default();
-    if unsafe {
-        GetFileInformationByHandleEx(
-            file.as_raw_handle().cast(),
-            FileAttributeTagInfo,
-            (&mut info as *mut FILE_ATTRIBUTE_TAG_INFO).cast(),
-            std::mem::size_of::<FILE_ATTRIBUTE_TAG_INFO>() as u32,
-        )
-    } == 0
-    {
-        return Err(err(std::io::Error::last_os_error()));
-    }
-    Ok(info.ReparseTag & 0xFFFF0FFF == 0x9000001A)
-}
-#[cfg(not(windows))]
-fn cloud(_: &Path) -> Result<bool, String> {
-    Ok(false)
 }
 
 #[cfg(test)]

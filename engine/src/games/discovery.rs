@@ -53,6 +53,7 @@ const GOG_REGISTRY_LOCATIONS: &[(RegistryHive, &str)] = &[
 pub const GOG_GAME_IDS: &[(GameRole, &str)] = &[
     (GameRole::BgeeSod, "1207666353"),
     (GameRole::Bg2ee, "1207666373"),
+    (GameRole::Iwdee, "1207666683"),
 ];
 
 /// Folder names that GOG installs use (GOG database). A folder of that name counts only when
@@ -60,16 +61,20 @@ pub const GOG_GAME_IDS: &[(GameRole, &str)] = &[
 const GOG_FOLDER_NAMES: &[(GameRole, &str)] = &[
     (GameRole::BgeeSod, "Baldur's Gate Enhanced Edition"),
     (GameRole::Bg2ee, "Baldur's Gate II - Enhanced Edition"),
+    (GameRole::Bg2ee, "Baldur's Gate II Enhanced Edition"),
+    (GameRole::Iwdee, "Icewind Dale - Enhanced Edition"),
+    (GameRole::Iwdee, "Icewind Dale Enhanced Edition"),
 ];
 
 /// Folder names the Beamdog client gave the games inside its `Games` folder: `00766` for
 /// Baldur's Gate: Enhanced Edition, `00806` for it with Siege of Dragonspear, `00783` for
-/// Baldur's Gate II: Enhanced Edition (Beamdog forums). The client closed in December 2025;
-/// installed games stay where it put them.
+/// Baldur's Gate II: Enhanced Edition, and `00798` for Icewind Dale: Enhanced Edition
+/// (Beamdog forums). The client closed in December 2025; installed games stay where it put them.
 pub const BEAMDOG_FOLDERS: &[(GameRole, &str)] = &[
     (GameRole::BgeeSod, "00806"),
     (GameRole::BgeeSod, "00766"),
     (GameRole::Bg2ee, "00783"),
+    (GameRole::Iwdee, "00798"),
 ];
 
 /// Supported Windows registry hive.

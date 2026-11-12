@@ -93,7 +93,9 @@ fn required_settings(game_root: &Path) -> Result<Vec<Setting>> {
 }
 
 fn read_optional_regular(path: &Path) -> Result<Option<Vec<u8>>> {
-    ensure_no_reparse_ancestors(path)?;
+    if let Some(parent) = path.parent() {
+        ensure_ancestors_are_directories(parent)?;
+    }
     let metadata = match fs::symlink_metadata(path) {
         Ok(metadata) => metadata,
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
@@ -348,6 +350,7 @@ fn ensure_settings(game_root: &Path, save_root: &Path) -> Result<bool> {
         }
         Ok(())
     };
+    let _ = crate::reparse::clear_readonly(&path);
     match fs_retry::persist_checked(temporary, &path, unchanged) {
         Ok(()) => {}
         Err(CheckedRenameError::Check(error)) => return Err(error),
@@ -470,6 +473,8 @@ fn verify_installed_save_root(
             "save folder name differs from the game's engine_name",
         ));
     }
+    ensure_ancestors_are_directories(save_root)
+        .map_err(|error| folder_context("check save folder", save_root, error))?;
     let metadata = fs::symlink_metadata(save_root)
         .map_err(|source| io_failure("check save folder", save_root, source))?;
     reject_reparse(save_root, &metadata)?;

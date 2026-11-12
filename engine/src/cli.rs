@@ -1513,8 +1513,7 @@ fn contained_evidence_directory(
         }
         let metadata =
             fs::symlink_metadata(&path).map_err(|error| format!("{}: {error}", path.display()))?;
-        if metadata.file_type().is_symlink() || metadata_is_reparse(&metadata) || !metadata.is_dir()
-        {
+        if crate::reparse::metadata_is_link(&path, &metadata) || !metadata.is_dir() {
             return Err(format!(
                 "{} is not a direct folder of this installation",
                 path.display()
@@ -2501,7 +2500,7 @@ pub fn report_managed_install(managed_root: &Path) -> Result<ManagedReport, CliE
                 format!("{}: {source}", entry.path().display()),
             )
         })?;
-        if metadata.file_type().is_symlink() || !metadata.is_dir() {
+        if crate::reparse::metadata_is_link(&entry.path(), &metadata) || !metadata.is_dir() {
             return Err(CliError::new(
                 "report_unavailable",
                 format!(
@@ -2544,7 +2543,7 @@ pub fn report_managed_install(managed_root: &Path) -> Result<ManagedReport, CliE
                 ));
             }
         };
-        if metadata.file_type().is_symlink() || !metadata.is_file() {
+        if crate::reparse::metadata_is_link(&path, &metadata) || !metadata.is_file() {
             return Err(CliError::new(
                 "report_unavailable",
                 format!(
@@ -3392,7 +3391,7 @@ fn registered_install(
 > {
     let local = local_application_data()?;
     let app_data = local.join(application_data_directory());
-    let root = fs::canonicalize(managed_root).map_err(|error| {
+    let root = crate::reparse::canonicalize_flexible(managed_root).map_err(|error| {
         CliError::new(
             "managed_install_unavailable",
             format!("{}: {error}", managed_root.display()),
@@ -3403,7 +3402,7 @@ fn registered_install(
         .map_err(|error| CliError::new("registry_unavailable", error.to_string()))?
         .into_iter()
         .map(|card| card.record)
-        .find(|record| record.managed_root == root)
+        .find(|record| crate::reparse::same_normalized_windows_path(&record.managed_root, &root))
         .ok_or_else(|| {
             CliError::new(
                 "managed_install_unavailable",
@@ -3669,6 +3668,17 @@ fn inspect_frozen_source(
     profiles: &GameProfiles,
     source: &FrozenSource,
 ) -> Result<GameCandidate, CliError> {
+    if fs::symlink_metadata(&source.root)
+        .is_ok_and(|metadata| crate::reparse::metadata_is_link(&source.root, &metadata))
+    {
+        return Err(CliError::new(
+            "game_inspection_failed",
+            format!(
+                "could not re-inspect frozen source {}: links and reparse points are not allowed",
+                source.root.display()
+            ),
+        ));
+    }
     inspect_game_path(
         profiles,
         &SystemFileSystem,
@@ -3843,7 +3853,7 @@ fn resolved_path_identity(path: &Path) -> Result<PathBuf, CliError> {
     let mut existing = absolute.as_path();
     let mut missing = Vec::new();
     loop {
-        match fs::canonicalize(existing) {
+        match crate::reparse::canonicalize_flexible(existing) {
             Ok(mut resolved) => {
                 for component in missing.iter().rev() {
                     resolved.push(component);
@@ -3869,13 +3879,13 @@ fn canonical_existing_directory(path: &Path, label: &str) -> Result<PathBuf, Cli
             format!("could not inspect {label} {}: {error}", path.display()),
         )
     })?;
-    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+    if crate::reparse::metadata_is_link(path, &metadata) || !metadata.is_dir() {
         return Err(CliError::new(
             "invalid_path",
             format!("{label} is not a direct directory: {}", path.display()),
         ));
     }
-    fs::canonicalize(path).map_err(|error| {
+    crate::reparse::canonicalize_flexible(path).map_err(|error| {
         CliError::new(
             "invalid_path",
             format!("could not canonicalize {label} {}: {error}", path.display()),
@@ -3895,7 +3905,7 @@ fn prospective_direct_path(path: &Path, label: &str) -> Result<PathBuf, CliError
     loop {
         match fs::symlink_metadata(existing) {
             Ok(metadata) => {
-                if metadata.file_type().is_symlink() || !metadata.is_dir() {
+                if crate::reparse::metadata_is_link(existing, &metadata) || !metadata.is_dir() {
                     return Err(CliError::new(
                         "invalid_path",
                         format!(
@@ -3904,15 +3914,16 @@ fn prospective_direct_path(path: &Path, label: &str) -> Result<PathBuf, CliError
                         ),
                     ));
                 }
-                let mut canonical = fs::canonicalize(existing).map_err(|error| {
-                    CliError::new(
-                        "invalid_path",
-                        format!(
-                            "could not canonicalize {label} ancestor {}: {error}",
-                            existing.display()
-                        ),
-                    )
-                })?;
+                let mut canonical =
+                    crate::reparse::canonicalize_flexible(existing).map_err(|error| {
+                        CliError::new(
+                            "invalid_path",
+                            format!(
+                                "could not canonicalize {label} ancestor {}: {error}",
+                                existing.display()
+                            ),
+                        )
+                    })?;
                 for component in suffix.iter().rev() {
                     canonical.push(component);
                 }
@@ -6465,10 +6476,8 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
             let executable = Path::new(executable);
             if !executable.is_absolute()
                 || !path_is_within(
-                    &executable.canonicalize().map_err(step_error)?,
-                    &self
-                        .target_root(run.target)?
-                        .canonicalize()
+                    &crate::reparse::canonicalize_flexible(executable).map_err(step_error)?,
+                    &crate::reparse::canonicalize_flexible(self.target_root(run.target)?)
                         .map_err(step_error)?,
                 )
             {
@@ -7139,10 +7148,7 @@ fn ensure_directories(path: &Path) -> Result<(), StepFailure> {
     loop {
         match fs::symlink_metadata(cursor) {
             Ok(metadata) => {
-                if metadata.file_type().is_symlink()
-                    || metadata_is_reparse(&metadata)
-                    || !metadata.is_dir()
-                {
+                if crate::reparse::metadata_is_link(cursor, &metadata) || !metadata.is_dir() {
                     return Err(StepFailure::new(format!(
                         "path ancestor is not a direct directory: {}",
                         cursor.display()
@@ -7169,8 +7175,7 @@ fn ensure_directories(path: &Path) -> Result<(), StepFailure> {
             Err(error) => return Err(step_error(error)),
         }
         let metadata = fs::symlink_metadata(&directory).map_err(step_error)?;
-        if metadata.file_type().is_symlink() || metadata_is_reparse(&metadata) || !metadata.is_dir()
-        {
+        if crate::reparse::metadata_is_link(&directory, &metadata) || !metadata.is_dir() {
             return Err(StepFailure::new(format!(
                 "created path is not a direct directory: {}",
                 directory.display()
@@ -7187,8 +7192,7 @@ fn pre_spawn_file_digests(
 ) -> Result<BTreeMap<String, String>, StepFailure> {
     for directory in attempt.evidence_root.ancestors() {
         let metadata = fs::symlink_metadata(directory).map_err(step_error)?;
-        if metadata.file_type().is_symlink() || metadata_is_reparse(&metadata) || !metadata.is_dir()
-        {
+        if crate::reparse::metadata_is_link(directory, &metadata) || !metadata.is_dir() {
             return Err(StepFailure::new(format!(
                 "pre-spawn evidence directory is not direct: {}",
                 directory.display()
@@ -7280,10 +7284,7 @@ fn write_bytes_once(path: &Path, bytes: &[u8]) -> Result<(), StepFailure> {
 fn holds_once(path: &Path, bytes: &[u8]) -> Result<bool, StepFailure> {
     match fs::symlink_metadata(path) {
         Ok(metadata) => {
-            if metadata.file_type().is_symlink()
-                || metadata_is_reparse(&metadata)
-                || !metadata.is_file()
-            {
+            if crate::reparse::metadata_is_link(path, &metadata) || !metadata.is_file() {
                 return Err(StepFailure::new(format!(
                     "evidence path is not a direct file: {}",
                     path.display()
@@ -7350,9 +7351,7 @@ fn interrupt_record_for_test(
 fn ensure_empty_file(path: &Path) -> Result<(), StepFailure> {
     match fs::symlink_metadata(path) {
         Ok(metadata)
-            if !metadata.file_type().is_symlink()
-                && !metadata_is_reparse(&metadata)
-                && metadata.is_file() =>
+            if !crate::reparse::metadata_is_link(path, &metadata) && metadata.is_file() =>
         {
             Ok(())
         }
@@ -7379,7 +7378,7 @@ fn read_optional_json<T: for<'de> Deserialize<'de>>(path: &Path) -> Result<Optio
 
 fn read_direct_file(path: &Path) -> Result<Vec<u8>, StepFailure> {
     let metadata = fs::symlink_metadata(path).map_err(step_error)?;
-    if metadata.file_type().is_symlink() || metadata_is_reparse(&metadata) || !metadata.is_file() {
+    if crate::reparse::metadata_is_link(path, &metadata) || !metadata.is_file() {
         return Err(StepFailure::new(format!(
             "evidence is not a direct regular file: {}",
             path.display()
@@ -7390,7 +7389,7 @@ fn read_direct_file(path: &Path) -> Result<Vec<u8>, StepFailure> {
 
 fn sync_direct_file(path: &Path) -> Result<(), StepFailure> {
     let metadata = fs::symlink_metadata(path).map_err(step_error)?;
-    if metadata.file_type().is_symlink() || metadata_is_reparse(&metadata) || !metadata.is_file() {
+    if crate::reparse::metadata_is_link(path, &metadata) || !metadata.is_file() {
         return Err(StepFailure::new(format!(
             "cannot sync non-direct evidence file: {}",
             path.display()
@@ -7415,7 +7414,7 @@ fn read_optional_weidu_log(root: &Path) -> Result<Vec<u8>, StepFailure> {
 
 fn directory_bytes(root: &Path) -> Result<u64, StepFailure> {
     let metadata = fs::symlink_metadata(root).map_err(step_error)?;
-    if metadata.file_type().is_symlink() || metadata_is_reparse(&metadata) || !metadata.is_dir() {
+    if crate::reparse::metadata_is_link(root, &metadata) || !metadata.is_dir() {
         return Err(StepFailure::new(format!(
             "source tree root is not a direct directory: {}",
             root.display()
@@ -7428,7 +7427,7 @@ fn directory_bytes(root: &Path) -> Result<u64, StepFailure> {
             let entry = entry.map_err(step_error)?;
             let path = entry.path();
             let metadata = fs::symlink_metadata(&path).map_err(step_error)?;
-            if metadata.file_type().is_symlink() || metadata_is_reparse(&metadata) {
+            if crate::reparse::metadata_is_link(&path, &metadata) {
                 return Err(StepFailure::new(format!(
                     "source tree contains a link or reparse point: {}",
                     path.display()
@@ -7821,21 +7820,8 @@ fn verified_launch_path(
 
 fn direct_regular_file(path: &Path) -> bool {
     fs::symlink_metadata(path).is_ok_and(|metadata| {
-        !metadata.file_type().is_symlink() && !metadata_is_reparse(&metadata) && metadata.is_file()
+        !crate::reparse::metadata_is_link(path, &metadata) && metadata.is_file()
     })
-}
-
-#[cfg(windows)]
-fn metadata_is_reparse(metadata: &fs::Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    metadata.file_attributes()
-        & windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT
-        != 0
-}
-
-#[cfg(not(windows))]
-fn metadata_is_reparse(_metadata: &fs::Metadata) -> bool {
-    false
 }
 
 fn load_recipe(recipe: &Path) -> Result<Manifest, CliError> {
@@ -7881,7 +7867,7 @@ fn split_assignment<'a>(
 
 fn canonical_direct_directory(path: &Path, label: &str) -> Result<PathBuf, CliError> {
     validate_direct_directory(path, label)?;
-    fs::canonicalize(path).map_err(|source| {
+    crate::reparse::canonicalize_flexible(path).map_err(|source| {
         CliError::new(
             "report_unavailable",
             format!(
@@ -7899,7 +7885,7 @@ fn validate_direct_directory(path: &Path, label: &str) -> Result<(), CliError> {
             format!("could not inspect {label} {}: {source}", path.display()),
         )
     })?;
-    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+    if crate::reparse::metadata_is_link(path, &metadata) || !metadata.is_dir() {
         return Err(CliError::new(
             "report_unavailable",
             format!("{label} is not a direct directory: {}", path.display()),

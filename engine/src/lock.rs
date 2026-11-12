@@ -211,11 +211,12 @@ fn prospective_target_identity(path: &Path) -> Result<PathBuf, LockError> {
             reason: "target has no existing ancestor".to_owned(),
         })?;
     }
-    let canonical = fs::canonicalize(existing).map_err(|source| LockError::Io {
-        action: "canonicalize target ancestor",
-        path: existing.to_path_buf(),
-        source,
-    })?;
+    let canonical =
+        crate::reparse::canonicalize_flexible(existing).map_err(|source| LockError::Io {
+            action: "canonicalize target ancestor",
+            path: existing.to_path_buf(),
+            source,
+        })?;
     let suffix = absolute
         .strip_prefix(existing)
         .map_err(|_| LockError::UnsafePath {
@@ -280,7 +281,7 @@ fn validate_direct_directory(path: &Path) -> Result<(), LockError> {
         path: path.to_path_buf(),
         source,
     })?;
-    if metadata.file_type().is_symlink() || is_windows_reparse_point(&metadata) {
+    if crate::reparse::metadata_is_link(path, &metadata) {
         return Err(LockError::UnsafePath {
             path: path.to_path_buf(),
             reason: "links and reparse points are not allowed".to_owned(),
@@ -307,7 +308,7 @@ fn validate_direct_regular_file_if_present(path: &Path) -> Result<(), LockError>
             });
         }
     };
-    if metadata.file_type().is_symlink() || is_windows_reparse_point(&metadata) {
+    if crate::reparse::metadata_is_link(path, &metadata) {
         return Err(LockError::UnsafePath {
             path: path.to_path_buf(),
             reason: "links and reparse points are not allowed".to_owned(),
@@ -320,17 +321,4 @@ fn validate_direct_regular_file_if_present(path: &Path) -> Result<(), LockError>
         });
     }
     Ok(())
-}
-
-#[cfg(windows)]
-fn is_windows_reparse_point(metadata: &fs::Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    use windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT;
-
-    metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
-}
-
-#[cfg(not(windows))]
-fn is_windows_reparse_point(_metadata: &fs::Metadata) -> bool {
-    false
 }

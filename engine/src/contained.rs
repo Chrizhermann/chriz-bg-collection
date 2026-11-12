@@ -33,15 +33,17 @@ pub(crate) fn is_interrupted_publication(folder: &Path, name: &str) -> bool {
     {
         return false;
     }
-    fs::symlink_metadata(folder.join(name)).is_ok_and(|metadata| {
-        metadata.is_file() && !metadata.file_type().is_symlink() && !is_reparse_point(&metadata)
+    let candidate = folder.join(name);
+    fs::symlink_metadata(&candidate).is_ok_and(|metadata| {
+        metadata.is_file() && !crate::reparse::metadata_is_link(&candidate, &metadata)
     })
 }
 /// The real path of an open file or folder.
 #[cfg(windows)]
-fn final_path(file: &File, _opened: &Path) -> io::Result<PathBuf> {
+fn final_path(file: &File, opened: &Path) -> io::Result<PathBuf> {
     use std::os::windows::ffi::OsStringExt;
     use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Foundation::ERROR_INVALID_FUNCTION;
     use windows_sys::Win32::Storage::FileSystem::{
         GetFinalPathNameByHandleW, FILE_NAME_NORMALIZED, VOLUME_NAME_DOS,
     };
@@ -58,7 +60,20 @@ fn final_path(file: &File, _opened: &Path) -> io::Result<PathBuf> {
             )
         } as usize;
         if length == 0 {
-            return Err(io::Error::last_os_error());
+            let error = io::Error::last_os_error();
+            if error.raw_os_error() == Some(ERROR_INVALID_FUNCTION as i32) {
+                for ancestor in opened.ancestors() {
+                    if ancestor.as_os_str().is_empty() {
+                        continue;
+                    }
+                    let metadata = fs::symlink_metadata(ancestor)?;
+                    if crate::reparse::metadata_is_link(ancestor, &metadata) {
+                        return Err(outside(ancestor, "is a link or another reparse point"));
+                    }
+                }
+                return crate::reparse::canonicalize_flexible(opened);
+            }
+            return Err(error);
         }
         if length < buffer.len() {
             return Ok(PathBuf::from(std::ffi::OsString::from_wide(
@@ -76,40 +91,14 @@ fn final_path(_file: &File, opened: &Path) -> io::Result<PathBuf> {
 
 /// Whether `path` is `root` or lies below it, comparing components as the platform does.
 fn is_within(path: &Path, root: &Path) -> bool {
-    let path = path.components().collect::<Vec<_>>();
-    let root = root.components().collect::<Vec<_>>();
-    path.len() >= root.len()
-        && path.iter().zip(&root).all(|(left, right)| {
-            #[cfg(windows)]
-            {
-                left.as_os_str()
-                    .to_string_lossy()
-                    .eq_ignore_ascii_case(&right.as_os_str().to_string_lossy())
-            }
-            #[cfg(not(windows))]
-            {
-                left == right
-            }
-        })
+    crate::reparse::windows_path_starts_with(path, root)
 }
 
-#[cfg(windows)]
-fn is_reparse_point(metadata: &fs::Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    use windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT;
-    metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
-}
-
-#[cfg(not(windows))]
-fn is_reparse_point(metadata: &fs::Metadata) -> bool {
-    metadata.file_type().is_symlink()
-}
-
-/// Checks that the open `file`, opened as `opened`, is no reparse point and really lies inside
-/// `root`.
+/// Checks that the open `file`, opened as `opened`, is no link/surrogate reparse point and
+/// really lies inside `root`.
 fn confirm_inside(file: &File, opened: &Path, root: &Path) -> io::Result<()> {
     let metadata = file.metadata()?;
-    if is_reparse_point(&metadata) {
+    if crate::reparse::handle_is_link(file, &metadata) {
         return Err(outside(opened, "is a link or another reparse point"));
     }
     let real = final_path(file, opened)?;

@@ -616,28 +616,30 @@ fn validate_source_candidate(
         });
     }
     let path = &candidate.root;
-    validate_direct_directory(path).map_err(|reason| PreflightError::SourceUnavailable {
-        label,
-        path: path.to_path_buf(),
-        reason,
-    })?;
-    fs::read_dir(path)
-        .map_err(|error| PreflightError::SourceUnavailable {
+    let canonical = crate::reparse::canonicalize_flexible(path).map_err(|error| {
+        PreflightError::SourceUnavailable {
             label,
             path: path.to_path_buf(),
+            reason: error.to_string(),
+        }
+    })?;
+    validate_direct_directory(&canonical).map_err(|reason| PreflightError::SourceUnavailable {
+        label,
+        path: canonical.clone(),
+        reason,
+    })?;
+    fs::read_dir(&canonical)
+        .map_err(|error| PreflightError::SourceUnavailable {
+            label,
+            path: canonical.clone(),
             reason: error.to_string(),
         })?
         .collect::<io::Result<Vec<_>>>()
         .map_err(|error| PreflightError::SourceUnavailable {
             label,
-            path: path.to_path_buf(),
+            path: canonical.clone(),
             reason: error.to_string(),
         })?;
-    let canonical = fs::canonicalize(path).map_err(|error| PreflightError::SourceUnavailable {
-        label,
-        path: path.to_path_buf(),
-        reason: error.to_string(),
-    })?;
     if !paths_equal(&canonical, &candidate.root) {
         return Err(PreflightError::SourceNotFresh {
             label,
@@ -765,7 +767,13 @@ fn destination_and_writable_root(path: &Path) -> Result<(PathBuf, PathBuf), Pref
                     source: io::Error::other(reason),
                 }
             })?;
-            let canonical = fs::canonicalize(&target).map_err(|source| {
+            crate::reparse::ensure_existing_ancestors_are_directories(&target).map_err(
+                |source| PreflightError::DestinationNotWritable {
+                    path: target.clone(),
+                    source,
+                },
+            )?;
+            let canonical = crate::reparse::canonicalize_flexible(&target).map_err(|source| {
                 PreflightError::DestinationNotWritable {
                     path: target.clone(),
                     source,
@@ -787,15 +795,15 @@ fn destination_and_writable_root(path: &Path) -> Result<(PathBuf, PathBuf), Pref
 fn nearest_existing_directory(path: &Path) -> Result<PathBuf, PreflightError> {
     let mut candidate = path.parent();
     while let Some(parent) = candidate {
-        match fs::symlink_metadata(parent) {
+        match fs::metadata(parent) {
             Ok(metadata) => {
-                validate_directory_metadata(parent, &metadata).map_err(|reason| {
-                    PreflightError::DestinationNotWritable {
+                if !metadata.is_dir() {
+                    return Err(PreflightError::DestinationNotWritable {
                         path: parent.to_path_buf(),
-                        source: io::Error::other(reason),
-                    }
-                })?;
-                return fs::canonicalize(parent).map_err(|source| {
+                        source: io::Error::other("expected a directory"),
+                    });
+                }
+                return crate::reparse::canonicalize_flexible(parent).map_err(|source| {
                     PreflightError::DestinationNotWritable {
                         path: parent.to_path_buf(),
                         source,
@@ -891,7 +899,7 @@ fn check_processes_under(target: &Path, host: &dyn PreflightHost) -> Result<(), 
         .running_executable_paths()
         .map_err(|source| PreflightError::ProcessEnumeration { source })?;
     for executable in running {
-        let canonical = match fs::canonicalize(&executable) {
+        let canonical = match crate::reparse::canonicalize_flexible(&executable) {
             Ok(canonical) => canonical,
             Err(source) => {
                 let raw = absolute_path(&executable).unwrap_or_else(|_| executable.to_path_buf());
@@ -926,11 +934,17 @@ fn target_tlk_paths(target_root: &Path, language: &str) -> [PathBuf; 2] {
 }
 
 fn validate_target_directory(path: &Path) -> Result<PathBuf, PreflightError> {
+    crate::reparse::ensure_existing_ancestors_are_directories(path).map_err(|error| {
+        PreflightError::TargetUnavailable {
+            path: path.to_path_buf(),
+            reason: error.to_string(),
+        }
+    })?;
     validate_direct_directory(path).map_err(|reason| PreflightError::TargetUnavailable {
         path: path.to_path_buf(),
         reason,
     })?;
-    fs::canonicalize(path).map_err(|error| PreflightError::TargetUnavailable {
+    crate::reparse::canonicalize_flexible(path).map_err(|error| PreflightError::TargetUnavailable {
         path: path.to_path_buf(),
         reason: error.to_string(),
     })
@@ -941,9 +955,11 @@ fn validate_cache_root(path: &Path) -> Result<PathBuf, PreflightError> {
         path: path.to_path_buf(),
         source: io::Error::other(reason),
     })?;
-    let canonical = fs::canonicalize(path).map_err(|source| PreflightError::CacheNotWritable {
-        path: path.to_path_buf(),
-        source,
+    let canonical = crate::reparse::canonicalize_flexible(path).map_err(|source| {
+        PreflightError::CacheNotWritable {
+            path: path.to_path_buf(),
+            source,
+        }
     })?;
     if !paths_equal(&canonical, path) {
         return Err(PreflightError::CacheNotWritable {
@@ -986,7 +1002,7 @@ fn validate_tlk(path: &Path, canonical_target: &Path) -> Result<PathBuf, Preflig
         path: path.to_path_buf(),
         source,
     })?;
-    if metadata.file_type().is_symlink() || is_windows_reparse_point(&metadata) {
+    if crate::reparse::metadata_is_link(path, &metadata) {
         return Err(PreflightError::TlkUnavailable {
             path: path.to_path_buf(),
             source: io::Error::other("links and reparse points are not allowed"),
@@ -998,9 +1014,11 @@ fn validate_tlk(path: &Path, canonical_target: &Path) -> Result<PathBuf, Preflig
             source: io::Error::other("expected a regular file"),
         });
     }
-    let canonical = fs::canonicalize(path).map_err(|source| PreflightError::TlkUnavailable {
-        path: path.to_path_buf(),
-        source,
+    let canonical = crate::reparse::canonicalize_flexible(path).map_err(|source| {
+        PreflightError::TlkUnavailable {
+            path: path.to_path_buf(),
+            source,
+        }
     })?;
     if !path_is_under(&canonical, canonical_target) {
         return Err(PreflightError::TlkUnavailable {
@@ -1031,7 +1049,7 @@ fn validate_direct_directory(path: &Path) -> Result<(), String> {
 }
 
 fn validate_directory_metadata(path: &Path, metadata: &fs::Metadata) -> Result<(), String> {
-    if metadata.file_type().is_symlink() || is_windows_reparse_point(metadata) {
+    if crate::reparse::metadata_is_link(path, metadata) {
         return Err(format!(
             "links and reparse points are not allowed: {}",
             path.display()
@@ -1054,7 +1072,7 @@ fn absolute_path(path: &Path) -> io::Result<PathBuf> {
 pub(crate) fn paths_equal(left: &Path, right: &Path) -> bool {
     #[cfg(windows)]
     {
-        windows_path_key(left) == windows_path_key(right)
+        crate::reparse::same_normalized_windows_path(left, right)
     }
     #[cfg(not(windows))]
     {
@@ -1065,9 +1083,7 @@ pub(crate) fn paths_equal(left: &Path, right: &Path) -> bool {
 fn path_is_under(candidate: &Path, root: &Path) -> bool {
     #[cfg(windows)]
     {
-        let candidate = windows_path_key(candidate);
-        let root = windows_path_key(root);
-        candidate == root || candidate.starts_with(&(root + "\\"))
+        crate::reparse::windows_path_starts_with(candidate, root)
     }
     #[cfg(not(windows))]
     {
@@ -1075,7 +1091,7 @@ fn path_is_under(candidate: &Path, root: &Path) -> bool {
     }
 }
 
-#[cfg(windows)]
+#[cfg(all(windows, any(debug_assertions, feature = "creator-guards")))]
 fn windows_path_key(path: &Path) -> String {
     use std::path::Component;
 
@@ -1218,8 +1234,8 @@ fn system_running_executable_paths() -> io::Result<Vec<PathBuf>> {
     use std::mem::size_of;
 
     use windows_sys::Win32::Foundation::{
-        CloseHandle, GetLastError, ERROR_INVALID_PARAMETER, ERROR_NO_MORE_FILES, HANDLE,
-        INVALID_HANDLE_VALUE,
+        CloseHandle, GetLastError, ERROR_ACCESS_DENIED, ERROR_INVALID_PARAMETER,
+        ERROR_NO_MORE_FILES, HANDLE, INVALID_HANDLE_VALUE,
     };
     use windows_sys::Win32::System::Diagnostics::ToolHelp::{
         CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
@@ -1280,10 +1296,13 @@ fn system_running_executable_paths() -> io::Result<Vec<PathBuf>> {
         if process.is_null() {
             if relevant {
                 let source = io::Error::last_os_error();
-                // A process can disappear after the Toolhelp snapshot but before OpenProcess.
-                // ERROR_INVALID_PARAMETER is Windows' documented response for a nonexistent PID;
-                // access-denied and every other failure remain fail-closed.
-                if source.raw_os_error() != Some(ERROR_INVALID_PARAMETER as i32) {
+                // A process can disappear after the Toolhelp snapshot or belong to another
+                // elevated/system user session (ERROR_ACCESS_DENIED). Neither can hold a handle
+                // inside our writable user target directory without failing the exclusive TLK probe.
+                if !matches!(
+                    source.raw_os_error().map(|code| code as u32),
+                    Some(ERROR_INVALID_PARAMETER | ERROR_ACCESS_DENIED)
+                ) {
                     return Err(io::Error::new(
                         source.kind(),
                         format!(
@@ -1432,19 +1451,6 @@ fn is_relevant_process_name(name: &str) -> bool {
 #[cfg(not(windows))]
 fn system_running_executable_paths() -> io::Result<Vec<PathBuf>> {
     Ok(Vec::new())
-}
-
-#[cfg(windows)]
-fn is_windows_reparse_point(metadata: &fs::Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    use windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT;
-
-    metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
-}
-
-#[cfg(not(windows))]
-fn is_windows_reparse_point(_metadata: &fs::Metadata) -> bool {
-    false
 }
 
 #[cfg(test)]

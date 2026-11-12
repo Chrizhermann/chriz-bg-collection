@@ -1793,3 +1793,113 @@ fn provider_surface_is_read_only_by_construction() {
     fn assert_read_only_shape<T: FileSystemProvider>(_provider: &T) {}
     assert_read_only_shape(&SystemFileSystem);
 }
+
+#[test]
+fn discovers_gog_and_beamdog_iwdee_and_unhyphenated_bg2ee_and_ignores_os_metadata() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut fs_provider = FixtureFileSystem::default();
+
+    let gog_lib = temp.path().join("GOG Games");
+    let gog_iwd = gog_lib.join("Icewind Dale Enhanced Edition");
+    fs::create_dir_all(gog_iwd.join("data")).unwrap();
+    fs::create_dir_all(gog_iwd.join("lang/en_US")).unwrap();
+    fs::write(gog_iwd.join("icewind.exe"), b"gog iwd").unwrap();
+    fs::write(gog_iwd.join("chitin.key"), b"key").unwrap();
+    fs::write(gog_iwd.join("engine.lua"), b"engine_name = \"IWD\"\n").unwrap();
+    fs::write(gog_iwd.join("lang/en_US/dialog.tlk"), b"tlk").unwrap();
+    fs::write(gog_iwd.join("data/DEFAULT.BIF"), b"bif").unwrap();
+    fs::write(
+        gog_iwd.join("goggame-1207666683.info"),
+        br#"{"language":"English"}"#,
+    )
+    .unwrap();
+    fs_provider.add_version(gog_iwd.join("icewind.exe"), "2.6.6.0");
+
+    let gog_bg2 = gog_lib.join("Baldur's Gate II Enhanced Edition");
+    fixture_game("steam-bg2ee", &gog_bg2, &mut fs_provider, "2.7.3.0");
+    fs::write(
+        gog_bg2.join("goggame-1207666373.info"),
+        br#"{"language":"English"}"#,
+    )
+    .unwrap();
+
+    let beamdog_lib = temp.path().join("Beamdog/Games");
+    let beamdog_iwd = beamdog_lib.join("00798");
+    fs::create_dir_all(beamdog_iwd.join("data")).unwrap();
+    fs::create_dir_all(beamdog_iwd.join("lang/en_US")).unwrap();
+    fs::write(beamdog_iwd.join("icewind.exe"), b"bd iwd").unwrap();
+    fs::write(beamdog_iwd.join("chitin.key"), b"key").unwrap();
+    fs::write(beamdog_iwd.join("engine.lua"), b"engine_name = \"IWD\"\n").unwrap();
+    fs::write(beamdog_iwd.join("lang/en_US/dialog.tlk"), b"tlk").unwrap();
+    fs::write(beamdog_iwd.join("data/DEFAULT.BIF"), b"bif").unwrap();
+    fs_provider.add_version(beamdog_iwd.join("icewind.exe"), "2.6.6.0");
+
+    let iwd_profiles = GameProfiles::load(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../recipes/iwd-current/game-builds"),
+    )
+    .unwrap();
+    let folders = StoreFolders {
+        beamdog_games: vec![beamdog_lib],
+        gog_libraries: vec![gog_lib],
+    };
+    let iwd_found = discover_games_with(
+        &iwd_profiles,
+        &FixtureRegistry::default(),
+        &fs_provider,
+        &folders,
+    )
+    .unwrap();
+    assert!(
+        iwd_found.iter().any(|c| c.role == GameRole::Iwdee
+            && c.storefront == Storefront::Gog
+            && c.eligibility.is_usable()),
+        "{iwd_found:#?}"
+    );
+    assert!(
+        iwd_found.iter().any(|c| c.role == GameRole::Iwdee
+            && c.storefront == Storefront::Beamdog
+            && c.eligibility.is_usable()),
+        "{iwd_found:#?}"
+    );
+
+    let bg_found = discover_games_with(
+        &profiles(),
+        &FixtureRegistry::default(),
+        &fs_provider,
+        &folders,
+    )
+    .unwrap();
+    assert!(
+        bg_found.iter().any(|c| c.role == GameRole::Bg2ee
+            && c.storefront == Storefront::Gog
+            && c.eligibility.is_usable()),
+        "{bg_found:#?}"
+    );
+
+    // desktop.ini and Thumbs.db in override/ do not dirty clean Steam BG2EE fingerprints.
+    let clean_bg2 = fixture_game(
+        "steam-bg2ee",
+        &temp.path().join("clean-bg2-meta"),
+        &mut fs_provider,
+        "2.7.3.0",
+    );
+    fs::write(
+        clean_bg2.join("override/desktop.ini"),
+        b"[.ShellClassInfo]\n",
+    )
+    .unwrap();
+    fs::write(clean_bg2.join("override/Thumbs.db"), b"db").unwrap();
+    let clean_cand = inspect_game_path(
+        &profiles(),
+        &fs_provider,
+        GameRole::Bg2ee,
+        Storefront::Steam,
+        &clean_bg2,
+    )
+    .unwrap();
+    assert_eq!(
+        clean_cand.eligibility,
+        Eligibility::Eligible,
+        "{clean_cand:#?}"
+    );
+}

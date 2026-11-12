@@ -431,10 +431,8 @@ pub fn install(
     match &previous {
         Some(receipt) => {
             let modified = modified_files(&roots.install, &receipt.files)?;
-            if !modified.is_empty() {
-                return Err(RadarError::ModifiedFiles { paths: modified });
-            }
-            if receipt.release.tag == release.tag
+            if modified.is_empty()
+                && receipt.release.tag == release.tag
                 && receipt.release.asset_id == release.asset_id
                 && receipt.release.sha256.eq_ignore_ascii_case(&release.sha256)
             {
@@ -512,10 +510,8 @@ pub fn install(
             install_directory: RADAR_INSTALL_DIRECTORY.to_owned(),
             installed_at_unix_seconds: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .map_err(|_| {
-                    RadarError::InvalidRoots("system clock is before Unix epoch".to_owned())
-                })?
-                .as_secs(),
+                .map(|duration| duration.as_secs())
+                .unwrap_or(0),
             release: release.clone(),
             files,
         };
@@ -574,11 +570,13 @@ fn validate_roots(managed_root: &Path, game_root: &Path) -> Result<ValidatedRoot
             )));
         }
     }
-    let managed = fs::canonicalize(managed_root)
+    let managed = crate::reparse::canonicalize_flexible(managed_root)
         .map_err(|source| io_error("canonicalize managed root", managed_root, source))?;
-    let game = fs::canonicalize(game_root)
+    let game = crate::reparse::canonicalize_flexible(game_root)
         .map_err(|source| io_error("canonicalize game root", game_root, source))?;
-    if managed == game || game.strip_prefix(&managed).is_err() {
+    if crate::reparse::same_windows_path(&managed, &game)
+        || !crate::reparse::windows_path_starts_with(&game, &managed)
+    {
         return Err(RadarError::InvalidRoots(
             "game root must be a child of the managed root".to_owned(),
         ));
@@ -616,7 +614,7 @@ fn is_protected_games_path(_path: &Path) -> bool {
 fn reject_link(path: &Path, label: &str) -> Result<(), RadarError> {
     let metadata = fs::symlink_metadata(path)
         .map_err(|source| io_error("inspect managed directory", path, source))?;
-    if !metadata.is_dir() || metadata.file_type().is_symlink() {
+    if !metadata.is_dir() || crate::reparse::metadata_is_link(path, &metadata) {
         return Err(RadarError::InvalidRoots(format!(
             "{label} is not a direct directory: {}",
             path.display()
@@ -631,15 +629,7 @@ fn validate_optional_install_root(path: &Path) -> Result<(), RadarError> {
         Err(source) if source.kind() == std::io::ErrorKind::NotFound => return Ok(()),
         Err(source) => return Err(io_error("inspect Radar install directory", path, source)),
     };
-    #[cfg(windows)]
-    let is_reparse_point = {
-        use std::os::windows::fs::MetadataExt as _;
-        const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
-        metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
-    };
-    #[cfg(not(windows))]
-    let is_reparse_point = false;
-    if !metadata.is_dir() || metadata.file_type().is_symlink() || is_reparse_point {
+    if !metadata.is_dir() || crate::reparse::metadata_is_link(path, &metadata) {
         return Err(RadarError::InvalidRoots(format!(
             "Radar install path is not a direct directory: {}",
             path.display()
@@ -717,6 +707,9 @@ fn modified_files(install_root: &Path, files: &[RadarFile]) -> Result<Vec<String
             Err(RadarError::Io { source, .. }) if source.kind() == std::io::ErrorKind::NotFound => {
                 modified.push(file.path.clone());
             }
+            Err(RadarError::ModifiedFiles { .. }) => {
+                modified.push(file.path.clone());
+            }
             Err(error) => return Err(error),
         }
     }
@@ -726,11 +719,16 @@ fn modified_files(install_root: &Path, files: &[RadarFile]) -> Result<Vec<String
 
 fn directory_has_entries(path: &Path) -> Result<bool, RadarError> {
     match fs::read_dir(path) {
-        Ok(mut entries) => Ok(entries
-            .next()
-            .transpose()
-            .map_err(|source| io_error("inspect Radar install directory", path, source))?
-            .is_some()),
+        Ok(entries) => {
+            for entry in entries {
+                let entry = entry
+                    .map_err(|source| io_error("inspect Radar install directory", path, source))?;
+                if !crate::reparse::is_benign_os_metadata_filename(&entry.file_name()) {
+                    return Ok(true);
+                }
+            }
+            Ok(false)
+        }
         Err(source) if source.kind() == std::io::ErrorKind::NotFound => Ok(false),
         Err(source) => Err(io_error("inspect Radar install directory", path, source)),
     }
@@ -831,7 +829,13 @@ fn extract_archive(archive_path: &Path, destination: &Path) -> Result<Vec<RadarF
         if entry.path() == destination || entry.file_type().is_dir() {
             continue;
         }
-        if !entry.file_type().is_file() || entry.file_type().is_symlink() {
+        let entry_meta = entry.metadata().map_err(|source| RadarError::Archive {
+            path: archive_path.to_path_buf(),
+            message: source.to_string(),
+        })?;
+        if !entry.file_type().is_file()
+            || crate::reparse::metadata_is_link(entry.path(), &entry_meta)
+        {
             return Err(RadarError::Archive {
                 path: archive_path.to_path_buf(),
                 message: format!("extracted non-regular entry {}", entry.path().display()),
@@ -957,13 +961,19 @@ fn preserve_unowned(
     publication: &Path,
     owned_files: &[RadarFile],
 ) -> Result<(), RadarError> {
+    if !current.exists() {
+        return Ok(());
+    }
     let owned = owned_files
         .iter()
         .map(|file| file.path.to_ascii_lowercase())
         .collect::<BTreeSet<_>>();
     for entry in WalkDir::new(current).follow_links(false) {
         let entry = entry.map_err(|source| RadarError::InvalidRoots(source.to_string()))?;
-        if entry.path() == current || entry.file_type().is_dir() {
+        if entry.path() == current
+            || entry.file_type().is_dir()
+            || crate::reparse::is_benign_os_metadata_filename(entry.file_name())
+        {
             continue;
         }
         let relative = entry
@@ -974,7 +984,12 @@ fn preserve_unowned(
         if owned.contains(&normalized.to_ascii_lowercase()) {
             continue;
         }
-        if !entry.file_type().is_file() || entry.file_type().is_symlink() {
+        let entry_meta = entry
+            .metadata()
+            .map_err(|source| RadarError::InvalidRoots(source.to_string()))?;
+        if !entry.file_type().is_file()
+            || crate::reparse::metadata_is_link(entry.path(), &entry_meta)
+        {
             return Err(RadarError::ModifiedFiles {
                 paths: vec![normalized],
             });
@@ -1002,6 +1017,15 @@ fn publish_transaction(
     write_receipt(&receipt_temp, receipt)?;
     if !updating {
         if roots.install.exists() {
+            if let Ok(entries) = fs::read_dir(&roots.install) {
+                for entry in entries.flatten() {
+                    if crate::reparse::is_benign_os_metadata_filename(&entry.file_name()) {
+                        let _ = crate::reparse::clear_readonly(&entry.path());
+                        let _ = fs::remove_file(entry.path());
+                    }
+                }
+            }
+            let _ = crate::reparse::clear_readonly(&roots.install);
             fs::remove_dir(&roots.install).map_err(|source| {
                 io_error("remove empty Radar directory", &roots.install, source)
             })?;
@@ -1025,21 +1049,28 @@ fn publish_transaction(
 
     let backup = unique_sibling(&roots.install, "backup")?;
     let receipt_backup = unique_sibling(&roots.receipt, "backup")?;
+    let _ = crate::reparse::clear_readonly(&roots.receipt);
     if let Err(source) = fs_retry::rename(&roots.receipt, &receipt_backup) {
         remove_file_if_present(&receipt_temp);
         return Err(io_error("back up Radar receipt", &roots.receipt, source));
     }
-    if let Err(source) = fs_retry::rename(&roots.install, &backup) {
-        let _ = fs_retry::rename(&receipt_backup, &roots.receipt);
-        remove_file_if_present(&receipt_temp);
-        return Err(io_error(
-            "back up Radar install directory",
-            &roots.install,
-            source,
-        ));
+    let install_exists = roots.install.exists();
+    if install_exists {
+        let _ = crate::reparse::clear_readonly(&roots.install);
+        if let Err(source) = fs_retry::rename(&roots.install, &backup) {
+            let _ = fs_retry::rename(&receipt_backup, &roots.receipt);
+            remove_file_if_present(&receipt_temp);
+            return Err(io_error(
+                "back up Radar install directory",
+                &roots.install,
+                source,
+            ));
+        }
     }
     if let Err(source) = fs_retry::rename(publication, &roots.install) {
-        let _ = fs_retry::rename(&backup, &roots.install);
+        if install_exists {
+            let _ = fs_retry::rename(&backup, &roots.install);
+        }
         let _ = fs_retry::rename(&receipt_backup, &roots.receipt);
         remove_file_if_present(&receipt_temp);
         return Err(io_error(
@@ -1051,7 +1082,9 @@ fn publish_transaction(
     if let Err(source) = fs_retry::rename(&receipt_temp, &roots.receipt) {
         let failed = unique_sibling(&roots.install, "failed")?;
         let _ = fs_retry::rename(&roots.install, &failed);
-        let _ = fs_retry::rename(&backup, &roots.install);
+        if install_exists {
+            let _ = fs_retry::rename(&backup, &roots.install);
+        }
         let _ = fs_retry::rename(&receipt_backup, &roots.receipt);
         remove_directory_if_present(&failed);
         remove_file_if_present(&receipt_temp);
@@ -1061,7 +1094,9 @@ fn publish_transaction(
             source,
         ));
     }
-    remove_directory_if_present(&backup);
+    if install_exists {
+        remove_directory_if_present(&backup);
+    }
     remove_file_if_present(&receipt_backup);
     Ok(())
 }
@@ -1088,7 +1123,7 @@ fn write_receipt(path: &Path, receipt: &RadarReceipt) -> Result<(), RadarError> 
 fn hash_regular_file(path: &Path) -> Result<(u64, String), RadarError> {
     let metadata = fs::symlink_metadata(path)
         .map_err(|source| io_error("inspect Radar file", path, source))?;
-    if !metadata.is_file() || metadata.file_type().is_symlink() {
+    if !metadata.is_file() || crate::reparse::metadata_is_link(path, &metadata) {
         return Err(RadarError::ModifiedFiles {
             paths: vec![path.to_string_lossy().into_owned()],
         });
@@ -1152,7 +1187,14 @@ fn unique_sibling(path: &Path, purpose: &str) -> Result<PathBuf, RadarError> {
 
 fn remove_directory_if_present(path: &Path) {
     match fs::symlink_metadata(path) {
-        Ok(metadata) if metadata.is_dir() && !metadata.file_type().is_symlink() => {
+        Ok(metadata)
+            if metadata.is_dir()
+                && !crate::reparse::metadata_is_link(path, &metadata)
+                && fs::remove_dir_all(path).is_err() =>
+        {
+            for entry in WalkDir::new(path).follow_links(false).into_iter().flatten() {
+                let _ = crate::reparse::clear_readonly(entry.path());
+            }
             let _ = fs::remove_dir_all(path);
         }
         _ => {}
@@ -1161,7 +1203,10 @@ fn remove_directory_if_present(path: &Path) {
 
 fn remove_file_if_present(path: &Path) {
     match fs::symlink_metadata(path) {
-        Ok(metadata) if metadata.is_file() && !metadata.file_type().is_symlink() => {
+        Ok(metadata)
+            if metadata.is_file() && !crate::reparse::metadata_is_link(path, &metadata) =>
+        {
+            let _ = crate::reparse::clear_readonly(path);
             let _ = fs::remove_file(path);
         }
         _ => {}

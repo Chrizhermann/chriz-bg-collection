@@ -336,7 +336,8 @@ fn read_ini(game: &HeldFolder) -> Result<Option<Vec<u8>>, String> {
 fn read_ini_shared(game: &HeldFolder) -> Result<Option<Vec<u8>>, String> {
     let path = game.path().join(INI);
     match fs::symlink_metadata(&path) {
-        Ok(metadata) if metadata.is_file() && !is_link_or_reparse(&metadata) => {}
+        Ok(metadata)
+            if metadata.is_file() && !crate::reparse::metadata_is_link(&path, &metadata) => {}
         Ok(_) => {
             return Err(entry_message(EntryError {
                 path,
@@ -376,7 +377,9 @@ fn file_facts(game: &HeldFolder, name: &str) -> GameLogFile {
         detail: None,
     };
     match fs::symlink_metadata(&facts.path) {
-        Ok(metadata) if metadata.is_file() && !is_link_or_reparse(&metadata) => {
+        Ok(metadata)
+            if metadata.is_file() && !crate::reparse::metadata_is_link(&facts.path, &metadata) =>
+        {
             facts.size_bytes = Some(metadata.len());
             facts.modified_at_millis = metadata
                 .modified()
@@ -394,19 +397,6 @@ fn file_facts(game: &HeldFolder, name: &str) -> GameLogFile {
         }
     }
     facts
-}
-
-#[cfg(windows)]
-fn is_link_or_reparse(metadata: &fs::Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    use windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT;
-
-    metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
-}
-
-#[cfg(not(windows))]
-fn is_link_or_reparse(metadata: &fs::Metadata) -> bool {
-    metadata.file_type().is_symlink()
 }
 
 /// The number of crashes with a report in the crash folder of the held `game` folder: each leaves

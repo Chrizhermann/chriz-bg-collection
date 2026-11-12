@@ -327,8 +327,10 @@ fn inspect(request: &SupervisedRecoveryRequest) -> Result<Inspected, CliError> {
         }
         let program = recovery_setup_program(&root, &mod_file.tp2)?;
         if !direct_regular_file(&program)
-            || fs::canonicalize(&intent.program).map_err(error)?
-                != fs::canonicalize(&program).map_err(error)?
+            || !crate::reparse::same_normalized_windows_path(
+                &crate::reparse::canonicalize_flexible(&intent.program).map_err(error)?,
+                &crate::reparse::canonicalize_flexible(&program).map_err(error)?,
+            )
             || sha256_bytes(&fs::read(&program).map_err(error)?) != tool.sha256
         {
             return Err(error("operation used a different setup executable"));
@@ -530,7 +532,13 @@ fn verify_arguments(
     );
     if args.len() != expected.len() + 1
         || args[..expected.len()] != expected
-        || fs::canonicalize(args.last().unwrap().trim_matches('"')).map_err(error)? != debug
+        || !crate::reparse::same_normalized_windows_path(
+            &crate::reparse::canonicalize_flexible(Path::new(
+                args.last().unwrap().trim_matches('"'),
+            ))
+            .map_err(error)?,
+            debug,
+        )
     {
         return Err(error(
             "supervised invocation differs from the frozen component command",
