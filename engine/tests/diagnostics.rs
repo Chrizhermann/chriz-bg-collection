@@ -1228,9 +1228,10 @@ first attempt line\n"
 
     // Re-exporting to the same regular .zip path atomically overwrites it.
     let overwritten = export_diagnostics(&request).unwrap();
+    assert_eq!(overwritten.path, bundle.path);
     assert!(bg_engine::reparse::same_normalized_windows_path(
         &overwritten.path,
-        &fixture.output
+        &bg_engine::reparse::canonicalize_flexible(&fixture.output).unwrap()
     ));
     assert!(overwritten.path.is_file());
 
