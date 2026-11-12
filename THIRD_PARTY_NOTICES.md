@@ -41,13 +41,15 @@ are recorded in `docs/audits/2026-09-07-eet-attribution.md` in the source reposi
 
 ## Theme fonts
 
-The app's themes embed two unmodified fonts under the SIL Open Font License 1.1. The source
-repository keeps each font with its `OFL.txt` in `app/src/themes/fonts/`.
+The app's themes embed three unmodified font families under the SIL Open Font License 1.1. The
+source repository keeps each font with its `OFL.txt` in `app/src/themes/fonts/`.
 
-- IM Fell English (Chriz Easy BG): Copyright (c) 2007 Igino Marini (www.iginomarini.com),
-  with Reserved Font Name "IM FELL English Roman".
-- Marcellus (Chriz Easy IWD): Copyright (c) 2012 by Brian J. Bonislawsky DBA Astigmatic
-  (AOETI) (astigma@astigmatic.com), with Reserved Font Name "Marcellus".
+- Alegreya (Chriz Easy BG): Copyright 2011 The Alegreya Project Authors
+  (https://github.com/huertatipografica/Alegreya).
+- Alegreya Sans (Chriz Easy BG and Chriz Easy IWD): Copyright 2013 The Alegreya Sans Project
+  Authors (https://github.com/huertatipografica/Alegreya-Sans).
+- Spectral (Chriz Easy IWD): Copyright 2017 The Spectral Project Authors
+  (https://github.com/productiontype/Spectral).
 
 These fonts are licensed under the SIL Open Font License, Version 1.1:
 

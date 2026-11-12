@@ -1,65 +1,201 @@
-/* Chriz Easy BG keeps main's dark theme. The IWD build substitutes iwd.css. */
+/* Chriz Easy BG: "Candlekeep Granite, Aged Brass & Vellum" — inspired by the original
+   Baldur's Gate 1 stone-and-bronze interface, Sword Coast plaques, and Renaissance bookcraft.
+   Fonts and their SIL Open Font Licenses are bundled locally in `./fonts/`. */
+
+@font-face {
+  font-family: "Alegreya";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/alegreya/alegreya-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Alegreya";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/alegreya/alegreya-latin-ext-400-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Alegreya";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/alegreya/alegreya-latin-400-italic.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Alegreya";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/alegreya/alegreya-latin-ext-400-italic.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Alegreya";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./fonts/alegreya/alegreya-latin-600-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Alegreya";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./fonts/alegreya/alegreya-latin-ext-600-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Alegreya";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/alegreya/alegreya-latin-700-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Alegreya";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/alegreya/alegreya-latin-ext-700-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Alegreya Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/alegreya-sans/alegreya-sans-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Alegreya Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/alegreya-sans/alegreya-sans-latin-ext-400-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Alegreya Sans";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./fonts/alegreya-sans/alegreya-sans-latin-500-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Alegreya Sans";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./fonts/alegreya-sans/alegreya-sans-latin-ext-500-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Alegreya Sans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/alegreya-sans/alegreya-sans-latin-700-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Alegreya Sans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/alegreya-sans/alegreya-sans-latin-ext-700-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 :root {
   color-scheme: dark;
-  --iron: #151819;
-  --charcoal: #23282a;
-  --slate: #343b3e;
-  --slate-light: #4c575b;
-  --vellum: #f1e7d2;
-  --vellum-dim: #c8bfad;
-  --brass: #c59a51;
-  --brass-dark: #806436;
-  --teal: #75bab4;
-  --teal-dark: #325f5c;
-  --ember: #e47b67;
-  --ok: #98c790;
-  --focus: #f1c873;
-  --on-accent: #151819;
-  --danger-surface: #61372f;
-  --header-background: rgba(21, 24, 25, 0.96);
+  --iron: #12151b;
+  --charcoal: #1b2029;
+  --slate: #272f3d;
+  --slate-light: #697689;
+  --vellum: #f2e8d2;
+  --vellum-dim: #c6bba4;
+  --brass: #d8ac57;
+  --brass-dark: #785822;
+  --teal: #72c4b4;
+  --teal-dark: #2c5b53;
+  --ember: #ec8566;
+  --ok: #97ca8e;
+  --focus: #f4cc76;
+  --on-accent: #12151b;
+  --danger-surface: #582822;
+  --header-background:
+    linear-gradient(180deg, rgba(31, 36, 46, 0.98) 0%, rgba(18, 21, 27, 0.98) 100%);
   --page-background:
-    linear-gradient(rgba(197, 154, 81, 0.035) 1px, transparent 1px),
-    var(--iron);
-  --log-background: #101314;
-  --log-text: #d9dfd4;
-  --font-display: Georgia, "Times New Roman", serif;
-  --font-body: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+    url("./images/stone-grain.svg") repeat 0 0 / 160px 160px,
+    radial-gradient(ellipse 85% 45% at 50% 0%, rgba(216, 172, 87, 0.085), transparent 72%),
+    radial-gradient(ellipse 110% 85% at 50% 100%, rgba(10, 12, 16, 0.72), transparent 68%),
+    linear-gradient(180deg, #161a22 0%, #101319 100%);
+  --log-background: #0b0d11;
+  --log-text: #dfd8c6;
+  --font-display: "Alegreya", Georgia, "Times New Roman", serif;
+  --font-body: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
   --font-mono: "Cascadia Mono", Consolas, monospace;
 }
 
-body {
-  background-size: 100% 4rem;
+.app-header {
+  border-bottom: 1px solid #594421;
+  box-shadow:
+    inset 0 -1px 0 rgba(216, 172, 87, 0.24),
+    0 4px 16px rgba(0, 0, 0, 0.52);
 }
 
-.category-count,
-.badge {
-  font-family: "Segoe UI Variable", "Segoe UI", sans-serif;
+.brand-mark {
+  background-image: url("./images/bg-medallion.svg");
+  border-radius: 50%;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.65));
 }
 
-/* Keep main's exact translucent surfaces as well as its palette. */
-.manual-download-checking,
-.install-ready.is-ready,
-.shortcut-feedback {
-  background: rgba(117, 186, 180, 0.08);
+.button:not(.quiet):not(.header-button):not(.danger-quiet):not(.danger):not(.version-link) {
+  background: linear-gradient(180deg, #e5bc69 0%, #c89740 100%);
+  border-color: #8f6824;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 245, 214, 0.45),
+    inset 0 -1px 0 rgba(70, 46, 10, 0.55),
+    0 2px 6px rgba(0, 0, 0, 0.45);
 }
 
-.manual-download-error,
-.unavailable-reason {
-  background: rgba(228, 123, 103, 0.08);
+.button.quiet {
+  background: linear-gradient(180deg, #242b37 0%, #191e27 100%);
+  border-color: var(--slate-light);
+  box-shadow:
+    inset 0 1px 0 rgba(242, 232, 210, 0.07),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.55),
+    0 2px 5px rgba(0, 0, 0, 0.35);
 }
 
-.install-ready {
-  background: rgba(197, 154, 81, 0.08);
-}
-
-.feature-group-card {
-  background: rgba(197, 154, 81, 0.06);
-}
-
-.category-heading:hover {
-  background: rgba(197, 154, 81, 0.07);
-}
-
-.shortcut-feedback.warning {
-  background: rgba(194, 154, 79, 0.08);
+.card,
+.choice-group,
+.update-selection,
+.operation-feedback,
+.manual-download-panel {
+  background:
+    url("./images/stone-grain.svg") repeat 0 0 / 160px 160px,
+    linear-gradient(180deg, #1f2530 0%, #191e27 100%);
 }
