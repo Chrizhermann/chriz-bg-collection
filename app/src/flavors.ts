@@ -117,7 +117,7 @@ export const FLAVORS: Readonly<Record<FlavorId, Flavor>> = {
       radarTip: true,
     },
     modUpdates: [{ modId: "buffbot", title: "BuffBot" }],
-    report: { issuesLabel: "github.com/Chrizhermann/chriz-easy-bg", chatLabel: "ChrizFader's Discord", chatChannel: null },
+    report: { issuesLabel: "github.com/Chrizhermann/chriz-easy-bg", chatLabel: "ChrizFader's Discord", chatChannel: "#mod-feedback" },
     text: {
       lookingForGames: "Looking for your Baldur's Gate games…",
       preparingSetupDetail: "Checking your game folders and mod choices. Your original games stay unchanged.",
@@ -159,7 +159,7 @@ export const FLAVORS: Readonly<Record<FlavorId, Flavor>> = {
       radarTip: true,
     },
     modUpdates: [{ modId: "buffbot", title: "BuffBot" }],
-    report: { issuesLabel: "github.com/Chrizhermann/chriz-easy-iwd", chatLabel: "ChrizFader's Discord", chatChannel: null },
+    report: { issuesLabel: "github.com/Chrizhermann/chriz-easy-iwd", chatLabel: "ChrizFader's Discord", chatChannel: "#mod-feedback" },
     text: {
       lookingForGames: "Looking for your Icewind Dale game…",
       preparingSetupDetail: "Checking your game folder and mod choices. Your original game stays unchanged.",

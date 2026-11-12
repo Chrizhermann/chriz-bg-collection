@@ -793,14 +793,14 @@ On `main` for the next Chriz Easy BG version:
   at failures, prefilled GitHub issue, text for Discord, better diagnostics ZIP; see
   [report-feature.md](../../report-feature.md)). The issue forms are in `chriz-easy-bg` and
   `chriz-easy-iwd` since 2026-11-10, without the sentence that names Feedback in the app,
-  because the released apps do not have the button yet. Left to do:
-  - Christopher creates the Discord channel for reports and names it, then `chatChannel`
-    is set.
+  because the released apps do not have the button yet, and opening the prefilled blank
+  issue signed in was checked on 2026-11-12 (the filled-in form appears directly, not the
+  template chooser). `chatChannel` in `app/src/flavors.ts` names `#mod-feedback` for both
+  flavors. Left to do:
+  - Christopher creates the public `#mod-feedback` channel on ChrizFader's Discord.
   - With the release that ships the dialog (each product): put the sentence "The quickest
     way is Feedback in the app…" from `docs/releases/issue-templates/problem.yml` into the
     repository's `problem.yml`, and the README sentence into its README.
-  - Open the prefilled blank issue signed in to GitHub once (check in report-feature.md);
-    signed out, GitHub asks for the sign-in and keeps title and text in the address.
   - Check the dialog in the packaged app: a long report opens the browser, Copy text works.
 
   A service of ours for reports without an account was left out and comes up again only if

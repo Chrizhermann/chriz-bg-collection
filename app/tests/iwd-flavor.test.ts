@@ -406,6 +406,7 @@ describe("Chriz Easy IWD build flavor", () => {
     const dialog = getByRole(root, "dialog", { name: "Report a problem or send feedback" });
     await waitFor(() => expect(dialog.querySelector("#report-details")?.textContent).toContain("App: Chriz Easy IWD"));
     expect(dialog.textContent).toContain("Opens github.com/Chrizhermann/chriz-easy-iwd in your browser.");
+    expect(dialog.textContent).toContain("paste it in ChrizFader's Discord, channel #mod-feedback.");
     expectNoBgWords(dialog, "report dialog");
     fireEvent.click(getByRole(dialog, "button", { name: "Open GitHub issue" }));
     await waitFor(() => expect(issue).toHaveBeenCalledTimes(1));
@@ -658,7 +659,7 @@ describe("Baldur's Gate flavor", () => {
       ],
       features: { radar: true, installPatches: true, modUpgrades: true, hotpatches: false, manualPauses: true, appUpdates: true, buffBotTip: true, radarTip: true },
       modUpdates: [{ modId: "buffbot", title: "BuffBot" }],
-      report: { issuesLabel: "github.com/Chrizhermann/chriz-easy-bg", chatLabel: "ChrizFader's Discord", chatChannel: null },
+      report: { issuesLabel: "github.com/Chrizhermann/chriz-easy-bg", chatLabel: "ChrizFader's Discord", chatChannel: "#mod-feedback" },
       text: {
         lookingForGames: "Looking for your Baldur's Gate games…",
         preparingSetupDetail: "Checking your game folders and mod choices. Your original games stay unchanged.",

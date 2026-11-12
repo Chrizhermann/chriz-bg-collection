@@ -22,7 +22,7 @@ the details the app adds. From there:
 - **Open GitHub issue** opens the new-issue page of the product's distribution repository in
   the browser, with title and text filled in. The player reads it there and submits it.
 - **Copy text** puts the report on the clipboard; **Open Discord** opens the invitation to
-  ChrizFader's Discord.
+  ChrizFader's Discord (`#mod-feedback`).
 - **Save diagnostics ZIP** is the existing Export diagnostics for the installation the report
   is about, with **Show in folder** afterwards. The player attaches the ZIP by hand.
 
@@ -69,14 +69,15 @@ the details the app adds. From there:
 - **Issue forms.** `docs/releases/issue-templates/` is the source of
   `.github/ISSUE_TEMPLATE/` in `Chrizhermann/chriz-easy-bg` and `Chrizhermann/chriz-easy-iwd`,
   for players who come to GitHub without the app. `blank_issues_enabled` stays `true`: the
-  app's link opens a blank issue with the report filled in. After publishing the forms, open
-  `https://github.com/<repository>/issues/new?title=Test&body=Test` signed in and check that
-  the filled-in blank issue appears, not the chooser.
+  app's link opens a blank issue with the report filled in (checked signed in on 2026-11-12
+  with `https://github.com/<repository>/issues/new?title=Test&body=Test` for both
+  repositories: the filled-in blank issue appears directly, not the template chooser).
 - **READMEs.** `docs/releases/public-README.md` names the three ways to report. The
   `chriz-easy-iwd` README gets the same sentence with its next release.
-- **Discord channel.** Christopher wants a channel of its own for reports. Once it has a
-  name, set `chatChannel` of both flavors in `app/src/flavors.ts`, and replace
-  `CHAT_INVITATION` if the channel gets its own invitation.
+- **Discord channel.** Both flavors name `#mod-feedback` (`chatChannel` in
+  `app/src/flavors.ts`) and use the server invitation `CHAT_INVITATION`
+  (`app/src-tauri/src/report.rs`). Keep `#mod-feedback` public on ChrizFader's Discord with
+  message and file-attachment permissions for members.
 
 ## Not built
 
