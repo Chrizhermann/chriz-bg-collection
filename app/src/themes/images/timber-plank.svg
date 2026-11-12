@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="64" viewBox="0 0 240 64">
+  <defs>
+    <filter id="grain" x="0%" y="0%" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04 0.45" numOctaves="3" seed="7" stitchTiles="stitch" result="wood"/>
+      <feColorMatrix type="matrix" values="0.35 0 0 0 0.08  0.22 0 0 0 0.05  0.12 0 0 0 0.03  0 0 0 0.22 0" in="wood"/>
+    </filter>
+  </defs>
+  <rect width="240" height="64" filter="url(#grain)"/>
+  <path d="M0 21.5h240M0 43.5h240" stroke="#0b0806" stroke-opacity="0.28" stroke-width="1"/>
+  <path d="M0 22.5h240M0 44.5h240" stroke="#d8b998" stroke-opacity="0.045" stroke-width="1"/>
+</svg>

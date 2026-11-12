@@ -41,13 +41,15 @@ are recorded in `docs/audits/2026-09-07-eet-attribution.md` in the source reposi
 
 ## Theme fonts
 
-The app's themes embed two unmodified fonts under the SIL Open Font License 1.1. The source
-repository keeps each font with its `OFL.txt` in `app/src/themes/fonts/`.
+The app's themes embed three unmodified font families under the SIL Open Font License 1.1. The
+source repository keeps each font with its `OFL.txt` in `app/src/themes/fonts/`.
 
-- IM Fell English (Chriz Easy BG): Copyright (c) 2007 Igino Marini (www.iginomarini.com),
-  with Reserved Font Name "IM FELL English Roman".
-- Marcellus (Chriz Easy IWD): Copyright (c) 2012 by Brian J. Bonislawsky DBA Astigmatic
-  (AOETI) (astigma@astigmatic.com), with Reserved Font Name "Marcellus".
+- Alegreya (Chriz Easy BG): Copyright 2011 The Alegreya Project Authors
+  (https://github.com/huertatipografica/Alegreya).
+- Alegreya Sans (Chriz Easy BG and Chriz Easy IWD): Copyright 2013 The Alegreya Sans Project
+  Authors (https://github.com/huertatipografica/Alegreya-Sans).
+- Spectral (Chriz Easy IWD): Copyright 2017 The Spectral Project Authors
+  (https://github.com/productiontype/Spectral).
 
 These fonts are licensed under the SIL Open Font License, Version 1.1:
 
@@ -154,8 +156,8 @@ For MPL components, the versioned source/archive links below identify the corres
 Supplemental files fill upstream package omissions and document embedded components; their exact sources
 and checksums are recorded in `LICENSES/supplemental.json`. Original copyright/NOTICE texts follow.
 
-- `Cargo.lock` SHA-256 (LF-normalized): `5d6ffc91e371aee9c84db65f4a6cc5fbbc26a7216060d4727f185bb8db388d0b`
-- `app/package-lock.json` SHA-256 (LF-normalized): `8738d398f5f8b1e2c558c8c454fe4b4421b8dc0a49222e5f863cf4c6a10b8268`
+- `Cargo.lock` SHA-256 (LF-normalized): `1d14736755103e966dee75ebd7339e866a5f5306c67f3b34cf86107ffabf639e`
+- `app/package-lock.json` SHA-256 (LF-normalized): `4549fbbf073721a339f6a011f62783d7c1d5363fc3d9a944f231e30edd664ffc`
 
 ### Package inventory
 

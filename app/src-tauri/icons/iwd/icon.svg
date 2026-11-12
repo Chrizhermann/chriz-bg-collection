@@ -1,15 +1,34 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <rect x="8" y="8" width="240" height="240" rx="44" fill="#14232e"/>
-  <rect x="44" y="34" width="172" height="188" rx="8" fill="#f8fbfd"/>
-  <path d="M52 34h14v188H52a8 8 0 0 1-8-8V42a8 8 0 0 1 8-8z" fill="#1d5e86"/>
-  <path d="M66 212v-26l26-14 20 10 28-22 24 15 18-8 34 17v28z" fill="#cbd9e3"/>
-  <circle cx="146" cy="112" r="44" fill="#1d5e86"/>
-  <g transform="translate(146 112)" stroke="#f8fbfd" stroke-width="7" stroke-linecap="round" fill="none">
-    <path id="arm" d="M0 0V-29M0-17l-8-8M0-17l8-8"/>
-    <use href="#arm" transform="rotate(60)"/>
-    <use href="#arm" transform="rotate(120)"/>
-    <use href="#arm" transform="rotate(180)"/>
-    <use href="#arm" transform="rotate(240)"/>
-    <use href="#arm" transform="rotate(300)"/>
+  <defs>
+    <linearGradient id="plinth" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#495159"/>
+      <stop offset="55%" stop-color="#272d33"/>
+      <stop offset="100%" stop-color="#13171b"/>
+    </linearGradient>
+    <linearGradient id="stoneFrame" x1="15%" y1="10%" x2="85%" y2="90%">
+      <stop offset="0%" stop-color="#aba698"/>
+      <stop offset="48%" stop-color="#6b6b66"/>
+      <stop offset="100%" stop-color="#303438"/>
+    </linearGradient>
+    <radialGradient id="ice" cx="46%" cy="42%" r="58%">
+      <stop offset="0%" stop-color="#a8f5ff"/>
+      <stop offset="38%" stop-color="#36bdd4"/>
+      <stop offset="78%" stop-color="#0f566b"/>
+      <stop offset="100%" stop-color="#072430"/>
+    </radialGradient>
+  </defs>
+  <rect x="40" y="40" width="176" height="176" rx="4" fill="url(#plinth)" stroke="#090c0f" stroke-width="5"/>
+  <rect x="47" y="47" width="162" height="162" rx="2" fill="none" stroke="#7d8a96" stroke-opacity="0.35" stroke-width="1.5"/>
+  <polygon points="128,12 244,128 128,244 12,128" fill="url(#stoneFrame)" stroke="#090c0f" stroke-width="5" stroke-linejoin="round"/>
+  <polygon points="128,22 234,128 128,234 22,128" fill="none" stroke="#dfd9c8" stroke-opacity="0.45" stroke-width="1.8"/>
+  <polygon points="128,40 216,128 128,216 40,128" fill="url(#ice)" stroke="#0a1217" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M128 40L110 112 40 128M128 40l24 68 64 20M110 112l42-4-24 108" stroke="#c8fbff" stroke-opacity="0.28" stroke-width="1.6" fill="none"/>
+  <path d="M120 208c4-22 6-39 4-54-9-11-24-21-44-26 15-1 30 5 41 14-3-16-14-31-31-42 15 5 27 16 34 29 1-17-3-34-12-49 11 11 17 26 18 43 7-14 19-26 34-34-10 13-17 27-19 42 12-10 27-16 43-16-18 6-32 16-40 29-2 15 1 33 8 54l-18 10-18-10z"
+        fill="#241911" stroke="#0d0906" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M126 196c2-18 3-34 1-48M125 144c8-12 18-22 31-29M122 138c-7-12-17-22-28-29"
+        stroke="#9e8262" stroke-opacity="0.55" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <g fill="#c9c4b5" stroke="#14181c" stroke-width="1.8">
+    <circle cx="128" cy="25" r="3.8"/><circle cx="231" cy="128" r="3.8"/>
+    <circle cx="128" cy="231" r="3.8"/><circle cx="25" cy="128" r="3.8"/>
   </g>
 </svg>

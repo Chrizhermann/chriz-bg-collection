@@ -162,9 +162,16 @@ export function setupScreen(
   summary.setAttribute("role", "status");
   filters.append(searchLabel, categoryLabel, summary);
   advanced.append(filters);
+  if (batch) {
+    advanced.append(element("p", "category-hint bulk-actions-note",
+      "Both buttons in each category affect the whole category, including choices hidden by your search. Include keeps your existing alternatives but can add challenge or experimental choices; it is not a recommendation. Required fixes stay included."));
+  }
+  const browser = element("div", "setup-browser");
+  const chapterButtons = new Map<string, HTMLButtonElement>();
   const groups = element("div", "setup-groups");
   const filterable: { group: HTMLDetailsElement; category: string; rows: { element: HTMLElement; text: string }[] }[] = [];
   const exclusiveByControl = new Map(exclusiveGroups.flatMap(group => group.controls.map(control => [control.id, group] as const)));
+  const chapterEntries: { category: string; label: string; countText: string }[] = [];
   evaluation.view.categories.forEach((category) => {
     const section = element("details", "choice-group");
     section.dataset.category = category;
@@ -174,7 +181,9 @@ export function setupScreen(
     const count = element("span", "category-count");
     const categoryControls = evaluation.view.controls.filter((control) => control.category === category && !interfaceGroup?.controls.includes(control));
     if (categoryControls.length === 0) return;
-    count.textContent = `${categoryControls.filter((control) => control.selected).length} / ${categoryControls.length} included`;
+    const includedCount = categoryControls.filter((control) => control.selected).length;
+    count.textContent = `${includedCount} / ${categoryControls.length} included`;
+    chapterEntries.push({ category, label: displayCategory(category), countText: `${includedCount}/${categoryControls.length}` });
     heading.append(count);
     persistDisclosure(section, heading, (open) => {
       // Search temporarily opens matches; it must not erase the player's layout.
@@ -195,7 +204,7 @@ export function setupScreen(
         button.disabled = Object.keys(changes).length === 0;
         buttons.append(button);
       }
-      fieldset.append(buttons, element("p", "category-hint", "Both buttons affect the whole category, including choices hidden by your search. Include keeps your existing alternatives but can add challenge or experimental choices; it is not a recommendation. Required fixes stay included."));
+      fieldset.append(buttons);
     }
     const rows: { element: HTMLElement; text: string }[] = [];
     const renderedExclusiveGroups = new Set<string>();
@@ -264,8 +273,9 @@ export function setupScreen(
         });
         return;
       }
-      const row = element("div", `control-row ${control.interactive ? "" : "is-unavailable"}`.trim());
-      const input = element("input");
+      const isMandatoryLocked = control.decision === "mandatory" && !control.interactive;
+      const row = element("div", `control-row ${control.interactive ? "" : "is-unavailable"}${isMandatoryLocked ? " is-locked" : ""}`.trim().replace(/\s+/g, " "));
+      const input = element("input", isMandatoryLocked ? "control-locked" : undefined);
       input.type = "checkbox";
       input.id = `feature-${control.id}`;
       input.checked = control.selected;
@@ -312,9 +322,42 @@ export function setupScreen(
     filterable.push({ group: section, category, rows });
   });
   const empty = element("p", "setup-empty", "No matching choices. Try another search or category.");
+  if (chapterEntries.length > 1) {
+    browser.classList.add("has-chapters");
+    const nav = element("nav", "setup-chapter-nav");
+    nav.setAttribute("aria-label", "Category index");
+    const list = element("ul", "chapter-list");
+    const addChapter = (value: string, labelText: string, countText?: string): void => {
+      const item = element("li");
+      const btn = element("button", "chapter-button");
+      btn.type = "button";
+      btn.append(element("span", "chapter-title", labelText));
+      if (countText !== undefined) btn.append(element("span", "chapter-count", countText));
+      btn.addEventListener("click", () => {
+        categorySelect.value = value;
+        filter();
+      });
+      chapterButtons.set(value, btn);
+      item.append(btn);
+      list.append(item);
+    };
+    addChapter("", "All categories");
+    for (const entry of chapterEntries) addChapter(entry.category, entry.label, entry.countText);
+    nav.append(list);
+    browser.append(nav);
+  }
+  const groupsPane = element("div", "setup-groups-pane");
+  groupsPane.append(groups, empty);
+  browser.append(groupsPane);
   const filter = (): void => {
     viewState.search = search.value;
     viewState.category = categorySelect.value;
+    for (const [value, btn] of chapterButtons) {
+      const active = value === viewState.category;
+      btn.classList.toggle("is-active", active);
+      if (active) btn.setAttribute("aria-current", "true");
+      else btn.removeAttribute("aria-current");
+    }
     const query = viewState.search.trim().toLocaleLowerCase();
     let visible = 0;
     for (const group of filterable) {
@@ -333,7 +376,7 @@ export function setupScreen(
   search.addEventListener("input", filter);
   categorySelect.addEventListener("change", filter);
   filter();
-  advanced.append(groups, empty);
+  advanced.append(browser);
   page.append(advanced);
   if (batch?.manualBreakpoints) page.append(manualBreakpointEditor({ ...batch.manualBreakpoints,
     open: viewState.manualModsOpen, onOpen: open => { viewState.manualModsOpen = open; },

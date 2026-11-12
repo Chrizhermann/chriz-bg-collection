@@ -108,7 +108,7 @@ export function createReportDialog(initial: ReportDialogModel, actions: ReportDi
   textLabel.htmlFor = "report-text";
   const text = element("textarea", "report-text");
   text.id = "report-text";
-  text.rows = 5;
+  text.rows = 3;
   text.maxLength = REPORT_TEXT_LIMIT;
   text.setAttribute("aria-describedby", "report-text-help");
   const textHelp = element("p", "muted", `Optional, up to ${REPORT_TEXT_LIMIT} characters. You can add more after the page opens.`);
@@ -125,6 +125,7 @@ export function createReportDialog(initial: ReportDialogModel, actions: ReportDi
   dialog.append(detailsLabel, details, detailsHelp);
 
   dialog.append(element("h3", undefined, "Send it"));
+  const channels = element("div", "report-channels");
   const github = actionButton("Open GitHub issue", () => actions.openIssue(text.value));
   github.id = "report-open-issue";
   const githubRow = element("div", "report-channel");
@@ -139,7 +140,8 @@ export function createReportDialog(initial: ReportDialogModel, actions: ReportDi
   const chatRow = element("div", "report-channel");
   chatRow.append(chatButtons, element("p", "muted",
     `Copy the text, then paste it in ${flavor.report.chatLabel}${flavor.report.chatChannel ? `, channel ${flavor.report.chatChannel}` : ""}. You need a Discord account.`));
-  dialog.append(githubRow, chatRow);
+  channels.append(githubRow, chatRow);
+  dialog.append(channels);
 
   const manualCopy = element("textarea", "report-text report-manual-copy");
   manualCopy.id = "report-manual-copy";

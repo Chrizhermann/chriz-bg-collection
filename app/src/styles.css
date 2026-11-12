@@ -1,16 +1,16 @@
-/* Layout and components shared by every app. Colors, fonts and ornaments come from the app's
-   theme in `themes/`, which `index.html` loads after this file. Each theme defines:
-     --iron            page ground, inputs           --charcoal        cards, panels, quiet buttons
-     --slate           dividers                      --slate-light     control borders
-     --vellum          text                          --vellum-dim      secondary text
-     --brass           accent: primary button, marks --brass-dark      accent edges
-     --teal            success, ready                --teal-dark       success edges
-     --ember           danger, errors                --danger-surface  danger button fill
-     --focus           focus ring, highlighted text  --on-accent       text on --brass and --focus
+/* Layout and components shared by every app. Colors, fonts and material textures come from the
+   app's theme in `themes/`, which `index.html` loads after this file. Each theme defines:
+     --iron            page ground, recessed wells   --charcoal        stone panels, cards
+     --slate           inner dividers, niches        --slate-light     chiseled stone/metal borders
+     --vellum          primary ink                   --vellum-dim      secondary ink
+     --brass           primary accent & emblems      --brass-dark      accent bevel edges
+     --teal            ready & verified state        --teal-dark       ready bevel edges
+     --ember           warnings & errors             --danger-surface  destructive button fill
+     --focus           focus ring & highlights       --on-accent       text on --brass and --focus
      --header-background, --page-background, --log-background, --log-text,
      --font-display, --font-body, --font-mono */
 :root {
-  --radius: 0.45rem;
+  --radius: 2px;
   color: var(--vellum);
   background: var(--iron);
   font-family: var(--font-body);
@@ -21,31 +21,29 @@
 * {
   box-sizing: border-box;
   min-width: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--slate-light) var(--iron);
 }
 
-.manual-breakpoint-body,
-.manual-checkpoint-panel {
-  display: grid;
-  gap: 0.8rem;
-  padding: 1rem;
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
 }
 
-.manual-checkpoint-panel { padding: 0.5rem 0; }
-.manual-breakpoint-body p,
-.manual-checkpoint-panel p { margin: 0; }
-.manual-breakpoint-body label { display: grid; gap: 0.35rem; }
-.manual-breakpoint-body input,
-.manual-breakpoint-body select { width: 100%; min-height: 44px; }
-.manual-mod-warning { color: var(--vellum); max-width: 76ch; line-height: 1.55; }
-.manual-breakpoint-list,
-.manual-addition-list { margin: 0; padding-left: 1.5rem; }
-.manual-breakpoint-row { padding: 0.5rem 0; }
-.manual-breakpoint-row > div { display: inline; }
-.manual-breakpoint-row > button { margin-top: 0.35rem; }
-.manual-breakpoint-row strong,
-.manual-checkpoint-panel .path,
-.manual-checkpoint-panel dd { overflow-wrap: anywhere; }
-.manual-checkpoint-panel .review-list { margin: 0; }
+::-webkit-scrollbar-track {
+  background: var(--iron);
+  border-left: 1px solid var(--slate);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--slate);
+  border: 1px solid var(--slate-light);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--slate-light);
+}
 
 [hidden] {
   display: none !important;
@@ -69,29 +67,199 @@ body {
 button,
 input,
 select,
+textarea,
 summary {
   font: inherit;
 }
 
 button,
 select,
-input[type="text"] {
+input[type="text"],
+input[type="search"] {
   min-height: 44px;
 }
 
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
+textarea:focus-visible,
 summary:focus-visible,
 [tabindex]:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 3px;
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 h1[tabindex="-1"]:focus-visible {
   outline: none;
 }
 
+/* Custom chiseled checkboxes & radio buttons — no raw OS widgets, no data: URLs. */
+input[type="checkbox"],
+input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  display: inline-grid;
+  place-content: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  margin: 0;
+  border: 1px solid var(--slate-light);
+  background: var(--iron);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.72),
+    0 1px 0 rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+input[type="checkbox"] {
+  border-radius: 2px;
+}
+
+input[type="radio"] {
+  border-radius: 50%;
+}
+
+input[type="checkbox"]:hover:not(:disabled):not([aria-disabled="true"]),
+input[type="radio"]:hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--focus);
+}
+
+input[type="checkbox"]:checked {
+  border-color: var(--brass);
+  background: color-mix(in srgb, var(--brass) 20%, var(--iron));
+}
+
+input[type="checkbox"]:checked::after {
+  width: 0.34rem;
+  height: 0.62rem;
+  margin-bottom: 0.12rem;
+  border: solid var(--brass);
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(42deg);
+  content: "";
+}
+
+input[type="checkbox"]:indeterminate {
+  border-color: var(--focus);
+  background: color-mix(in srgb, var(--focus) 16%, var(--iron));
+}
+
+input[type="checkbox"]:indeterminate::after {
+  width: 0.62rem;
+  height: 2.5px;
+  background: var(--focus);
+  content: "";
+}
+
+/* Mandatory foundation seal: distinct from interactive checkboxes. */
+input[type="checkbox"].control-locked,
+input[type="checkbox"].control-locked:checked {
+  border-color: var(--brass-dark);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--brass) 14%, var(--iron));
+  cursor: default;
+}
+
+input[type="checkbox"].control-locked:checked::after {
+  width: 0.46rem;
+  height: 0.46rem;
+  margin: 0;
+  border: 1px solid var(--brass);
+  background: var(--brass);
+  transform: rotate(45deg);
+  content: "";
+}
+
+input[type="radio"]:checked {
+  border-color: var(--brass);
+  background: color-mix(in srgb, var(--brass) 18%, var(--iron));
+}
+
+input[type="radio"]:checked::after {
+  width: 0.54rem;
+  height: 0.54rem;
+  border-radius: 50%;
+  background: var(--brass);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--brass) 55%, transparent);
+  content: "";
+}
+
+input[type="checkbox"]:disabled,
+input[type="checkbox"][aria-disabled="true"]:not(.control-locked),
+input[type="radio"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+/* Manual checkpoints */
+.manual-breakpoint-body,
+.manual-checkpoint-panel {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+}
+
+.manual-checkpoint-panel {
+  padding: 0.5rem 0;
+}
+
+.manual-breakpoint-body p,
+.manual-checkpoint-panel p {
+  margin: 0;
+}
+
+.manual-breakpoint-body label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.manual-breakpoint-body input,
+.manual-breakpoint-body select {
+  width: 100%;
+  min-height: 44px;
+}
+
+.manual-mod-warning {
+  color: var(--vellum);
+  max-width: 76ch;
+  line-height: 1.5;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--brass-dark);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--brass) 8%, var(--iron));
+}
+
+.manual-breakpoint-list,
+.manual-addition-list {
+  margin: 0;
+  padding-left: 1.4rem;
+}
+
+.manual-breakpoint-row {
+  padding: 0.5rem 0;
+}
+
+.manual-breakpoint-row > div {
+  display: inline;
+}
+
+.manual-breakpoint-row > button {
+  margin-top: 0.35rem;
+}
+
+.manual-breakpoint-row strong,
+.manual-checkpoint-panel .path,
+.manual-checkpoint-panel dd {
+  overflow-wrap: anywhere;
+}
+
+.manual-checkpoint-panel .review-list {
+  margin: 0;
+}
+
+/* App shell & startup */
 .app-shell {
   display: grid;
   height: 100vh;
@@ -104,36 +272,49 @@ h1[tabindex="-1"]:focus-visible {
   flex-direction: column;
   align-items: center;
   justify-content: safe center;
-  gap: 2.5rem;
+  gap: 2rem;
   padding: 2rem 1.25rem;
   overflow: auto;
   text-align: center;
 }
 
+.startup-brand .brand-mark {
+  width: 3.4rem;
+  height: 3.4rem;
+  flex-basis: 3.4rem;
+}
+
 .startup-brand h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 1.4rem;
+  font-size: 1.65rem;
 }
 
 .startup-status {
   width: min(100%, 36rem);
+  padding: 1.4rem 1.6rem;
+  border: 1px solid var(--slate-light);
+  border-radius: var(--radius);
+  background: var(--charcoal);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
 .startup-status h2 {
-  margin: 1.25rem 0 0.65rem;
-  font-size: clamp(1.25rem, 3vw, 1.65rem);
+  margin: 1rem 0 0.55rem;
+  font-size: clamp(1.2rem, 2.6vw, 1.5rem);
   line-height: 1.3;
 }
 
 .startup-status p {
-  margin: 0.65rem 0;
+  margin: 0.55rem 0;
   color: var(--vellum-dim);
-  line-height: 1.55;
+  line-height: 1.5;
 }
 
 .startup-status .button {
-  margin-top: 1rem;
+  margin-top: 0.9rem;
 }
 
 .loading-spinner {
@@ -150,91 +331,109 @@ h1[tabindex="-1"]:focus-visible {
   to { transform: rotate(360deg); }
 }
 
+/* Header bar */
 .app-header {
   display: flex;
-  min-height: 4.25rem;
+  min-height: 4rem;
   align-items: center;
   justify-content: space-between;
-  padding: 0.7rem clamp(1rem, 3vw, 2.25rem);
-  border-bottom: 1px solid var(--slate);
+  padding: 0.55rem clamp(1rem, 3vw, 2.25rem);
+  border-bottom: 1px solid var(--slate-light);
   background: var(--header-background);
+  position: relative;
+  z-index: 15;
 }
 
 .brand {
   display: flex;
-  gap: 0.85rem;
+  gap: 0.8rem;
   align-items: center;
 }
 
 .brand-mark {
-  display: grid;
-  width: 2.2rem;
-  height: 2.2rem;
-  place-items: center;
-  border: 1px solid var(--brass);
-  color: var(--brass);
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  transform: rotate(45deg);
-}
-
-.brand-mark::first-letter {
-  transform: rotate(-45deg);
+  display: block;
+  width: 2.45rem;
+  height: 2.45rem;
+  flex: 0 0 2.45rem;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
 }
 
 .brand-copy {
   display: grid;
-  gap: 0.15rem;
+  gap: 0.08rem;
 }
 
 .brand-copy strong {
   font-family: var(--font-display);
+  font-size: 1.16rem;
+  font-weight: 700;
+  letter-spacing: 0.015em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
 }
 
-.brand-copy small,
+.brand-copy small {
+  color: var(--vellum-dim);
+  font-size: 0.76rem;
+  letter-spacing: 0.03em;
+}
+
 .lede,
 .card p,
-.fixture-note {
+.fixture-note,
+.muted {
   color: var(--vellum-dim);
 }
 
 .header-actions {
   display: flex;
-  gap: 0.45rem;
+  gap: 0.35rem;
+  align-items: center;
 }
 
+/* Buttons */
 .button {
   min-block-size: 44px;
-  padding: 0.65rem 1rem;
+  padding: 0.55rem 1rem;
   border: 1px solid var(--brass-dark);
   border-radius: var(--radius);
   color: var(--on-accent);
   background: var(--brass);
-  font-weight: 750;
+  font-weight: 700;
+  letter-spacing: 0.012em;
   cursor: pointer;
+  transition: filter 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
 }
 
 .button:hover:not(:disabled) {
   border-color: var(--focus);
-  filter: brightness(1.08);
+  filter: brightness(1.07);
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .button:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
+  opacity: 0.5;
+  filter: saturate(0.65);
 }
 
 .button.quiet,
 .button.header-button {
   color: var(--vellum);
   background: var(--charcoal);
+  font-weight: 500;
 }
 
 .button.danger-quiet {
   width: fit-content;
   border-color: var(--slate-light);
   color: var(--vellum-dim);
-  background: transparent;
+  background: rgba(0, 0, 0, 0.22);
+  font-weight: 500;
 }
 
 .button.danger-quiet:hover:not(:disabled),
@@ -244,36 +443,78 @@ h1[tabindex="-1"]:focus-visible {
   background: var(--danger-surface);
 }
 
+.button.header-button {
+  min-block-size: 40px;
+  padding: 0.42rem 0.85rem;
+  border: 1px solid transparent;
+  border-bottom-width: 2px;
+  color: var(--vellum-dim);
+  background: transparent;
+  font-family: var(--font-display);
+  font-size: 0.96rem;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+}
+
+.button.header-button:hover:not(:disabled) {
+  color: var(--vellum);
+  border-color: rgba(255, 255, 255, 0.08);
+  border-bottom-color: var(--brass-dark);
+  background: rgba(255, 255, 255, 0.04);
+  filter: none;
+}
+
+.button.header-button[aria-current="page"] {
+  border-color: color-mix(in srgb, var(--brass) 32%, transparent);
+  border-bottom-color: var(--brass);
+  color: var(--focus);
+  background: color-mix(in srgb, var(--brass) 10%, rgba(0, 0, 0, 0.28));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.button.compact {
+  min-block-size: 38px;
+  min-height: 38px;
+  padding: 0.36rem 0.72rem;
+  font-size: 0.84rem;
+}
+
+/* Modal overlays & dialogs */
 .dialog-overlay {
   position: fixed;
   z-index: 50;
   inset: 0;
   display: grid;
   place-items: center;
-  padding: 1rem;
-  background: rgba(0, 0, 0, 0.7);
+  padding: 0.85rem;
+  background: rgba(4, 6, 9, 0.78);
 }
 
 .removal-dialog,
 .decision-dialog {
-  width: min(100%, 35rem);
-  max-height: calc(100dvh - 2rem);
+  width: min(100%, 36rem);
+  max-height: calc(100dvh - 1.7rem);
   overflow: auto;
-  padding: 1.4rem;
-  border: 1px solid var(--brass-dark);
+  padding: 1.25rem 1.4rem;
+  border: 1px solid var(--brass);
   border-radius: var(--radius);
   background: var(--charcoal);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 16px 42px rgba(0, 0, 0, 0.72);
 }
 
 .removal-dialog h2,
 .decision-dialog h2 {
-  margin: 0 0 1rem;
+  margin: 0 0 0.6rem;
   font-family: var(--font-display);
+  font-size: 1.35rem;
 }
 
 .removal-dialog p,
 .decision-dialog p {
-  line-height: 1.45;
+  line-height: 1.42;
   font-size: 0.9rem;
 }
 
@@ -284,17 +525,17 @@ h1[tabindex="-1"]:focus-visible {
 }
 
 .decision-details {
-  margin: 0.8rem 0;
+  margin: 0.7rem 0;
   font-size: 0.85rem;
 }
 
 .decision-details ul {
-  margin: 0.5rem 0 0;
+  margin: 0.45rem 0 0;
   padding-left: 1.2rem;
 }
 
 .removal-path {
-  padding: 0.7rem;
+  padding: 0.65rem 0.75rem;
   border: 1px solid var(--slate-light);
   border-radius: var(--radius);
   background: var(--iron);
@@ -306,26 +547,19 @@ h1[tabindex="-1"]:focus-visible {
 
 .removal-notice {
   color: var(--teal);
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--teal-dark);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--teal) 8%, var(--charcoal));
 }
 
-.button.header-button {
-  min-block-size: 40px;
-  padding: 0.45rem 0.8rem;
-  border-color: transparent;
-  color: var(--vellum-dim);
-  font-size: 0.88rem;
-}
-
-.button.header-button[aria-current="page"] {
-  border-bottom-color: var(--brass);
-  color: var(--focus);
-}
-
+/* Main screen layout & plaque headings */
 .eyebrow {
   color: var(--brass);
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.095em;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -333,22 +567,107 @@ h1[tabindex="-1"]:focus-visible {
   width: min(100%, 72rem);
   min-height: 0;
   margin-inline: auto;
-  padding: clamp(1rem, 2.4vh, 1.5rem) clamp(1rem, 3vw, 2.5rem);
+  padding: clamp(0.9rem, 2.1vh, 1.35rem) clamp(1rem, 2.8vw, 2.25rem);
   overflow-y: auto;
 }
 
 .screen-stack {
   display: grid;
   align-content: start;
-  gap: 1rem;
+  gap: 0.85rem;
 }
 
 .screen-navigation {
-  margin-bottom: 0.7rem;
+  margin-bottom: 0.55rem;
 }
 
+.screen-intro {
+  margin-bottom: 0.2rem;
+}
+
+.screen-intro .eyebrow {
+  margin: 0 0 0.25rem;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--vellum);
+  font-family: var(--font-display);
+  overflow-wrap: anywhere;
+}
+
+h1 {
+  max-width: 54rem;
+  margin: 0;
+  font-size: clamp(1.48rem, 2.4vw, 1.88rem);
+  font-weight: 700;
+  letter-spacing: 0.012em;
+  line-height: 1.16;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.78);
+}
+
+h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.008em;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.65);
+}
+
+h3 {
+  font-weight: 600;
+}
+
+p,
+dd,
+span,
+pre,
+code {
+  overflow-wrap: anywhere;
+}
+
+.lede {
+  max-width: 54rem;
+  margin: 0.3rem 0 0;
+  font-size: 0.98rem;
+  line-height: 1.42;
+}
+
+/* Chiseled stone panel frame */
+.card,
+fieldset {
+  padding: clamp(0.8rem, 1.8vw, 1.05rem);
+  border: 1px solid var(--slate-light);
+  border-radius: var(--radius);
+  background: var(--charcoal);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.42),
+    0 4px 14px rgba(0, 0, 0, 0.42);
+}
+
+.card p:last-child {
+  margin-bottom: 0;
+}
+
+.safety-promise {
+  border-color: var(--teal-dark);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--teal) 25%, transparent),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.42),
+    0 4px 14px rgba(0, 0, 0, 0.42);
+}
+
+.requirement,
+.choice-summary,
+.fixture-note {
+  line-height: 1.5;
+}
+
+/* Updates screen — full symmetrical width, recessed stone sub-panels */
 .updates-screen {
-  max-width: 58rem;
+  max-width: none;
   gap: 0.75rem;
 }
 
@@ -366,24 +685,29 @@ h1[tabindex="-1"]:focus-visible {
 .update-selection {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.15rem 1rem;
-  padding: 0.65rem 0.85rem 0.35rem;
-  border: 1px solid var(--slate-light);
-  border-left: 3px solid var(--brass);
+  gap: 0.25rem 1rem;
+  padding: 0.75rem 0.95rem 0.45rem;
+  border: 1px solid var(--brass-dark);
   border-radius: var(--radius);
   background: var(--charcoal);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--brass) 22%, transparent),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.45),
+    0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .update-selection-row {
   display: flex;
   grid-column: 1 / -1;
-  gap: 0.75rem;
+  gap: 0.7rem;
   align-items: center;
 }
 
 .update-selection-label {
   flex: 0 0 auto;
-  font-size: 0.85rem;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .update-selection-row select {
@@ -391,7 +715,7 @@ h1[tabindex="-1"]:focus-visible {
   width: 0;
   max-width: 100%;
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   text-overflow: ellipsis;
 }
 
@@ -399,7 +723,7 @@ h1[tabindex="-1"]:focus-visible {
   align-self: center;
   margin: 0;
   color: var(--vellum-dim);
-  font-size: 0.85rem;
+  font-size: 0.86rem;
   line-height: 1.4;
 }
 
@@ -414,14 +738,14 @@ h1[tabindex="-1"]:focus-visible {
 }
 
 .update-selection-details summary {
-  min-height: 44px;
-  padding-block: 0.7rem;
+  min-height: 40px;
+  padding-block: 0.5rem;
   line-height: 1.4;
   cursor: pointer;
 }
 
 .update-selection-details .path {
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.45rem;
   overflow-wrap: anywhere;
   user-select: text;
 }
@@ -429,6 +753,20 @@ h1[tabindex="-1"]:focus-visible {
 .update-game-sections {
   display: grid;
   gap: 0.65rem;
+}
+
+.updates-screen .install-patches,
+.updates-screen .hotpatch-section,
+.updates-screen .mod-update-section,
+.updates-screen .update-overlay {
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--slate-light);
+  border-radius: var(--radius);
+  background: var(--charcoal);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.4),
+    0 3px 10px rgba(0, 0, 0, 0.35);
 }
 
 .updates-screen .update-section-heading {
@@ -443,7 +781,7 @@ h1[tabindex="-1"]:focus-visible {
 .updates-screen .update-section-heading h2,
 .updates-screen .update-global-heading {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.12rem;
   line-height: 1.3;
 }
 
@@ -453,49 +791,24 @@ h1[tabindex="-1"]:focus-visible {
 }
 
 .updates-screen .update-global-heading {
-  margin-top: 0.25rem;
-}
-
-.updates-screen .update-row {
-  gap: 0.35rem 0.85rem;
-  padding-block: 0.65rem;
-}
-
-.updates-screen .update-installed h2 {
-  font-size: 1.05rem;
-  line-height: 1.3;
-}
-
-.updates-screen .update-installed p {
-  margin-top: 0.2rem;
-}
-
-.updates-screen .update-latest {
-  gap: 0;
-}
-
-.updates-screen .update-note {
-  line-height: 1.4;
-}
-
-.updates-screen .update-overlay {
-  border-top: 1px solid var(--slate-light);
-}
-
-.updates-screen h1,
-.build-screen h1 {
-  font-size: clamp(1.7rem, 3vw, 2.2rem);
+  margin-top: 0.35rem;
 }
 
 .update-versions {
-  border-block: 1px solid var(--slate-light);
+  padding: 0.25rem 1rem;
+  border: 1px solid var(--slate-light);
+  border-radius: var(--radius);
+  background: var(--charcoal);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 3px 10px rgba(0, 0, 0, 0.35);
 }
 
 .update-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 12rem;
-  gap: 0.6rem 1rem;
-  padding: 1rem 0;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr) auto;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 0;
   align-items: center;
 }
 
@@ -504,8 +817,13 @@ h1[tabindex="-1"]:focus-visible {
 }
 
 .update-row.available {
-  box-shadow: inset 3px 0 0 var(--brass);
-  padding-left: 0.85rem;
+  padding-left: 0.75rem;
+  box-shadow: inset 2px 0 0 var(--brass);
+}
+
+.updates-screen .update-installed h2 {
+  font-size: 1.06rem;
+  line-height: 1.3;
 }
 
 .update-installed p,
@@ -515,25 +833,29 @@ h1[tabindex="-1"]:focus-visible {
 .update-diagnostics,
 .update-install-list span {
   color: var(--vellum-dim);
-  font-size: 0.85rem;
+  font-size: 0.86rem;
 }
 
 .update-installed p,
 .update-note {
-  margin: 0.35rem 0 0;
+  margin: 0.22rem 0 0;
 }
 
 .update-purpose {
-  max-width: 34rem;
+  max-width: 38rem;
   color: var(--vellum-dim);
-  font-size: 0.82rem;
-  line-height: 1.35;
+  font-size: 0.83rem;
+  line-height: 1.38;
 }
 
 .update-latest {
   display: grid;
   justify-items: start;
-  gap: 0.2rem;
+  gap: 0.15rem;
+}
+
+.update-state {
+  font-weight: 700;
 }
 
 .update-state.up-to-date {
@@ -546,26 +868,31 @@ h1[tabindex="-1"]:focus-visible {
 }
 
 .button.version-link {
-  padding: 0;
+  min-height: 0;
+  min-block-size: 0;
+  padding: 0.1rem 0;
   border-color: transparent;
   color: var(--focus);
   background: none;
+  box-shadow: none;
   text-decoration: underline;
   text-underline-offset: 0.2em;
 }
 
 .update-changelog {
   grid-column: 1 / -1;
-  padding: 0.8rem 1rem;
-  border-left: 2px solid var(--brass-dark);
-  background: var(--charcoal);
+  padding: 0.75rem 0.95rem;
+  border: 1px solid var(--slate-light);
+  border-radius: var(--radius);
+  background: var(--iron);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.55);
   font-size: 0.9rem;
 }
 
 .update-changelog h3,
 .update-changelog h4,
 .update-changelog p {
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.45rem;
 }
 
 .update-changelog p {
@@ -573,13 +900,13 @@ h1[tabindex="-1"]:focus-visible {
 }
 
 .update-change + .update-change {
-  margin-top: 1rem;
+  margin-top: 0.85rem;
 }
 
 .updates-installs summary,
 .update-diagnostics summary {
   min-height: 44px;
-  padding-block: 0.7rem;
+  padding-block: 0.65rem;
   cursor: pointer;
 }
 
@@ -593,12 +920,13 @@ h1[tabindex="-1"]:focus-visible {
   flex-wrap: wrap;
   gap: 0.4rem 1rem;
   justify-content: space-between;
-  padding: 0.65rem 0;
+  padding: 0.6rem 0;
   border-bottom: 1px solid var(--slate);
 }
 
+/* Build / Installation progress screen */
 .build-screen {
-  gap: 0.8rem;
+  gap: 0.75rem;
 }
 
 .build-screen .screen-intro {
@@ -606,12 +934,12 @@ h1[tabindex="-1"]:focus-visible {
 }
 
 .build-screen .status-card h2 {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
 }
 
 .build-screen .status-card p {
-  margin-block: 0.45rem;
-  font-size: 0.9rem;
+  margin-block: 0.4rem;
+  font-size: 0.92rem;
 }
 
 .build-screen .inline-actions {
@@ -620,8 +948,12 @@ h1[tabindex="-1"]:focus-visible {
 
 .build-screen .ledger {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.85rem 1.5rem;
-  margin-top: 0.85rem;
+  gap: 0.75rem 1.4rem;
+  margin-top: 0.5rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--slate-light);
+  border-radius: var(--radius);
+  background: var(--charcoal);
 }
 
 .build-screen .ledger li {
@@ -633,89 +965,60 @@ h1[tabindex="-1"]:focus-visible {
 }
 
 .build-screen .ledger span {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   line-height: 1.4;
+}
+
+.build-activity-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.8rem;
+  align-items: center;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--slate-light);
+  border-radius: var(--radius);
+  background: var(--iron);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.55);
+}
+
+.build-activity-label {
+  flex: 0 0 auto;
+  color: var(--brass);
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.build-activity-line {
+  flex: 1 1 18rem;
+  color: var(--log-text);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .build-screen .technical-log pre {
   max-height: min(14rem, 25vh);
 }
 
-.screen-intro {
-  margin-bottom: 0.5rem;
-}
-
-.screen-intro .eyebrow {
-  margin: 0 0 0.35rem;
-}
-
-h1,
-h2,
-h3 {
-  color: var(--vellum);
-  font-family: var(--font-display);
-  overflow-wrap: anywhere;
-}
-
-h1 {
-  max-width: 52rem;
-  margin: 0;
-  font-size: clamp(1.65rem, 3.3vw, 2.35rem);
-  font-weight: 550;
-  letter-spacing: -0.035em;
-  line-height: 1.05;
-}
-
-h2 {
-  margin: 0;
-  font-size: 1.2rem;
-}
-
-p,
-dd,
-span,
-pre {
-  overflow-wrap: anywhere;
-}
-
-.lede {
-  max-width: 48rem;
-  margin: 0.45rem 0 0;
-  font-size: clamp(0.95rem, 1.5vw, 1.08rem);
-  line-height: 1.45;
-}
-
-.card,
-fieldset {
-  padding: clamp(0.85rem, 2vw, 1.15rem);
-  border: 1px solid var(--slate-light);
-  border-radius: var(--radius);
-  background: var(--charcoal);
-}
-
-.card p:last-child {
-  margin-bottom: 0;
-}
-
-.safety-promise {
-  border-left: 4px solid var(--teal);
-}
-
-.requirement,
-.choice-summary,
-.fixture-note {
-  line-height: 1.6;
-}
-
+/* Install screen & source cards */
 .source-grid,
 .review-layout {
   display: grid;
-  gap: 1rem;
+  gap: 0.85rem;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.source-grid:has(> :only-child) {
+  grid-template-columns: 1fr;
+}
+
 .install-screen {
-  gap: 0.75rem;
+  gap: 0.7rem;
 }
 
 .install-screen .screen-intro {
@@ -729,8 +1032,13 @@ fieldset {
 .source-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.4rem 0.8rem;
+  gap: 0.3rem 0.8rem;
   align-items: center;
+}
+
+.source-card.is-compact {
+  padding-block: 0.65rem;
+  gap: 0.22rem 0.8rem;
 }
 
 .source-card-heading h2,
@@ -748,28 +1056,40 @@ fieldset {
 }
 
 .source-title {
-  color: var(--vellum-dim);
-  font-size: 0.78rem;
+  color: var(--brass);
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
 }
 
 .source-card-heading h2 {
-  margin-top: 0.12rem;
-  font-size: 1.08rem;
+  margin-top: 0.08rem;
+  font-size: 1.06rem;
 }
 
 .source-status {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.38rem;
+  padding: 0.16rem 0.5rem;
+  border: 1px solid var(--brass-dark);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.25);
   color: var(--vellum);
-  font-size: 0.8rem;
-  font-weight: 750;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.source-status.ok {
+  border-color: var(--teal-dark);
+  color: var(--teal);
 }
 
 .source-status::before {
-  width: 0.55rem;
-  height: 0.55rem;
-  border-radius: 50%;
+  width: 0.45rem;
+  height: 0.45rem;
+  transform: rotate(45deg);
   background: var(--brass);
   content: "";
 }
@@ -785,16 +1105,17 @@ fieldset {
 }
 
 .source-card select {
-  margin-top: 0.1rem;
+  margin-top: 0.15rem;
 }
 
 .source-label {
   color: var(--vellum);
   font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .source-card .path {
-  min-height: 1.25rem;
+  min-height: 1.2rem;
   margin: 0;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -809,7 +1130,7 @@ fieldset {
 .source-details summary,
 .recipe-notices summary {
   min-height: 32px;
-  padding: 0.35rem 0;
+  padding: 0.25rem 0;
   cursor: pointer;
 }
 
@@ -817,30 +1138,37 @@ fieldset {
   margin-top: 0.35rem;
 }
 
-.button.compact {
-  padding: 0.4rem 0.7rem;
-  font-size: 0.8rem;
-}
-
 .install-settings {
   display: grid;
-  gap: 0.65rem;
+  gap: 0.6rem;
 }
 
 .install-field-grid {
   display: grid;
-  grid-template-columns: minmax(12rem, 0.75fr) minmax(18rem, 1.25fr);
-  gap: 0.85rem;
+  grid-template-columns: minmax(12rem, 0.72fr) minmax(18rem, 1.28fr);
+  gap: 0.9rem;
   align-items: start;
 }
 
 .install-field {
   display: block;
-  font-size: 0.85rem;
+  font-size: 0.88rem;
 }
 
-.install-field input {
-  margin-top: 0.3rem;
+.install-field > input {
+  margin-top: 0.32rem;
+}
+
+.location-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  align-items: center;
+  margin-top: 0.32rem;
+}
+
+.location-controls input {
+  margin-top: 0;
 }
 
 .field-help,
@@ -848,8 +1176,9 @@ fieldset {
 .safety-note {
   margin-top: 0.28rem;
   color: var(--vellum-dim);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 400;
+  line-height: 1.38;
 }
 
 .field-error {
@@ -859,7 +1188,7 @@ fieldset {
 .location-finding {
   margin-top: 0.35rem;
   color: var(--ember);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 400;
 }
 
@@ -867,59 +1196,48 @@ fieldset {
   margin: 0.12rem 0 0;
 }
 
-.location-controls {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.55rem;
-  align-items: end;
-}
-
-.location-controls .button {
-  margin-bottom: 0.02rem;
-}
-
+/* Main choices (Challenge Mode) */
 .main-choices {
   display: grid;
-  gap: 0.6rem;
+  gap: 0.55rem;
   border-color: var(--brass-dark);
 }
 
 .main-choice {
   display: grid;
   grid-template-columns: 1.35rem minmax(0, 1fr) auto;
-  gap: 0.3rem 0.8rem;
+  gap: 0.28rem 0.8rem;
   align-items: center;
-  padding: 0.75rem 0.9rem;
-  border: 1px solid var(--brass);
-  border-left: 4px solid var(--brass);
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--brass) 6%, transparent);
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--brass-dark);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--brass) 6%, var(--iron));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .main-choice input {
-  width: 1.35rem;
-  height: 1.35rem;
-  margin: 0;
-  accent-color: var(--teal);
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 .main-choice-title {
   cursor: pointer;
-  font-size: 1.15rem;
+  font-family: var(--font-display);
+  font-size: 1.12rem;
   font-weight: 700;
 }
 
 .main-choice .main-choice-description,
 .main-choice .main-choice-state {
   grid-column: 2 / -1;
-  max-width: 70ch;
+  max-width: 72ch;
   margin: 0;
   font-size: 0.86rem;
-  line-height: 1.45;
+  line-height: 1.42;
 }
 
 .main-choice .main-choice-state {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .main-choice.is-on .main-choice-state {
@@ -943,53 +1261,19 @@ fieldset {
 
 .profile-select {
   margin: 0;
-  font-size: 0.86rem;
-}
-
-.choice-summary {
-  margin: 0.2rem 0 0;
-  color: var(--vellum-dim);
-  font-size: 0.86rem;
-}
-
-.installed-mod-search {
-  display: grid;
-  gap: 0.35rem;
-  max-width: 32rem;
-  margin: 0.7rem 0;
-  font-size: 0.86rem;
-}
-
-.installed-mod-list {
-  list-style: none;
-  padding: 0;
-  max-height: 24rem;
-  overflow-y: auto;
-}
-
-.installed-mod {
-  display: grid;
-  gap: 0.2rem;
-  padding: 0.55rem 0;
-  border-bottom: 1px solid var(--slate);
-  overflow-wrap: anywhere;
   font-size: 0.88rem;
 }
 
-.installation-component-meta,
-.first-play-guide li {
+.choice-summary {
+  margin: 0.18rem 0 0;
   color: var(--vellum-dim);
-  font-size: 0.8rem;
-  line-height: 1.5;
+  font-size: 0.88rem;
 }
-
-.installed-mod.missing strong { color: var(--ember); }
-.installed-mod.extra strong { color: var(--brass); }
 
 .recipe-notices {
   grid-column: 1 / -1;
   color: var(--vellum-dim);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
 }
 
 .recipe-notices ul {
@@ -997,11 +1281,15 @@ fieldset {
   padding-left: 1.2rem;
 }
 
+/* Manual download gate */
 .manual-download-panel {
   padding: 0.85rem 1rem;
-  border-left: 4px solid var(--brass);
+  border: 1px solid var(--brass);
   border-radius: var(--radius);
   background: var(--charcoal);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 4px 14px rgba(0, 0, 0, 0.42);
 }
 
 .manual-download-panel h2,
@@ -1013,9 +1301,10 @@ fieldset {
 .manual-download-kicker {
   margin-bottom: 0.18rem !important;
   color: var(--brass);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -1023,8 +1312,8 @@ fieldset {
   max-width: 72ch;
   margin-top: 0.25rem !important;
   color: var(--vellum-dim);
-  font-size: 0.82rem;
-  line-height: 1.45;
+  font-size: 0.84rem;
+  line-height: 1.42;
 }
 
 .manual-download-row {
@@ -1044,7 +1333,7 @@ fieldset {
 .manual-download-copy > p {
   margin-top: 0.2rem;
   color: var(--vellum-dim);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   line-height: 1.4;
 }
 
@@ -1055,8 +1344,8 @@ fieldset {
 
 .manual-download-status {
   color: var(--brass);
-  font-size: 0.78rem;
-  font-weight: 800;
+  font-size: 0.8rem;
+  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -1068,18 +1357,20 @@ fieldset {
 .manual-download-error {
   grid-column: 1 / -1;
   padding: 0.5rem 0.65rem;
-  font-size: 0.8rem;
+  border: 1px solid var(--slate-light);
+  border-radius: var(--radius);
+  font-size: 0.82rem;
 }
 
 .manual-download-checking {
-  border-left: 3px solid var(--teal);
-  background: color-mix(in srgb, var(--teal) 8%, transparent);
+  border-color: var(--teal-dark);
+  background: color-mix(in srgb, var(--teal) 10%, var(--iron));
 }
 
 .manual-download-error {
-  border-left: 3px solid var(--ember);
+  border-color: var(--ember);
   color: var(--ember);
-  background: color-mix(in srgb, var(--ember) 8%, transparent);
+  background: color-mix(in srgb, var(--ember) 10%, var(--iron));
 }
 
 .manual-download-actions {
@@ -1091,35 +1382,39 @@ fieldset {
 
 .manual-download-actions .button {
   min-block-size: 40px;
-  padding: 0.48rem 0.75rem;
-  font-size: 0.8rem;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.82rem;
 }
 
+/* Ready to install altar bar */
 .install-ready {
   display: flex;
   gap: 1rem;
   align-items: center;
   justify-content: space-between;
-  padding: 0.8rem 1rem;
+  padding: 0.8rem 1.05rem;
   border: 1px solid var(--brass-dark);
   border-radius: var(--radius);
-  background: color-mix(in srgb, var(--brass) 8%, transparent);
+  background: color-mix(in srgb, var(--brass) 9%, var(--charcoal));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 4px 14px rgba(0, 0, 0, 0.45);
 }
 
 .install-ready.is-ready {
   border-color: var(--teal-dark);
-  background: color-mix(in srgb, var(--teal) 8%, transparent);
+  background: color-mix(in srgb, var(--teal) 9%, var(--charcoal));
 }
 
 .install-ready p {
-  margin-top: 0.2rem;
+  margin-top: 0.18rem;
   color: var(--vellum-dim);
-  font-size: 0.82rem;
+  font-size: 0.85rem;
 }
 
 .install-finish-actions {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.85rem;
   align-items: center;
 }
 
@@ -1128,44 +1423,48 @@ fieldset {
   gap: 0.55rem;
   align-items: center;
   color: var(--vellum-dim);
-  font-size: 0.82rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
 }
 
-.shortcut-choice input {
-  width: 1.1rem;
-  height: 1.1rem;
-  margin: 0;
-  accent-color: var(--teal);
-}
-
+/* Form inputs & recessed obsidian wells */
 label,
 legend {
   color: var(--vellum);
-  font-weight: 750;
+  font-weight: 700;
 }
 
 select,
 input[type="text"],
 input[type="search"] {
   width: 100%;
-  margin-top: 0.6rem;
-  padding: 0.55rem 0.75rem;
+  margin-top: 0.5rem;
+  padding: 0.52rem 0.75rem;
   border: 1px solid var(--slate-light);
   border-radius: var(--radius);
   color: var(--vellum);
   background: var(--iron);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.6),
+    0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+select option {
+  color: var(--vellum);
+  background: var(--charcoal);
 }
 
 .path {
   color: var(--vellum-dim);
   font-family: var(--font-mono);
-  font-size: 0.82rem;
-  line-height: 1.55;
+  font-size: 0.8rem;
+  line-height: 1.5;
 }
 
 .finding {
   margin-bottom: 0;
-  padding-top: 0.7rem;
+  padding-top: 0.65rem;
   border-top: 1px solid var(--slate);
 }
 
@@ -1184,7 +1483,7 @@ input[type="search"] {
 }
 
 .status-card h2 + p {
-  margin-top: 0.45rem;
+  margin-top: 0.4rem;
 }
 
 .status-card .failure-reason {
@@ -1192,17 +1491,16 @@ input[type="search"] {
   overflow-wrap: anywhere;
 }
 
-input[type="search"] {
-  min-height: 44px;
-}
-
+/* Customize / Setup screen — opaque sticky stone header & spellbook chapter index */
 .setup-toolbar {
   position: sticky;
-  top: -1.5rem;
-  z-index: 1;
-  padding: 0.7rem 0;
-  border-bottom: 1px solid var(--slate);
+  top: -1.35rem;
+  z-index: 12;
+  margin-inline: -0.5rem;
+  padding: 0.85rem 0.5rem 0.7rem;
+  border-bottom: 1px solid var(--slate-light);
   background: var(--iron);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.58);
 }
 
 .setup-heading {
@@ -1213,18 +1511,30 @@ input[type="search"] {
 }
 
 .setup-heading h1 {
-  font-size: clamp(1.5rem, 2.6vw, 2rem);
+  font-size: clamp(1.42rem, 2.3vw, 1.78rem);
+}
+
+.setup-heading .screen-actions {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  flex-direction: row;
+}
+
+.setup-heading .screen-actions .button {
+  width: auto;
 }
 
 .common-choices h2 {
-  margin: 0 0 0.75rem;
-  font-size: 1.25rem;
+  margin: 0 0 0.65rem;
+  font-size: 1.18rem;
 }
 
 .common-choice-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 1.5rem;
+  gap: 0 1.4rem;
 }
 
 .common-choice {
@@ -1232,41 +1542,39 @@ input[type="search"] {
   grid-template-columns: 1.25rem minmax(0, 1fr);
   align-items: start;
   gap: 0.7rem;
-  padding: 0.85rem 0;
+  padding: 0.75rem 0;
   border-bottom: 1px solid var(--slate);
   cursor: pointer;
   font-size: 0.92rem;
 }
 
 .common-choice input {
-  width: 1.15rem;
-  height: 1.15rem;
-  margin: 0.15rem 0 0;
-  accent-color: var(--teal);
+  margin-top: 0.14rem;
 }
 
 .common-choice-description {
   display: block;
   max-width: 65ch;
-  margin-top: 0.3rem;
+  margin-top: 0.25rem;
   color: var(--vellum-dim);
   font-size: 0.82rem;
   font-weight: 400;
-  line-height: 1.45;
+  line-height: 1.42;
 }
 
 .common-choices .button-quiet {
   margin-top: 0.65rem;
-  background: none;
   font-size: 0.85rem;
 }
 
 .feature-group-card {
-  padding: 1rem 1.15rem;
+  padding: 0.95rem 1.1rem;
   border: 1px solid var(--brass);
-  border-left: 4px solid var(--brass);
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--brass) 6%, transparent);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--brass) 7%, var(--charcoal));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 4px 14px rgba(0, 0, 0, 0.42);
 }
 
 .feature-group-header {
@@ -1276,28 +1584,27 @@ input[type="search"] {
 }
 
 .feature-group-header input {
-  width: 1.35rem;
-  height: 1.35rem;
-  margin: 0;
-  accent-color: var(--teal);
+  width: 1.3rem;
+  height: 1.3rem;
 }
 
 .feature-group-title {
   cursor: pointer;
-  font-size: 1.3rem;
+  font-family: var(--font-display);
+  font-size: 1.24rem;
   font-weight: 700;
 }
 
 .feature-group-description,
 .feature-group-state,
 .feature-group-note {
-  max-width: 70ch;
-  margin: 0.45rem 0 0;
-  line-height: 1.45;
+  max-width: 72ch;
+  margin: 0.4rem 0 0;
+  line-height: 1.42;
 }
 
 .feature-group-state {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .feature-group-note {
@@ -1307,8 +1614,8 @@ input[type="search"] {
 
 .feature-group-members {
   display: grid;
-  gap: 0.35rem;
-  margin: 0.75rem 0 0;
+  gap: 0.3rem;
+  margin: 0.7rem 0 0;
   padding: 0;
   list-style: none;
   font-size: 0.9rem;
@@ -1319,13 +1626,13 @@ input[type="search"] {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.25rem 0.6rem;
-  padding: 0.35rem 0;
+  padding: 0.32rem 0;
   border-bottom: 1px solid var(--slate);
 }
 
 .feature-group-member-state {
   color: var(--vellum-dim);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -1361,107 +1668,255 @@ input[type="search"] {
 
 .setup-advanced > summary,
 .setup-effects > summary {
-  padding: 0.65rem 0;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--slate-light);
+  border-radius: var(--radius);
+  background: var(--charcoal);
   cursor: pointer;
-  font-size: 0.95rem;
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  font-weight: 600;
 }
 
 .setup-effects {
-  border-left: 3px solid var(--brass);
-  padding-left: 0.85rem;
-  font-size: 0.85rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--brass-dark);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--brass) 6%, var(--charcoal));
+  font-size: 0.86rem;
 }
 
-.setup-advanced .setup-groups {
-  margin-top: 1rem;
-}
-
-.category-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
-.category-actions .button {
-  font-size: 0.78rem;
-  padding: 0.4rem 0.6rem;
-}
-
-.category-hint {
-  font-size: 0.75rem;
-  color: var(--vellum-dim);
-  line-height: 1.4;
-}
-
-@media (max-width: 700px) {
-  .common-choice-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.setup-heading .screen-actions {
-  flex-shrink: 0;
-  margin: 0;
-  padding: 0;
+.setup-effects > summary {
+  padding: 0.3rem 0;
   border: 0;
-  flex-direction: row;
-}
-
-.setup-heading .screen-actions .button {
-  width: auto;
+  background: none;
 }
 
 .setup-filters {
   display: grid;
-  grid-template-columns: minmax(12rem, 1.3fr) minmax(9rem, 0.8fr) auto;
-  gap: 1rem;
-  margin-top: 0.8rem;
+  grid-template-columns: minmax(12rem, 1.3fr) minmax(10rem, 0.85fr) auto;
+  gap: 0.85rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--slate-light);
+  border-radius: var(--radius);
+  background: var(--charcoal);
 }
 
 .setup-filters label {
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   color: var(--vellum-dim);
 }
 
 .setup-filters input,
 .setup-filters select {
-  margin-top: 0.3rem;
+  margin-top: 0.28rem;
   font-size: 0.9rem;
 }
 
 .setup-filters .choice-summary {
   align-self: end;
-  padding-bottom: 0.65rem;
+  padding-bottom: 0.6rem;
+}
+
+.bulk-actions-note {
+  margin: 0.55rem 0 0;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--slate);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+/* Spellbook / Journal Chapter Browser */
+.setup-browser {
+  margin-top: 0.8rem;
+}
+
+.setup-browser.has-chapters {
+  display: grid;
+  grid-template-columns: 14.5rem minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: start;
+}
+
+.setup-chapter-nav {
+  position: sticky;
+  top: 5.5rem;
+  padding: 0.45rem;
+  border: 1px solid var(--slate-light);
+  border-radius: var(--radius);
+  background: var(--charcoal);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 4px 12px rgba(0, 0, 0, 0.38);
+}
+
+.chapter-list {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chapter-button {
+  display: flex;
+  width: 100%;
+  min-height: 38px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--vellum-dim);
+  background: transparent;
+  text-align: left;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+.chapter-button:hover {
+  color: var(--vellum);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.chapter-button.is-active {
+  border-color: var(--brass-dark);
+  color: var(--focus);
+  background: color-mix(in srgb, var(--brass) 12%, var(--iron));
+  font-weight: 700;
+}
+
+.chapter-count {
+  flex: 0 0 auto;
+  color: var(--vellum-dim);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
 }
 
 .setup-groups {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   align-items: start;
-  gap: 1rem;
+  gap: 0.8rem;
 }
 
-.setup-screen .control-row {
-  padding-block: 0.65rem;
-  gap: 0.65rem;
-  font-size: 0.9rem;
+.category-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--slate);
 }
 
-.setup-screen .control-row p {
-  font-size: 0.82rem;
+.category-actions .button {
+  min-height: 36px;
+  min-block-size: 36px;
+  font-size: 0.8rem;
+  padding: 0.32rem 0.65rem;
+}
+
+.category-hint {
+  font-size: 0.78rem;
+  color: var(--vellum-dim);
+  line-height: 1.4;
+}
+
+.choice-group {
+  margin: 0;
+  border: 1px solid var(--slate-light);
+  border-radius: var(--radius);
+  background: var(--charcoal);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 3px 10px rgba(0, 0, 0, 0.36);
+}
+
+.category-heading {
+  min-height: 44px;
+  padding: 0.7rem 0.95rem;
+  border-radius: var(--radius);
+  color: var(--vellum);
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 1.08rem;
+  font-weight: 700;
+}
+
+.category-heading:hover {
+  background: color-mix(in srgb, var(--brass) 7%, transparent);
+}
+
+.choice-group[open] > .category-heading {
+  border-bottom: 1px solid var(--slate-light);
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.category-count {
+  float: right;
+  margin: 0.12rem 0 0 0.5rem;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--slate);
+  border-radius: var(--radius);
+  background: var(--iron);
+  color: var(--vellum-dim);
+  font-family: var(--font-mono);
+  font-size: 0.73rem;
+  font-weight: 400;
+}
+
+.category-body {
+  padding: 0.75rem 0.95rem;
+}
+
+.control-row {
+  display: grid;
+  min-height: 56px;
+  grid-template-columns: 1.35rem minmax(0, 1fr);
+  gap: 0.7rem;
+  align-items: start;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--slate);
+}
+
+.control-row:last-child {
+  border-bottom: 0;
+}
+
+.control-row input[type="checkbox"] {
+  margin-top: 0.15rem;
+}
+
+.control-row p {
+  margin: 0.3rem 0 0;
+  color: var(--vellum-dim);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.control-row.is-unavailable:not(.is-locked) {
+  opacity: 0.8;
+}
+
+.unavailable-reason {
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--ember);
+  border-radius: var(--radius);
+  color: var(--vellum) !important;
+  background: color-mix(in srgb, var(--ember) 10%, var(--iron));
 }
 
 .setup-screen .control-row .badge,
 .setup-screen .exclusive-choice-heading .badge {
-  margin: 0.2rem 0 0.1rem 0.5rem;
-  letter-spacing: 0;
-  text-transform: none;
+  margin: 0.15rem 0 0.1rem 0.5rem;
 }
 
 .exclusive-choice-row {
   display: grid;
   gap: 0.4rem;
-  padding: 0.75rem 0;
+  padding: 0.7rem 0;
   border-bottom: 1px solid var(--slate);
 }
 
@@ -1508,98 +1963,23 @@ input[type="search"] {
 .setup-notices,
 .setup-empty {
   color: var(--vellum-dim);
-  font-size: 0.85rem;
+  font-size: 0.86rem;
 }
 
-.choice-group {
-  margin: 0;
-  border: 1px solid var(--slate-light);
-  border-radius: var(--radius);
-  background: var(--charcoal);
-}
-
-.category-heading {
-  min-height: 44px;
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius);
-  color: var(--vellum);
-  cursor: pointer;
-  font-family: var(--font-display);
-  font-size: 1.05rem;
-  font-weight: 700;
-}
-
-.category-heading:hover {
-  background: color-mix(in srgb, var(--brass) 7%, transparent);
-}
-
-.choice-group[open] > .category-heading {
-  border-bottom: 1px solid var(--slate-light);
-  border-radius: var(--radius) var(--radius) 0 0;
-}
-
-.category-count {
-  float: right;
-  margin: 0.15rem 0 0 0.5rem;
-  color: var(--vellum-dim);
-  font-family: var(--font-body);
-  font-size: 0.72rem;
-  font-weight: 400;
-}
-
-.category-body {
-  padding: 0.85rem 1rem;
-}
-
-.control-row {
-  display: grid;
-  min-height: 64px;
-  grid-template-columns: 1.5rem minmax(0, 1fr);
-  gap: 0.8rem;
-  align-items: start;
-  padding: 1rem 0;
-  border-bottom: 1px solid var(--slate);
-}
-
-.control-row:last-child {
-  border-bottom: 0;
-}
-
-.control-row input {
-  width: 1.25rem;
-  height: 1.25rem;
-  margin: 0.15rem 0 0;
-  accent-color: var(--teal);
-}
-
-.control-row p {
-  margin: 0.35rem 0 0;
-  color: var(--vellum-dim);
-  line-height: 1.5;
-}
-
-.control-row.is-unavailable {
-  opacity: 0.82;
-}
-
-.unavailable-reason {
-  padding: 0.7rem;
-  border-left: 3px solid var(--ember);
-  color: var(--vellum) !important;
-  background: color-mix(in srgb, var(--ember) 8%, transparent);
-}
-
+/* Square-cut etched metal/stone tags — zero 999px SaaS pills */
 .badge {
   display: inline-flex;
-  margin-left: 0.65rem;
-  padding: 0.2rem 0.55rem;
+  align-items: center;
+  margin-left: 0.55rem;
+  padding: 0.14rem 0.45rem;
   border: 1px solid var(--slate-light);
-  border-radius: 999px;
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.28);
   color: var(--vellum-dim);
   font-family: var(--font-body);
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -1609,7 +1989,18 @@ input[type="search"] {
   color: var(--teal);
 }
 
-.badge.blocked {
+.badge.mandatory {
+  border-color: var(--brass-dark);
+  color: var(--brass);
+}
+
+.badge.warning {
+  border-color: var(--brass);
+  color: var(--focus);
+}
+
+.badge.blocked,
+.badge.danger {
   border-color: var(--ember);
   color: var(--ember);
 }
@@ -1620,20 +2011,21 @@ input[type="search"] {
 }
 
 .plan-notices {
-  border-left: 4px solid var(--brass);
+  border-color: var(--brass-dark);
 }
 
 .plan-notices ul {
   margin-bottom: 0;
   padding-left: 1.2rem;
   color: var(--vellum-dim);
-  line-height: 1.55;
+  line-height: 1.5;
 }
 
+/* Review & Campaign Ledger */
 .review-list {
   display: grid;
   grid-template-columns: minmax(7rem, auto) minmax(0, 1fr);
-  gap: 0.75rem 1rem;
+  gap: 0.65rem 1rem;
   margin-bottom: 0;
 }
 
@@ -1649,35 +2041,36 @@ input[type="search"] {
 .ledger {
   display: grid;
   gap: 0;
-  margin: 1.25rem 0 0;
+  margin: 1rem 0 0;
   padding: 0;
   list-style: none;
 }
 
 .ledger li {
   display: grid;
-  min-height: 58px;
+  min-height: 54px;
   grid-template-columns: 1.4rem minmax(0, 1fr);
-  gap: 0.75rem;
+  gap: 0.7rem;
   color: var(--vellum-dim);
 }
 
 .ledger li::before {
-  width: 0.7rem;
-  height: 0.7rem;
-  margin: 0.25rem 0 0 0.2rem;
+  width: 0.65rem;
+  height: 0.65rem;
+  margin: 0.28rem 0 0 0.2rem;
   border: 2px solid var(--teal);
-  border-radius: 50%;
-  box-shadow: 0 1.45rem 0 -0.27rem var(--teal);
+  transform: rotate(45deg);
   content: "";
-}
-
-.ledger li:last-child::before {
-  box-shadow: none;
 }
 
 .ledger li[data-state="done"]::before {
   background: var(--teal);
+}
+
+.ledger li[data-state="current"]::before {
+  border-color: var(--focus);
+  background: var(--focus);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--focus) 50%, transparent);
 }
 
 .ledger li[data-state="current"] strong {
@@ -1696,11 +2089,12 @@ input[type="search"] {
 
 .ledger strong {
   color: var(--vellum);
+  font-family: var(--font-display);
 }
 
 .ledger span {
-  margin-top: 0.18rem;
-  font-size: 0.86rem;
+  margin-top: 0.15rem;
+  font-size: 0.85rem;
 }
 
 .screen-actions,
@@ -1708,33 +2102,35 @@ input[type="search"] {
 .log-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.65rem;
   align-items: center;
 }
 
 .screen-actions {
   justify-content: flex-end;
-  margin-top: 1rem;
-  padding-top: 1.25rem;
+  margin-top: 0.85rem;
+  padding-top: 1rem;
   border-top: 1px solid var(--slate);
 }
 
 .technical-log {
-  border: 1px solid var(--slate);
+  border: 1px solid var(--slate-light);
   border-radius: var(--radius);
   background: var(--log-background);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.65);
 }
 
 .technical-log summary {
   min-height: 44px;
-  padding: 0.8rem 1rem;
+  padding: 0.7rem 1rem;
   color: var(--vellum-dim);
+  font-family: var(--font-display);
   cursor: pointer;
 }
 
 .log-toolbar {
   justify-content: space-between;
-  padding: 0.75rem 1rem;
+  padding: 0.65rem 1rem;
   border-top: 1px solid var(--slate);
   color: var(--vellum-dim);
   font-size: 0.78rem;
@@ -1743,37 +2139,38 @@ input[type="search"] {
 .technical-log pre {
   max-height: 18rem;
   margin: 0;
-  padding: 1rem;
+  padding: 0.9rem 1rem;
   overflow: auto;
   border-top: 1px solid var(--slate);
   color: var(--log-text);
   font-family: var(--font-mono);
   font-size: 0.78rem;
-  line-height: 1.55;
+  line-height: 1.5;
   white-space: pre-wrap;
   user-select: text;
 }
 
+/* My installs / Launcher screen */
 .campaign-list,
 .installation-list {
   display: grid;
-  gap: 1rem;
+  gap: 0.85rem;
 }
 
 .campaign-card .badge,
 .installation-card .badge {
-  margin: 0 0 0.8rem;
+  margin: 0 0 0.7rem;
 }
 
 .launcher-screen {
-  width: min(100%, 52rem);
+  width: min(100%, 62rem);
   margin-inline: auto;
 }
 
 .launcher-card {
   display: grid;
-  gap: 1rem;
-  padding: clamp(1rem, 3vw, 1.5rem);
+  gap: 0.95rem;
+  padding: clamp(1rem, 2.5vw, 1.4rem);
 }
 
 .launcher-card .badge {
@@ -1781,42 +2178,158 @@ input[type="search"] {
   margin: 0;
 }
 
-.launcher-card h2 {
-  font-size: clamp(1.35rem, 3vw, 1.8rem);
+.launcher-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(15.5rem, auto);
+  gap: 1rem 1.5rem;
+  align-items: start;
+  padding-bottom: 0.95rem;
+  border-bottom: 1px solid var(--slate);
 }
 
-.launcher-actions {
-  margin-block: 0.25rem;
+.launcher-hero:has(> :only-child) {
+  grid-template-columns: 1fr;
+}
+
+.launcher-identity {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.launcher-card h2 {
+  font-size: clamp(1.38rem, 2.6vw, 1.75rem);
+}
+
+.launcher-cta {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--brass-dark);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.24);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.button.hero-play {
+  width: 100%;
+  min-block-size: 50px;
+  padding: 0.7rem 1.35rem;
+  font-family: var(--font-display);
+  font-size: 1.12rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.launcher-utilities {
+  margin: 0;
 }
 
 .radar-launch-choice,
 .game-log-choice {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  min-height: 44px;
-}
-
-.radar-launch-choice input,
-.game-log-choice input {
-  flex: 0 0 auto;
-  width: 1.1rem;
-  height: 1.1rem;
-  margin: 0;
-  accent-color: var(--teal);
+  gap: 0.55rem;
+  min-height: 36px;
+  font-size: 0.88rem;
+  cursor: pointer;
 }
 
 .radar-launch-option p,
 .game-log-option p {
-  margin-block: 0.35rem 0;
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.launcher-drawers {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.installation-details {
+  padding: 0 0.85rem;
+  border: 1px solid var(--slate);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--iron) 62%, var(--charcoal));
+}
+
+.installation-details[open] {
+  padding-bottom: 0.8rem;
+  border-color: var(--slate-light);
+}
+
+.installation-details summary {
+  min-height: 44px;
+  padding-block: 0.68rem;
+  color: var(--vellum);
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.launcher-maintenance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--slate);
+}
+
+.launcher-diagnostics-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.8rem;
+  align-items: center;
+}
+
+.launcher-diagnostics-group p {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.installed-mod-search {
+  display: grid;
+  gap: 0.3rem;
+  max-width: 32rem;
+  margin: 0.6rem 0;
   font-size: 0.85rem;
 }
+
+.installed-mod-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+.installed-mod {
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--slate);
+  overflow-wrap: anywhere;
+  font-size: 0.88rem;
+}
+
+.installation-component-meta,
+.first-play-guide li {
+  color: var(--vellum-dim);
+  font-size: 0.82rem;
+  line-height: 1.48;
+}
+
+.installed-mod.missing strong { color: var(--ember); }
+.installed-mod.extra strong { color: var(--brass); }
 
 .troubleshooting > p,
 .troubleshooting > .game-log-option,
 .troubleshooting > .shortcut-feedback,
 .troubleshooting > .game-log-files {
-  margin-block: 0 0.75rem;
+  margin-block: 0 0.7rem;
 }
 
 .game-log-files dd span {
@@ -1826,7 +2339,7 @@ input[type="search"] {
 .installation-metadata {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem 1rem;
+  gap: 0.4rem 1rem;
   color: var(--vellum-dim);
   font-size: 0.85rem;
 }
@@ -1846,20 +2359,21 @@ input[type="search"] {
 }
 
 .shortcut-feedback {
-  padding: 0.7rem 0.85rem;
-  border-left: 3px solid var(--teal-dark);
-  background: color-mix(in srgb, var(--teal) 8%, transparent);
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--teal-dark);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--teal) 9%, var(--iron));
 }
 
 .shortcut-feedback.warning {
   border-color: var(--brass);
-  background: color-mix(in srgb, var(--brass) 8%, transparent);
+  background: color-mix(in srgb, var(--brass) 9%, var(--iron));
 }
 
 .error-details {
   min-width: 0;
-  margin-block: 0.5rem;
-  font-size: 0.85rem;
+  margin-block: 0.45rem;
+  font-size: 0.84rem;
 }
 
 .error-details summary {
@@ -1875,13 +2389,13 @@ input[type="search"] {
 }
 
 .shortcut-feedback .path {
-  margin: 0.25rem 0 0;
+  margin: 0.22rem 0 0;
 }
 
 .install-switcher {
   display: grid;
   max-width: 28rem;
-  gap: 0.35rem;
+  gap: 0.3rem;
 }
 
 .install-switcher label,
@@ -1893,30 +2407,19 @@ input[type="search"] {
 
 .install-switcher label {
   display: grid;
-  gap: 0.35rem;
+  gap: 0.3rem;
 }
 
 .install-switcher select {
   width: 100%;
-}
-
-.installation-details {
-  padding-top: 0.25rem;
-  border-top: 1px solid var(--slate);
-}
-
-.installation-details summary {
-  min-height: 44px;
-  padding-block: 0.75rem;
-  color: var(--vellum-dim);
-  cursor: pointer;
+  margin-top: 0;
 }
 
 .installation-detail-list {
   display: grid;
-  grid-template-columns: minmax(8rem, auto) minmax(0, 1fr);
-  gap: 0.5rem 1rem;
-  margin: 0 0 0.5rem;
+  grid-template-columns: minmax(8.5rem, auto) minmax(0, 1fr);
+  gap: 0.45rem 1rem;
+  margin: 0.25rem 0 0.25rem;
 }
 
 .installation-detail-list dd {
@@ -1934,7 +2437,356 @@ input[type="search"] {
   border: 0;
 }
 
-@media (max-width: 53rem) {
+/* Header notification badge & tooltip */
+.update-nav-item {
+  position: relative;
+  display: inline-flex;
+}
+
+.update-badge {
+  margin-left: 0.42rem;
+  padding: 0.12rem 0.36rem;
+  border: 1px solid var(--brass-dark);
+  border-radius: var(--radius);
+  color: var(--on-accent);
+  background: var(--focus);
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.update-tooltip {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: max-content;
+  max-width: min(22rem, calc(100vw - 2rem));
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--brass);
+  border-radius: var(--radius);
+  color: var(--vellum);
+  background: var(--charcoal);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-0.2rem);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.update-nav-item:hover .update-tooltip,
+.update-nav-item:focus-within .update-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Patches & mod update cards */
+.install-patches,
+.mod-update-section {
+  border-top: 1px solid var(--slate-light);
+  padding-block: 0.85rem;
+}
+
+.install-patches h2,
+.install-patches h3,
+.install-patches p,
+.mod-update-section h2,
+.mod-update-section h3,
+.mod-update-section p {
+  margin-block: 0 0.45rem;
+}
+
+.patch-toolbar {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-block: 0.75rem 0.45rem;
+}
+
+.patch-install-label {
+  display: grid;
+  gap: 0.3rem;
+  flex: 1 1 24rem;
+  font-size: 0.85rem;
+}
+
+.patch-install-label select {
+  width: 100%;
+}
+
+.patch-path,
+.patch-history {
+  overflow-wrap: anywhere;
+}
+
+.patch-path {
+  font-size: 0.8rem;
+}
+
+.patch-result {
+  margin-top: 0.6rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--slate-light);
+  border-radius: var(--radius);
+  background: var(--iron);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+.patch-result h3 {
+  font-size: 1rem;
+}
+
+.patch-state,
+.patch-progress {
+  color: var(--teal);
+  font-size: 0.85rem;
+}
+
+.patch-error,
+.patch-result[data-patch-state="needs-recovery"] .patch-state {
+  color: var(--ember);
+}
+
+.patch-backups {
+  border-top: 1px solid var(--slate);
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+}
+
+.patch-backup-choice {
+  display: flex;
+  align-items: start;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding-block: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.patch-backup-choice input {
+  flex: 0 0 auto;
+  margin-top: 0.15rem;
+}
+
+.patch-result .button {
+  margin-block: 0.35rem 0.6rem;
+}
+
+.updates-screen .installed-update-result > :last-child,
+.updates-screen .patch-content > :last-child {
+  margin-bottom: 0;
+}
+
+/* Operation feedback banner */
+.operation-feedback {
+  border: 1px solid var(--brass);
+  border-radius: var(--radius);
+  background: var(--charcoal);
+  padding: 0.8rem 1rem;
+  margin-bottom: 0.85rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 4px 12px rgba(0, 0, 0, 0.42);
+}
+
+.operation-success { border-color: var(--teal); }
+.operation-error { border-color: var(--ember); }
+.operation-heading { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
+.operation-heading h2 { font-size: 1.2rem; margin: 0 0 0.3rem; }
+.operation-feedback p { margin: 0.22rem 0; }
+.operation-heading .button { flex-shrink: 0; padding: 0.3rem 0.6rem; min-height: 44px; }
+.operation-progress { margin-top: 0.65rem; }
+.operation-stage { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
+.operation-meter { display: block; width: 100%; height: 0.55rem; accent-color: var(--brass); border: 1px solid var(--slate-light); border-radius: var(--radius); overflow: hidden; }
+.operation-meter::-webkit-progress-bar { background: var(--iron); }
+.operation-meter::-webkit-progress-value { background: var(--brass); }
+.operation-count { display: block; font-size: 0.8rem; margin-top: 0.28rem; color: var(--vellum-dim); }
+.operation-spinner { display: inline-block; flex: 0 0 1rem; height: 1rem; border: 2px solid var(--slate-light); border-top-color: var(--brass); border-radius: 50%; animation: operation-spin 1.1s linear infinite; }
+@keyframes operation-spin { to { transform: rotate(360deg); } }
+
+/* Installation rename editor */
+.installation-name-editor { margin-block: 0.3rem; font-size: 0.88rem; }
+.installation-name-editor summary { cursor: pointer; color: var(--vellum-dim); }
+.installation-name-form { max-width: 32rem; margin-top: 0.5rem; }
+.installation-name-form input { width: 100%; }
+.installation-name-form p { font-size: 0.84rem; margin-block: 0.35rem; }
+.installation-name-form .error-message { color: var(--ember); }
+.installation-name-form .success-message { color: var(--teal); }
+
+/* Feedback / Report dialog — compact 2-column layout so 1160x760 never overflows */
+.report-dialog {
+  width: min(100%, 48rem);
+  padding: 1rem 1.25rem;
+}
+
+.report-dialog h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.28rem;
+}
+
+.report-dialog > p {
+  margin: 0.2rem 0;
+  font-size: 0.84rem;
+}
+
+.report-dialog h3 {
+  margin: 0.65rem 0 0.25rem;
+  font-size: 0.96rem;
+}
+
+.report-kind {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1.25rem;
+  align-items: center;
+  margin: 0.45rem 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.report-kind legend {
+  float: left;
+  padding: 0;
+  margin-right: 0.75rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 36px;
+}
+
+.report-kind label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 36px;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.report-label {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.report-text {
+  display: block;
+  width: 100%;
+  margin-top: 0.3rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--slate-light);
+  border-radius: var(--radius);
+  color: var(--vellum);
+  background: var(--iron);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+  font: inherit;
+  font-size: 0.88rem;
+  line-height: 1.38;
+  resize: vertical;
+}
+
+.report-details {
+  max-height: 5.8rem;
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  overflow: auto;
+  border: 1px solid var(--slate-light);
+  border-radius: var(--radius);
+  color: var(--vellum-dim);
+  background: var(--iron);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.report-channels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.25rem;
+}
+
+.report-channel {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--slate);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.report-channel .button {
+  min-block-size: 38px;
+  min-height: 38px;
+  padding: 0.36rem 0.75rem;
+  font-size: 0.84rem;
+}
+
+.report-channel p {
+  margin: 0.3rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.report-diagnostics {
+  margin-top: 0.5rem;
+}
+
+.report-diagnostics h3 {
+  margin-top: 0;
+}
+
+.report-status {
+  min-height: 1.1rem;
+  margin: 0.45rem 0 0;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.report-status:empty {
+  display: none;
+}
+
+.report-status.ok { color: var(--teal); }
+.report-status.warning { color: var(--ember); }
+
+.report-footer {
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--slate);
+}
+
+.report-copy-buffer {
+  position: fixed;
+  inset: 0 auto auto 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.decision-report {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.85rem;
+  font-size: 0.85rem;
+}
+
+.diagnostics-result {
+  overflow-wrap: anywhere;
+}
+
+/* Responsive rules — verified at 1160x760 and 640x520 (minWidth x minHeight) */
+@media (max-width: 54rem) {
   .screen {
     padding-inline: 1rem;
   }
@@ -1942,8 +2794,16 @@ input[type="search"] {
   .source-grid,
   .review-layout,
   .install-field-grid,
-  .setup-groups {
+  .launcher-hero {
     grid-template-columns: 1fr;
+  }
+
+  .setup-browser.has-chapters {
+    grid-template-columns: 1fr;
+  }
+
+  .setup-chapter-nav {
+    display: none;
   }
 
   .build-screen .ledger {
@@ -1951,7 +2811,7 @@ input[type="search"] {
   }
 }
 
-@media (min-width: 53.01rem) and (max-height: 48rem) {
+@media (min-width: 54.01rem) and (max-height: 48rem) {
   .screen {
     padding-block: 0.65rem;
   }
@@ -1960,18 +2820,14 @@ input[type="search"] {
     gap: 0.45rem;
   }
 
-  .install-screen .screen-intro h1 {
-    font-size: 2.1rem;
-  }
-
   .install-screen .lede {
-    margin-top: 0.25rem;
-    line-height: 1.3;
+    margin-top: 0.22rem;
+    line-height: 1.32;
   }
 
   .install-screen .card,
   .install-ready {
-    padding: 0.7rem 0.9rem;
+    padding: 0.65rem 0.9rem;
   }
 
   .install-sources,
@@ -1981,7 +2837,34 @@ input[type="search"] {
 
   .setup-toolbar {
     top: -0.65rem;
-    padding-top: 0.35rem;
+    padding-top: 0.55rem;
+  }
+}
+
+@media (max-width: 48rem) {
+  .common-choice-grid,
+  .report-channels {
+    grid-template-columns: 1fr;
+  }
+
+  .setup-filters {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.55rem;
+  }
+
+  .setup-filters .choice-summary {
+    grid-column: 1 / -1;
+    padding: 0;
+  }
+
+  .setup-heading {
+    align-items: start;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .setup-heading .screen-actions {
+    align-self: flex-end;
   }
 }
 
@@ -2024,31 +2907,8 @@ input[type="search"] {
     flex-basis: auto;
   }
 
-  .update-selection-details summary {
-    padding-block: 0.65rem;
-  }
-
-  .setup-heading {
-    align-items: start;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .setup-heading .screen-actions {
-    align-self: flex-end;
-  }
-
-  .setup-filters {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 0.5rem;
-  }
-
-  .setup-filters .choice-summary {
-    grid-column: 1 / -1;
-    padding: 0;
-  }
   .app-header {
-    min-height: 4rem;
+    min-height: 3.8rem;
   }
 
   .install-ready,
@@ -2077,19 +2937,13 @@ input[type="search"] {
     gap: 0;
   }
 
-  .review-list {
-    grid-template-columns: 1fr;
-  }
-
+  .review-list,
   .installation-detail-list {
     grid-template-columns: 1fr;
     gap: 0.25rem;
   }
 
-  .installation-detail-list dd + dt {
-    margin-top: 0.5rem;
-  }
-
+  .installation-detail-list dd + dt,
   .review-list dd + dt {
     margin-top: 0.5rem;
   }
@@ -2119,7 +2973,7 @@ input[type="search"] {
   .button.header-button {
     width: auto;
     padding-inline: 0.4rem;
-    font-size: 0.76rem;
+    font-size: 0.78rem;
     white-space: nowrap;
   }
 
@@ -2166,215 +3020,3 @@ input[type="search"] {
     animation: none !important;
   }
 }
-.update-nav-item {
-  position: relative;
-  display: inline-flex;
-}
-
-.update-badge {
-  margin-left: 0.45rem;
-  padding: 0.14rem 0.38rem;
-  border: 1px solid var(--brass);
-  border-radius: 999px;
-  color: var(--on-accent);
-  background: var(--focus);
-  font-size: 0.68rem;
-  font-weight: 750;
-  line-height: 1;
-}
-
-.update-tooltip {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 0.55rem);
-  right: 0;
-  width: max-content;
-  max-width: min(22rem, calc(100vw - 2rem));
-  padding: 0.55rem 0.7rem;
-  border: 1px solid var(--brass-dark);
-  border-radius: var(--radius);
-  color: var(--vellum);
-  background: var(--charcoal);
-  box-shadow: 0 0.4rem 1rem rgba(0, 0, 0, 0.35);
-  font-size: 0.78rem;
-  line-height: 1.35;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-0.2rem);
-  transition: opacity 120ms ease, transform 120ms ease;
-}
-
-.update-nav-item:hover .update-tooltip,
-.update-nav-item:focus-within .update-tooltip {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.install-patches,
-.mod-update-section {
-  border-top: 1px solid var(--slate-light);
-  padding-block: 1rem;
-}
-
-.install-patches h2,
-.install-patches h3,
-.install-patches p,
-.mod-update-section h2,
-.mod-update-section h3,
-.mod-update-section p {
-  margin-block: 0 0.6rem;
-}
-
-.patch-toolbar {
-  display: flex;
-  align-items: end;
-  flex-wrap: wrap;
-  gap: 0.65rem;
-  margin-block: 0.85rem 0.5rem;
-}
-
-.patch-install-label {
-  display: grid;
-  gap: 0.35rem;
-  flex: 1 1 24rem;
-  font-size: 0.85rem;
-}
-
-.patch-install-label select {
-  width: 100%;
-}
-
-.patch-path,
-.patch-history {
-  overflow-wrap: anywhere;
-}
-
-.patch-path {
-  font-size: 0.8rem;
-}
-
-.patch-result {
-  margin-top: 0.85rem;
-  padding: 0.85rem 1rem;
-  border: 1px solid var(--slate-light);
-  border-radius: var(--radius);
-  background: var(--charcoal);
-}
-
-.patch-result h3 {
-  font-size: 1rem;
-}
-
-.patch-state,
-.patch-progress {
-  color: var(--teal);
-  font-size: 0.85rem;
-}
-
-.patch-error,
-.patch-result[data-patch-state="needs-recovery"] .patch-state {
-  color: var(--ember);
-}
-
-.patch-backups {
-  border-top: 1px solid var(--slate-light);
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-}
-
-.patch-backup-choice {
-  display: flex;
-  align-items: start;
-  gap: 0.5rem;
-  padding-block: 0.4rem;
-  font-size: 0.85rem;
-}
-
-.patch-backup-choice input {
-  flex: 0 0 auto;
-  margin-top: 0.15rem;
-}
-
-.patch-result .button {
-  margin-block: 0.4rem 0.75rem;
-}
-
-.updates-screen .install-patches,
-.updates-screen .mod-update-section {
-  padding-block: 0.65rem 0.15rem;
-}
-
-.updates-screen .update-game-sections > .install-patches:first-child,
-.updates-screen .update-game-sections > .mod-update-section:first-child {
-  padding-top: 0;
-  border-top: 0;
-}
-
-.updates-screen .install-patches h3,
-.updates-screen .install-patches p,
-.updates-screen .mod-update-section h3,
-.updates-screen .mod-update-section p {
-  margin-bottom: 0.4rem;
-}
-
-.updates-screen .installed-update-result > :last-child,
-.updates-screen .patch-content > :last-child {
-  margin-bottom: 0;
-}
-
-.updates-screen .patch-result {
-  margin-top: 0.6rem;
-  padding: 0.7rem 0.85rem;
-}
-
-.updates-screen .patch-backup-choice {
-  min-height: 44px;
-}
-
-.operation-feedback {
-  border: 1px solid var(--slate-light);
-  border-left: 4px solid var(--brass);
-  border-radius: 6px;
-  background: var(--charcoal);
-  padding: 0.85rem 1rem;
-  margin-bottom: 1rem;
-}
-.operation-success { border-left-color: var(--teal); }
-.operation-error { border-left-color: var(--ember); }
-.operation-heading { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
-.operation-heading h2 { font-size: 1.3rem; margin: 0 0 0.4rem; }
-.operation-feedback p { margin: 0.25rem 0; }
-.operation-heading .button { flex-shrink: 0; padding: 0.3rem 0.55rem; min-height: 44px; }
-.operation-progress { margin-top: 0.75rem; }
-.operation-stage { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.45rem; }
-.operation-meter { display: block; width: 100%; height: 0.6rem; accent-color: var(--brass); border: 0; border-radius: 1rem; overflow: hidden; }
-.operation-meter::-webkit-progress-bar { background: var(--slate); }
-.operation-meter::-webkit-progress-value { background: var(--brass); }
-.operation-count { display: block; font-size: 0.8rem; margin-top: 0.3rem; color: var(--vellum-dim); }
-.operation-spinner { display: inline-block; flex: 0 0 1rem; height: 1rem; border: 2px solid var(--slate-light); border-top-color: var(--brass); border-radius: 50%; animation: operation-spin 1.1s linear infinite; }
-@keyframes operation-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .operation-spinner { animation: none; } }
-.installation-name-editor { margin-block: 0.6rem; font-size: 0.9rem; }
-.installation-name-form { max-width: 32rem; margin-top: 0.6rem; }
-.installation-name-form input { width: 100%; }
-.installation-name-form p { font-size: 0.85rem; margin-block: 0.4rem; }
-.installation-name-form .error-message { color: var(--ember); }
-.installation-name-form .success-message { color: var(--teal); }
-.report-dialog { width: min(100%, 44rem); }
-.report-dialog h3 { margin: 1.1rem 0 0.4rem; font-size: 1rem; }
-.report-kind { display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; margin: 0.8rem 0; padding: 0; border: 0; }
-.report-kind legend { padding: 0; margin-bottom: 0.3rem; font-weight: 750; }
-.report-kind label { display: inline-flex; align-items: center; gap: 0.45rem; min-height: 44px; cursor: pointer; }
-.report-label { display: block; margin-top: 0.8rem; font-weight: 750; }
-.report-text { display: block; width: 100%; margin-top: 0.5rem; padding: 0.55rem 0.75rem; border: 1px solid var(--slate-light); border-radius: var(--radius); color: var(--vellum); background: var(--iron); font: inherit; line-height: 1.45; resize: vertical; }
-.report-text:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
-.report-details { max-height: 11rem; margin: 0; padding: 0.7rem; overflow: auto; border: 1px solid var(--slate-light); border-radius: var(--radius); color: var(--vellum-dim); background: var(--iron); font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
-.report-channel { margin-top: 0.7rem; }
-.report-channel p { margin: 0.35rem 0 0; }
-.report-status { min-height: 1.4rem; margin: 1rem 0 0; font-weight: 750; }
-.report-status.ok { color: var(--teal); }
-.report-status.warning { color: var(--ember); }
-.report-footer { justify-content: flex-end; margin-top: 0.6rem; }
-.report-copy-buffer { position: fixed; inset: 0 auto auto 0; width: 1px; height: 1px; opacity: 0; }
-.decision-report { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-top: 0.9rem; font-size: 0.85rem; }
-.diagnostics-result { overflow-wrap: anywhere; }

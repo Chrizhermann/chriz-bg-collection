@@ -1,98 +1,196 @@
-/* Chriz Easy IWD: "Glacier", the Spine of the World. Frost white, glacier blue, pale peaks.
-   Token roles are listed at the top of styles.css; the font and its licence are in fonts/. */
+/* Chriz Easy IWD: "Kuldahar Cracked Stone, Dark Riveted Timber & Glacial Cyan" — inspired by
+   the Icewind Dale stone-and-timber main menu, the Great Oak diamond emblem, and Northern plaques.
+   Fonts and their SIL Open Font Licenses are bundled locally in `./fonts/`. */
 
 @font-face {
-  font-family: "Marcellus";
+  font-family: "Spectral";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url("./fonts/marcellus/marcellus-latin-400-normal.woff2") format("woff2");
+  src: url("./fonts/spectral/spectral-latin-400-normal.woff2") format("woff2");
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 @font-face {
-  font-family: "Marcellus";
+  font-family: "Spectral";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url("./fonts/marcellus/marcellus-latin-ext-400-normal.woff2") format("woff2");
+  src: url("./fonts/spectral/spectral-latin-ext-400-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Spectral";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./fonts/spectral/spectral-latin-600-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Spectral";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./fonts/spectral/spectral-latin-ext-600-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Spectral";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/spectral/spectral-latin-700-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Spectral";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/spectral/spectral-latin-ext-700-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Alegreya Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/alegreya-sans/alegreya-sans-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Alegreya Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/alegreya-sans/alegreya-sans-latin-ext-400-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Alegreya Sans";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./fonts/alegreya-sans/alegreya-sans-latin-500-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Alegreya Sans";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./fonts/alegreya-sans/alegreya-sans-latin-ext-500-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Alegreya Sans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/alegreya-sans/alegreya-sans-latin-700-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Alegreya Sans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/alegreya-sans/alegreya-sans-latin-ext-700-normal.woff2") format("woff2");
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 :root {
-  color-scheme: light;
-  --iron: #e4edf3;
-  --charcoal: #f8fbfd;
-  --slate: #cbd9e3;
-  --slate-light: #6a8293;
-  --vellum: #14232e;
-  --vellum-dim: #41566a;
-  --brass: #1d5e86;
-  --brass-dark: #164a6a;
-  --teal: #1d6857;
-  --teal-dark: #5aa08c;
-  --ember: #b3261e;
-  --focus: #0a64a0;
-  --on-accent: #ffffff;
-  --danger-surface: #f6d9d6;
-  --header-background: linear-gradient(#fbfdfe, #e9f1f6);
-  /* Two pale ridges along the bottom edge, under a cold sky. */
+  color-scheme: dark;
+  --iron: #0f1419;
+  --charcoal: #182028;
+  --slate: #232e39;
+  --slate-light: #647b8f;
+  --vellum: #eaf1f6;
+  --vellum-dim: #b4c4d2;
+  --brass: #5fd0e5;
+  --brass-dark: #216070;
+  --teal: #8ae0f0;
+  --teal-dark: #1d5160;
+  --ember: #ee8c68;
+  --ok: #8ed1aa;
+  --focus: #8ce6f7;
+  --on-accent: #0f1419;
+  --danger-surface: #56272b;
+  --header-background:
+    url("./images/timber-plank.svg") repeat 0 0 / 240px 64px,
+    linear-gradient(180deg, #241911 0%, #17100b 100%);
   --page-background:
-    url("./images/glacier-ridges.svg") bottom / 100% 190px no-repeat,
-    linear-gradient(180deg, #eef4f8, #e1eaf0);
-  --log-background: #eef3f7;
-  --log-text: #14232e;
-  --font-display: "Marcellus", Georgia, "Times New Roman", serif;
-  --font-body: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+    url("./images/stone-grain.svg") repeat 0 0 / 160px 160px,
+    radial-gradient(ellipse 85% 45% at 50% 0%, rgba(95, 208, 229, 0.10), transparent 72%),
+    radial-gradient(ellipse 110% 85% at 50% 100%, rgba(5, 8, 12, 0.78), transparent 68%),
+    linear-gradient(180deg, #131b23 0%, #0d1218 100%);
+  --log-background: #090d11;
+  --log-text: #d6e4ee;
+  --font-display: "Spectral", Georgia, "Times New Roman", serif;
+  --font-body: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
   --font-mono: "Cascadia Mono", Consolas, monospace;
 }
 
+/* Dark riveted Kuldahar timber header beam above cracked stone. */
 .app-header {
-  border-bottom-color: #b9cbd7;
-  box-shadow: 0 1px 0 #ffffff;
+  border-bottom: 1px solid #4e3b2a;
+  box-shadow:
+    inset 0 -1px 0 rgba(95, 208, 229, 0.22),
+    0 4px 16px rgba(0, 0, 0, 0.58);
 }
 
-/* An ice crystal. */
 .brand-mark {
-  width: 2.3rem;
-  height: 2.6rem;
-  border: 0;
-  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
-  color: var(--on-accent);
-  background: linear-gradient(160deg, #3b86b5, #164a6a);
-  font-weight: 700;
-  transform: none;
+  background-image: url("./images/iwd-diamond.svg");
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.72));
 }
 
-h1 {
-  letter-spacing: 0;
+/* Primary button: chiseled glacial cyan ice plaque. */
+.button:not(.quiet):not(.header-button):not(.danger-quiet):not(.danger):not(.version-link) {
+  background: linear-gradient(180deg, #74ddf0 0%, #48b6cd 100%);
+  border-color: #266b7d;
+  box-shadow:
+    inset 0 1px 0 rgba(234, 250, 255, 0.52),
+    inset 0 -1px 0 rgba(12, 48, 60, 0.55),
+    0 2px 7px rgba(0, 0, 0, 0.48);
 }
 
-.screen-intro h1::after {
-  display: block;
-  width: 8rem;
-  height: 0.8rem;
-  margin-top: 0.45rem;
-  background: url("./images/frost-flourish.svg") left center / contain no-repeat;
-  content: "";
+/* Secondary buttons: authentic Icewind Dale dark stained oak planks with iron bevels! */
+.button.quiet {
+  color: #efe6d8;
+  border-color: #6b533c;
+  background:
+    url("./images/timber-plank.svg") repeat 0 0 / 240px 64px,
+    linear-gradient(180deg, #322419 0%, #221810 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(235, 205, 168, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.65),
+    0 2px 5px rgba(0, 0, 0, 0.42);
+}
+
+.button.quiet:hover:not(:disabled) {
+  border-color: var(--brass);
+  box-shadow:
+    inset 0 1px 0 rgba(140, 230, 247, 0.28),
+    0 0 10px rgba(95, 208, 229, 0.16);
 }
 
 .card,
 .choice-group,
-.install-ready,
+.update-selection,
 .operation-feedback,
-.update-selection {
-  background: color-mix(in srgb, var(--charcoal) 90%, transparent);
-  box-shadow: 0 1px 2px rgba(20, 50, 80, 0.06), 0 6px 18px rgba(20, 50, 80, 0.07);
-}
-
-.card,
-.choice-group {
-  border-color: #c3d4df;
-}
-
-/* The sticky toolbar shows the page behind it, so it carries the same ground. */
-.setup-toolbar {
-  background: var(--page-background);
-  background-attachment: fixed;
+.manual-download-panel {
+  background:
+    url("./images/stone-grain.svg") repeat 0 0 / 160px 160px,
+    linear-gradient(180deg, #1b242e 0%, #151c24 100%);
 }

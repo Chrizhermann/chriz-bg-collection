@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <radialGradient id="rim" cx="38%" cy="28%" r="72%">
+      <stop offset="0%" stop-color="#5a4930"/>
+      <stop offset="55%" stop-color="#2c2419"/>
+      <stop offset="100%" stop-color="#14110d"/>
+    </radialGradient>
+    <radialGradient id="well" cx="50%" cy="46%" r="54%">
+      <stop offset="0%" stop-color="#221b16"/>
+      <stop offset="70%" stop-color="#121011"/>
+      <stop offset="100%" stop-color="#090809"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f5dc9b"/>
+      <stop offset="45%" stop-color="#cc9d48"/>
+      <stop offset="100%" stop-color="#6f4d19"/>
+    </linearGradient>
+    <radialGradient id="ember" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffd27d"/>
+      <stop offset="42%" stop-color="#ff6f24"/>
+      <stop offset="100%" stop-color="#8f1e09" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- Forged outer bronze-iron medallion -->
+  <circle cx="128" cy="128" r="120" fill="url(#rim)" stroke="#090807" stroke-width="6"/>
+  <circle cx="128" cy="128" r="113" fill="none" stroke="#c89b4b" stroke-opacity="0.55" stroke-width="2"/>
+  <circle cx="128" cy="128" r="95" fill="url(#well)" stroke="#7c5d2b" stroke-width="3.5"/>
+  <!-- 8 forged iron-brass rivets on the rim -->
+  <g fill="#d9b166" stroke="#18120b" stroke-width="2">
+    <circle cx="128" cy="21" r="5"/><circle cx="204" cy="52" r="5"/>
+    <circle cx="235" cy="128" r="5"/><circle cx="204" cy="204" r="5"/>
+    <circle cx="128" cy="235" r="5"/><circle cx="52" cy="204" r="5"/>
+    <circle cx="21" cy="128" r="5"/><circle cx="52" cy="52" r="5"/>
+  </g>
+  <!-- Carved ring of 8 teardrop reliefs echoing classic Sword Coast / Bhaal medallion -->
+  <g fill="#5b4322" stroke="#9e783a" stroke-width="1.2" opacity="0.88">
+    <path d="M128 40c5 8 7 13 0 18-7-5-5-10 0-18z"/>
+    <path d="M189 67c-2 9-6 13-14 11 1-8 6-11 14-11z"/>
+    <path d="M216 128c-8 5-13 7-18 0 5-7 10-5 18 0z"/>
+    <path d="M189 189c-9-2-13-6-11-14 8 1 11 6 11 14z"/>
+    <path d="M128 216c-5-8-7-13 0-18 7 5 5 10 0 18z"/>
+    <path d="M67 189c2-9 6-13 14-11-1 8-6 11-14 11z"/>
+    <path d="M40 128c8-5 13-7 18 0-5 7-10 5-18 0z"/>
+    <path d="M67 67c9 2 13 6 11 14-8-1-11-6-11-14z"/>
+  </g>
+  <!-- Embossed Sword Coast citadel gate & portcullis arch -->
+  <path d="M74 184V104l18-24h72l18 24v80h-24v-46c0-18-13-30-30-30s-30 12-30 30v46H74z"
+        fill="url(#gold)" stroke="#1b1207" stroke-width="4" stroke-linejoin="round"/>
+  <!-- Battlement crowns -->
+  <path d="M84 80v-14h16v10h12V64h32v12h12V66h16v14"
+        fill="url(#gold)" stroke="#1b1207" stroke-width="3.5" stroke-linejoin="round"/>
+  <!-- Portcullis spears -->
+  <path d="M114 114v66M128 109v71M142 114v66M102 146h52"
+        stroke="#8b6830" stroke-width="3" stroke-linecap="round" opacity="0.65"/>
+  <!-- Twin glowing amber-crimson embers inside the dark gate -->
+  <circle cx="113" cy="132" r="15" fill="url(#ember)"/>
+  <circle cx="143" cy="132" r="15" fill="url(#ember)"/>
+  <circle cx="113" cy="132" r="4.5" fill="#ffe4a3"/>
+  <circle cx="143" cy="132" r="4.5" fill="#ffe4a3"/>
+</svg>

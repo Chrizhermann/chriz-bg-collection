@@ -12,7 +12,7 @@ const messages = {
 function startupLayout(): HTMLElement {
   const main = element("main", "startup-screen");
   const brand = element("div", "brand startup-brand");
-  const mark = element("span", "brand-mark", "C");
+  const mark = element("span", "brand-mark");
   mark.setAttribute("aria-hidden", "true");
   brand.append(mark, element("h1", undefined, flavor.productName));
   main.append(brand);

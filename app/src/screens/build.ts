@@ -109,6 +109,18 @@ export function buildScreen(snapshot: BuildSnapshot, actions: BuildActions): HTM
   }
   if (actions.resuming) controls.querySelectorAll<HTMLButtonElement>("button").forEach(button => { button.disabled = true; });
   if (controls.childElementCount > 0) stateCard.append(controls);
-  page.append(stateCard, campaignLedger(snapshot.phases, true), technicalLog(snapshot.logTail, actions.logState, actions.updateLogState));
+  page.append(stateCard, campaignLedger(snapshot.phases, true));
+  const latestActivity = snapshot.state === "running"
+    ? [...snapshot.logTail].reverse().find(line => line.trim().length > 0)
+    : undefined;
+  if (latestActivity !== undefined) {
+    const strip = element("div", "build-activity-strip");
+    strip.append(
+      element("span", "build-activity-label", "Latest activity"),
+      element("code", "build-activity-line", latestActivity.trim()),
+    );
+    page.append(strip);
+  }
+  page.append(technicalLog(snapshot.logTail, actions.logState, actions.updateLogState));
   return page;
 }
