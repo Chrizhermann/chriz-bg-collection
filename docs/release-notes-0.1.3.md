@@ -1,6 +1,7 @@
 # Chriz Easy BG 0.1.3
 
-**Release candidate:** app 0.1.3 / collection 0.1.2, prepared on 2026-11-12.
+**Released:** app 0.1.3 / collection 0.1.2, on 2026-11-12. The exact package and its test
+results are in the [package verification record](package-acceptance-0.1.3-2026-11-12.md).
 
 0.1.3 fixes two setup blockers reported by GOG and external-drive players — GOG's 2.7.3.0
 Baldur's Gate II: Enhanced Edition executable (`BaldurII.exe`) and installing onto exFAT or

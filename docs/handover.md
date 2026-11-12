@@ -2,10 +2,13 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
-## November 12 — Chriz Easy BG 0.1.3 prepared
+## November 12 — Chriz Easy BG 0.1.3 released
 
-Prepared on `fix/flexible-source-and-exfat` from `main` at `1c90104` to ship two urgent
-setup fixes reported by player `stonepot` on Discord alongside the post-0.1.2 features
+Published on 2026-11-12 at 14:00 UTC from `main` at `7f26664` (PR #136; setup
+`Chriz.Easy.BG_0.1.3_x64-setup.exe`, 6,797,347 bytes, SHA-256 `01f16036…`; `alpha/latest.json`
+update channel and `bg.chrizfader.org` via `twitch-setup-chriz` PR #84 both live — see
+[package-acceptance-0.1.3-2026-11-12.md](package-acceptance-0.1.3-2026-11-12.md)) to ship two
+urgent setup fixes reported by player `stonepot` on Discord alongside the post-0.1.2 features
 already merged on `main`:
 
 - **Flexible game executable & archive detection + canonical staging copy:** GOG's 2.7.3.0
