@@ -228,7 +228,11 @@ fn the_iwd_app_has_its_own_icon() {
         let height = i32::from_le_bytes(bmp[22..26].try_into().unwrap());
         let bpp = u16::from_le_bytes(bmp[28..30].try_into().unwrap());
         let compression = u32::from_le_bytes(bmp[30..34].try_into().unwrap());
-        assert_eq!((width, height), (expected_width, expected_height), "{path} dimensions");
+        assert_eq!(
+            (width, height),
+            (expected_width, expected_height),
+            "{path} dimensions"
+        );
         assert_eq!(bpp, 24, "{path} is 24-bit RGB");
         assert_eq!(compression, 0, "{path} is uncompressed BI_RGB");
         bmp
