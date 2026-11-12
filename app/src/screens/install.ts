@@ -128,13 +128,14 @@ function sourceCard(
   actions: InstallScreenActions,
 ): HTMLElement {
   const game = source.slot;
-  const card = element("article", "source-card card");
-  card.dataset.source = game;
   const candidate = selectedCandidate(candidates, selectedId);
+  const usable = sourceStatus(candidate);
+  const compact = candidate !== undefined && candidates.length === 1 && usable === "ready";
+  const card = element("article", `source-card card${compact ? " is-compact" : ""}`);
+  card.dataset.source = game;
   const copy = element("div", "source-card-heading");
   copy.append(element("p", "source-title", source.label));
   copy.append(element("h2", undefined, candidate === undefined ? "Source needed" : candidates.length === 1 ? "Found source" : "Choose source"));
-  const usable = sourceStatus(candidate);
   const status = element(
     "span",
     `source-status ${usable === "ready" ? "ok" : "warning"}`,
@@ -235,6 +236,9 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
   const changeLocation = actionButton("Browse…", actions.browseLocation, "quiet");
   changeLocation.setAttribute("aria-label", "Change install location");
   changeLocation.disabled = model.starting;
+  location.input.remove();
+  locationControls.append(location.input, changeLocation);
+  location.wrapper.append(locationControls);
   const locationHelp = element("p", "field-help", `Enter a new folder path or browse. ${flavor.shortName} creates missing folders when you install.`);
   locationHelp.id = "install-location-help";
   location.input.setAttribute("aria-describedby", locationHelp.id);
@@ -259,9 +263,8 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
     location.input.setAttribute("aria-describedby", `${locationHelp.id} ${locationFinding.id}`);
     location.wrapper.append(locationFinding);
   }
-  locationControls.append(location.wrapper, changeLocation);
   location.input.addEventListener("change", () => void actions.changeLocation(location.input.value));
-  fields.append(name.wrapper, locationControls);
+  fields.append(name.wrapper, location.wrapper);
   settings.append(fields, element("p", "safety-note", flavor.text.installSafetyNote));
 
   const recipe = element("section", "recommended-setup card");

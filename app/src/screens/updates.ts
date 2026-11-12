@@ -9,6 +9,7 @@ import { flavor } from "../flavor";
 export interface UpdateActions extends InstallPatchActions, InstalledUpdateActions, HotpatchActions, ModUpdateActions {
   readonly customized?: boolean;
   readonly checkAgain: () => void | Promise<void>;
+  readonly onCheckAllGameUpdates?: (installId: string) => void | Promise<void>;
   readonly installApplication: (version: string) => void | Promise<void>;
   readonly buildUpdatedCopy: (version: string) => void | Promise<void>;
   readonly installRadar?: () => void | Promise<void>;
@@ -55,6 +56,11 @@ function installationSelection(copies: readonly ManagedCopyUpdate[], selected: M
     if (!disabled) actions.onSelectInstalledUpdate?.(selector.value);
   });
   row.append(label, selector);
+  if (actions.onCheckAllGameUpdates !== undefined) {
+    const checkAll = actionButton("Check all for this game", () => actions.onCheckAllGameUpdates!(selected.installId), "quiet compact");
+    checkAll.disabled = disabled || selected.state === "stale" || actions.installedUpdateBusy === true;
+    row.append(checkAll);
+  }
   const status = element("p", "update-selection-status", selected.state === "stale"
     ? "Needs attention. Open My installs to check or remove this entry."
     : `Collection ${selected.installedRecipeVersion ?? "version not recorded"}`);
@@ -81,7 +87,14 @@ function versionRow(
   const row = element("article", "update-row");
   if (["available", "requires-app", "local-available"].includes(state) && availableVersion !== null) row.classList.add("available");
   const installed = element("div", "update-installed");
-  installed.append(element("h2", undefined, title), element("p", undefined, currentVersion === null ? "Not installed" : `${currentLabel}: ${currentVersion === "bundled" ? `Bundled with ${flavor.shortName}` : currentVersion}`));
+  installed.append(
+    element("h2", undefined, title),
+    element("p", undefined, currentVersion === null
+      ? "Not installed"
+      : currentVersion === "bundled"
+        ? `Bundled with ${flavor.shortName}`
+        : `${currentLabel}: ${currentVersion}`),
+  );
   if (note !== undefined) installed.append(element("p", "update-purpose", note));
   const latest = element("div", "update-latest");
   if (availableVersion !== null) {

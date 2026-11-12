@@ -46,7 +46,7 @@ export function createAppShell(
   shell.dataset.route = route;
   const header = element("header", "app-header");
   const brand = element("div", "brand");
-  const mark = element("span", "brand-mark", "C");
+  const mark = element("span", "brand-mark");
   mark.setAttribute("aria-hidden", "true");
   const copy = element("div", "brand-copy");
   copy.append(element("strong", undefined, flavor.productName), element("small", undefined, version.replace(/-alpha\.?/i, " Alpha ")));

@@ -2378,6 +2378,15 @@ class AppController implements AppHandle {
           onApplyModUpdate: flavor.modUpdates.length > 0 && this.backend.applyModUpdate ? (modId, full, saves) => this.#modUpdateOperation("apply", modId, this.#modUpdateInstallId, full, saves) : undefined,
           onUndoModUpdate: flavor.modUpdates.length > 0 && this.backend.restoreModUpdate ? (modId) => this.#modUpdateOperation("undo", modId) : undefined,
           onRestoreModUpdate: flavor.modUpdates.length > 0 && this.backend.restoreModUpdate ? (modId) => this.#modUpdateOperation("restore", modId) : undefined,
+          onCheckAllGameUpdates: selected && selected.state !== "stale" ? (id) => safely(async () => {
+            const customized = this.#installations.find(item => item.id === id)?.customized === true;
+            if (flavor.features.hotpatches && this.backend.inspectHotpatch) await this.#hotpatchOperation("check", id);
+            if (this.backend.inspectModUpdate) {
+              for (const offer of flavor.modUpdates) await this.#modUpdateOperation("check", offer.modId, id);
+            }
+            if (!customized && this.backend.inspectInstalledUpdate) await this.#checkInstalledUpdate(id);
+            if (!customized && flavor.features.installPatches && this.backend.inspectInstallPatches) await this.#patchOperation("check", id);
+          }) : undefined,
           checkAgain: () => safely(() => this.#checkUpdates()),
           installApplication: (version) => safely(() => this.#installAppUpdate(version)),
           buildUpdatedCopy: (version) => safely(() => this.#buildUpdatedCopy(version)),
@@ -2566,7 +2575,9 @@ class AppController implements AppHandle {
       content,
       (route) => safely(() => navigate(route)),
       this.#status.mode,
-      ["home", "updates"].includes(this.#state.route) ? () => safely(() => this.#backFromSecondary()) : undefined,
+      (this.#state.route === "updates" || (this.#state.route === "home" && this.#state.history.length > 0))
+        ? () => safely(() => this.#backFromSecondary())
+        : undefined,
       this.#status.applicationVersion ?? this.#status.engineVersion,
       // The selected installation's diagnostics are offered where that installation is in view.
       () => this.#openReport(generalSubject(["home", "updates", "build", "complete"].includes(this.#state.route) ? this.#installId : null)),

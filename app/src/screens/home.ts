@@ -193,7 +193,9 @@ export function homeScreen(
   }
 
   const card = element("section", "card launcher-card");
-  card.append(
+  const hero = element("div", "launcher-hero");
+  const identity = element("div", "launcher-identity");
+  identity.append(
     element("p", `badge ${patchRecoveryNeeded ? "danger" : selected.available ? "ok" : selected.resumable ? "warning" : "danger"}`, patchRecoveryNeeded ? "Patch recovery required" : selected.status),
     element("h2", undefined, selected.name),
   );
@@ -207,14 +209,17 @@ export function homeScreen(
     summary.dataset.consistency = check.state;
     metadata.append(summary);
   }
-  if (metadata.childElementCount > 0) card.append(metadata);
-  if (selected.customized) card.append(element("p", "manual-mod-warning", flavor.text.customizedLauncherNote));
+  if (metadata.childElementCount > 0) identity.append(metadata);
+  if (selected.customized) identity.append(element("p", "manual-mod-warning", flavor.text.customizedLauncherNote));
   const picker = installationPicker(installations, selected.id, actions.select);
-  if (picker !== null) card.append(picker);
-  if (actions.rename) card.append(installationNameEditor({ installId: selected.id, name: selected.name,
+  if (picker !== null) identity.append(picker);
+  if (actions.rename) identity.append(installationNameEditor({ installId: selected.id, name: selected.name,
     installations: installations.map(copy => ({ installId: copy.id, name: copy.name })),
     disabled: actions.removalDisabled, onRename: actions.rename }));
-  const controls = element("div", "inline-actions launcher-actions");
+  hero.append(identity);
+
+  const cta = element("div", "launcher-cta");
+  const utilities = element("div", "inline-actions launcher-actions launcher-utilities");
   let feedback: HTMLElement | null = null;
   if (selected.available) {
     const currentFeedback = shortcutFeedback?.installId === selected.id ? shortcutFeedback : null;
@@ -235,19 +240,20 @@ export function homeScreen(
     radarHelp.id = "radar-launch-help";
     const radarOption = element("div", "radar-launch-option");
     radarOption.append(radarLabel, radarHelp);
-    if (flavor.features.radar) card.append(radarOption);
     const play = actionButton(launchState.pending ? "Starting game…" : `Play ${flavor.productName}`,
       () => !patchRecoveryNeeded && !launchState.pending ? actions.launch(selected.id, radar.checked) : undefined);
+    play.classList.add("hero-play");
     play.disabled = patchRecoveryNeeded || launchState.pending;
-    controls.append(
-      play,
-      actionButton("Open game folder", () => actions.openFolder(selected.id), "quiet"),
-    );
+    cta.append(play);
+    if (flavor.features.radar) cta.append(radarOption);
+    hero.append(cta);
+
+    utilities.append(actionButton("Open game folder", () => actions.openFolder(selected.id), "quiet"));
     const openProfileFolder = actions.openProfileFolder;
     if (selected.profilePath && openProfileFolder) {
-      controls.append(actionButton("Open saves & portraits folder", () => openProfileFolder(selected.id), "quiet"));
+      utilities.append(actionButton("Open saves & portraits folder", () => openProfileFolder(selected.id), "quiet"));
     }
-    controls.append(
+    utilities.append(
       actionButton(
         currentFeedback?.state === "created"
           ? "Recreate desktop shortcut"
@@ -257,7 +263,7 @@ export function homeScreen(
         () => actions.createShortcut(selected.id),
         "quiet",
       ),
-      actionButton("Export diagnostics", () => actions.diagnostics(selected.id), "quiet"),
+      actionButton("New installation", actions.begin, "quiet"),
     );
     if (currentFeedback !== null) {
       feedback = element("div", `shortcut-feedback ${currentFeedback.state === "created" ? "ok" : "warning"}`);
@@ -272,15 +278,16 @@ export function homeScreen(
       }
     }
   } else if (selected.resumable && !patchRecoveryNeeded) {
-    controls.append(
-      actionButton(selected.status === "Paused for your mods" ? "Review manual-mod pause"
-        : selected.status === "Waiting for your answer" ? "Answer the question" : "Continue installation", () => actions.resume(selected.id)),
-      actionButton("Export diagnostics", () => actions.diagnostics(selected.id), "quiet"),
-    );
+    const resumeButton = actionButton(selected.status === "Paused for your mods" ? "Review manual-mod pause"
+      : selected.status === "Waiting for your answer" ? "Answer the question" : "Continue installation", () => actions.resume(selected.id));
+    resumeButton.classList.add("hero-play");
+    cta.append(resumeButton);
+    hero.append(cta);
+    utilities.append(actionButton("New installation", actions.begin, "quiet"));
   } else {
-    controls.append(actionButton("Export diagnostics", () => actions.diagnostics(selected.id), "quiet"));
+    utilities.append(actionButton("New installation", actions.begin, "quiet"));
   }
-  card.append(controls);
+  card.append(hero);
   if (launchState.feedback?.installId === selected.id) {
     const { radar } = launchState.feedback;
     const warning = radar.state === "failed" || radar.state === "cancelled";
@@ -316,13 +323,6 @@ export function homeScreen(
       card.append(log);
     }
   }
-  if (actions.remove) {
-    const removal = actionButton("Delete / remove installation…", () => actions.remove!(selected.id), "danger-quiet");
-    removal.id = "remove-installation";
-    removal.disabled = actions.removalDisabled ?? false;
-    card.append(removal);
-  }
-  card.append(element("p", "muted", "Diagnostics stay local; review the ZIP before sharing."));
   if (addonFeedback?.installId === selected.id) {
     const note = element("p", "addon-feedback", patchRecoveryNeeded
       ? "Finish patch recovery in Updates before using the game or overlay."
@@ -333,20 +333,38 @@ export function homeScreen(
     card.append(note);
   }
   if (feedback !== null) card.append(feedback);
-  card.append(installationDetails(selected));
+  card.append(utilities);
+
+  const drawers = element("div", "launcher-drawers");
   const mods = installedMods(selected);
-  if (mods !== null) card.append(mods);
-  if (selected.available && !patchRecoveryNeeded) card.append(firstPlayGuide(selected));
+  if (mods !== null) drawers.append(mods);
+  if (selected.available && !patchRecoveryNeeded) drawers.append(firstPlayGuide(selected));
+  drawers.append(installationDetails(selected));
   const gameLogActions = actions.gameLog;
   if (selected.available && gameLog !== null && gameLogActions !== undefined) {
-    card.append(troubleshootingSection(gameLog, {
+    drawers.append(troubleshootingSection(gameLog, {
       toggle: (open) => gameLogActions.toggle(selected.id, open),
       set: (enabled) => gameLogActions.set(selected.id, enabled),
       refresh: () => gameLogActions.refresh(selected.id),
       report: gameLogActions.report ? () => gameLogActions.report!(selected.id) : undefined,
     }));
   }
+  card.append(drawers);
+
+  const maintenance = element("div", "launcher-maintenance");
+  const diagGroup = element("div", "launcher-diagnostics-group");
+  diagGroup.append(
+    actionButton("Export diagnostics", () => actions.diagnostics(selected.id), "quiet compact"),
+    element("p", "muted", "Diagnostics stay local; review the ZIP before sharing."),
+  );
+  maintenance.append(diagGroup);
+  if (actions.remove) {
+    const removal = actionButton("Delete / remove installation…", () => actions.remove!(selected.id), "danger-quiet compact");
+    removal.id = "remove-installation";
+    removal.disabled = actions.removalDisabled ?? false;
+    maintenance.append(removal);
+  }
+  card.append(maintenance);
   page.append(card);
-  page.append(screenActions(null, actionButton("New installation", actions.begin, "quiet")));
   return page;
 }
