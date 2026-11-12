@@ -314,7 +314,7 @@ impl HeldFolder {
         let metadata = file
             .metadata()
             .map_err(|error| EntryError::io(path.clone(), error))?;
-        if !metadata.is_file() || is_link_or_reparse(&metadata) {
+        if !metadata.is_file() || crate::reparse::handle_is_link(&file, &metadata) {
             return Err(EntryError::not_direct(path));
         }
         Ok((file, metadata))
@@ -344,7 +344,7 @@ impl HeldFolder {
         let metadata = file
             .metadata()
             .map_err(|error| EntryError::io(path.clone(), error))?;
-        if !metadata.is_file() || is_link_or_reparse(&metadata) {
+        if !metadata.is_file() || crate::reparse::handle_is_link(&file, &metadata) {
             return Err(EntryError::not_direct(path));
         }
         Ok(RemovableFile { file, path })
@@ -424,27 +424,38 @@ impl HeldFolder {
         check_name(name).map_err(|error| EntryError::io(path.clone(), error))?;
         let wide = handles::wide(name);
         if existing == Existing::Overwrite {
-            match handles::open_writable_entry(self.folder(), &wide) {
-                Ok(file) => {
-                    let metadata = file
-                        .metadata()
-                        .map_err(|error| EntryError::io(path.clone(), error))?;
-                    if !metadata.is_file() || is_link_or_reparse(&metadata) {
-                        return Err(EntryError::not_direct(path));
+            let opened = match handles::open_writable_entry(self.folder(), &wide) {
+                Ok(file) => Ok(Some(file)),
+                Err(error) if error.kind() == ErrorKind::NotFound => Ok(None),
+                Err(error) if error.kind() == ErrorKind::PermissionDenied => {
+                    handles::clear_readonly_existing(self.folder(), &wide)
+                        .map_err(|err| EntryError::io(path.clone(), err))?;
+                    match handles::open_writable_entry(self.folder(), &wide) {
+                        Ok(file) => Ok(Some(file)),
+                        Err(err) if err.kind() == ErrorKind::NotFound => Ok(None),
+                        Err(err) => Err(err),
                     }
-                    let names = handles::link_count(&file)
-                        .map_err(|error| EntryError::io(path.clone(), error))?;
-                    if names != 1 {
-                        return Err(EntryError::not_direct(path));
-                    }
-                    return file
-                        .set_len(0)
-                        .and_then(|()| (&file).write_all(content))
-                        .and_then(|()| file.sync_all())
-                        .map_err(|error| EntryError::io(path, error));
                 }
-                Err(error) if error.kind() == ErrorKind::NotFound => {}
-                Err(error) => return Err(EntryError::io(path, error)),
+                Err(error) => Err(error),
+            }
+            .map_err(|error| EntryError::io(path.clone(), error))?;
+            if let Some(file) = opened {
+                let metadata = file
+                    .metadata()
+                    .map_err(|error| EntryError::io(path.clone(), error))?;
+                if !metadata.is_file() || crate::reparse::handle_is_link(&file, &metadata) {
+                    return Err(EntryError::not_direct(path));
+                }
+                let names = handles::link_count(&file)
+                    .map_err(|error| EntryError::io(path.clone(), error))?;
+                if names != 1 {
+                    return Err(EntryError::not_direct(path));
+                }
+                return file
+                    .set_len(0)
+                    .and_then(|()| (&file).write_all(content))
+                    .and_then(|()| file.sync_all())
+                    .map_err(|error| EntryError::io(path, error));
             }
         }
         let file = handles::create_new_file(self.folder(), &wide)
@@ -473,6 +484,9 @@ impl HeldFolder {
         check_name(name)?;
         let temporary = self.create_temporary_file()?;
         let wide_name = handles::wide(name);
+        if replace {
+            let _ = handles::clear_readonly_existing(self.folder(), &wide_name);
+        }
         let published = (&temporary)
             .write_all(content)
             .and_then(|()| temporary.sync_all())
@@ -517,7 +531,7 @@ fn require_direct_directory(folder: &fs::File, path: &Path) -> Result<(), EntryE
     let metadata = folder
         .metadata()
         .map_err(|error| EntryError::io(path.to_path_buf(), error))?;
-    if !metadata.is_dir() || is_link_or_reparse(&metadata) {
+    if !metadata.is_dir() || crate::reparse::handle_is_link(folder, &metadata) {
         return Err(EntryError::not_direct(path.to_path_buf()));
     }
     Ok(())
@@ -560,7 +574,7 @@ fn remove_contents_of(
             let metadata = file
                 .metadata()
                 .map_err(|error| EntryError::io(child.clone(), error))?;
-            if !metadata.is_file() || is_link_or_reparse(&metadata) {
+            if !metadata.is_file() || crate::reparse::handle_is_link(&file, &metadata) {
                 return Err(EntryError::not_direct(child));
             }
             before_remove(&child).map_err(|error| EntryError::io(child.clone(), error))?;
@@ -589,7 +603,7 @@ fn find_link_below_of(folder: &fs::File, path: &Path) -> Result<Option<PathBuf>,
             .metadata()
             .map_err(|error| EntryError::io(child.clone(), error))?;
         // It was replaced since it was listed.
-        if is_link_or_reparse(&metadata) {
+        if crate::reparse::handle_is_link(&inner, &metadata) {
             return Ok(Some(child));
         }
         if metadata.is_dir() {
@@ -760,6 +774,28 @@ mod handles {
         )
     }
 
+    /// Clear `FILE_ATTRIBUTE_READONLY` on an existing direct single-link regular file inside
+    /// `folder`, failing if absent or not a direct single-link regular file.
+    pub(super) fn clear_readonly_existing(folder: &File, name: &[u16]) -> io::Result<()> {
+        let file = open_relative(
+            folder,
+            name,
+            FILE_READ_ATTRIBUTES | windows_sys::Win32::Storage::FileSystem::FILE_WRITE_ATTRIBUTES,
+            SHARE_ALL_BUT_DELETE,
+            FILE_OPEN,
+            0,
+            0,
+        )?;
+        let metadata = file.metadata()?;
+        if !metadata.is_file()
+            || crate::reparse::handle_is_link(&file, &metadata)
+            || link_count(&file)? != 1
+        {
+            return Ok(());
+        }
+        crate::reparse::clear_readonly_handle(&file)
+    }
+
     /// All entries directly inside `folder`, read through its handle from the start.
     pub(super) fn list(folder: &File) -> io::Result<Vec<ListedEntry>> {
         // Whole u64 words keep every record in the buffer aligned.
@@ -791,22 +827,24 @@ mod handles {
                 // SAFETY: the call filled the buffer with a chain of complete records, each
                 // aligned and starting `NextEntryOffset` bytes after the one before. Fields are
                 // read through raw pointers, so no reference outlives a record's bytes.
-                let (next, attributes, name) = unsafe {
+                let (next, attributes, ea_size, name) = unsafe {
                     let record = start.add(offset).cast::<FILE_FULL_DIR_INFO>();
                     let next = ptr::addr_of!((*record).NextEntryOffset).read();
                     let attributes = ptr::addr_of!((*record).FileAttributes).read();
+                    let ea_size = ptr::addr_of!((*record).EaSize).read();
                     let length = ptr::addr_of!((*record).FileNameLength).read() as usize;
                     let name = std::slice::from_raw_parts(
                         ptr::addr_of!((*record).FileName).cast::<u16>(),
                         length / size_of::<u16>(),
                     );
-                    (next, attributes, OsString::from_wide(name))
+                    (next, attributes, ea_size, OsString::from_wide(name))
                 };
                 if name != "." && name != ".." {
                     entries.push(ListedEntry {
                         name,
                         directory: attributes & FILE_ATTRIBUTE_DIRECTORY != 0,
-                        reparse_point: attributes & FILE_ATTRIBUTE_REPARSE_POINT != 0,
+                        reparse_point: (attributes & FILE_ATTRIBUTE_REPARSE_POINT != 0)
+                            && !crate::reparse::is_benign_storage_reparse_tag(ea_size),
                     });
                 }
                 if next == 0 {
@@ -1246,7 +1284,7 @@ impl HeldFolder {
 fn require_direct_directory(path: &Path) -> Result<(), EntryError> {
     let metadata =
         fs::symlink_metadata(path).map_err(|error| EntryError::io(path.to_path_buf(), error))?;
-    if !metadata.is_dir() || is_link_or_reparse(&metadata) {
+    if !metadata.is_dir() || crate::reparse::metadata_is_link(path, &metadata) {
         return Err(EntryError::not_direct(path.to_path_buf()));
     }
     Ok(())
@@ -1267,20 +1305,6 @@ fn check_name(name: &str) -> io::Result<()> {
         ));
     }
     Ok(())
-}
-
-#[cfg(not(windows))]
-fn is_link_or_reparse(metadata: &Metadata) -> bool {
-    metadata.file_type().is_symlink()
-}
-
-#[cfg(windows)]
-fn is_link_or_reparse(metadata: &Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    use windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT;
-
-    metadata.file_type().is_symlink()
-        || metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
 }
 
 #[cfg(test)]

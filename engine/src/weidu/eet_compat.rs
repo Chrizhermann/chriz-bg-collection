@@ -33,7 +33,7 @@ pub(crate) struct EetCompatibilityInput<'a> {
 #[derive(Debug, Serialize)]
 pub(crate) struct EetCompatibilityEvidence {
     fix_id: &'static str,
-    artifact_id: &'static str,
+    artifact_id: String,
     archive_sha256: String,
     relative_path: &'static str,
     upstream_lf_sha256: &'static str,
@@ -41,19 +41,19 @@ pub(crate) struct EetCompatibilityEvidence {
     observed_before_sha256: String,
     observed_after_sha256: String,
     changed: bool,
-    /// Present only for a changed download: the fix then matched the faulty text alone,
-    /// because the rest of the file may differ from the reviewed release.
+    /// Present only for a changed download or newer EET release: the fix then matched the faulty
+    /// text alone, because the rest of the file may differ from the reviewed release.
     #[serde(skip_serializing_if = "Option::is_none")]
     matched: Option<&'static str>,
 }
 
-/// Apply only to the known Windows EET core, after source verification/materialization.
+/// Apply only to the Windows EET core, after source verification/materialization.
 /// Neither the original download nor extracted cache is rewritten.
 ///
 /// For the reviewed archive the whole file must be the reviewed original or its correction.
-/// When the official link served a different archive, the file may come from a newer EET
-/// release, so only the exact faulty batch text is replaced, once, and a file without it is
-/// left as it is: upstream may have fixed or changed it.
+/// When the official link served a different archive, or when EET comes from another artifact ID,
+/// only the exact faulty batch text is replaced, once, and a file without it is left as it is:
+/// upstream may have fixed or changed it.
 pub(crate) fn prepare(
     input: EetCompatibilityInput<'_>,
 ) -> Result<Option<EetCompatibilityEvidence>, String> {
@@ -65,31 +65,27 @@ pub(crate) fn prepare(
             .tp2
             .replace('\\', "/")
             .eq_ignore_ascii_case("eet/eet.tp2")
-        || input.artifact_id != ARTIFACT_ID
     {
         return Ok(None);
     }
-    let matched = if input.archive_drifted {
-        Some("faulty-text")
-    } else if input.artifact_sha256.eq_ignore_ascii_case(ARCHIVE_SHA256) {
-        None
-    } else {
-        return Ok(None);
-    };
-    let Some((before, after)) = (if matched.is_some() {
-        patch_drifted_file(input.target_root)?
-    } else {
+    let use_exact_reviewed_patch = !input.archive_drifted
+        && input.artifact_id == ARTIFACT_ID
+        && input.artifact_sha256.eq_ignore_ascii_case(ARCHIVE_SHA256);
+    let matched = (!use_exact_reviewed_patch).then_some("faulty-text");
+    let Some((before, after)) = (if use_exact_reviewed_patch {
         Some(patch_file(
             input.target_root,
             ORIGINAL_SHA256,
             CORRECTED_SHA256,
         )?)
+    } else {
+        patch_drifted_file(input.target_root)?
     }) else {
         return Ok(None);
     };
     Ok(Some(EetCompatibilityEvidence {
         fix_id: "eet-windows-documents-path-v1",
-        artifact_id: ARTIFACT_ID,
+        artifact_id: input.artifact_id.to_owned(),
         archive_sha256: input.artifact_sha256.to_ascii_lowercase(),
         relative_path: "EET/lib/macros.tph",
         upstream_lf_sha256: ORIGINAL_SHA256,
@@ -445,6 +441,37 @@ mod tests {
             .is_none());
         }
         assert_eq!(std::fs::read_dir(temp.path()).unwrap().count(), 0);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn eet_compat_patches_other_artifact_id_when_faulty_batch_present() {
+        let temp = tempfile::tempdir().unwrap();
+        let macros = temp.path().join("EET/lib/macros.tph");
+        std::fs::create_dir_all(macros.parent().unwrap()).unwrap();
+        let original = format!("// custom header\n{ORIGINAL_BATCH}// custom footer\n");
+        std::fs::write(&macros, original.as_bytes()).unwrap();
+
+        let evidence = prepare(EetCompatibilityInput {
+            mod_id: "eet",
+            artifact_id: "eet-v14-custom",
+            artifact_sha256: "cd34cd34cd34cd34cd34cd34cd34cd34cd34cd34cd34cd34cd34cd34cd34cd34",
+            archive_drifted: false,
+            target: GameRoot::Bg2,
+            tp2: "EET/EET.tp2",
+            components: &[0],
+            target_root: temp.path(),
+        })
+        .unwrap()
+        .expect("custom EET artifact with faulty batch should be patched");
+
+        assert_eq!(evidence.artifact_id, "eet-v14-custom");
+        assert!(evidence.changed);
+        assert_eq!(evidence.matched, Some("faulty-text"));
+        assert_eq!(
+            std::fs::read_to_string(&macros).unwrap(),
+            format!("// custom header\n{CORRECTED_BATCH}// custom footer\n")
+        );
     }
 
     fn drifted_input(target_root: &Path) -> EetCompatibilityInput<'_> {

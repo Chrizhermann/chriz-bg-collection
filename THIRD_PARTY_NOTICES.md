@@ -156,8 +156,8 @@ For MPL components, the versioned source/archive links below identify the corres
 Supplemental files fill upstream package omissions and document embedded components; their exact sources
 and checksums are recorded in `LICENSES/supplemental.json`. Original copyright/NOTICE texts follow.
 
-- `Cargo.lock` SHA-256 (LF-normalized): `1d14736755103e966dee75ebd7339e866a5f5306c67f3b34cf86107ffabf639e`
-- `app/package-lock.json` SHA-256 (LF-normalized): `4549fbbf073721a339f6a011f62783d7c1d5363fc3d9a944f231e30edd664ffc`
+- `Cargo.lock` SHA-256 (LF-normalized): `85a66f8e5a391ee525a77b944fe13135ccdee8b7e84666202e53707f57b7c468`
+- `app/package-lock.json` SHA-256 (LF-normalized): `0b2e3da0b7135dc095c9f6ce68d2115fbb02d313e36dd31bd5002db7be9e813e`
 
 ### Package inventory
 

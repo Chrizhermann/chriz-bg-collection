@@ -191,11 +191,11 @@ fn shell_path(path: &Path) -> Result<Vec<u16>, String> {
         return Err("Radar launch path must be absolute and contain no null character.".to_owned());
     }
     let shell = super::display_windows_path_text(text);
-    let expected = std::fs::canonicalize(path)
+    let expected = bg_engine::reparse::canonicalize_flexible(path)
         .map_err(|error| format!("resolve verified Radar launch path: {error}"))?;
-    let actual = std::fs::canonicalize(&shell)
+    let actual = bg_engine::reparse::canonicalize_flexible(Path::new(&shell))
         .map_err(|error| format!("resolve Radar Shell launch path: {error}"))?;
-    if actual != expected {
+    if !bg_engine::reparse::same_normalized_windows_path(&actual, &expected) {
         return Err("Radar Shell path does not resolve to the verified launch path.".to_owned());
     }
     Ok(shell.encode_utf16().chain(Some(0)).collect())

@@ -352,7 +352,7 @@ impl ManagedInstallRegistry {
                 path: path.clone(),
                 source,
             })?;
-            if metadata.file_type().is_symlink() || !metadata.is_file() {
+            if crate::reparse::metadata_is_link(&path, &metadata) || !metadata.is_file() {
                 return Err(unsafe_path(
                     &path,
                     "registry entries must be direct regular files",
@@ -416,7 +416,7 @@ impl ManagedInstallRegistry {
                 path: path.clone(),
                 source,
             })?;
-            if metadata.file_type().is_symlink() || !metadata.is_file() {
+            if crate::reparse::metadata_is_link(&path, &metadata) || !metadata.is_file() {
                 return Err(unsafe_path(
                     &path,
                     "campaign registry entries must be direct regular files",
@@ -475,7 +475,7 @@ impl ManagedInstallRegistry {
         validate_direct_file(&record.launch_path)?;
         let canonical_root = canonicalize(&record.managed_root)?;
         let canonical_launch = canonicalize(&record.launch_path)?;
-        if !canonical_launch.starts_with(&canonical_root) {
+        if !crate::reparse::windows_path_starts_with(&canonical_launch, &canonical_root) {
             return Err(RegistryError::InvalidRecord(
                 "launch path must be inside the managed root".to_owned(),
             ));
@@ -654,7 +654,7 @@ pub fn inspect_install_availability(record: &ManagedInstallRecord) -> Result<(),
     validate_direct_file(&record.launch_path)?;
     let root = canonicalize(&record.managed_root)?;
     let launch = canonicalize(&record.launch_path)?;
-    if !launch.starts_with(&root) {
+    if !crate::reparse::windows_path_starts_with(&launch, &root) {
         return Err(unsafe_path(
             &record.launch_path,
             &format!(
@@ -676,7 +676,7 @@ pub fn inspect_install_availability(record: &ManagedInstallRecord) -> Result<(),
 }
 
 fn canonicalize(path: &Path) -> Result<PathBuf, RegistryError> {
-    fs::canonicalize(path).map_err(|source| RegistryError::Io {
+    crate::reparse::canonicalize_flexible(path).map_err(|source| RegistryError::Io {
         path: path.to_path_buf(),
         source,
     })
@@ -714,7 +714,7 @@ fn campaign_record_bytes(
 fn read_existing(path: &Path) -> Result<Option<Vec<u8>>, RegistryError> {
     match fs::symlink_metadata(path) {
         Ok(metadata) => {
-            if metadata.file_type().is_symlink() || !metadata.is_file() {
+            if crate::reparse::metadata_is_link(path, &metadata) || !metadata.is_file() {
                 return Err(unsafe_path(path, "record destination is not a direct file"));
             }
             fs::read(path)
@@ -810,28 +810,8 @@ fn create_directories(path: &Path) -> Result<(), RegistryError> {
 }
 
 fn ensure_existing_ancestors_are_direct(path: &Path) -> Result<(), RegistryError> {
-    let mut current = Some(path);
-    while let Some(candidate) = current {
-        match fs::symlink_metadata(candidate) {
-            Ok(metadata) => {
-                if metadata.file_type().is_symlink() || !metadata.is_dir() {
-                    return Err(unsafe_path(
-                        candidate,
-                        "existing ancestor must be a direct directory",
-                    ));
-                }
-            }
-            Err(source) if source.kind() == std::io::ErrorKind::NotFound => {}
-            Err(source) => {
-                return Err(RegistryError::Io {
-                    path: candidate.to_path_buf(),
-                    source,
-                });
-            }
-        }
-        current = candidate.parent();
-    }
-    Ok(())
+    crate::reparse::ensure_existing_ancestors_are_directories(path)
+        .map_err(|source| unsafe_path(path, &source.to_string()))
 }
 
 fn validate_direct_directory(path: &Path) -> Result<(), RegistryError> {
@@ -839,7 +819,7 @@ fn validate_direct_directory(path: &Path) -> Result<(), RegistryError> {
         path: path.to_path_buf(),
         source,
     })?;
-    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+    if crate::reparse::metadata_is_link(path, &metadata) || !metadata.is_dir() {
         return Err(unsafe_path(path, "expected a direct non-symlink directory"));
     }
     Ok(())
@@ -850,7 +830,7 @@ fn validate_direct_file(path: &Path) -> Result<(), RegistryError> {
         path: path.to_path_buf(),
         source,
     })?;
-    if metadata.file_type().is_symlink() || !metadata.is_file() {
+    if crate::reparse::metadata_is_link(path, &metadata) || !metadata.is_file() {
         return Err(unsafe_path(path, "expected a direct non-symlink file"));
     }
     Ok(())

@@ -125,10 +125,11 @@ fn path_probe(path: &Path) -> Value {
             let attributes: Option<u32> = None;
             json!({
                 "path": path.to_string_lossy(),
-                "canonical_path": fs::canonicalize(path).ok().map(|path| path.to_string_lossy().into_owned()),
+                "canonical_path": bg_engine::reparse::canonicalize_flexible(path).ok().map(|path| path.to_string_lossy().into_owned()),
                 "is_directory": metadata.is_dir(),
                 "is_file": metadata.is_file(),
                 "is_symlink": metadata.file_type().is_symlink(),
+                "is_link": bg_engine::reparse::metadata_is_link(path, &metadata),
                 "length": metadata.len(),
                 "windows_attributes": attributes,
             })

@@ -225,24 +225,18 @@ fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, String> {
 }
 
 fn direct(path: &Path) -> Result<(), String> {
-    let mut current = Some(path);
-    while let Some(p) = current {
-        if p.exists() {
-            let metadata = fs::symlink_metadata(p).map_err(|e| e.to_string())?;
-            #[cfg(windows)]
-            {
-                use std::os::windows::fs::MetadataExt;
-                if metadata.file_attributes() & 0x400 != 0 {
-                    return Err("Manual checkpoint paths cannot use reparse points.".into());
-                }
-            }
-            if metadata.file_type().is_symlink() {
-                return Err("Manual checkpoint paths cannot use symbolic links.".into());
-            }
-        }
-        current = p.parent();
+    if let Some(parent) = path.parent() {
+        crate::reparse::ensure_existing_ancestors_are_directories(parent)
+            .map_err(|_| "Manual checkpoint paths cannot use symbolic links.".to_owned())?;
     }
-    Ok(())
+    match fs::symlink_metadata(path) {
+        Ok(metadata) if crate::reparse::metadata_is_link(path, &metadata) => {
+            Err("Manual checkpoint paths cannot use symbolic links.".into())
+        }
+        Ok(_) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error.to_string()),
+    }
 }
 
 fn write_once<T: Serialize>(path: &Path, value: &T) -> Result<(), String> {

@@ -137,7 +137,7 @@ fn preview_with(
             return Ok(with_unused_profile(plan))
         }
         Err(error) => return Err(io_at(root, error)),
-        Ok(metadata) if !metadata.is_dir() || reparse(&metadata) => {
+        Ok(metadata) if !metadata.is_dir() || crate::reparse::metadata_is_link(root, &metadata) => {
             return Ok(unlisted(
                 plan,
                 None,
@@ -146,7 +146,8 @@ fn preview_with(
         }
         Ok(_) => {}
     }
-    if fs::canonicalize(root).map_err(|e| io_at(root, e))? != *root {
+    let canonical = crate::reparse::canonicalize_flexible(root).map_err(|e| io_at(root, e))?;
+    if !crate::reparse::same_windows_path(&canonical, root) {
         return Ok(unlisted(
             plan,
             None,
@@ -498,7 +499,9 @@ fn journal_present(path: &Path) -> Result<bool, RemovalError> {
     match fs::symlink_metadata(path) {
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
         Err(error) => Err(io_at(path, error)),
-        Ok(metadata) if !metadata.is_file() || reparse(&metadata) => {
+        Ok(metadata)
+            if !metadata.is_file() || crate::reparse::metadata_is_link(path, &metadata) =>
+        {
             Err(failure("Unsafe removal journal."))
         }
         Ok(_) => Ok(true),
@@ -571,20 +574,15 @@ fn entry_failure(error: EntryError) -> RemovalError {
 }
 
 fn direct_ancestors(path: &Path) -> Result<(), RemovalError> {
-    for ancestor in path.ancestors() {
-        match fs::symlink_metadata(ancestor) {
-            Ok(metadata) if reparse(&metadata) => {
-                return Err(failure(format!(
-                    "Refusing linked/reparse path {}",
-                    ancestor.display()
-                )))
-            }
-            Ok(_) => {}
-            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
-            Err(error) => return Err(io_at(ancestor, error)),
-        }
-    }
-    Ok(())
+    let Some(parent) = path.parent() else {
+        return Ok(());
+    };
+    crate::reparse::ensure_existing_ancestors_are_directories(parent).map_err(|error| {
+        failure(format!(
+            "Refusing linked/reparse path {}: {error}",
+            path.display()
+        ))
+    })
 }
 
 fn reject_broad_root(root: &Path) -> Result<(), RemovalError> {
@@ -613,15 +611,16 @@ fn reject_broad_root(root: &Path) -> Result<(), RemovalError> {
             .filter(|path| path.is_absolute())
         {
             let path = prospective_path(&path)?;
-            if path.starts_with(root) {
+            if crate::reparse::windows_path_starts_with(&path, root) {
                 return Err(failure(
                     "Refusing home, system, or application-data folder.",
                 ));
             }
         }
     }
-    if let Ok(cwd) = std::env::current_dir().and_then(fs::canonicalize) {
-        if cwd.starts_with(root) {
+    if let Ok(cwd) = std::env::current_dir().and_then(|p| crate::reparse::canonicalize_flexible(&p))
+    {
+        if crate::reparse::windows_path_starts_with(&cwd, root) {
             return Err(failure("Refusing current workspace or its parent."));
         }
     }
@@ -647,7 +646,8 @@ fn resolvable_path(path: &Path) -> Result<Option<PathBuf>, RemovalError> {
     }
     for ancestor in path.ancestors() {
         if ancestor.exists() {
-            let base = fs::canonicalize(ancestor).map_err(|e| io_at(ancestor, e))?;
+            let base =
+                crate::reparse::canonicalize_flexible(ancestor).map_err(|e| io_at(ancestor, e))?;
             return Ok(Some(
                 base.join(path.strip_prefix(ancestor).map_err(failure)?),
             ));
@@ -657,30 +657,7 @@ fn resolvable_path(path: &Path) -> Result<Option<PathBuf>, RemovalError> {
 }
 
 fn overlap(a: &Path, b: &Path) -> bool {
-    #[cfg(windows)]
-    {
-        let a = a.to_string_lossy().to_lowercase();
-        let b = b.to_string_lossy().to_lowercase();
-        let a = Path::new(&a);
-        let b = Path::new(&b);
-        a.starts_with(b) || b.starts_with(a)
-    }
-    #[cfg(not(windows))]
-    {
-        a.starts_with(b) || b.starts_with(a)
-    }
-}
-
-fn reparse(metadata: &fs::Metadata) -> bool {
-    #[cfg(windows)]
-    {
-        use std::os::windows::fs::MetadataExt;
-        metadata.file_attributes() & 0x400 != 0 || metadata.file_type().is_symlink()
-    }
-    #[cfg(not(windows))]
-    {
-        metadata.file_type().is_symlink()
-    }
+    crate::reparse::windows_path_starts_with(a, b) || crate::reparse::windows_path_starts_with(b, a)
 }
 
 fn validate_tree(root: &HeldFolder) -> Result<(), RemovalError> {
@@ -1142,7 +1119,10 @@ mod tests {
 
         assert_eq!(outcome.unused_save_path_kept, Some(profile.clone()));
         assert!(elsewhere.join(SAVE_OWNER_MARKER).is_file());
-        assert!(reparse(&fs::symlink_metadata(&profile).unwrap()));
+        assert!(crate::reparse::metadata_is_link(
+            &profile,
+            &fs::symlink_metadata(&profile).unwrap()
+        ));
     }
     #[test]
     fn a_linked_profile_is_kept_without_following_it() {
@@ -1157,7 +1137,10 @@ mod tests {
         run(&f, &plan).unwrap();
 
         assert!(elsewhere.join(SAVE_OWNER_MARKER).is_file());
-        assert!(reparse(&fs::symlink_metadata(&profile).unwrap()));
+        assert!(crate::reparse::metadata_is_link(
+            &profile,
+            &fs::symlink_metadata(&profile).unwrap()
+        ));
     }
     /// Another program, such as a virus scanner or a sync client, holds the marker open. The
     /// installation is still removed, and the profile is reported.
@@ -1710,7 +1693,10 @@ mod tests {
         );
         run(&f, &plan).unwrap();
         assert!(f.source.join("original.txt").exists());
-        assert!(reparse(&fs::symlink_metadata(&f.root).unwrap()));
+        assert!(crate::reparse::metadata_is_link(
+            &f.root,
+            &fs::symlink_metadata(&f.root).unwrap()
+        ));
         assert_eq!(registered_campaigns(&f), 0);
     }
     #[test]

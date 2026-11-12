@@ -186,10 +186,8 @@ fn known_desktop_directory() -> Result<PathBuf, String> {
 #[cfg(windows)]
 fn write_shortcut(desktop: &Path, request: &ShortcutRequest) -> Result<PathBuf, String> {
     use std::os::windows::ffi::{OsStrExt, OsStringExt};
-    use std::os::windows::fs::MetadataExt;
     use std::{ffi::OsString, fs, ptr};
     use windows::core::{Interface, PCWSTR};
-    use windows::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT;
     use windows::Win32::System::Com::{
         CoCreateInstance, IPersistFile, CLSCTX_INPROC_SERVER, STGM_READ,
     };
@@ -225,11 +223,13 @@ fn write_shortcut(desktop: &Path, request: &ShortcutRequest) -> Result<PathBuf, 
                 .map_err(|error| format!("read existing shortcut marker: {error}"))?;
         }
         let stored_target = PathBuf::from(read_wide(&target));
-        let same_target = fs::canonicalize(&stored_target)
+        let same_target = bg_engine::reparse::canonicalize_flexible(&stored_target)
             .ok()
-            .zip(fs::canonicalize(&request.target).ok())
-            .map(|(left, right)| left == right)
-            .unwrap_or(stored_target == request.target);
+            .zip(bg_engine::reparse::canonicalize_flexible(&request.target).ok())
+            .map(|(left, right)| bg_engine::reparse::same_normalized_windows_path(&left, &right))
+            .unwrap_or_else(|| {
+                bg_engine::reparse::same_normalized_windows_path(&stored_target, &request.target)
+            });
         Ok(same_target
             && read_wide(&arguments) == std::ffi::OsStr::new(&request.arguments)
             && read_wide(&description) == std::ffi::OsStr::new(marker))
@@ -259,7 +259,7 @@ fn write_shortcut(desktop: &Path, request: &ShortcutRequest) -> Result<PathBuf, 
                 ))
             }
         };
-        if !metadata.is_file() || metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT.0 != 0 {
+        if !metadata.is_file() || bg_engine::reparse::metadata_is_link(path, &metadata) {
             return Ok(ExistingShortcut::Occupied);
         }
         let link: IShellLinkW = unsafe { CoCreateInstance(&ShellLink, None, CLSCTX_INPROC_SERVER) }
@@ -605,10 +605,10 @@ mod tests {
         let created = create_shortcut_in_directory(desktop.path(), request)
             .expect("create safe fallback for reparse collision");
         assert_ne!(created, original);
-        assert!(fs::symlink_metadata(&original)
-            .expect("inspect preserved shortcut reparse fixture")
-            .file_type()
-            .is_symlink());
+        assert!(bg_engine::reparse::metadata_is_link(
+            &original,
+            &fs::symlink_metadata(&original).expect("inspect preserved shortcut reparse fixture"),
+        ));
         assert_eq!(fs::read(protected).expect("read protected target"), bytes);
     }
 }

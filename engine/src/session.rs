@@ -625,7 +625,7 @@ impl SessionStore {
                 path: path.clone(),
                 source,
             })?;
-            if !metadata.is_file() || metadata.file_type().is_symlink() {
+            if !metadata.is_file() || crate::reparse::metadata_is_link(&path, &metadata) {
                 return Err(ledger_error(&path, "ledger entries must be regular files"));
             }
             let Some(name) = entry.file_name().to_str().map(str::to_owned) else {
@@ -794,6 +794,11 @@ fn normalize_created(
             ));
         }
     };
+    created.staged_bg1 = created
+        .staged_bg1
+        .map(|path| crate::reparse::canonicalize_prospective(&path).unwrap_or(path));
+    created.staged_bg2 =
+        crate::reparse::canonicalize_prospective(&created.staged_bg2).unwrap_or(created.staged_bg2);
     if created.staged_bg1 != expected_bg1 {
         return Err(identity_mismatch(
             "staged BG1 path",
@@ -1581,7 +1586,10 @@ fn write_create_once(path: &Path, bytes: &[u8]) -> Result<()> {
 
 fn remove_owned_temporary(path: &Path) -> Result<()> {
     match fs::symlink_metadata(path) {
-        Ok(metadata) if metadata.is_file() && !metadata.file_type().is_symlink() => {
+        Ok(metadata)
+            if metadata.is_file() && !crate::reparse::metadata_is_link(path, &metadata) =>
+        {
+            let _ = crate::reparse::clear_readonly(path);
             fs::remove_file(path).map_err(|source| EngineError::Io {
                 path: path.to_path_buf(),
                 source,
@@ -1630,13 +1638,13 @@ fn canonical_directory(path: &Path, label: &str) -> Result<PathBuf> {
         path: path.to_path_buf(),
         source,
     })?;
-    if !metadata.is_dir() || metadata.file_type().is_symlink() {
+    if !metadata.is_dir() || crate::reparse::metadata_is_link(path, &metadata) {
         return Err(ledger_error(
             path,
             &format!("{label} must be an existing non-symlink directory"),
         ));
     }
-    fs::canonicalize(path).map_err(|source| EngineError::Io {
+    crate::reparse::canonicalize_flexible(path).map_err(|source| EngineError::Io {
         path: path.to_path_buf(),
         source,
     })
@@ -1647,7 +1655,7 @@ fn validate_directory(path: &Path) -> Result<()> {
         path: path.to_path_buf(),
         source,
     })?;
-    if !metadata.is_dir() || metadata.file_type().is_symlink() {
+    if !metadata.is_dir() || crate::reparse::metadata_is_link(path, &metadata) {
         return Err(ledger_error(path, "expected a non-symlink directory"));
     }
     Ok(())
@@ -1658,7 +1666,7 @@ fn validate_regular_file(path: &Path) -> Result<()> {
         path: path.to_path_buf(),
         source,
     })?;
-    if !metadata.is_file() || metadata.file_type().is_symlink() {
+    if !metadata.is_file() || crate::reparse::metadata_is_link(path, &metadata) {
         return Err(ledger_error(path, "expected a regular non-symlink file"));
     }
     Ok(())

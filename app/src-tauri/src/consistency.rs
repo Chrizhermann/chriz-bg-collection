@@ -103,7 +103,7 @@ fn check_logs_with_patch_verifier(
             .collect::<Vec<_>>();
         let metadata = fs::symlink_metadata(&path).map_err(|error| error.to_string())?;
         if !metadata.is_file()
-            || metadata.file_type().is_symlink()
+            || bg_engine::reparse::metadata_is_link(&path, &metadata)
             || metadata.len() > 16 * 1024 * 1024
         {
             return Err("Mod list is not a regular bounded file.".to_owned());

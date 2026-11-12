@@ -90,16 +90,17 @@ impl VerifiedWeidu {
             path: path.to_path_buf(),
             source,
         })?;
-        if metadata.file_type().is_symlink() || !metadata.is_file() {
+        if crate::reparse::metadata_is_link(path, &metadata) || !metadata.is_file() {
             return Err(InvocationError::UnsafeToolPath {
                 path: path.to_path_buf(),
             });
         }
 
-        let source_path = path.canonicalize().map_err(|source| InvocationError::Io {
-            path: path.to_path_buf(),
-            source,
-        })?;
+        let source_path =
+            crate::reparse::canonicalize_flexible(path).map_err(|source| InvocationError::Io {
+                path: path.to_path_buf(),
+                source,
+            })?;
         let bytes = fs::read(&source_path).map_err(|source| InvocationError::Io {
             path: source_path.clone(),
             source,
@@ -1018,7 +1019,7 @@ fn canonical_game_root(path: &Path) -> Result<PathBuf, InvocationError> {
             path: path.to_path_buf(),
         });
     }
-    path.canonicalize().map_err(|source| InvocationError::Io {
+    crate::reparse::canonicalize_flexible(path).map_err(|source| InvocationError::Io {
         path: path.to_path_buf(),
         source,
     })
@@ -1029,34 +1030,38 @@ fn resolve_debug_path(attempt_dir: &Path) -> Result<PathBuf, InvocationError> {
         path: attempt_dir.to_path_buf(),
         source,
     })?;
-    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+    if crate::reparse::metadata_is_link(attempt_dir, &metadata) || !metadata.is_dir() {
         return Err(InvocationError::UnsafeAttemptDirectory {
             path: attempt_dir.to_path_buf(),
         });
     }
-    let attempt = attempt_dir
-        .canonicalize()
-        .map_err(|source| InvocationError::Io {
+    let attempt = crate::reparse::canonicalize_flexible(attempt_dir).map_err(|source| {
+        InvocationError::Io {
             path: attempt_dir.to_path_buf(),
             source,
-        })?;
+        }
+    })?;
     let candidate = attempt.join(DEBUG_LOG_NAME);
 
     match fs::symlink_metadata(&candidate) {
         Ok(candidate_metadata) => {
-            let resolved = candidate
-                .canonicalize()
-                .map_err(|source| InvocationError::Io {
+            let resolved = crate::reparse::canonicalize_flexible(&candidate).map_err(|source| {
+                InvocationError::Io {
                     path: candidate.clone(),
                     source,
-                })?;
-            if !resolved.starts_with(&attempt) || resolved == attempt {
+                }
+            })?;
+            if !crate::reparse::windows_path_starts_with(&resolved, &attempt)
+                || crate::reparse::same_windows_path(&resolved, &attempt)
+            {
                 return Err(InvocationError::LogEscapesAttempt {
                     attempt,
                     path: resolved,
                 });
             }
-            if candidate_metadata.file_type().is_symlink() || !candidate_metadata.is_file() {
+            if crate::reparse::metadata_is_link(&candidate, &candidate_metadata)
+                || !candidate_metadata.is_file()
+            {
                 return Err(InvocationError::UnsafeLogDestination { path: candidate });
             }
             Ok(resolved)
@@ -1075,13 +1080,15 @@ fn resolve_debug_path(attempt_dir: &Path) -> Result<PathBuf, InvocationError> {
                 source,
             })?;
             drop(file);
-            let resolved = candidate
-                .canonicalize()
-                .map_err(|source| InvocationError::Io {
+            let resolved = crate::reparse::canonicalize_flexible(&candidate).map_err(|source| {
+                InvocationError::Io {
                     path: candidate.clone(),
                     source,
-                })?;
-            if !resolved.starts_with(&attempt) || resolved == attempt {
+                }
+            })?;
+            if !crate::reparse::windows_path_starts_with(&resolved, &attempt)
+                || crate::reparse::same_windows_path(&resolved, &attempt)
+            {
                 return Err(InvocationError::LogEscapesAttempt {
                     attempt,
                     path: resolved,
@@ -1104,7 +1111,7 @@ fn materialize_verified_tool(
     let destination = root.join(executable_name);
     match fs::symlink_metadata(&destination) {
         Ok(metadata) => {
-            if metadata.file_type().is_symlink() || !metadata.is_file() {
+            if crate::reparse::metadata_is_link(&destination, &metadata) || !metadata.is_file() {
                 return Err(InvocationError::UnsafeProgramDestination { path: destination });
             }
             let existing = fs::read(&destination).map_err(|source| InvocationError::Io {
@@ -1112,6 +1119,7 @@ fn materialize_verified_tool(
                 source,
             })?;
             if existing != tool.bytes {
+                let _ = crate::reparse::clear_readonly(&destination);
                 let mut file = OpenOptions::new()
                     .write(true)
                     .truncate(true)
@@ -1158,13 +1166,13 @@ fn materialize_verified_tool(
         }
     }
 
-    let program = destination
-        .canonicalize()
-        .map_err(|source| InvocationError::Io {
+    let program = crate::reparse::canonicalize_flexible(&destination).map_err(|source| {
+        InvocationError::Io {
             path: destination.clone(),
             source,
-        })?;
-    if !program.starts_with(root) {
+        }
+    })?;
+    if !crate::reparse::windows_path_starts_with(&program, root) {
         return Err(InvocationError::UnsafeProgramDestination { path: program });
     }
     let bytes = fs::read(&program).map_err(|source| InvocationError::Io {

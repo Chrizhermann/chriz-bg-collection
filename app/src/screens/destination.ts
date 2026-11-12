@@ -5,7 +5,7 @@ import { flavor } from "../flavor";
 
 export function destinationScreen(
   evaluation: DestinationEvaluation,
-  onInspect: (path: string) => void | Promise<void>,
+  onInspect: (path: string, liveTyping?: boolean) => void | Promise<void>,
   onBrowse: () => void | Promise<void>,
   back: () => void,
   next: () => void,
@@ -19,7 +19,21 @@ export function destinationScreen(
   input.id = "destination-path";
   input.type = "text";
   input.value = evaluation.path;
-  input.addEventListener("change", () => void onInspect(input.value));
+  let inspectTimer: number | null = null;
+  input.addEventListener("input", () => {
+    if (inspectTimer !== null) window.clearTimeout(inspectTimer);
+    inspectTimer = window.setTimeout(() => {
+      inspectTimer = null;
+      if (input.isConnected) void onInspect(input.value, true);
+    }, 250);
+  });
+  input.addEventListener("change", () => {
+    if (inspectTimer !== null) {
+      window.clearTimeout(inspectTimer);
+      inspectTimer = null;
+    }
+    void onInspect(input.value, false);
+  });
   const browseButton = actionButton("Browse…", onBrowse, "quiet");
   browseButton.setAttribute("aria-label", "Browse for install location");
   const space = evaluation.requiredSpace !== undefined && evaluation.availableSpace !== undefined

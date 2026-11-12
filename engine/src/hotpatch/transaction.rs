@@ -142,7 +142,9 @@ pub(super) struct History {
 }
 
 pub(super) fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, String> {
-    serde_json::from_slice(&files::read(path, RECORD_LIMIT)?).map_err(files::err)
+    let bytes = files::read(path, RECORD_LIMIT)?;
+    let bytes = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes);
+    serde_json::from_slice(bytes).map_err(files::err)
 }
 
 fn later_records(dir: &Path) -> bool {
@@ -370,8 +372,9 @@ pub fn launch_guard(root: &Path) -> Result<(), String> {
 }
 
 pub(super) fn install_id_of(receipt: &Path) -> Result<String, String> {
-    let value: serde_json::Value =
-        serde_json::from_slice(&files::read(receipt, 64 * 1024 * 1024)?).map_err(files::err)?;
+    let bytes = files::read(receipt, 64 * 1024 * 1024)?;
+    let bytes = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes);
+    let value: serde_json::Value = serde_json::from_slice(bytes).map_err(files::err)?;
     value
         .get("install_id")
         .and_then(|id| id.as_str())

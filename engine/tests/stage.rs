@@ -812,11 +812,7 @@ fn a_bg1_identity_patch_failure_discards_the_unisolated_stage() {
     let temp = tempfile::tempdir().unwrap();
     let bg1 = source_tree(temp.path(), "source-bg1");
     let bg2 = source_tree(temp.path(), "source-bg2");
-    fs::write(
-        bg1.join("engine.lua"),
-        b"engine_name = \"One\"\r\nengine_name = \"Two\"\r\n",
-    )
-    .unwrap();
+    fs::write(bg1.join("engine.lua"), b"engine_name = 123\r\n").unwrap();
     let layout = ManagedLayout::prepare(temp.path().join("managed"), &bg1, &bg2).unwrap();
     let documents = temp.path().join("Documents");
     fs::create_dir(&documents).unwrap();
@@ -830,13 +826,13 @@ fn a_bg1_identity_patch_failure_discards_the_unisolated_stage() {
 
     let error = stage_initial_games(&layout, &identity).unwrap_err();
 
-    assert!(error.to_string().contains("exactly one"), "{error}");
+    assert!(error.to_string().contains("engine_name"), "{error}");
     assert!(!layout.bg1_root().exists());
     assert_eq!(fs::read_dir(layout.game_root()).unwrap().count(), 0);
 }
 
 #[test]
-fn engine_name_patch_preserves_other_lines_and_rejects_ambiguous_assignments() {
+fn engine_name_patch_preserves_other_lines_and_overwrites_missing_or_multiple_assignments() {
     let temp = tempfile::tempdir().unwrap();
     let (layout, _, _) = layout(&temp);
     let documents = temp.path().join("Documents");
@@ -849,17 +845,37 @@ fn engine_name_patch_preserves_other_lines_and_rejects_ambiguous_assignments() {
     )
     .unwrap();
     stage_game_copy(&layout, GameRole::Bg2ee).unwrap();
+
     fs::write(
         layout.game_root().join("engine.lua"),
         b"engine_name = \"One\"\r\nengine_mode = 1\r\nengine_name = \"Two\"\r\n",
     )
     .unwrap();
-
-    let error = finalize_game_identity(&layout, &identity).unwrap_err();
-    assert!(error.to_string().contains("exactly one"), "{error}");
+    finalize_game_identity(&layout, &identity).unwrap();
     assert_eq!(
-        fs::read(layout.game_root().join("engine.lua")).unwrap(),
-        b"engine_name = \"One\"\r\nengine_mode = 1\r\nengine_name = \"Two\"\r\n"
+        read_engine_name(layout.game_root()).unwrap(),
+        identity.engine_name
+    );
+    let patched_multiple = fs::read_to_string(layout.game_root().join("engine.lua")).unwrap();
+    assert!(
+        patched_multiple.contains("engine_mode = 1"),
+        "{patched_multiple}"
+    );
+
+    fs::write(
+        layout.game_root().join("engine.lua"),
+        b"engine_mode = 1\r\n",
+    )
+    .unwrap();
+    finalize_game_identity(&layout, &identity).unwrap();
+    assert_eq!(
+        read_engine_name(layout.game_root()).unwrap(),
+        identity.engine_name
+    );
+    let patched_missing = fs::read_to_string(layout.game_root().join("engine.lua")).unwrap();
+    assert!(
+        patched_missing.contains("engine_mode = 1"),
+        "{patched_missing}"
     );
 }
 
@@ -1528,5 +1544,47 @@ fn staging_bg2ee_with_baldur_ii_exe_materializes_independent_canonical_baldur_ex
     assert_eq!(
         fs::read(layout.game_root().join("Baldur.exe")).unwrap(),
         b"gog 2.7.3 game binary"
+    );
+}
+
+#[test]
+fn readonly_source_files_desktop_ini_and_harmless_top_level_files_do_not_block_staging() {
+    let temp = tempfile::tempdir().unwrap();
+    let bg1 = source_tree(temp.path(), "source-bg1");
+    let bg2 = source_tree(temp.path(), "source-bg2");
+    let mut perms = fs::metadata(bg1.join("engine.lua")).unwrap().permissions();
+    perms.set_readonly(true);
+    fs::set_permissions(bg1.join("engine.lua"), perms.clone()).unwrap();
+    fs::set_permissions(bg1.join("data/base.bif"), perms.clone()).unwrap();
+    fs::set_permissions(bg2.join("engine.lua"), perms).unwrap();
+    fs::write(bg1.join("data/desktop.ini"), b"[.ShellClassInfo]\r\n").unwrap();
+    fs::write(bg2.join("Thumbs.db"), b"thumbcache").unwrap();
+
+    let managed = temp.path().join("managed");
+    fs::create_dir(&managed).unwrap();
+    fs::write(managed.join("notes.txt"), b"player notes").unwrap();
+    fs::write(managed.join("desktop.ini"), b"[.ShellClassInfo]\r\n").unwrap();
+
+    let layout = ManagedLayout::prepare(&managed, &bg1, &bg2).unwrap();
+    let documents = temp.path().join("Documents");
+    fs::create_dir(&documents).unwrap();
+    let identity = reserve_save_identity(
+        &FixedDocuments(documents),
+        &layout,
+        "Chriz EET",
+        "install-ro",
+    )
+    .unwrap();
+
+    let reports = stage_initial_games(&layout, &identity).unwrap();
+    assert_eq!(reports.bg1.copied_files, 2);
+    assert!(!fs::metadata(layout.bg1_root().join("data/base.bif"))
+        .unwrap()
+        .permissions()
+        .readonly());
+    finalize_game_identity(&layout, &identity).unwrap();
+    assert_eq!(
+        read_engine_name(layout.game_root()).unwrap(),
+        identity.engine_name
     );
 }

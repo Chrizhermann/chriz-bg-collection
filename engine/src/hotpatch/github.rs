@@ -73,6 +73,7 @@ pub(super) fn latest_release(repository: &str, asset: &str) -> Result<LatestRele
 
 /// Check GitHub's answer `body` for `repository`'s Latest release.
 pub(super) fn parse(repository: &str, asset: &str, body: &[u8]) -> Result<LatestRelease, String> {
+    let body = body.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(body);
     let release: GitHubRelease = serde_json::from_slice(body)
         .map_err(|error| format!("GitHub's answer is not a release: {error}"))?;
     if release.draft || release.prerelease {

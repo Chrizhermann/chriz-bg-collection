@@ -94,10 +94,13 @@ pub(crate) fn verify_installed_baseline(
     player_mods: PlayerMods,
 ) -> Result<VerifiedInstalledBaseline, CliError> {
     let root = canonical_direct_directory(&record.managed_root, "managed installation")?;
-    if metadata_is_reparse(&fs::symlink_metadata(&record.managed_root).map_err(problem)?) {
+    if crate::reparse::metadata_is_link(
+        &record.managed_root,
+        &fs::symlink_metadata(&record.managed_root).map_err(problem)?,
+    ) {
         return Err(problem("Linked installation folders are not supported."));
     }
-    if root != record.managed_root
+    if !crate::reparse::same_normalized_windows_path(&root, &record.managed_root)
         || record.schema_version != crate::registry::REGISTRY_SCHEMA_VERSION
     {
         return Err(problem(
@@ -115,7 +118,7 @@ pub(crate) fn verify_installed_baseline(
     let replay = store.replay().map_err(problem)?;
     let created = replay.created();
     if created.install_id != record.install_id
-        || created.managed_root != root
+        || !crate::reparse::same_normalized_windows_path(&created.managed_root, &root)
         || created.recipe_payload_sha256 != record.recipe_sha256
     {
         return Err(problem(
@@ -357,7 +360,7 @@ fn bounded_file(root: &Path, path: &Path) -> Result<Vec<u8>, CliError> {
         }
         current.push(component);
         let metadata = fs::symlink_metadata(&current).map_err(problem)?;
-        if metadata.file_type().is_symlink() || metadata_is_reparse(&metadata) {
+        if crate::reparse::metadata_is_link(&current, &metadata) {
             return Err(problem("Linked installation records are not supported."));
         }
     }

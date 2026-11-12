@@ -209,20 +209,13 @@ pub fn export_diagnostics(
     let temporary = temporary_sibling(&output_path)?;
 
     let result = write_bundle(&temporary, &selected, &redactions, start_here).and_then(|()| {
-        match crate::fs_retry::rename_noclobber(&temporary, &output_path) {
-            Ok(()) => Ok(()),
-            Err(source)
-                if source.kind() == std::io::ErrorKind::AlreadyExists || output_path.exists() =>
-            {
-                Err(DiagnosticsError::OutputExists {
-                    path: output_path.clone(),
-                })
-            }
-            Err(source) => Err(DiagnosticsError::Io {
-                path: output_path.clone(),
-                source,
-            }),
+        if output_path.exists() {
+            let _ = crate::reparse::clear_readonly(&output_path);
         }
+        crate::fs_retry::rename(&temporary, &output_path).map_err(|source| DiagnosticsError::Io {
+            path: output_path.clone(),
+            source,
+        })
     });
     if let Err(error) = result {
         let _ = fs::remove_file(&temporary);
@@ -338,7 +331,7 @@ fn select_recorded_entries(state_root: &Path) -> Result<Vec<SelectedEntry>, Diag
                     path: attempt_root.clone(),
                     source,
                 })?;
-            if metadata.file_type().is_symlink() || is_reparse_point(&metadata) {
+            if crate::reparse::metadata_is_link(&attempt_root, &metadata) {
                 return Err(unsafe_path(
                     &attempt_root,
                     "links and reparse points are forbidden in diagnostics evidence",
@@ -442,7 +435,7 @@ fn add_shared_evidence(
     for folder in [&evidence, &decisions] {
         match fs::symlink_metadata(folder) {
             Ok(metadata) => {
-                if metadata.file_type().is_symlink() || is_reparse_point(&metadata) {
+                if crate::reparse::metadata_is_link(folder, &metadata) {
                     return Err(unsafe_path(
                         folder,
                         "links and reparse points are forbidden in diagnostics evidence",
@@ -691,7 +684,7 @@ fn direct_metadata(path: &Path) -> Result<fs::Metadata, DiagnosticsError> {
         path: path.to_path_buf(),
         source,
     })?;
-    if metadata.file_type().is_symlink() {
+    if crate::reparse::metadata_is_link(path, &metadata) {
         return Err(unsafe_path(path, "links are forbidden in diagnostics logs"));
     }
     Ok(metadata)
@@ -1535,14 +1528,23 @@ fn resolve_new_output(requested: &Path, managed_root: &Path) -> Result<PathBuf, 
         .file_name()
         .ok_or_else(|| unsafe_path(requested, "output has no filename"))?;
     let output = parent.join(name);
-    if output.starts_with(managed_root) {
+    if crate::reparse::windows_path_starts_with(&output, managed_root) {
         return Err(unsafe_path(
             &output,
             "diagnostics output must be outside the managed installation",
         ));
     }
     match fs::symlink_metadata(&output) {
-        Ok(_) => Err(DiagnosticsError::OutputExists { path: output }),
+        Ok(metadata) => {
+            if metadata.is_dir() || crate::reparse::metadata_is_link(&output, &metadata) {
+                Err(unsafe_path(
+                    &output,
+                    "diagnostics output must be a regular file path, not a directory or link",
+                ))
+            } else {
+                Ok(output)
+            }
+        }
         Err(source) if source.kind() == std::io::ErrorKind::NotFound => Ok(output),
         Err(source) => Err(DiagnosticsError::Io {
             path: output,
@@ -1580,22 +1582,10 @@ fn validate_identifier(value: &str, path: &Path) -> Result<(), DiagnosticsError>
 
 fn canonical_direct_directory(path: &Path) -> Result<PathBuf, DiagnosticsError> {
     validate_direct_directory(path)?;
-    fs::canonicalize(path).map_err(|source| DiagnosticsError::Io {
+    crate::reparse::canonicalize_flexible(path).map_err(|source| DiagnosticsError::Io {
         path: path.to_path_buf(),
         source,
     })
-}
-
-#[cfg(windows)]
-fn is_reparse_point(metadata: &fs::Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    // FILE_ATTRIBUTE_REPARSE_POINT
-    metadata.file_attributes() & 0x400 != 0
-}
-
-#[cfg(not(windows))]
-fn is_reparse_point(_metadata: &fs::Metadata) -> bool {
-    false
 }
 
 fn validate_direct_directory(path: &Path) -> Result<(), DiagnosticsError> {
@@ -1603,7 +1593,7 @@ fn validate_direct_directory(path: &Path) -> Result<(), DiagnosticsError> {
         path: path.to_path_buf(),
         source,
     })?;
-    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+    if crate::reparse::metadata_is_link(path, &metadata) || !metadata.is_dir() {
         return Err(unsafe_path(path, "expected a direct non-symlink directory"));
     }
     Ok(())
@@ -1614,7 +1604,7 @@ fn validate_direct_file(path: &Path) -> Result<(), DiagnosticsError> {
         path: path.to_path_buf(),
         source,
     })?;
-    if metadata.file_type().is_symlink() || !metadata.is_file() {
+    if crate::reparse::metadata_is_link(path, &metadata) || !metadata.is_file() {
         return Err(unsafe_path(path, "expected a direct non-symlink file"));
     }
     Ok(())

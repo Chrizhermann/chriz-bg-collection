@@ -69,20 +69,20 @@ impl FileSystemProvider for SystemFileSystem {
                 let entry_path = entry.path();
                 let metadata = fs::symlink_metadata(&entry_path)?;
                 Ok(DirectoryEntry {
-                    path: entry_path,
+                    path: entry_path.clone(),
                     name: entry.file_name(),
-                    kind: metadata_kind(&metadata),
+                    kind: metadata_kind(&entry_path, &metadata),
                 })
             })
             .collect()
     }
 
     fn file_kind(&self, path: &Path) -> io::Result<FileKind> {
-        fs::symlink_metadata(path).map(|metadata| metadata_kind(&metadata))
+        fs::symlink_metadata(path).map(|metadata| metadata_kind(path, &metadata))
     }
 
     fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
-        fs::canonicalize(path)
+        crate::reparse::canonicalize_flexible(path)
     }
 
     #[cfg(windows)]
@@ -444,14 +444,13 @@ pub(crate) fn inspect_profile_paths<F: FileSystemProvider>(
             },
         ));
     }
-    if fs_provider
+    let root_kind = fs_provider
         .file_kind(root)
         .map_err(|source| GameError::Io {
             path: root.to_path_buf(),
             source,
-        })?
-        != FileKind::Directory
-    {
+        })?;
+    if !matches!(root_kind, FileKind::Directory | FileKind::Symlink) {
         return Err(GameError::Io {
             path: root.to_path_buf(),
             source: io::Error::new(
@@ -466,6 +465,23 @@ pub(crate) fn inspect_profile_paths<F: FileSystemProvider>(
             path: root.to_path_buf(),
             source,
         })?;
+    if root_kind == FileKind::Symlink
+        && fs_provider
+            .file_kind(&canonical_root)
+            .map_err(|source| GameError::Io {
+                path: canonical_root.clone(),
+                source,
+            })?
+            != FileKind::Directory
+    {
+        return Err(GameError::Io {
+            path: root.to_path_buf(),
+            source: io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "source root is not a direct directory",
+            ),
+        });
+    }
     let resolved_executable = resolve_game_executable(
         fs_provider,
         &canonical_root,
@@ -1047,6 +1063,11 @@ fn observe_profile<F: FileSystemProvider>(
                 {
                     Ok(entries) => {
                         for entry in entries {
+                            if crate::reparse::is_benign_os_metadata_filename(&entry.name)
+                                && entry.kind == FileKind::File
+                            {
+                                continue;
+                            }
                             let name = entry.name.to_string_lossy();
                             let matches_surface = surface
                                 .patterns
@@ -1094,6 +1115,11 @@ fn collect_tree<F: FileSystemProvider>(
     let entries = sorted_entries(fs_provider, directory)?;
     let mut complete = true;
     for entry in entries {
+        if crate::reparse::is_benign_os_metadata_filename(&entry.name)
+            && entry.kind == FileKind::File
+        {
+            continue;
+        }
         let is_directory = entry.kind == FileKind::Directory;
         if insert_entry(fs_provider, root, &entry, inventory).is_err() {
             problem_paths.push(entry.path.clone());
@@ -1410,17 +1436,8 @@ fn path_eq(left: &Path, right: &Path) -> bool {
         .eq_ignore_ascii_case(&right.to_string_lossy())
 }
 
-fn metadata_kind(metadata: &fs::Metadata) -> FileKind {
-    #[cfg(windows)]
-    {
-        use std::os::windows::fs::MetadataExt;
-
-        const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
-        if metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
-            return FileKind::Symlink;
-        }
-    }
-    if metadata.file_type().is_symlink() {
+fn metadata_kind(path: &Path, metadata: &fs::Metadata) -> FileKind {
+    if crate::reparse::metadata_is_link(path, metadata) {
         FileKind::Symlink
     } else if metadata.is_file() {
         FileKind::File

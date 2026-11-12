@@ -95,13 +95,17 @@ fn unused_installation_defaults(
     // Check parents before considering a missing child to be an unused location.
     for ancestor in games.ancestors() {
         match metadata(ancestor) {
-            Ok(info) if !info.is_dir() || metadata_is_reparse(&info) => {
-                return Err(unsafe_destination(
-                    ancestor,
-                    "the default installation parent must be a direct ordinary directory",
-                ));
+            Ok(info) => {
+                let disallowed = !info.is_dir()
+                    || (ancestor == games
+                        && bg_engine::reparse::metadata_is_link(ancestor, &info));
+                if disallowed {
+                    return Err(unsafe_destination(
+                        ancestor,
+                        "the default installation parent must be a direct ordinary directory",
+                    ));
+                }
             }
-            Ok(_) => {}
             Err(error) if error.kind() == io::ErrorKind::NotFound => {}
             Err(error) => return Err(default_destination_error(ancestor, error)),
         }
@@ -378,7 +382,7 @@ mod installation_name_tests {
         for entry in fs::read_dir(root).unwrap() {
             let path = entry.unwrap().path();
             let info = fs::symlink_metadata(&path).unwrap();
-            if info.is_dir() && !metadata_is_reparse(&info) {
+            if info.is_dir() && !bg_engine::reparse::metadata_is_link(&path, &info) {
                 result.insert(path.clone(), None);
                 result.extend(snapshot(&path));
             } else {
@@ -559,7 +563,10 @@ mod installation_name_tests {
             defaults.path,
             display_windows_path(&games.join("Chriz Easy BG (2)")).unwrap()
         );
-        assert!(metadata_is_reparse(&fs::symlink_metadata(link).unwrap()));
+        assert!(bg_engine::reparse::metadata_is_link(
+            &link,
+            &fs::symlink_metadata(&link).unwrap()
+        ));
         assert!(!games.join("Chriz Easy BG (2)").exists());
     }
 }

@@ -3574,6 +3574,7 @@ fn open_or_create_campaign(
     let root = &request.created.managed_root;
     let existed = match fs::symlink_metadata(root) {
         Ok(metadata) => {
+            ensure_direct_ancestors(root)?;
             ensure_direct_directory(root, &metadata)?;
             true
         }
@@ -3588,9 +3589,11 @@ fn open_or_create_campaign(
             })
         }
     };
-    let canonical = fs::canonicalize(root).map_err(|source| OrchestratorError::UnsafeTarget {
-        path: root.clone(),
-        reason: source.to_string(),
+    let canonical = crate::reparse::canonicalize_flexible(root).map_err(|source| {
+        OrchestratorError::UnsafeTarget {
+            path: root.clone(),
+            reason: source.to_string(),
+        }
     })?;
     if !same_path(&canonical, target_lock.target()) {
         return Err(OrchestratorError::UnsafeTarget {
@@ -3614,8 +3617,8 @@ fn open_or_create_campaign(
                     path: canonical.clone(),
                     reason: source.to_string(),
                 })?
-                .next()
-                .is_some()
+                .filter_map(Result::ok)
+                .any(|entry| !crate::reparse::is_benign_os_metadata_filename(&entry.file_name()))
         {
             return Err(OrchestratorError::UnsafeTarget {
                 path: canonical,
@@ -3642,13 +3645,18 @@ fn claim_new_root(root: &Path) -> Result<(), OrchestratorError> {
             path: root.to_path_buf(),
             reason: "managed root has no parent".to_owned(),
         })?;
+    ensure_direct_ancestors(root)?;
     let mut existing = parent;
     let mut missing = Vec::new();
     loop {
-        match fs::symlink_metadata(existing) {
+        match fs::metadata(existing) {
             Ok(metadata) => {
-                ensure_direct_directory(existing, &metadata)?;
-                ensure_direct_ancestors(existing)?;
+                if !metadata.is_dir() {
+                    return Err(OrchestratorError::UnsafeTarget {
+                        path: existing.to_path_buf(),
+                        reason: "expected a direct non-reparse directory".to_owned(),
+                    });
+                }
                 break;
             }
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
@@ -3676,13 +3684,18 @@ fn claim_new_root(root: &Path) -> Result<(), OrchestratorError> {
                 path: directory.clone(),
                 reason: "managed root ancestor has no parent".to_owned(),
             })?;
-        let parent_metadata =
-            fs::symlink_metadata(parent).map_err(|source| OrchestratorError::UnsafeTarget {
+        ensure_direct_ancestors(&directory)?;
+        let parent_meta =
+            fs::metadata(parent).map_err(|source| OrchestratorError::UnsafeTarget {
                 path: parent.to_path_buf(),
                 reason: format!("could not recheck managed root ancestor: {source}"),
             })?;
-        ensure_direct_directory(parent, &parent_metadata)?;
-        ensure_direct_ancestors(parent)?;
+        if !parent_meta.is_dir() {
+            return Err(OrchestratorError::UnsafeTarget {
+                path: parent.to_path_buf(),
+                reason: "expected a direct non-reparse directory".to_owned(),
+            });
+        }
         fs::create_dir(&directory).map_err(|source| OrchestratorError::UnsafeTarget {
             path: directory.clone(),
             reason: format!("could not create managed root ancestor: {source}"),
@@ -3695,13 +3708,17 @@ fn claim_new_root(root: &Path) -> Result<(), OrchestratorError> {
         ensure_direct_directory(&directory, &metadata)?;
     }
 
-    let parent_metadata =
-        fs::symlink_metadata(parent).map_err(|source| OrchestratorError::UnsafeTarget {
+    ensure_direct_ancestors(root)?;
+    let parent_meta = fs::metadata(parent).map_err(|source| OrchestratorError::UnsafeTarget {
+        path: parent.to_path_buf(),
+        reason: format!("could not recheck managed root parent: {source}"),
+    })?;
+    if !parent_meta.is_dir() {
+        return Err(OrchestratorError::UnsafeTarget {
             path: parent.to_path_buf(),
-            reason: format!("could not recheck managed root parent: {source}"),
-        })?;
-    ensure_direct_directory(parent, &parent_metadata)?;
-    ensure_direct_ancestors(parent)?;
+            reason: "expected a direct non-reparse directory".to_owned(),
+        });
+    }
     fs::create_dir(root).map_err(|source| OrchestratorError::UnsafeTarget {
         path: root.to_path_buf(),
         reason: format!("could not claim direct managed root: {source}"),
@@ -3723,6 +3740,9 @@ fn validate_owned_top_level(root: &Path, standalone: bool) -> Result<(), Orchest
             reason: source.to_string(),
         })?;
         let name = entry.file_name();
+        if crate::reparse::is_benign_os_metadata_filename(&name) {
+            continue;
+        }
         let allowed = owned
             .iter()
             .any(|expected| os_name_eq(&name.to_string_lossy(), expected));
@@ -3787,14 +3807,22 @@ fn prospective_identity(path: &Path) -> Result<PathBuf, OrchestratorError> {
     loop {
         match fs::symlink_metadata(existing) {
             Ok(metadata) => {
-                ensure_direct_directory(existing, &metadata)?;
-                ensure_direct_ancestors(existing)?;
-                let mut canonical = fs::canonicalize(existing).map_err(|source| {
-                    OrchestratorError::UnsafeTarget {
+                if same_path(existing, &absolute) {
+                    ensure_direct_directory(existing, &metadata)?;
+                } else if !fs::metadata(existing).map(|m| m.is_dir()).unwrap_or(false) {
+                    return Err(OrchestratorError::UnsafeTarget {
                         path: existing.to_path_buf(),
-                        reason: source.to_string(),
-                    }
-                })?;
+                        reason: "expected a direct non-reparse directory".to_owned(),
+                    });
+                }
+                ensure_direct_ancestors(&absolute)?;
+                let mut canonical =
+                    crate::reparse::canonicalize_flexible(existing).map_err(|source| {
+                        OrchestratorError::UnsafeTarget {
+                            path: existing.to_path_buf(),
+                            reason: source.to_string(),
+                        }
+                    })?;
                 for component in suffix.iter().rev() {
                     canonical.push(component);
                 }
@@ -3830,46 +3858,20 @@ fn paths_overlap(left: &Path, right: &Path) -> bool {
 }
 
 fn path_is_within(path: &Path, base: &Path) -> bool {
-    let path = path.components().collect::<Vec<_>>();
-    let base = base.components().collect::<Vec<_>>();
-    path.len() >= base.len()
-        && path
-            .iter()
-            .zip(base.iter())
-            .all(|(left, right)| component_eq(left.as_os_str(), right.as_os_str()))
-}
-
-fn component_eq(left: &std::ffi::OsStr, right: &std::ffi::OsStr) -> bool {
-    #[cfg(windows)]
-    {
-        left.to_string_lossy()
-            .eq_ignore_ascii_case(&right.to_string_lossy())
-    }
-    #[cfg(not(windows))]
-    {
-        left == right
-    }
+    crate::reparse::windows_path_starts_with(path, base)
 }
 
 fn ensure_direct_ancestors(path: &Path) -> Result<(), OrchestratorError> {
-    let mut current = Some(path);
-    while let Some(candidate) = current {
-        if let Ok(metadata) = fs::symlink_metadata(candidate) {
-            if is_link_or_reparse(&metadata) {
-                return Err(OrchestratorError::UnsafeTarget {
-                    path: candidate.to_path_buf(),
-                    reason: "symbolic links, junctions, and reparse points are forbidden"
-                        .to_owned(),
-                });
-            }
+    crate::reparse::ensure_existing_ancestors_are_directories(path).map_err(|source| {
+        OrchestratorError::UnsafeTarget {
+            path: path.to_path_buf(),
+            reason: source.to_string(),
         }
-        current = candidate.parent();
-    }
-    Ok(())
+    })
 }
 
 fn ensure_direct_directory(path: &Path, metadata: &fs::Metadata) -> Result<(), OrchestratorError> {
-    if is_link_or_reparse(metadata) || !metadata.is_dir() {
+    if crate::reparse::metadata_is_link(path, metadata) || !metadata.is_dir() {
         return Err(OrchestratorError::UnsafeTarget {
             path: path.to_path_buf(),
             reason: "expected a direct non-reparse directory".to_owned(),
@@ -3878,33 +3880,8 @@ fn ensure_direct_directory(path: &Path, metadata: &fs::Metadata) -> Result<(), O
     Ok(())
 }
 
-fn is_link_or_reparse(metadata: &fs::Metadata) -> bool {
-    metadata.file_type().is_symlink() || has_windows_reparse_attribute(metadata)
-}
-
-#[cfg(windows)]
-fn has_windows_reparse_attribute(metadata: &fs::Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    use windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT;
-
-    metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
-}
-
-#[cfg(not(windows))]
-fn has_windows_reparse_attribute(_metadata: &fs::Metadata) -> bool {
-    false
-}
-
 fn same_path(left: &Path, right: &Path) -> bool {
-    #[cfg(windows)]
-    {
-        left.to_string_lossy()
-            .eq_ignore_ascii_case(&right.to_string_lossy())
-    }
-    #[cfg(not(windows))]
-    {
-        left == right
-    }
+    crate::reparse::same_windows_path(left, right)
 }
 
 fn os_name_eq(left: &str, right: &str) -> bool {

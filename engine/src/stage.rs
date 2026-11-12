@@ -13,6 +13,7 @@ use sha2::{Digest, Sha256};
 use crate::error::{EngineError, Result};
 use crate::fs_retry;
 use crate::games::GameRole;
+use crate::reparse;
 
 mod documents;
 mod folder_diagnostics;
@@ -58,7 +59,7 @@ impl ManagedLayout {
         bg1_source: impl AsRef<Path>,
         bg2_source: impl AsRef<Path>,
     ) -> Result<Self> {
-        let bg1_source = canonical_direct_directory(bg1_source.as_ref()).map_err(|error| {
+        let bg1_source = canonical_source_directory(bg1_source.as_ref()).map_err(|error| {
             folder_context("check BG1 source folder", bg1_source.as_ref(), error)
         })?;
         Self::prepare_with(
@@ -101,7 +102,7 @@ impl ManagedLayout {
         } else {
             "check game source folder"
         };
-        let bg2_source = canonical_direct_directory(primary_source)
+        let bg2_source = canonical_source_directory(primary_source)
             .map_err(|error| folder_context(primary_label, primary_source, error))?;
         let sources = bg1_source
             .iter()
@@ -126,7 +127,7 @@ impl ManagedLayout {
         };
         inspect_existing_managed_root(&requested_root, owned)
             .map_err(|error| folder_context("check installation folder", &requested_root, error))?;
-        create_directories(&requested_root).map_err(|error| {
+        create_managed_root_directory(&requested_root).map_err(|error| {
             folder_context("create installation folder", &requested_root, error)
         })?;
         let root = canonical_direct_directory(&requested_root).map_err(|error| {
@@ -401,10 +402,7 @@ pub fn reserve_save_identity<L: DocumentsLocator>(
 
     let metadata = fs::symlink_metadata(&identity.save_root)
         .map_err(|source| io_failure("revalidate save folder", &identity.save_root, source))?;
-    if metadata.file_type().is_symlink()
-        || has_windows_reparse_attribute(&metadata)
-        || !metadata.is_dir()
-    {
+    if reparse::metadata_is_link(&identity.save_root, &metadata) || !metadata.is_dir() {
         return Err(save_root_collision(
             &identity,
             "existing path is not a direct directory",
@@ -467,26 +465,24 @@ pub fn finalize_game_identity(
     profile_settings::ensure_profile_settings(layout, identity)
 }
 
-/// Reads the one effective `engine_name` assignment from a game root.
+/// Reads the effective `engine_name` assignment from a game root.
 pub fn read_engine_name(game_root: impl AsRef<Path>) -> Result<String> {
-    let path = game_root.as_ref().join("engine.lua");
-    ensure_no_reparse_ancestors(&path)?;
+    let game_root = game_root.as_ref();
+    ensure_ancestors_are_directories(game_root)?;
+    let path = game_root.join("engine.lua");
     ensure_direct_file(&path)?;
     let content = fs::read_to_string(&path).map_err(|source| EngineError::Io {
         path: path.clone(),
         source,
     })?;
     let assignments = engine_name_assignments(&path, &content)?;
-    if assignments.len() != 1 {
+    let Some(last) = assignments.last() else {
         return Err(EngineError::GameIdentity {
             path,
-            reason: format!(
-                "expected exactly one engine_name assignment, found {}",
-                assignments.len()
-            ),
+            reason: "expected an engine_name assignment, found 0".to_owned(),
         });
-    }
-    Ok(assignments[0].value.clone())
+    };
+    Ok(last.value.clone())
 }
 
 fn normalize_display_name(display_name: &str, primary_role: GameRole) -> String {
@@ -576,10 +572,7 @@ fn read_save_owner(identity: &SaveIdentity) -> Result<SaveOwner> {
             ))
         }
     };
-    if metadata.file_type().is_symlink()
-        || has_windows_reparse_attribute(&metadata)
-        || !metadata.is_file()
-    {
+    if reparse::metadata_is_link(&marker_path, &metadata) || !metadata.is_file() {
         return Err(save_root_collision(
             identity,
             "ownership marker is not a direct regular file",
@@ -721,19 +714,28 @@ fn cleanup_failed_save_reservation(identity: &SaveIdentity) -> Result<()> {
             })
         }
     }
-    let mut entries = fs::read_dir(&identity.save_root).map_err(|source| EngineError::Io {
+    let entries = fs::read_dir(&identity.save_root).map_err(|source| EngineError::Io {
         path: identity.save_root.clone(),
         source,
     })?;
-    if entries
-        .next()
-        .transpose()
-        .map_err(|source| EngineError::Io {
+    for entry in entries {
+        let entry = entry.map_err(|source| EngineError::Io {
             path: identity.save_root.clone(),
             source,
-        })?
-        .is_some()
-    {
+        })?;
+        let name = entry.file_name();
+        let entry_path = entry.path();
+        if reparse::is_benign_os_metadata_filename(&name)
+            && fs::symlink_metadata(&entry_path)
+                .is_ok_and(|meta| meta.is_file() && !reparse::metadata_is_link(&entry_path, &meta))
+        {
+            let _ = reparse::clear_readonly(&entry_path);
+            fs::remove_file(&entry_path).map_err(|source| EngineError::Io {
+                path: entry_path,
+                source,
+            })?;
+            continue;
+        }
         return Err(save_root_collision(
             identity,
             "failed reservation directory is no longer empty",
@@ -878,28 +880,33 @@ fn malformed_engine_name(path: &Path, reason: impl Into<String>) -> EngineError 
 }
 
 fn patch_engine_name(game_root: &Path, identity: &ReservedSaveIdentity) -> Result<()> {
+    ensure_ancestors_are_directories(game_root)?;
     let path = game_root.join("engine.lua");
-    ensure_no_reparse_ancestors(&path)?;
     ensure_direct_file(&path)?;
     let mut content = fs::read_to_string(&path).map_err(|source| EngineError::Io {
         path: path.clone(),
         source,
     })?;
     let assignments = engine_name_assignments(&path, &content)?;
-    if assignments.len() != 1 {
-        return Err(EngineError::GameIdentity {
-            path,
-            reason: format!(
-                "expected exactly one engine_name assignment, found {}",
-                assignments.len()
-            ),
-        });
-    }
     let escaped_name = identity
         .engine_name
         .replace('\\', "\\\\")
         .replace('"', "\\\"");
-    content.replace_range(assignments[0].value_range.clone(), &escaped_name);
+    if assignments.is_empty() {
+        let newline = if content.contains("\r\n") {
+            "\r\n"
+        } else {
+            "\n"
+        };
+        if !content.is_empty() && !content.ends_with('\n') {
+            content.push_str(newline);
+        }
+        content.push_str(&format!("engine_name = \"{escaped_name}\"{newline}"));
+    } else {
+        for assignment in assignments.iter().rev() {
+            content.replace_range(assignment.value_range.clone(), &escaped_name);
+        }
+    }
 
     let temporary = game_root.join(".engine.lua.chriz-part");
     let mut output = create_fresh_temporary_file(&temporary)?;
@@ -911,6 +918,7 @@ fn patch_engine_name(game_root: &Path, identity: &ReservedSaveIdentity) -> Resul
             source,
         })?;
     drop(output);
+    let _ = reparse::clear_readonly(&path);
     publish_replace(&temporary, &path)?;
 
     let found = read_engine_name(game_root)?;
@@ -1206,6 +1214,9 @@ fn collect_snapshot_entries(
             continue;
         }
         let metadata = direct_metadata(&path)?;
+        if reparse::is_benign_os_metadata_filename(&name) && metadata.is_file() {
+            continue;
+        }
         let relative = path
             .strip_prefix(root)
             .map_err(|_| EngineError::StagingVerification {
@@ -1286,6 +1297,9 @@ fn collect_direct_paths(
         })?;
         let path = child.path();
         let metadata = direct_metadata(&path)?;
+        if reparse::is_benign_os_metadata_filename(&child.file_name()) && metadata.is_file() {
+            continue;
+        }
         let relative = path
             .strip_prefix(root)
             .map_err(|_| EngineError::StagingVerification {
@@ -1376,13 +1390,19 @@ fn copy_regular_file(
         source,
     })?;
     drop(output);
-    let permissions = fs::metadata(source)
+    let mut permissions = fs::metadata(source)
         .map_err(|source_error| EngineError::Io {
             path: source.to_path_buf(),
             source: source_error,
         })?
         .permissions();
+    #[allow(clippy::permissions_set_readonly_false)]
+    permissions.set_readonly(false);
     fs::set_permissions(&scratch_file, permissions).map_err(|source| EngineError::Io {
+        path: scratch_file.clone(),
+        source,
+    })?;
+    reparse::clear_readonly(&scratch_file).map_err(|source| EngineError::Io {
         path: scratch_file.clone(),
         source,
     })?;
@@ -1394,6 +1414,7 @@ fn copy_regular_file(
             found: hash_and_length(&scratch_file)?.1,
         });
     }
+    let _ = reparse::clear_readonly(destination);
     publish_replace(&scratch_file, destination)?;
     Ok(())
 }
@@ -1490,6 +1511,7 @@ fn remove_synthesized_canonical_executable_if_present(
             reason: "entry kind differs from the read-only source tree".to_owned(),
         });
     }
+    let _ = reparse::clear_readonly(&path);
     fs::remove_file(&path).map_err(|source| EngineError::Io { path, source })
 }
 
@@ -1541,9 +1563,7 @@ fn source_metadata_identity(path: &Path, metadata: &fs::Metadata) -> Result<Stri
     use std::os::windows::fs::MetadataExt;
 
     Ok(format!(
-        "{}:{}:{}:{}:{}",
-        metadata.file_attributes(),
-        metadata.creation_time(),
+        "{}:{}:{}",
         metadata.last_write_time(),
         metadata.file_size(),
         file_identity_hash(path)?,
@@ -1680,29 +1700,50 @@ fn inspect_existing_managed_root(root: &Path, owned: &[&str]) -> Result<()> {
             source,
         })?;
         let name = child.file_name();
+        let child_path = child.path();
+        let metadata = direct_metadata(&child_path)?;
         let allowed = owned.iter().any(|allowed| os_name_eq(&name, allowed));
-        if !allowed {
-            return Err(EngineError::UnsafeStagingEntry {
-                path: child.path(),
-                reason: "existing managed root contains an unowned top-level entry".to_owned(),
-            });
+        if allowed {
+            if !metadata.is_dir() {
+                return Err(EngineError::UnsafeStagingEntry {
+                    path: child_path,
+                    reason: "managed top-level entries must be direct directories".to_owned(),
+                });
+            }
+            continue;
         }
-        let metadata = direct_metadata(&child.path())?;
-        if !metadata.is_dir() {
-            return Err(EngineError::UnsafeStagingEntry {
-                path: child.path(),
-                reason: "managed top-level entries must be direct directories".to_owned(),
-            });
+        let reserved = EET_OWNED_TOP_LEVEL
+            .iter()
+            .any(|candidate| os_name_eq(&name, candidate));
+        if !reserved && metadata.is_file() {
+            // Harmless non-reserved user files (e.g. desktop.ini, notes.txt, shortcuts) are left untouched.
+            continue;
         }
+        return Err(EngineError::UnsafeStagingEntry {
+            path: child_path,
+            reason: "existing managed root contains an unowned top-level entry".to_owned(),
+        });
     }
     Ok(())
 }
 
+fn canonical_source_directory(path: &Path) -> Result<PathBuf> {
+    let absolute = absolute_path(path)?;
+    let canonical =
+        reparse::canonicalize_flexible(&absolute).map_err(|source| EngineError::Io {
+            path: absolute.clone(),
+            source,
+        })?;
+    ensure_ancestors_are_directories(&canonical)?;
+    ensure_direct_directory(&canonical)?;
+    Ok(canonical)
+}
+
 fn canonical_direct_directory(path: &Path) -> Result<PathBuf> {
     let absolute = absolute_path(path)?;
-    ensure_no_reparse_ancestors(&absolute)?;
+    ensure_ancestors_are_directories(&absolute)?;
     ensure_direct_directory(&absolute)?;
-    fs::canonicalize(&absolute).map_err(|source| EngineError::Io {
+    reparse::canonicalize_flexible(&absolute).map_err(|source| EngineError::Io {
         path: absolute,
         source,
     })
@@ -1710,52 +1751,39 @@ fn canonical_direct_directory(path: &Path) -> Result<PathBuf> {
 
 fn canonicalize_for_creation(path: &Path) -> Result<PathBuf> {
     let absolute = absolute_path(path)?;
-    let mut ancestor = absolute.as_path();
-    let mut suffix = Vec::<OsString>::new();
-    loop {
-        match fs::symlink_metadata(ancestor) {
-            Ok(metadata) => {
-                reject_reparse(ancestor, &metadata)?;
-                if !metadata.is_dir() {
-                    return Err(EngineError::UnsafeStagingEntry {
-                        path: ancestor.to_path_buf(),
-                        reason: "existing ancestor is not a directory".to_owned(),
-                    });
-                }
-                ensure_no_reparse_ancestors(ancestor)?;
-                let mut canonical =
-                    fs::canonicalize(ancestor).map_err(|source| EngineError::Io {
-                        path: ancestor.to_path_buf(),
-                        source,
-                    })?;
-                for component in suffix.iter().rev() {
-                    canonical.push(component);
-                }
-                return Ok(canonical);
+    ensure_ancestors_are_directories(&absolute)?;
+    reparse::canonicalize_prospective(&absolute).map_err(|source| EngineError::Io {
+        path: absolute,
+        source,
+    })
+}
+
+fn create_managed_root_directory(path: &Path) -> Result<()> {
+    ensure_ancestors_are_directories(path)?;
+    match fs::symlink_metadata(path) {
+        Ok(metadata) => {
+            reject_reparse(path, &metadata)?;
+            if metadata.is_dir() {
+                return Ok(());
             }
-            Err(error) if error.kind() == io::ErrorKind::NotFound => {
-                let name = ancestor
-                    .file_name()
-                    .ok_or_else(|| EngineError::UnsafeStagingEntry {
-                        path: absolute.clone(),
-                        reason: "could not find an existing directory ancestor".to_owned(),
-                    })?;
-                suffix.push(name.to_os_string());
-                ancestor = ancestor
-                    .parent()
-                    .ok_or_else(|| EngineError::UnsafeStagingEntry {
-                        path: absolute.clone(),
-                        reason: "could not find an existing directory ancestor".to_owned(),
-                    })?;
-            }
-            Err(source) => {
-                return Err(EngineError::Io {
-                    path: ancestor.to_path_buf(),
-                    source,
-                })
-            }
+            return Err(EngineError::UnsafeStagingEntry {
+                path: path.to_path_buf(),
+                reason: "expected a direct directory".to_owned(),
+            });
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+        Err(source) => {
+            return Err(EngineError::Io {
+                path: path.to_path_buf(),
+                source,
+            })
         }
     }
+    fs::create_dir_all(path).map_err(|source| EngineError::Io {
+        path: path.to_path_buf(),
+        source,
+    })?;
+    ensure_direct_directory(path)
 }
 
 fn reject_overlapping_roots(left: &Path, right: &Path) -> Result<()> {
@@ -1936,45 +1964,34 @@ fn direct_metadata(path: &Path) -> Result<fs::Metadata> {
     Ok(metadata)
 }
 
-fn ensure_no_reparse_ancestors(path: &Path) -> Result<()> {
-    let mut current = Some(path);
-    while let Some(candidate) = current {
-        match fs::symlink_metadata(candidate) {
-            Ok(metadata) => reject_reparse(candidate, &metadata)?,
-            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
-            Err(source) => {
-                return Err(EngineError::Io {
-                    path: candidate.to_path_buf(),
-                    source,
-                })
+fn ensure_ancestors_are_directories(path: &Path) -> Result<()> {
+    reparse::ensure_existing_ancestors_are_directories(path).map_err(|source| {
+        if source.kind() == io::ErrorKind::InvalidInput {
+            EngineError::UnsafeStagingEntry {
+                path: path.to_path_buf(),
+                reason: source.to_string(),
+            }
+        } else {
+            EngineError::Io {
+                path: path.to_path_buf(),
+                source,
             }
         }
-        current = candidate.parent();
-    }
-    Ok(())
+    })
+}
+
+fn ensure_no_reparse_ancestors(path: &Path) -> Result<()> {
+    ensure_ancestors_are_directories(path)
 }
 
 fn reject_reparse(path: &Path, metadata: &fs::Metadata) -> Result<()> {
-    if metadata.file_type().is_symlink() || has_windows_reparse_attribute(metadata) {
+    if reparse::metadata_is_link(path, metadata) {
         return Err(EngineError::UnsafeStagingEntry {
             path: path.to_path_buf(),
             reason: "symbolic links, junctions, and other reparse points are forbidden".to_owned(),
         });
     }
     Ok(())
-}
-
-#[cfg(windows)]
-fn has_windows_reparse_attribute(metadata: &fs::Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    use windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT;
-
-    metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
-}
-
-#[cfg(not(windows))]
-fn has_windows_reparse_attribute(_metadata: &fs::Metadata) -> bool {
-    false
 }
 
 fn portable_relative_path(path: &Path) -> Result<String> {
@@ -2112,7 +2129,11 @@ fn remove_direct_directory_if_present(path: &Path) -> Result<()> {
     }
     let mut entries = Vec::new();
     collect_direct_paths(path, path, &mut entries)?;
-    ensure_no_reparse_ancestors(path)?;
+    ensure_ancestors_are_directories(path)?;
+    for (relative, _) in &entries {
+        let _ = reparse::clear_readonly(&path.join(relative));
+    }
+    let _ = reparse::clear_readonly(path);
     fs::remove_dir_all(path).map_err(|source| EngineError::Io {
         path: path.to_path_buf(),
         source,
