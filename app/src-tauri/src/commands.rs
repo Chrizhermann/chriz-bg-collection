@@ -13,11 +13,11 @@ use tauri_plugin_updater::{Update, UpdaterExt};
 
 use crate::bridge::{
     BootstrapResponse, DesktopShortcutResponse, DestinationEvaluationResponse,
-    DiagnosticsExportResponse, EvaluateBuildResponse, FrozenReviewResponse, GameCandidateResponse,
-    GameDiscoveryResponse, GameLogStatusResponse, InstallationDefaultsResponse,
-    LaunchInstallResponse, ManagedInstallationResponse, ManualArchiveResponse,
-    ManualDownloadRequirementResponse, NativeBridge, ReportIssueResponse, RunEventEnvelope,
-    RunSnapshotResponse, StartBuildResponse,
+    DiagnosticsExportResponse, DirectReportResponse, EvaluateBuildResponse, FrozenReviewResponse,
+    GameCandidateResponse, GameDiscoveryResponse, GameLogStatusResponse,
+    InstallationDefaultsResponse, LaunchInstallResponse, ManagedInstallationResponse,
+    ManualArchiveResponse, ManualDownloadRequirementResponse, NativeBridge, ReportIssueResponse,
+    RunEventEnvelope, RunSnapshotResponse, StartBuildResponse,
 };
 use crate::error::CommandError;
 use crate::updates::UpdateCenterResponse;
@@ -671,6 +671,24 @@ pub async fn redact_report_text(
         .unwrap_or_else(|poisoned| poisoned.into_inner())
         .clone();
     background(move || Ok(bridge.redact_report_text(&text))).await
+}
+
+#[tauri::command]
+pub async fn send_report(
+    state: State<'_, BridgeState>,
+    kind: String,
+    title: String,
+    body: String,
+    contact: String,
+    install_id: Option<String>,
+) -> Result<DirectReportResponse, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .clone();
+    background(move || bridge.send_report(&kind, &title, &body, &contact, install_id.as_deref()))
+        .await
 }
 
 #[tauri::command]

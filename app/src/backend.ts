@@ -47,6 +47,19 @@ import type {
   UpdateSummary,
 } from "./contracts";
 
+export interface SendReportRequest {
+  readonly kind: "problem" | "feedback";
+  readonly title: string;
+  readonly body: string;
+  readonly contact: string;
+  readonly installId: string | null;
+}
+
+export interface SendReportResult {
+  readonly reportId: string;
+  readonly includedDiagnostics: boolean;
+}
+
 export interface Backend {
   // This is the UI adapter boundary, not the eventual Tauri wire shape. Task 23
   // may map snake_case command payloads without leaking transport casing here.
@@ -92,6 +105,11 @@ export interface Backend {
   showDiagnosticsExport(): Promise<void>;
   /** The text as it may be shared: home folder, user name, computer name and secrets removed. */
   redactReportText(text: string): Promise<string>;
+  /**
+   * Sends the redacted report (and optionally the installation's diagnostics ZIP) through
+   * `bg.chrizfader.org` without requiring a GitHub or Discord account.
+   */
+  sendReport(request: SendReportRequest): Promise<SendReportResult>;
   /**
    * Opens the product's GitHub issue page in the browser with the report filled in; the player
    * sends it there. `shortened` when the text did not fit into the link.
@@ -679,6 +697,16 @@ export class NativeBackend implements Backend {
     return this.#command("redact_report_text", { text });
   }
 
+  sendReport(request: SendReportRequest): Promise<SendReportResult> {
+    return this.#command("send_report", {
+      kind: request.kind,
+      title: request.title,
+      body: request.body,
+      contact: request.contact,
+      installId: request.installId,
+    });
+  }
+
   openReportIssue(title: string, body: string): Promise<{ readonly shortened: boolean }> {
     return this.#command("open_report_issue", { title, body });
   }
@@ -1169,6 +1197,13 @@ export class FixtureBackend implements Backend {
 
   redactReportText(text: string): Promise<string> {
     return Promise.resolve(text);
+  }
+
+  sendReport(request: SendReportRequest): Promise<SendReportResult> {
+    return Promise.resolve({
+      reportId: "r-fixture1",
+      includedDiagnostics: request.installId !== null,
+    });
   }
 
   openReportIssue(_title: string, _body: string): Promise<{ readonly shortened: boolean }> {

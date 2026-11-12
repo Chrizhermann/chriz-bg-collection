@@ -302,7 +302,17 @@ struct RecordingBridgeSystem {
     folders: Mutex<Vec<PathBuf>>,
     urls: Mutex<Vec<String>>,
     diagnostics: Mutex<Vec<(PathBuf, PathBuf)>>,
+    diagnostics_payload: Mutex<Option<Vec<u8>>>,
     shortcuts: Mutex<Vec<ShortcutRequest>>,
+    submitted_reports: Mutex<Vec<bg_engine::report_submit::ReportSubmissionRequest>>,
+    submit_result: Mutex<
+        Option<
+            Result<
+                bg_engine::report_submit::ReportSubmissionResult,
+                bg_engine::report_submit::ReportSubmitError,
+            >,
+        >,
+    >,
 }
 
 impl BridgeSystem for RecordingBridgeSystem {
@@ -348,6 +358,15 @@ impl BridgeSystem for RecordingBridgeSystem {
             .lock()
             .unwrap()
             .push((managed_root.to_path_buf(), output.to_path_buf()));
+        if output.parent().is_some_and(Path::is_dir) {
+            let bytes = self
+                .diagnostics_payload
+                .lock()
+                .unwrap()
+                .clone()
+                .unwrap_or_else(|| b"PK\x03\x04fixture-diagnostics".to_vec());
+            fs::write(output, bytes).map_err(|error| error.to_string())?;
+        }
         Ok(output.to_path_buf())
     }
 
@@ -360,6 +379,25 @@ impl BridgeSystem for RecordingBridgeSystem {
     fn create_desktop_shortcut(&self, request: ShortcutRequest) -> Result<PathBuf, String> {
         self.shortcuts.lock().unwrap().push(request);
         Ok(PathBuf::from(r"C:\Users\Player\Desktop\Chriz Easy BG.lnk"))
+    }
+
+    fn submit_report(
+        &self,
+        request: &bg_engine::report_submit::ReportSubmissionRequest,
+    ) -> Result<
+        bg_engine::report_submit::ReportSubmissionResult,
+        bg_engine::report_submit::ReportSubmitError,
+    > {
+        self.submitted_reports.lock().unwrap().push(request.clone());
+        self.submit_result
+            .lock()
+            .unwrap()
+            .clone()
+            .unwrap_or_else(|| {
+                Ok(bg_engine::report_submit::ReportSubmissionResult {
+                    report_id: "r-contract".to_owned(),
+                })
+            })
     }
 }
 
@@ -3602,4 +3640,137 @@ fn a_resume_that_stops_for_a_question_is_waiting_not_failed() {
     let wire = serde_json::to_value(snapshot.report.unwrap()).unwrap();
     assert_eq!(wire["status"]["status"], "decision_required");
     assert_eq!(wire["status"]["step_id"], "acquire:weidu");
+}
+
+#[test]
+fn send_report_redacts_body_attaches_diagnostics_and_maps_relay_failures() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let root = recipe.parent().unwrap().to_path_buf();
+    let cache = root.join("cache");
+    let app_data = root.join("app-data");
+    let managed = root.join("managed-report");
+    fs::create_dir(&cache).unwrap();
+    publish_managed_install(&app_data, &managed, "install-report");
+
+    let system = Arc::new(RecordingBridgeSystem::default());
+    let bridge = NativeBridge::with_engine_and_system(
+        &recipe,
+        "recommended",
+        &cache,
+        app_data,
+        Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2"))),
+        system.clone(),
+    );
+
+    let sent = bridge
+        .send_report(
+            "problem",
+            "[Problem] Installation stopped\r\nextra",
+            "Failed inside C:\\Users\\ExamplePlayer\\Games\\BG2\nAuthorization: Bearer secret-token",
+            "  @chriz_tester  ",
+            Some("install-report"),
+        )
+        .unwrap();
+    let wire = serde_json::to_value(&sent).unwrap();
+    assert_eq!(
+        wire,
+        json!({ "reportId": "r-contract", "includedDiagnostics": true })
+    );
+
+    let submitted = system.submitted_reports.lock().unwrap();
+    assert_eq!(submitted.len(), 1);
+    let first = &submitted[0];
+    assert_eq!(first.flavor, "bg");
+    assert_eq!(first.app_version, chriz_bg_app_lib::flavor::APP_VERSION);
+    assert_eq!(first.kind, "problem");
+    assert_eq!(first.title, "[Problem] Installation stopped extra");
+    assert_eq!(first.contact, "@chriz_tester");
+    assert!(!first.body.contains("ExamplePlayer"));
+    assert!(!first.body.contains("secret-token"));
+    assert_eq!(first.client_tag.as_deref().map(str::len), Some(32));
+    let zip = first
+        .diagnostics
+        .as_ref()
+        .expect("attached diagnostics ZIP");
+    assert!(
+        zip.filename.starts_with("chriz-easy-bg-diagnostics-"),
+        "{}",
+        zip.filename
+    );
+    assert!(zip.filename.ends_with(".zip"));
+    assert_eq!(zip.bytes, b"PK\x03\x04fixture-diagnostics");
+    drop(submitted);
+
+    // Without install_id, no diagnostics export runs and the same cached client_tag is reused.
+    let sent_feedback = bridge
+        .send_report("feedback", "[Feedback] Idea", "Add search.", "", None)
+        .unwrap();
+    assert!(!sent_feedback.included_diagnostics);
+    assert_eq!(system.diagnostics.lock().unwrap().len(), 1);
+    {
+        let submitted = system.submitted_reports.lock().unwrap();
+        assert_eq!(submitted.len(), 2);
+        assert!(submitted[1].diagnostics.is_none());
+        assert_eq!(submitted[0].client_tag, submitted[1].client_tag);
+    }
+
+    // IWD flavor sends flavor = "iwd" and names attached diagnostics after Chriz Easy IWD.
+    let iwd_bridge = NativeBridge::with_engine_and_system(
+        &recipe,
+        "recommended",
+        &cache,
+        root.join("app-data"),
+        Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2"))),
+        system.clone(),
+    )
+    .with_flavor(&chriz_bg_app_lib::flavor::IWD);
+    let sent_iwd = iwd_bridge
+        .send_report(
+            "problem",
+            "[Problem] IWD stop",
+            "Stopped.",
+            "",
+            Some("install-report"),
+        )
+        .unwrap();
+    assert!(sent_iwd.included_diagnostics);
+    {
+        let submitted = system.submitted_reports.lock().unwrap();
+        assert_eq!(submitted.len(), 3);
+        assert_eq!(submitted[2].flavor, "iwd");
+        let iwd_zip = submitted[2]
+            .diagnostics
+            .as_ref()
+            .expect("attached IWD diagnostics ZIP");
+        assert!(
+            iwd_zip.filename.starts_with("chriz-easy-iwd-diagnostics-"),
+            "{}",
+            iwd_zip.filename
+        );
+    }
+
+    // Service unavailable (503) directs the player to GitHub or Discord below.
+    *system.submit_result.lock().unwrap() = Some(Err(
+        bg_engine::report_submit::ReportSubmitError::Unavailable(
+            "report_service_unavailable".to_owned(),
+        ),
+    ));
+    let unavailable = bridge
+        .send_report("feedback", "[Feedback] Idea", "Add search.", "", None)
+        .unwrap_err();
+    assert_eq!(unavailable.code, "report_service_unavailable");
+    assert!(unavailable.recovery_action.contains("Open GitHub issue"));
+    assert!(unavailable.recovery_action.contains("Open Discord"));
+
+    // Rate limiting reports minutes and fallback channels.
+    *system.submit_result.lock().unwrap() = Some(Err(
+        bg_engine::report_submit::ReportSubmitError::RateLimited {
+            retry_after_seconds: Some(900),
+        },
+    ));
+    let limited = bridge
+        .send_report("feedback", "[Feedback] Idea", "Add search.", "", None)
+        .unwrap_err();
+    assert_eq!(limited.code, "report_rate_limited");
+    assert!(limited.recovery_action.contains("15 minutes"));
 }

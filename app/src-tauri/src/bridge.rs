@@ -214,6 +214,17 @@ pub trait BridgeSystem: Send + Sync {
     fn export_diagnostics(&self, managed_root: &Path, output: &Path) -> Result<PathBuf, String>;
     fn current_exe(&self) -> Result<PathBuf, String>;
     fn create_desktop_shortcut(&self, request: ShortcutRequest) -> Result<PathBuf, String>;
+    fn submit_report(
+        &self,
+        _request: &bg_engine::report_submit::ReportSubmissionRequest,
+    ) -> Result<
+        bg_engine::report_submit::ReportSubmissionResult,
+        bg_engine::report_submit::ReportSubmitError,
+    > {
+        Err(bg_engine::report_submit::ReportSubmitError::Unavailable(
+            "report submission not configured".to_owned(),
+        ))
+    }
 }
 
 #[derive(Default)]
@@ -256,6 +267,19 @@ impl BridgeSystem for SystemBridgeSystem {
 
     fn create_desktop_shortcut(&self, request: ShortcutRequest) -> Result<PathBuf, String> {
         shortcut::create_desktop_shortcut(request)
+    }
+
+    fn submit_report(
+        &self,
+        request: &bg_engine::report_submit::ReportSubmissionRequest,
+    ) -> Result<
+        bg_engine::report_submit::ReportSubmissionResult,
+        bg_engine::report_submit::ReportSubmitError,
+    > {
+        bg_engine::report_submit::submit_report_to(
+            bg_engine::report_submit::REPORT_API_BASE,
+            request,
+        )
     }
 }
 
@@ -640,6 +664,14 @@ pub struct DiagnosticsExportResponse {
 pub struct ReportIssueResponse {
     /// The report did not fit into the address; the page asks for the whole text.
     pub shortened: bool,
+}
+
+/// Confirmation returned after sending a report directly through `bg.chrizfader.org`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DirectReportResponse {
+    pub report_id: String,
+    pub included_diagnostics: bool,
 }
 
 /// Display-only path returned after writing a verified CEBG launcher shortcut.
@@ -2013,8 +2045,162 @@ impl NativeBridge {
         bg_engine::diagnostics::redact_for_sharing(&text[..end], &[])
     }
 
+    /// Sends a redacted report (and optionally a freshly exported redacted diagnostics ZIP)
+    /// directly to the `bg.chrizfader.org` relay without requiring a player account.
+    pub fn send_report(
+        &self,
+        kind: &str,
+        title: &str,
+        body: &str,
+        contact: &str,
+        install_id: Option<&str>,
+    ) -> Result<DirectReportResponse, CommandError> {
+        const FALLBACK_HINT: &str =
+            "Use Open GitHub issue, or Copy text and Open Discord below instead.";
+
+        if kind != "problem" && kind != "feedback" {
+            return Err(CommandError::new(
+                "report_invalid",
+                "The report could not be prepared.",
+                "Close this dialog and open Feedback again.",
+                format!("unsupported report kind {kind:?}"),
+            ));
+        }
+
+        let clean_title = crate::report::clean_title(title);
+        let clean_body = crate::report::clean_body(&self.redact_report_text(body));
+        if clean_title.is_empty() || clean_body.is_empty() {
+            return Err(CommandError::new(
+                "report_empty",
+                "Write a few words before sending the report.",
+                "Describe what happened or your idea above, then click Send report again.",
+                "report title or body was empty after trimming",
+            ));
+        }
+        let clean_contact = crate::report::clean_contact(contact);
+
+        let install_id = install_id.map(str::trim).filter(|id| !id.is_empty());
+        let diagnostics = if let Some(install_id) = install_id {
+            let managed_root = self.diagnostics_managed_root(install_id)?;
+            let temp_dir = crate::report::ScopedReportTempDir::new().map_err(|error| {
+                CommandError::new(
+                    "diagnostics_failed",
+                    "The diagnostics ZIP could not be prepared for this report.",
+                    "Uncheck Include the diagnostics ZIP to send the text alone, or use Save diagnostics ZIP below.",
+                    error.to_string(),
+                )
+            })?;
+            let filename = crate::report::diagnostics_file_name(
+                self.flavor.product_name,
+                time::OffsetDateTime::now_utc(),
+            );
+            let output_path = temp_dir.path().join(&filename);
+            let exported_path = self
+                .system
+                .export_diagnostics(&managed_root, &output_path)
+                .map_err(|error| {
+                    CommandError::new(
+                        "diagnostics_failed",
+                        "The diagnostics ZIP could not be prepared for this report.",
+                        "Uncheck Include the diagnostics ZIP to send the text alone, or use Open GitHub issue below.",
+                        error,
+                    )
+                })?;
+            let bytes = std::fs::read(&exported_path).map_err(|error| {
+                CommandError::new(
+                    "diagnostics_failed",
+                    "The diagnostics ZIP could not be read after export.",
+                    "Uncheck Include the diagnostics ZIP to send the text alone, or use Save diagnostics ZIP below.",
+                    error.to_string(),
+                )
+            })?;
+            if bytes.len() > bg_engine::report_submit::MAX_DIAGNOSTICS_ATTACHMENT_BYTES {
+                return Err(CommandError::new(
+                    "report_diagnostics_too_large",
+                    "The diagnostics ZIP for this installation is too large to send directly.",
+                    "Uncheck Include the diagnostics ZIP to send the text, or save the ZIP below and attach it to a GitHub issue.",
+                    format!(
+                        "diagnostics ZIP is {} bytes (limit {})",
+                        bytes.len(),
+                        bg_engine::report_submit::MAX_DIAGNOSTICS_ATTACHMENT_BYTES
+                    ),
+                ));
+            }
+            Some(bg_engine::report_submit::ReportAttachment { filename, bytes })
+        } else {
+            None
+        };
+
+        let included_diagnostics = diagnostics.is_some();
+        let submission = bg_engine::report_submit::ReportSubmissionRequest {
+            client_tag: bg_engine::report_submit::load_or_create_client_tag(&self.cache),
+            flavor: self.flavor.key.to_owned(),
+            app_version: crate::flavor::APP_VERSION.to_owned(),
+            kind: kind.to_owned(),
+            title: clean_title,
+            body: clean_body,
+            contact: clean_contact,
+            diagnostics,
+        };
+
+        let result = self.system.submit_report(&submission).map_err(|error| {
+            use bg_engine::report_submit::ReportSubmitError;
+            match error {
+                ReportSubmitError::Unavailable(detail) => CommandError::new(
+                    "report_service_unavailable",
+                    "Direct report sending is unavailable right now.",
+                    FALLBACK_HINT,
+                    detail,
+                ),
+                ReportSubmitError::Network(detail) => CommandError::new(
+                    "report_network_failed",
+                    "The report could not reach bg.chrizfader.org.",
+                    "Check your internet connection and try again, or use Open GitHub issue or Copy text and Open Discord below.",
+                    detail,
+                ),
+                ReportSubmitError::RateLimited {
+                    retry_after_seconds,
+                } => {
+                    let minutes = retry_after_seconds.map_or(15, |secs| secs.div_ceil(60).max(1));
+                    let unit = if minutes == 1 { "minute" } else { "minutes" };
+                    CommandError::new(
+                        "report_rate_limited",
+                        "Several reports were already sent from this connection recently.",
+                        format!(
+                            "Wait about {minutes} {unit} before sending another here, or use Open GitHub issue or Copy text and Open Discord below."
+                        ),
+                        format!("retry_after_seconds={retry_after_seconds:?}"),
+                    )
+                }
+                ReportSubmitError::TooLarge => CommandError::new(
+                    "report_too_large",
+                    "The report with its diagnostics ZIP is too large to send directly.",
+                    "Uncheck Include the diagnostics ZIP to send the text, or save the ZIP below and attach it to a GitHub issue.",
+                    "relay returned 413 report_too_large",
+                ),
+                ReportSubmitError::Rejected { code } if code == "empty_report" => CommandError::new(
+                    "report_empty",
+                    "Write a few words before sending the report.",
+                    "Describe what happened or your idea above, then click Send report again.",
+                    code,
+                ),
+                ReportSubmitError::Rejected { code } => CommandError::new(
+                    "report_rejected",
+                    "The report service could not accept this submission.",
+                    FALLBACK_HINT,
+                    code,
+                ),
+            }
+        })?;
+
+        Ok(DirectReportResponse {
+            report_id: result.report_id,
+            included_diagnostics,
+        })
+    }
+
     /// Opens this product's GitHub issue page in the browser with a report filled in. The
-    /// player reads and submits it there; the app transmits nothing.
+    /// player reads and submits it there; this action transmits nothing directly.
     pub fn open_report_issue(
         &self,
         title: &str,

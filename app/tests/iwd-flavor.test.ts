@@ -399,15 +399,21 @@ describe("Chriz Easy IWD build flavor", () => {
   it("reports to its own repository, in its own words", async () => {
     const { mountApp, FixtureBackend } = await iwd();
     const backend = new FixtureBackend({ managedInstallations: [installation()] });
+    const send = vi.spyOn(backend, "sendReport");
     const issue = vi.spyOn(backend, "openReportIssue");
     const root = rootElement();
     await mountApp(root, backend);
     fireEvent.click(getByRole(root, "button", { name: "Feedback" }));
     const dialog = getByRole(root, "dialog", { name: "Report a problem or send feedback" });
     await waitFor(() => expect(dialog.querySelector("#report-details")?.textContent).toContain("App: Chriz Easy IWD"));
+    expect(dialog.textContent).toContain("Send a report straight from Chriz Easy IWD (no account needed)");
     expect(dialog.textContent).toContain("Opens github.com/Chrizhermann/chriz-easy-iwd in your browser.");
     expect(dialog.textContent).toContain("paste it in ChrizFader's Discord, channel #mod-feedback.");
     expectNoBgWords(dialog, "report dialog");
+    fireEvent.click(getByRole(dialog, "button", { name: "Send report" }));
+    await waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    expect(send.mock.calls[0]![0]).toMatchObject({ kind: "problem", installId: "iwd-install" });
+    expectNoBgWords(dialog, "report dialog after direct send");
     fireEvent.click(getByRole(dialog, "button", { name: "Open GitHub issue" }));
     await waitFor(() => expect(issue).toHaveBeenCalledTimes(1));
     expect(issue.mock.calls[0]![1]).toContain("Details from Chriz Easy IWD:");

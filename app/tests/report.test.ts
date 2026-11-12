@@ -5,11 +5,11 @@ import axe from "axe-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mountApp } from "../src/app";
-import { BackendCommandError, FixtureBackend, NativeBackend, type InvokeCommand } from "../src/backend";
+import { BackendCommandError, FixtureBackend, NativeBackend, type InvokeCommand, type SendReportRequest, type SendReportResult } from "../src/backend";
 import type { DecisionAnswer, GameLogStatus, ManagedInstallation, PendingDecision, RunEventEnvelope, RunSnapshot } from "../src/contracts";
 import { FLAVORS } from "../src/flavors";
 import bridgeFlavor from "../src-tauri/src/flavor.rs?raw";
-import { environmentFacts, failedComponentSubject, failedInstallationSubject, reportBody, reportTitle, REPORT_TEXT_LIMIT } from "../src/report";
+import { environmentFacts, failedComponentSubject, failedInstallationSubject, reportBody, reportTitle, REPORT_CONTACT_LIMIT, REPORT_TEXT_LIMIT } from "../src/report";
 
 function installation(overrides: Partial<ManagedInstallation> = {}): ManagedInstallation {
   return { id: "ready", name: "Adventure", path: "D:\\Games\\Adventure", status: "Ready to play", receiptPath: null,
@@ -21,6 +21,9 @@ function installation(overrides: Partial<ManagedInstallation> = {}): ManagedInst
 class ReportBackend extends FixtureBackend {
   redactions: string[] = [];
   redactionError: Error | null = null;
+  sentReports: SendReportRequest[] = [];
+  sendError: BackendCommandError | null = null;
+  sendReportId = "r-test42";
   issues: { title: string; body: string }[] = [];
   shortened = false;
   issueError: BackendCommandError | null = null;
@@ -37,6 +40,14 @@ class ReportBackend extends FixtureBackend {
     this.redactions.push(text);
     if (this.redactionError) return Promise.reject(this.redactionError);
     return Promise.resolve(text.replaceAll("C:\\Users\\Max", "<redacted-home>"));
+  }
+  override sendReport(request: SendReportRequest): Promise<SendReportResult> {
+    this.sentReports.push(request);
+    if (this.sendError) return Promise.reject(this.sendError);
+    return Promise.resolve({
+      reportId: this.sendReportId,
+      includedDiagnostics: request.installId !== null,
+    });
   }
   override openReportIssue(title: string, body: string) {
     this.issues.push({ title, body });
@@ -161,7 +172,8 @@ describe("report dialog", () => {
     const opened = await openFromHeader(root, user);
     expect(opened.getAttribute("aria-modal")).toBe("true");
     expect((root.querySelector(".app-shell") as HTMLElement).inert).toBe(true);
-    expect(getByText(opened, /CEBG sends nothing by itself/)).toBeTruthy();
+    expect(getByText(opened, /Send a report straight from CEBG \(no account needed\)/)).toBeTruthy();
+    expect(getByText(opened, /Nothing is sent until you click Send report\./)).toBeTruthy();
     expect(getByText(opened, /Opens github\.com\/Chrizhermann\/chriz-easy-bg in your browser/)).toBeTruthy();
     // A report without a subject lets the player say what it is; a problem is preselected.
     expect((getByRole(opened, "radio", { name: "A problem" }) as HTMLInputElement).checked).toBe(true);
@@ -180,6 +192,58 @@ describe("report dialog", () => {
         + "Installation: collection 0.1.2, Ready to play\n\nDiagnostics ZIP: attach it to this report if you saved one.",
     }]);
     expect((await axe.run(root, { rules: { "color-contrast": { enabled: false } } })).violations).toEqual([]);
+  });
+
+  it("sends reports straight from the app with optional contact details, diagnostics toggle, and fallback guidance", async () => {
+    const { root, backend, user } = await mounted(new ReportBackend({ managedInstallations: [installation()] }));
+    const opened = await openFromHeader(root, user);
+    const contact = getByLabelText(opened, "How to reach you (optional)") as HTMLInputElement;
+    expect(contact.maxLength).toBe(REPORT_CONTACT_LIMIT);
+    const includeZip = getByLabelText(opened, "Include the diagnostics ZIP for this installation") as HTMLInputElement;
+    // Problem reports include diagnostics by default; switching to feedback unchecks it unless touched.
+    expect(includeZip.checked).toBe(true);
+    expect(getByText(opened, /Sends this text and the redacted diagnostics ZIP through bg\.chrizfader\.org/)).toBeTruthy();
+
+    await user.click(getByRole(opened, "radio", { name: "Feedback or an idea" }));
+    expect(includeZip.checked).toBe(false);
+    expect(getByText(opened, /Sends this text through bg\.chrizfader\.org/)).toBeTruthy();
+
+    // Empty feedback without diagnostics warns instead of sending a blank report.
+    await user.click(getByRole(opened, "button", { name: "Send report" }));
+    expect(statusText(root)).toBe("Write a few words above before sending.");
+    expect(backend.sentReports).toEqual([]);
+    expect(document.activeElement).toBe(getByLabelText(opened, "Your feedback or idea"));
+
+    await user.type(getByLabelText(opened, "Your feedback or idea"), "Love the new Challenge Mode toggle!");
+    await user.type(contact, "max_on_discord");
+    await user.click(getByRole(opened, "button", { name: "Send report" }));
+    await waitFor(() => expect(statusText(root)).toBe("Report sent (r-test42). Thank you!"));
+    expect(backend.sentReports).toEqual([{
+      kind: "feedback",
+      title: "[Feedback] Love the new Challenge Mode toggle!",
+      body: "Love the new Challenge Mode toggle!\n\nDetails from Chriz Easy BG:\nApp: Chriz Easy BG 0.1.3\nCollection: 0.1.3 (Recommended setup)\nInstallation: collection 0.1.2, Ready to play",
+      contact: "max_on_discord",
+      installId: null,
+    }]);
+
+    // Switching back to problem and keeping diagnostics checked attaches the installation's ZIP.
+    await user.click(getByRole(opened, "radio", { name: "A problem" }));
+    expect(includeZip.checked).toBe(true);
+    await user.click(getByRole(opened, "button", { name: "Send report" }));
+    await waitFor(() => expect(statusText(root)).toBe("Report sent (r-test42), with the diagnostics ZIP attached. Thank you!"));
+    expect(backend.sentReports[1]?.installId).toBe("ready");
+
+    // When the relay is unavailable, the error guides the player to GitHub or Discord below.
+    backend.sendError = new BackendCommandError({
+      code: "report_service_unavailable",
+      message: "Direct report sending is unavailable right now.",
+      recovery_action: "Use Open GitHub issue, or Copy text and Open Discord below instead.",
+      technical_detail: "report_service_unavailable",
+    });
+    await user.click(getByRole(opened, "button", { name: "Send report" }));
+    await waitFor(() => expect(statusText(root)).toBe(
+      "Direct report sending is unavailable right now. Use Open GitHub issue, or Copy text and Open Discord below instead."));
+    expect(queryByRole(root, "alert")).toBeNull();
   });
 
   it("shows the details only after the backend removed private paths, and drops free-form facts when it cannot", async () => {
@@ -309,6 +373,7 @@ describe("report dialog", () => {
     const { root, backend, user } = await mounted(new ReportBackend());
     const opened = await openFromHeader(root, user);
     expect((opened.querySelector(".report-diagnostics") as HTMLElement).hidden).toBe(true);
+    expect((opened.querySelector(".report-checkbox") as HTMLElement).hidden).toBe(true);
     backend.issueError = new BackendCommandError({ code: "report_open_failed", message: "The page could not be opened.",
       recovery_action: "Use Copy text instead.", technical_detail: "no browser" });
     await user.click(getByRole(opened, "button", { name: "Open GitHub issue" }));
@@ -464,17 +529,26 @@ describe("report commands", () => {
     const calls: [string, Record<string, unknown> | undefined][] = [];
     const invoke: InvokeCommand = (command, args) => {
       calls.push([command, args]);
+      if (command === "send_report") return Promise.resolve({ reportId: "r-native", includedDiagnostics: true });
       if (command === "open_report_issue") return Promise.resolve({ shortened: true });
       if (command === "redact_report_text") return Promise.resolve("clean");
       return Promise.resolve(null);
     };
     const backend = new NativeBackend(invoke);
     expect(await backend.redactReportText("raw")).toBe("clean");
+    expect(await backend.sendReport({
+      kind: "problem",
+      title: "[Problem] x",
+      body: "body",
+      contact: "@player",
+      installId: "install-1",
+    })).toEqual({ reportId: "r-native", includedDiagnostics: true });
     expect(await backend.openReportIssue("[Problem] x", "body")).toEqual({ shortened: true });
     await backend.openReportChat();
     await backend.showDiagnosticsExport();
     expect(calls).toEqual([
       ["redact_report_text", { text: "raw" }],
+      ["send_report", { kind: "problem", title: "[Problem] x", body: "body", contact: "@player", installId: "install-1" }],
       ["open_report_issue", { title: "[Problem] x", body: "body" }],
       ["open_report_chat", undefined],
       ["show_diagnostics_export", undefined],

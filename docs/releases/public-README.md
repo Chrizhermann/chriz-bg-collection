@@ -25,11 +25,10 @@ This repository hosts public distributions, update metadata and player-facing
 information. Mod credit belongs to the original authors; source and project links
 are retained in the recipe.
 
-Report problems and ideas with **Feedback** at the top of the app, in
-[ChrizFader's Discord](https://discord.gg/RtXjRzy68k) or as an issue in this repository.
-Feedback fills in the versions and what went wrong, and you send the report yourself. For a
-problem with an installation, attach its diagnostics ZIP after checking it for information
-you do not wish to share.
+Report problems and ideas with **Feedback** at the top of the app (which can send the report
+and the redacted diagnostics ZIP straight from the app without an account), in
+[ChrizFader's Discord](https://discord.gg/RtXjRzy68k) (`#mod-feedback`), or as an issue in
+this repository.
 
 The updater signature is not a Windows Authenticode publisher certificate. The
 installer may show an unknown-publisher warning. Obtain downloads only from the

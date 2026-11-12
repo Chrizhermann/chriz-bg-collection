@@ -88,6 +88,7 @@ pub fn run() -> tauri::Result<()> {
             commands::export_diagnostics,
             commands::show_diagnostics_export,
             commands::redact_report_text,
+            commands::send_report,
             commands::open_report_issue,
             commands::open_report_chat,
             commands::launch_install,

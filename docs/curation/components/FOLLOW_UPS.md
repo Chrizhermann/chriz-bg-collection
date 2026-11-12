@@ -789,22 +789,19 @@ On `main` for the next Chriz Easy BG version:
 **Ideas for later (Christopher, 2026-11-10)**
 
 - Feedback and error reports from the installer: designed and approved by Christopher on
-  2026-11-10, built and merged for the next app versions (Feedback button, report buttons
-  at failures, prefilled GitHub issue, text for Discord, better diagnostics ZIP; see
-  [report-feature.md](../../report-feature.md)). The issue forms are in `chriz-easy-bg` and
-  `chriz-easy-iwd` since 2026-11-10, without the sentence that names Feedback in the app,
-  because the released apps do not have the button yet, and opening the prefilled blank
-  issue signed in was checked on 2026-11-12 (the filled-in form appears directly, not the
-  template chooser). `chatChannel` in `app/src/flavors.ts` names `#mod-feedback` for both
-  flavors. Left to do:
-  - Christopher creates the public `#mod-feedback` channel on ChrizFader's Discord.
-  - With the release that ships the dialog (each product): put the sentence "The quickest
-    way is Feedback in the app…" from `docs/releases/issue-templates/problem.yml` into the
-    repository's `problem.yml`, and the README sentence into its README.
-  - Check the dialog in the packaged app: a long report opens the browser, Copy text works.
-
-  A service of ours for reports without an account was left out and comes up again only if
-  reports fail at the account requirement.
+  2026-11-10, expanded on 2026-11-13 with direct 1-click in-app sending through the
+  `bg.chrizfader.org` Cloudflare Worker relay (signed challenge + SHA-256 Proof-of-Work +
+  ZIP allowlist validation + rate limits -> private Discord webhook, optional contact field,
+  automatic redacted diagnostics ZIP toggle; see [report-feature.md](../../report-feature.md)).
+  `#mod-feedback` is live on ChrizFader's Discord with file attachments enabled, and opening
+  the prefilled blank GitHub issue signed in was verified on 2026-11-12 for both repositories.
+  Left to do:
+  - Configure `DISCORD_REPORT_WEBHOOK_URL` (private Discord channel webhook) and
+    `REPORT_SECRET` on the `chrizfader-site-deploy` Cloudflare Worker (`twitch-setup-chriz`).
+  - With the release that ships the updated dialog (each product): put the sentence "The
+    quickest way is Feedback in the app…" from `docs/releases/issue-templates/problem.yml`
+    into the repository's `problem.yml`, and sync the updated README sentence.
+  - Check direct report sending + browser fallbacks once in the packaged app.
 
 **Ideas for later (Christopher, 2026-11-11)**
 

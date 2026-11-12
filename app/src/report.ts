@@ -2,8 +2,8 @@ import type { BackendStatus, BuildSnapshot, GameCandidate, GameLogStatus, Manage
 import { flavor, sourceFor, type SourceSlot } from "./flavor";
 
 /**
- * What a report says. The app never sends one: it opens the product's GitHub issue page or the
- * Discord server with this text, and the player sends it there.
+ * What a report says. The player can send it straight from the app, or open the product's GitHub
+ * issue page or Discord server with this text.
  */
 export type ReportKind = "problem" | "feedback";
 
@@ -23,6 +23,8 @@ export interface ReportSubject {
 
 /** The longest text the player can add; a prefilled link has to hold it. */
 export const REPORT_TEXT_LIMIT = 1200;
+/** Maximum length of the optional reply handle or email address. */
+export const REPORT_CONTACT_LIMIT = 120;
 const FACT_LIMIT = 400;
 const TITLE_LIMIT = 100;
 

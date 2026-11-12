@@ -1,5 +1,5 @@
 import { flavor } from "../flavor";
-import { REPORT_TEXT_LIMIT, type ReportKind } from "../report";
+import { REPORT_CONTACT_LIMIT, REPORT_TEXT_LIMIT, type ReportKind } from "../report";
 import { actionButton, element } from "./app-shell";
 
 /** The diagnostics ZIP of the installation a report is about. */
@@ -16,16 +16,23 @@ export interface ReportDialogModel {
   /** The details the app adds, as they will be sent; null while they are prepared. */
   readonly details: string | null;
   readonly diagnostics: ReportDiagnostics;
+  /** Whether direct sending attaches the installation's diagnostics ZIP. */
+  readonly includeDiagnostics: boolean;
   /** The result of the last action in the dialog. */
   readonly status: { readonly tone: "ok" | "warning"; readonly text: string } | null;
   /** The whole report, shown for copying by hand when the clipboard cannot be used. */
   readonly manualCopy: string | null;
+  /** Direct submission is running. */
+  readonly sending: boolean;
   /** An action of the dialog is running. */
   readonly busy: boolean;
 }
 
 export interface ReportDialogActions {
   readonly setKind: (kind: ReportKind) => void;
+  readonly setIncludeDiagnostics: (included: boolean) => void;
+  /** Sends the report directly from the app; `text` and `contact` are what the player wrote. */
+  readonly send: (text: string, contact: string) => void;
   /** Opens the product's GitHub issue page with the report; `text` is what the player wrote. */
   readonly openIssue: (text: string) => void;
   readonly copy: (text: string) => void;
@@ -83,7 +90,7 @@ export function createReportDialog(initial: ReportDialogModel, actions: ReportDi
   const title = element("h2", undefined, initial.kindSelectable ? "Report a problem or send feedback" : "Report this problem");
   title.id = "report-title";
   const intro = element("p", undefined,
-    `${flavor.shortName} sends nothing by itself. It opens GitHub or Discord with the text below, and you send it there.`);
+    `Send a report straight from ${flavor.shortName} (no account needed), or use GitHub or Discord below. Nothing is sent until you click Send report.`);
   intro.id = "report-intro";
   dialog.append(title, intro);
 
@@ -111,7 +118,8 @@ export function createReportDialog(initial: ReportDialogModel, actions: ReportDi
   text.rows = 5;
   text.maxLength = REPORT_TEXT_LIMIT;
   text.setAttribute("aria-describedby", "report-text-help");
-  const textHelp = element("p", "muted", `Optional, up to ${REPORT_TEXT_LIMIT} characters. You can add more after the page opens.`);
+  const textHelp = element("p", "muted",
+    `Up to ${REPORT_TEXT_LIMIT} characters. Optional when ${flavor.shortName} already captured an error above.`);
   textHelp.id = "report-text-help";
   dialog.append(textLabel, text, textHelp);
 
@@ -121,11 +129,42 @@ export function createReportDialog(initial: ReportDialogModel, actions: ReportDi
   details.id = "report-details";
   details.tabIndex = 0;
   details.setAttribute("aria-labelledby", "report-details-title");
-  const detailsHelp = element("p", "muted", "Your home folder, your Windows user name, the computer name and passwords are removed from these details. No files are attached.");
+  const detailsHelp = element("p", "muted",
+    "Your home folder, your Windows user name, the computer name and passwords are removed from these details.");
   dialog.append(detailsLabel, details, detailsHelp);
 
   dialog.append(element("h3", undefined, "Send it"));
-  const github = actionButton("Open GitHub issue", () => actions.openIssue(text.value));
+  const directBox = element("div", "report-channel report-direct");
+  const contactLabel = element("label", "report-contact-label", "How to reach you (optional)");
+  contactLabel.htmlFor = "report-contact";
+  const contact = element("input", "report-contact");
+  contact.type = "text";
+  contact.id = "report-contact";
+  contact.maxLength = REPORT_CONTACT_LIMIT;
+  contact.placeholder = "Discord name or email, if Chriz may reply";
+  contact.autocomplete = "off";
+
+  const includeDiagnosticsRow = element("label", "report-checkbox");
+  const includeDiagnostics = element("input");
+  includeDiagnostics.type = "checkbox";
+  includeDiagnostics.id = "report-include-diagnostics";
+  includeDiagnostics.addEventListener("change", () => {
+    actions.setIncludeDiagnostics(includeDiagnostics.checked);
+  });
+  includeDiagnosticsRow.append(
+    includeDiagnostics,
+    element("span", undefined, "Include the diagnostics ZIP for this installation"),
+  );
+
+  const send = actionButton("Send report", () => actions.send(text.value, contact.value));
+  send.id = "report-send";
+  const directHelp = element("p", "muted");
+  directHelp.id = "report-direct-help";
+  directBox.append(contactLabel, contact, includeDiagnosticsRow, send, directHelp);
+  dialog.append(directBox);
+
+  dialog.append(element("h3", undefined, "Or post it yourself"));
+  const github = actionButton("Open GitHub issue", () => actions.openIssue(text.value), "quiet");
   github.id = "report-open-issue";
   const githubRow = element("div", "report-channel");
   githubRow.append(github, element("p", "muted",
@@ -160,7 +199,7 @@ export function createReportDialog(initial: ReportDialogModel, actions: ReportDi
   const diagnosticsPath = element("p", "path");
   diagnosticsPath.id = "report-diagnostics-path";
   diagnostics.append(diagnosticsTitle, diagnosticsButtons, diagnosticsPath, element("p", "muted",
-    "The installer's logs for this installation. The ZIP stays on your PC until you attach it to your report yourself; review it before sharing."));
+    "Save a local copy of this installation's logs to inspect yourself, or to attach on GitHub or Discord."));
   dialog.append(diagnostics);
 
   const status = element("p", "report-status");
@@ -179,7 +218,7 @@ export function createReportDialog(initial: ReportDialogModel, actions: ReportDi
       return;
     }
     if (event.key !== "Tab") return;
-    const focusable = Array.from(dialog.querySelectorAll<HTMLElement>("input, textarea, pre[tabindex], button:not(:disabled)"))
+    const focusable = Array.from(dialog.querySelectorAll<HTMLElement>("input:not(:disabled), textarea, pre[tabindex], button:not(:disabled)"))
       .filter(candidate => !candidate.hidden && candidate.closest("[hidden]") === null);
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
@@ -204,11 +243,23 @@ export function createReportDialog(initial: ReportDialogModel, actions: ReportDi
     textLabel.textContent = model.kind === "problem" ? "What happened, and what did you expect?" : "Your feedback or idea";
     details.textContent = model.details ?? "Preparing the details…";
     const ready = model.details !== null && !model.busy;
+    const hasDiagnostics = model.diagnostics.state !== "none";
+
+    contact.disabled = model.busy;
+    includeDiagnosticsRow.hidden = !hasDiagnostics;
+    includeDiagnostics.checked = hasDiagnostics && model.includeDiagnostics;
+    includeDiagnostics.disabled = model.busy;
+    send.disabled = !ready;
+    send.textContent = model.sending ? "Sending…" : "Send report";
+    directHelp.textContent = hasDiagnostics && model.includeDiagnostics
+      ? "Sends this text and the redacted diagnostics ZIP through bg.chrizfader.org to Chriz's private inbox (your IP is hashed briefly against spam)."
+      : "Sends this text through bg.chrizfader.org to Chriz's private inbox (your IP is hashed briefly against spam).";
+
     github.disabled = !ready;
     copy.disabled = !ready;
     chat.disabled = model.busy;
 
-    diagnostics.hidden = model.diagnostics.state === "none";
+    diagnostics.hidden = !hasDiagnostics;
     save.disabled = model.busy || model.diagnostics.state === "saving";
     save.textContent = model.diagnostics.state === "saving" ? "Saving…"
       : model.diagnostics.state === "saved" ? "Save another copy" : "Save diagnostics ZIP";

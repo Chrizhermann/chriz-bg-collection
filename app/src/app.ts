@@ -61,8 +61,11 @@ interface ReportSession {
   kind: ReportKind;
   details: string | null;
   diagnostics: ReportDiagnostics;
+  includeDiagnostics: boolean;
+  includeDiagnosticsTouched: boolean;
   status: ReportDialogModel["status"];
   manualCopy: string | null;
+  sending: boolean;
   busy: boolean;
 }
 
@@ -1580,12 +1583,25 @@ class AppController implements AppHandle {
       kind: subject.kind ?? "problem",
       details: null,
       diagnostics: subject.installId === null ? { state: "none" } : { state: "ready" },
+      includeDiagnostics: subject.installId !== null && (subject.kind ?? "problem") === "problem",
+      includeDiagnosticsTouched: false,
       status: null,
       manualCopy: null,
+      sending: false,
       busy: false,
     } satisfies Omit<ReportSession, "dialog">;
     const dialog = createReportDialog(this.#reportModel(session), {
-      setKind: (kind) => this.#updateReport({ kind }),
+      setKind: (kind) => this.#updateReport({
+        kind,
+        ...(this.#report !== null && !this.#report.includeDiagnosticsTouched && this.#report.subject.installId !== null
+          ? { includeDiagnostics: kind === "problem" }
+          : {}),
+      }),
+      setIncludeDiagnostics: (includeDiagnostics) => this.#updateReport({
+        includeDiagnostics,
+        includeDiagnosticsTouched: true,
+      }),
+      send: (text, contact) => void this.#reportSend(text, contact),
       openIssue: (text) => void this.#reportOpenIssue(text),
       copy: (text) => void this.#reportCopy(text),
       openChat: () => void this.#reportOpenChat(),
@@ -1605,13 +1621,15 @@ class AppController implements AppHandle {
       kindSelectable: session.subject.kind === null,
       details: session.details,
       diagnostics: session.diagnostics,
+      includeDiagnostics: session.includeDiagnostics,
       status: session.status,
       manualCopy: session.manualCopy,
+      sending: session.sending,
       busy: session.busy,
     };
   }
 
-  #updateReport(changes: Partial<Pick<ReportSession, "kind" | "details" | "diagnostics" | "status" | "manualCopy" | "busy">>): void {
+  #updateReport(changes: Partial<Pick<ReportSession, "kind" | "details" | "diagnostics" | "includeDiagnostics" | "includeDiagnosticsTouched" | "status" | "manualCopy" | "sending" | "busy">>): void {
     const report = this.#report;
     if (report === null) return;
     Object.assign(report, changes);
@@ -1658,6 +1676,43 @@ class AppController implements AppHandle {
     const title = reportTitle(report.kind, report.subject.summary, text);
     const body = reportBody(report.kind, text, report.details ?? "", report.diagnostics.state !== "none");
     return { title, body, whole: `${title}\n\n${body}` };
+  }
+
+  async #reportSend(text: string, contact: string): Promise<void> {
+    const report = this.#report;
+    if (report === null || report.details === null || report.busy) return;
+    const attachDiagnostics = report.includeDiagnostics && report.subject.installId !== null;
+    if (text.trim().length === 0 && report.subject.facts.length === 0 && !attachDiagnostics) {
+      this.#updateReport({
+        status: { tone: "warning", text: "Write a few words above before sending." },
+        manualCopy: null,
+      });
+      report.dialog.overlay.querySelector<HTMLTextAreaElement>("#report-text")?.focus({ preventScroll: true });
+      return;
+    }
+    const title = reportTitle(report.kind, report.subject.summary, text);
+    const body = reportBody(report.kind, text, report.details, false);
+    const installId = attachDiagnostics ? report.subject.installId : null;
+    this.#updateReport({ busy: true, sending: true, status: null, manualCopy: null });
+    let status: ReportDialogModel["status"];
+    try {
+      const sent = await this.backend.sendReport({
+        kind: report.kind,
+        title,
+        body,
+        contact,
+        installId,
+      });
+      status = {
+        tone: "ok",
+        text: sent.includedDiagnostics
+          ? `Report sent (${sent.reportId}), with the diagnostics ZIP attached. Thank you!`
+          : `Report sent (${sent.reportId}). Thank you!`,
+      };
+    } catch (error: unknown) {
+      status = this.#reportFailure(error);
+    }
+    if (this.#report === report) this.#updateReport({ busy: false, sending: false, status });
   }
 
   async #reportOpenIssue(text: string): Promise<void> {
