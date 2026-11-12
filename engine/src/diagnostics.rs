@@ -209,26 +209,25 @@ pub fn export_diagnostics(
     let temporary = temporary_sibling(&output_path)?;
 
     let result = write_bundle(&temporary, &selected, &redactions, start_here).and_then(|()| {
-        match fs::hard_link(&temporary, &output_path) {
+        match crate::fs_retry::rename_noclobber(&temporary, &output_path) {
             Ok(()) => Ok(()),
-            Err(_source) if output_path.exists() => Err(DiagnosticsError::OutputExists {
-                path: output_path.clone(),
-            }),
+            Err(source)
+                if source.kind() == std::io::ErrorKind::AlreadyExists || output_path.exists() =>
+            {
+                Err(DiagnosticsError::OutputExists {
+                    path: output_path.clone(),
+                })
+            }
             Err(source) => Err(DiagnosticsError::Io {
                 path: output_path.clone(),
                 source,
             }),
         }
     });
-    let cleanup = fs::remove_file(&temporary);
     if let Err(error) = result {
-        let _ = cleanup;
+        let _ = fs::remove_file(&temporary);
         return Err(error);
     }
-    cleanup.map_err(|source| DiagnosticsError::Io {
-        path: temporary,
-        source,
-    })?;
 
     Ok(DiagnosticsBundle {
         path: output_path,

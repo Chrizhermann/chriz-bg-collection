@@ -856,17 +856,22 @@ fn publish_one(
                     path: plan.payload.relative_path.clone(),
                 })
             } else {
-                fs::hard_link(&temporary, &target).map_err(|source| AcquireError::Io {
-                    action: "publish materialized file without replacement",
-                    path: target.clone(),
-                    source,
-                })?;
-                fs::remove_file(&temporary).map_err(|source| AcquireError::Io {
-                    action: "remove published materialization temporary",
-                    path: temporary.clone(),
-                    source,
-                })?;
-                Ok(())
+                match fs_retry::rename_noclobber(&temporary, &target) {
+                    Ok(()) => Ok(()),
+                    Err(source)
+                        if source.kind() == std::io::ErrorKind::AlreadyExists
+                            || target.exists() =>
+                    {
+                        Err(AcquireError::UndeclaredOverwrite {
+                            path: plan.payload.relative_path.clone(),
+                        })
+                    }
+                    Err(source) => Err(AcquireError::Io {
+                        action: "publish materialized file without replacement",
+                        path: target.clone(),
+                        source,
+                    }),
+                }
             }
         }
         PublishAction::Replace {

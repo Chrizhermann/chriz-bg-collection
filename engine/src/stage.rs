@@ -972,7 +972,11 @@ pub fn stage_game_copy_with_observer<O: StageObserver>(
     let (source, target, scratch) = layout.paths_for(role)?;
     let left_out = layout.left_out(role);
     let before = snapshot_tree_without(source, left_out)?;
+    let alternate_executable = alternate_executable_in_snapshot(source, &before, role);
     create_directories(target)?;
+    if alternate_executable.is_some() {
+        remove_synthesized_canonical_executable_if_present(target, role.canonical_executable())?;
+    }
     ensure_expected_destination_entries(target, &before)?;
     create_directories(&scratch)?;
     ensure_direct_directory(&scratch)?;
@@ -1041,6 +1045,16 @@ pub fn stage_game_copy_with_observer<O: StageObserver>(
             ));
         }
         verify_staged_tree(source, target, &before)?;
+        if let Some((alt_relative, alt_length, alt_sha256)) = &alternate_executable {
+            ensure_canonical_executable(
+                target,
+                &scratch,
+                role.canonical_executable(),
+                alt_relative,
+                *alt_length,
+                alt_sha256,
+            )?;
+        }
         Ok(())
     })();
 
@@ -1316,7 +1330,7 @@ fn reusable_destination(
     })? {
         return Ok(false);
     }
-    if hard_link_count(destination, &metadata)? != 1 {
+    if hard_link_count(destination, &metadata)? > 1 {
         return Ok(false);
     }
     Ok(hash_and_length(destination)? == (expected_length, expected_sha256.to_owned()))
@@ -1400,7 +1414,7 @@ fn verify_staged_tree(source: &Path, target: &Path, expected: &TreeSnapshot) -> 
             let source_file = source.join(&entry.relative);
             let destination_file = target.join(&entry.relative);
             let destination_metadata = direct_metadata(&destination_file)?;
-            if hard_link_count(&destination_file, &destination_metadata)? != 1 {
+            if hard_link_count(&destination_file, &destination_metadata)? > 1 {
                 return Err(EngineError::StagingVerification {
                     path: destination_file,
                     reason: "destination regular file has another hard link".to_owned(),
@@ -1418,6 +1432,106 @@ fn verify_staged_tree(source: &Path, target: &Path, expected: &TreeSnapshot) -> 
                 });
             }
         }
+    }
+    Ok(())
+}
+
+/// When `source` ships its game executable under an alternate name (such as GOG 2.7.3.0's
+/// `BaldurII.exe`) and has no canonical executable (`Baldur.exe` / `icewind.exe`), returns the
+/// snapshot's relative path, byte length and SHA-256 so staging can also materialize an
+/// independent canonical copy for mods, InfinityLoader and overlays.
+fn alternate_executable_in_snapshot(
+    source: &Path,
+    snapshot: &TreeSnapshot,
+    role: GameRole,
+) -> Option<(PathBuf, u64, String)> {
+    let canonical_key = path_sort_key(Path::new(role.canonical_executable()));
+    if snapshot
+        .entries
+        .iter()
+        .any(|entry| path_sort_key(&entry.relative) == canonical_key)
+    {
+        return None;
+    }
+    let resolved = crate::games::resolve_game_executable(
+        &crate::games::SystemFileSystem,
+        source,
+        role,
+        role.canonical_executable(),
+    )?;
+    let resolved_key = path_sort_key(Path::new(&resolved));
+    snapshot.entries.iter().find_map(|entry| {
+        if path_sort_key(&entry.relative) != resolved_key {
+            return None;
+        }
+        match &entry.kind {
+            SnapshotKind::File { length, sha256 } => {
+                Some((entry.relative.clone(), *length, sha256.clone()))
+            }
+            SnapshotKind::Directory => None,
+        }
+    })
+}
+
+fn remove_synthesized_canonical_executable_if_present(
+    target: &Path,
+    canonical_name: &str,
+) -> Result<()> {
+    let path = target.join(canonical_name);
+    let metadata = match fs::symlink_metadata(&path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
+        Err(source) => return Err(EngineError::Io { path, source }),
+    };
+    reject_reparse(&path, &metadata)?;
+    if !metadata.is_file() {
+        return Err(EngineError::UnsafeStagingEntry {
+            path,
+            reason: "entry kind differs from the read-only source tree".to_owned(),
+        });
+    }
+    fs::remove_file(&path).map_err(|source| EngineError::Io { path, source })
+}
+
+fn ensure_canonical_executable(
+    target: &Path,
+    scratch: &Path,
+    canonical_name: &str,
+    alt_relative: &Path,
+    expected_length: u64,
+    expected_sha256: &str,
+) -> Result<()> {
+    let staged_alt = target.join(alt_relative);
+    let canonical_relative = Path::new(canonical_name);
+    let canonical_dest = target.join(canonical_relative);
+    fs_retry::retry_while_held(
+        || {
+            copy_regular_file(
+                &staged_alt,
+                &canonical_dest,
+                scratch,
+                canonical_relative,
+                expected_length,
+                expected_sha256,
+            )
+        },
+        engine_io_error,
+    )?;
+    let metadata = direct_metadata(&canonical_dest)?;
+    if hard_link_count(&canonical_dest, &metadata)? > 1 {
+        return Err(EngineError::StagingVerification {
+            path: canonical_dest,
+            reason: "canonical executable copy has another hard link".to_owned(),
+        });
+    }
+    if same_file::is_same_file(&staged_alt, &canonical_dest).map_err(|source| EngineError::Io {
+        path: canonical_dest.clone(),
+        source,
+    })? {
+        return Err(EngineError::StagingVerification {
+            path: canonical_dest,
+            reason: "canonical executable copy shares source file identity".to_owned(),
+        });
     }
     Ok(())
 }

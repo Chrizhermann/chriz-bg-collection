@@ -1653,6 +1653,142 @@ fn configured_local_probe_reproduces_known_source_evidence_without_writes() {
 }
 
 #[test]
+fn gog_bg2ee_2_7_3_with_baldur_ii_exe_is_usable_without_missing_files_or_version_error() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut fs_provider = FixtureFileSystem::default();
+    let root = fixture_game(
+        "steam-bg2ee",
+        &temp.path().join("gog-bg2ee-273"),
+        &mut fs_provider,
+        "2.7.3.0",
+    );
+    fs::rename(root.join("Baldur.exe"), root.join("BaldurII.exe")).unwrap();
+    fs::write(root.join("goggame-1207666373.info"), b"{}").unwrap();
+    fs_provider.add_version(root.join("BaldurII.exe"), "2.7.3.0");
+
+    let real_profiles =
+        GameProfiles::load(Path::new(env!("CARGO_MANIFEST_DIR")).join("../manifest/game-builds"))
+            .unwrap();
+    let candidate = inspect_game_path(
+        &real_profiles,
+        &fs_provider,
+        GameRole::Bg2ee,
+        Storefront::Gog,
+        &root,
+    )
+    .unwrap();
+
+    assert_eq!(
+        candidate.eligibility,
+        Eligibility::Experimental,
+        "{candidate:#?}"
+    );
+    assert_eq!(candidate.build.as_deref(), Some("2.7.3.0"));
+    assert!(candidate.fingerprint.is_some());
+    assert!(!has_finding(&candidate, FindingKind::MissingFiles));
+    assert!(!has_finding(&candidate, FindingKind::UnsupportedVersion));
+    assert!(has_finding(&candidate, FindingKind::UnverifiedStorefront));
+}
+
+#[test]
+fn custom_root_game_executable_is_detected_while_helper_tools_are_ignored() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut fs_provider = FixtureFileSystem::default();
+    let root = fixture_game(
+        "steam-bg2ee",
+        &temp.path().join("repackaged-bg2ee"),
+        &mut fs_provider,
+        "2.7.3.0",
+    );
+    fs::rename(root.join("Baldur.exe"), root.join("BG2Enhanced.exe")).unwrap();
+    fs::write(root.join("unins000.exe"), b"uninstaller").unwrap();
+    fs::write(root.join("oalinst.exe"), b"openal").unwrap();
+    fs_provider.add_version(root.join("BG2Enhanced.exe"), "2.7.3.0");
+
+    let candidate = inspect_game_path(
+        &profiles(),
+        &fs_provider,
+        GameRole::Bg2ee,
+        Storefront::Other,
+        &root,
+    )
+    .unwrap();
+
+    assert_eq!(
+        candidate.eligibility,
+        Eligibility::Experimental,
+        "{candidate:#?}"
+    );
+    assert_eq!(candidate.build.as_deref(), Some("2.7.3.0"));
+    assert!(candidate.fingerprint.is_some());
+    assert!(!has_finding(&candidate, FindingKind::MissingFiles));
+
+    // When no game executable exists at all (only helper binaries), MissingFiles still blocks.
+    fs::remove_file(root.join("BG2Enhanced.exe")).unwrap();
+    let missing = inspect_game_path(
+        &profiles(),
+        &fs_provider,
+        GameRole::Bg2ee,
+        Storefront::Other,
+        &root,
+    )
+    .unwrap();
+    assert_eq!(missing.eligibility, Eligibility::Ineligible);
+    assert!(has_finding(&missing, FindingKind::MissingFiles));
+}
+
+#[test]
+fn older_iwdee_build_without_patch27_bif_is_usable_when_data_has_regular_bifs() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut fs_provider = FixtureFileSystem::default();
+    let root = temp.path().join("beamdog-iwdee-266");
+    fs::create_dir_all(root.join("data")).unwrap();
+    fs::create_dir_all(root.join("lang/en_US")).unwrap();
+    fs::write(root.join("icewind.exe"), b"iwdee 2.6").unwrap();
+    fs::write(root.join("chitin.key"), b"key").unwrap();
+    fs::write(root.join("engine.lua"), b"engine_name = \"IWD\"\n").unwrap();
+    fs::write(root.join("lang/en_US/dialog.tlk"), b"tlk").unwrap();
+    fs::write(root.join("data/DEFAULT.BIF"), b"bif").unwrap();
+    fs_provider.add_version(root.join("icewind.exe"), "2.6.6.0");
+
+    let iwd_profiles = GameProfiles::load(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../recipes/iwd-current/game-builds"),
+    )
+    .unwrap();
+    let candidate = inspect_game_path(
+        &iwd_profiles,
+        &fs_provider,
+        GameRole::Iwdee,
+        Storefront::Beamdog,
+        &root,
+    )
+    .unwrap();
+
+    assert_eq!(
+        candidate.eligibility,
+        Eligibility::Experimental,
+        "{candidate:#?}"
+    );
+    assert_eq!(candidate.build.as_deref(), Some("2.6.6.0"));
+    assert!(candidate.fingerprint.is_some());
+    assert!(!has_finding(&candidate, FindingKind::MissingFiles));
+    assert!(has_finding(&candidate, FindingKind::UnsupportedVersion));
+
+    // Removing the remaining BIF archive still blocks with MissingFiles.
+    fs::remove_file(root.join("data/DEFAULT.BIF")).unwrap();
+    let broken = inspect_game_path(
+        &iwd_profiles,
+        &fs_provider,
+        GameRole::Iwdee,
+        Storefront::Beamdog,
+        &root,
+    )
+    .unwrap();
+    assert_eq!(broken.eligibility, Eligibility::Ineligible);
+    assert!(has_finding(&broken, FindingKind::MissingFiles));
+}
+
+#[test]
 fn provider_surface_is_read_only_by_construction() {
     fn assert_read_only_shape<T: FileSystemProvider>(_provider: &T) {}
     assert_read_only_shape(&SystemFileSystem);

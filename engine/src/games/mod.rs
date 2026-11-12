@@ -15,7 +15,7 @@ pub use discovery::{
 };
 pub use probe::{
     detect_storefront, inspect_game_path, inspect_game_path_with_language, left_out_root_patterns,
-    DirectoryEntry, FileKind, FileSystemProvider, SystemFileSystem,
+    resolve_game_executable, DirectoryEntry, FileKind, FileSystemProvider, SystemFileSystem,
 };
 pub use profile::{
     AllowedCleanVariant, ExpectedInventoryEntry, FileFingerprint, ForbiddenResiduePattern,
@@ -56,6 +56,38 @@ impl GameRole {
     /// Returns `true` for a role that is installed alone instead of as one half of EET.
     pub const fn is_standalone(self) -> bool {
         matches!(self, Self::Iwdee)
+    }
+
+    /// Canonical Windows executable name expected by mods, InfinityLoader and overlays.
+    pub const fn canonical_executable(self) -> &'static str {
+        match self {
+            Self::BgeeSod | Self::Bg2ee => "Baldur.exe",
+            Self::Iwdee => "icewind.exe",
+        }
+    }
+
+    /// Known storefront executable names for this game role, canonical name first.
+    ///
+    /// GOG's 2.7.3.0 Baldur's Gate II: Enhanced Edition build ships `BaldurII.exe` instead of
+    /// `Baldur.exe`; Siege of Dragonspear and older/repackaged releases have also used
+    /// role-specific names.
+    pub const fn known_executables(self) -> &'static [&'static str] {
+        match self {
+            Self::BgeeSod => &[
+                "Baldur.exe",
+                "SiegeOfDragonspear.exe",
+                "BaldursGate.exe",
+                "BGEE.exe",
+            ],
+            Self::Bg2ee => &[
+                "Baldur.exe",
+                "BaldurII.exe",
+                "BaldursGateII.exe",
+                "Baldur2.exe",
+                "BG2EE.exe",
+            ],
+            Self::Iwdee => &["icewind.exe", "IcewindDale.exe", "IWDEE.exe", "Baldur.exe"],
+        }
     }
 }
 

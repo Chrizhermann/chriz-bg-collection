@@ -566,12 +566,48 @@ fn launch_accepts_the_games_own_executable_and_skips_eet_settings() {
     assert_eq!(launches.len(), 1);
     assert!(launches[0].ends_with("game/icewind.exe"), "{launches:?}");
 
-    // The Baldur's Gate app launches only InfinityLoader.
+    // The Baldur's Gate app still refuses an IWD executable.
     let bg = fixture.bridge.clone().with_flavor(&BG);
     assert_eq!(
         bg.launch_install(&install_id, false).unwrap_err().code,
         "managed_launch_invalid"
     );
+}
+
+#[test]
+fn bg_launch_accepts_baldur_ii_exe_when_eeex_is_left_out() {
+    let fixture = iwd_fixture();
+    let managed = fixture.root.join("Games").join("Chriz Easy BG GOG");
+    fs::create_dir_all(managed.join(".chriz")).unwrap();
+    fs::create_dir_all(managed.join("game")).unwrap();
+    fs::write(managed.join(".chriz/install-receipt.json"), b"receipt").unwrap();
+    let launch = managed.join("game/BaldurII.exe");
+    fs::write(&launch, b"gog bg2ee launcher").unwrap();
+    let install_id = "install-bg-gog-launch".to_owned();
+    ManagedInstallRegistry::open_or_create(&fixture.app_data)
+        .unwrap()
+        .publish(&ManagedInstallRecord {
+            schema_version: REGISTRY_SCHEMA_VERSION,
+            install_id: install_id.clone(),
+            display_name: "Chriz Easy BG".to_owned(),
+            managed_root: managed.canonicalize().unwrap(),
+            recipe_version: "0.1.2".to_owned(),
+            recipe_sha256: "22".repeat(32),
+            engine_name: "bg-gog-fixture".to_owned(),
+            managed_save_root: managed.parent().unwrap().join("bg-saves"),
+            launch_path: launch.canonicalize().unwrap(),
+            receipt_sha256: sha256_bytes(b"receipt"),
+            completed_at_millis: 1,
+            recipe_id: Some("chriz-bg-collection".to_owned()),
+        })
+        .unwrap();
+
+    let bg = fixture.bridge.clone().with_flavor(&BG);
+    bg.launch_install(&install_id, false)
+        .expect("launch a BG installation whose executable is BaldurII.exe");
+    let launches = fixture.system.launches.lock().unwrap().clone();
+    assert_eq!(launches.len(), 1);
+    assert!(launches[0].ends_with("game/BaldurII.exe"), "{launches:?}");
 }
 
 #[test]

@@ -2,6 +2,35 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 12 — Chriz Easy BG 0.1.3 prepared
+
+Prepared on `fix/flexible-source-and-exfat` from `main` at `1c90104` to ship two urgent
+setup fixes reported by player `stonepot` on Discord alongside the post-0.1.2 features
+already merged on `main`:
+
+- **Flexible game executable & archive detection + canonical staging copy:** GOG's 2.7.3.0
+  Windows build of Baldur's Gate II: Enhanced Edition ships `BaldurII.exe` instead of
+  `Baldur.exe`. Source probing (`engine/src/games/probe.rs`) now resolves role-specific and
+  renamed game executables without modifying the store folder, and accepts older builds
+  (such as 2.6.6.0 without `data/PATCH27.bif`) whenever regular `.bif` archives exist in
+  `data/`. Staging (`engine/src/stage.rs`) materializes an independent verified `Baldur.exe`
+  (or `icewind.exe`) copy inside `managed_root/game` when the source used an alternate name
+  so EEex (`InfinityLoader.ini`), WeiDU mods and BG Radar Overlay (`ProcessHacker.cs`) work
+  out of the box. Launch and patch paths (`cli.rs`, `bridge.rs`, `patches/mod.rs`) also
+  accept known role executables directly.
+- **exFAT and FAT32 installation drives:** all seven no-overwrite file publication sites
+  (`session.rs`, `receipt.rs`, `recovery_receipt.rs`, `registry.rs`, `acquire/materialize.rs`,
+  `diagnostics.rs`) now use `fs_retry::rename_noclobber` (`MoveFileExW` without
+  `MOVEFILE_REPLACE_EXISTING` plus transient scanner retry) instead of `std::fs::hard_link`,
+  which failed with `ERROR_INVALID_FUNCTION (os error 1)` on exFAT/FAT32 drives.
+- **Also reaching players in 0.1.3 from `main`:** Main choices on the install screen (#130),
+  campaign XP caps with banked XP in Challenge Mode (#129), and Feedback / Report a problem
+  with username and computer-name redaction in diagnostics bundles (#131, #135).
+- **Versions:** app **0.1.3** (`package.json`, `package-lock.json`, `tauri.conf.json`,
+  `app/src-tauri/Cargo.toml`, `Cargo.lock`, `THIRD_PARTY_NOTICES.md`); bundled curated
+  collection stays **0.1.2** (no `diff_recipe_packages` subject changed since `0.1.2`).
+  See [release-notes-0.1.3.md](release-notes-0.1.3.md).
+
 ## November 10 — Feedback and problem reports from the app (for the next versions)
 
 Christopher's idea of 2026-11-10, designed and approved the same day: both apps get a

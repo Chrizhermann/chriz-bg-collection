@@ -100,6 +100,83 @@ pub(crate) fn persist_checked<E>(
     published
 }
 
+/// Rename `from` to `to` without replacing an existing `to`, retrying while another program
+/// briefly holds `from`. Unlike [`fs::hard_link`], this works on filesystems without hard links
+/// such as exFAT and FAT32 as well as NTFS and ReFS.
+#[cfg(windows)]
+pub(crate) fn rename_noclobber(from: &Path, to: &Path) -> io::Result<()> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Storage::FileSystem::MoveFileExW;
+
+    let from_wide = from
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    let to_wide = to
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    match attempt(
+        BACKOFF,
+        &mut pause,
+        || {
+            if fs::symlink_metadata(to).is_ok() {
+                Err(io::Error::new(
+                    io::ErrorKind::AlreadyExists,
+                    "destination already exists",
+                ))
+            } else {
+                Ok(())
+            }
+        },
+        || {
+            let moved = unsafe { MoveFileExW(from_wide.as_ptr(), to_wide.as_ptr(), 0) };
+            if moved == 0 {
+                Err(io::Error::last_os_error())
+            } else {
+                Ok(())
+            }
+        },
+    ) {
+        Ok(()) => Ok(()),
+        Err(CheckedRenameError::Check(error) | CheckedRenameError::Rename(error)) => Err(error),
+    }
+}
+
+/// Rename `from` to `to` without replacing an existing `to`, falling back to a checked rename on
+/// filesystems that do not support hard links.
+#[cfg(not(windows))]
+pub(crate) fn rename_noclobber(from: &Path, to: &Path) -> io::Result<()> {
+    if fs::symlink_metadata(to).is_ok() {
+        return Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            "destination already exists",
+        ));
+    }
+    match fs::hard_link(from, to) {
+        Ok(()) => fs::remove_file(from),
+        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => Err(error),
+        Err(error)
+            if matches!(
+                error.kind(),
+                io::ErrorKind::Unsupported | io::ErrorKind::PermissionDenied
+            ) =>
+        {
+            if fs::symlink_metadata(to).is_ok() {
+                Err(io::Error::new(
+                    io::ErrorKind::AlreadyExists,
+                    "destination already exists",
+                ))
+            } else {
+                fs::rename(from, to)
+            }
+        }
+        Err(error) => Err(error),
+    }
+}
+
 /// Publish `temporary` at `to` like [`NamedTempFile::persist_noclobber`], retried the same way.
 /// Every attempt is itself a no-clobber publish, so an existing `to` is never replaced: it fails
 /// the first attempt with its own error, which is not retried. A temporary that could not be
@@ -618,5 +695,37 @@ mod tests {
         assert_eq!(waits, 0);
         assert_eq!(fs::read(&target).unwrap(), b"earlier record");
         assert_eq!(names(&temp), ["record.json"]);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn rename_noclobber_moves_a_held_source_without_hard_links_once_released() {
+        let temp = TempDir::new().unwrap();
+        let source = temp.path().join(".payload.zip.part");
+        let target = temp.path().join("payload.zip");
+        fs::write(&source, b"recipe payload").unwrap();
+
+        let (result, waits) = hold_until_first_wait(&source, || rename_noclobber(&source, &target));
+
+        result.unwrap();
+        assert!(waits >= 1);
+        assert_eq!(fs::read(&target).unwrap(), b"recipe payload");
+        assert!(!source.exists());
+        assert_eq!(names(&temp), ["payload.zip"]);
+    }
+
+    #[test]
+    fn rename_noclobber_never_overwrites_an_existing_target_and_keeps_source_for_caller_cleanup() {
+        let temp = TempDir::new().unwrap();
+        let source = temp.path().join(".payload.zip.part");
+        let target = temp.path().join("payload.zip");
+        fs::write(&source, b"new payload").unwrap();
+        fs::write(&target, b"existing payload").unwrap();
+
+        let error = rename_noclobber(&source, &target).unwrap_err();
+
+        assert_eq!(error.kind(), io::ErrorKind::AlreadyExists);
+        assert_eq!(fs::read(&target).unwrap(), b"existing payload");
+        assert_eq!(fs::read(&source).unwrap(), b"new payload");
     }
 }

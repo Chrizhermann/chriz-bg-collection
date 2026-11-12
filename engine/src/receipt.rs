@@ -1299,32 +1299,40 @@ fn publish_if_missing(path: &Path, bytes: &[u8]) -> Result<(), ReceiptError> {
             source,
         })?;
         drop(file);
-        match fs::hard_link(&temporary, path) {
+        match crate::fs_retry::rename_noclobber(&temporary, path) {
             Ok(()) => Ok(()),
-            Err(link_source) => match fs::symlink_metadata(path) {
-                Ok(_) => reconcile_existing(path, bytes),
-                Err(source) if source.kind() == std::io::ErrorKind::NotFound => {
-                    Err(ReceiptError::Io {
-                        path: path.to_path_buf(),
-                        source: link_source,
-                    })
+            Err(move_source) => {
+                let cleanup = fs::remove_file(&temporary);
+                match fs::symlink_metadata(path) {
+                    Ok(_) => {
+                        reconcile_existing(path, bytes)?;
+                        cleanup.map_err(|source| ReceiptError::Io {
+                            path: temporary.clone(),
+                            source,
+                        })
+                    }
+                    Err(source) if source.kind() == std::io::ErrorKind::NotFound => {
+                        let _ = cleanup;
+                        Err(ReceiptError::Io {
+                            path: path.to_path_buf(),
+                            source: move_source,
+                        })
+                    }
+                    Err(source) => {
+                        let _ = cleanup;
+                        Err(ReceiptError::Io {
+                            path: path.to_path_buf(),
+                            source,
+                        })
+                    }
                 }
-                Err(source) => Err(ReceiptError::Io {
-                    path: path.to_path_buf(),
-                    source,
-                }),
-            },
+            }
         }
     })();
-    let cleanup = fs::remove_file(&temporary);
     if let Err(error) = result {
-        let _ = cleanup;
+        let _ = fs::remove_file(&temporary);
         return Err(error);
     }
-    cleanup.map_err(|source| ReceiptError::Io {
-        path: temporary,
-        source,
-    })?;
     sync_directory(parent)
 }
 

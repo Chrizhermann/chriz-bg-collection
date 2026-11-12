@@ -7795,9 +7795,28 @@ fn verified_launch_path(
         return Ok(infinity_loader);
     }
     let vanilla = game_root.join(fallback);
-    direct_regular_file(&vanilla)
-        .then_some(vanilla)
-        .ok_or_else(|| StepFailure::new(format!("{root_label} has no verified launch executable")))
+    if direct_regular_file(&vanilla) {
+        return Ok(vanilla);
+    }
+    let role = if fallback.eq_ignore_ascii_case("icewind.exe") {
+        GameRole::Iwdee
+    } else {
+        GameRole::Bg2ee
+    };
+    if let Some(resolved) = crate::games::resolve_game_executable(
+        &crate::games::SystemFileSystem,
+        game_root,
+        role,
+        fallback,
+    ) {
+        let candidate = game_root.join(resolved);
+        if direct_regular_file(&candidate) {
+            return Ok(candidate);
+        }
+    }
+    Err(StepFailure::new(format!(
+        "{root_label} has no verified launch executable"
+    )))
 }
 
 fn direct_regular_file(path: &Path) -> bool {
