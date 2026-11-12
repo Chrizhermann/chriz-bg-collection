@@ -2,6 +2,33 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 13 — Chriz Easy BG 0.1.4 and Chriz Easy IWD 0.1.11 released
+
+Published on 2026-11-12 at 21:18–21:19 UTC (2026-11-13 06:18–06:19 KST) from `main` at
+`032d623` (PR #138), live on both versioned releases, both update channels (`alpha` on
+`chriz-easy-bg`, `updates` on `chriz-easy-iwd`), `Chrizhermann/chriz-easy-iwd` `README.md`
+(`fdd94aa`), and `bg.chrizfader.org` (`twitch-setup-chriz` PR #86):
+
+- **Classic BG1 & IWD UI/UX and typography redesign (#138):**
+  - **Chriz Easy BG 0.1.4** (`Chriz.Easy.BG_0.1.4_x64-setup.exe`, 7,195,109 bytes, SHA-256
+    `f5d51d43…`; bundled collection stays **0.1.2**): Candlekeep granite stone, aged brass
+    rules, citadel gate medallion, and bundled multi-weight `Alegreya` + `Alegreya Sans`
+    OFL WOFF2 fonts. See [package-acceptance-0.1.4-2026-11-13.md](package-acceptance-0.1.4-2026-11-13.md)
+    and [release-notes-0.1.4.md](release-notes-0.1.4.md).
+  - **Chriz Easy IWD 0.1.11** (`Chriz.Easy.IWD_0.1.11_x64-setup.exe`, 7,115,234 bytes,
+    SHA-256 `a06283bb…`; bundled collection stays **0.1.10**): Kuldahar dark slate, riveted
+    dark oak timber planks, glowing glacial Heartstone diamond, and bundled multi-weight
+    `Spectral` + `Alegreya Sans` OFL WOFF2 fonts, plus the post-0.1.10 engine/UI additions
+    from `main` (**Feedback** / **Report a problem**, diagnostics redaction, flexible exe
+    probing, and exFAT/FAT32 drive support). See
+    [package-acceptance-iwd-0.1.11-2026-11-13.md](package-acceptance-iwd-0.1.11-2026-11-13.md)
+    and [release-notes-iwd-0.1.11.md](release-notes-iwd-0.1.11.md).
+  - **Shared UX upgrades:** Spellbook/Journal chapter index sidebar and sticky toolbar in
+    **Customize**, dedicated **Play** launch header card on **My installs**, live activity
+    line during **Build**, full-width **Updates** layout with flavor-aware copy, compact
+    zero-scroll **Feedback / Report a problem** dialog, refreshed multi-size `.ico` app
+    icons, and 24-bit uncompressed NSIS setup bitmaps (`app/src-tauri/windows/*.bmp`).
+
 ## November 12 — Chriz Easy BG 0.1.3 released
 
 Published on 2026-11-12 at 14:00 UTC from `main` at `7f26664` (PR #136; setup
