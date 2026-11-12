@@ -25,7 +25,9 @@
     "icon": ["icons/iwd/icon.ico"],
     "windows": {
       "nsis": {
-        "installerIcon": "icons/iwd/icon.ico"
+        "installerIcon": "icons/iwd/icon.ico",
+        "sidebarImage": "windows/iwd-sidebar.bmp",
+        "headerImage": "windows/iwd-header.bmp"
       }
     },
     "createUpdaterArtifacts": true,

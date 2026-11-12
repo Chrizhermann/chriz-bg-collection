@@ -218,6 +218,35 @@ fn the_iwd_app_has_its_own_icon() {
         fs::read(crate_root.join("icons/icon.ico")).unwrap()
     );
     assert_eq!(sizes("icons/iwd/icon.ico"), sizes("icons/icon.ico"));
+
+    let check_bmp = |path: &str, expected_width: i32, expected_height: i32| {
+        let bmp = fs::read(crate_root.join(path)).unwrap();
+        assert_eq!(&bmp[0..2], b"BM", "{path} starts with BM header");
+        let dib_size = u32::from_le_bytes(bmp[14..18].try_into().unwrap());
+        assert_eq!(dib_size, 40, "{path} uses 40-byte BITMAPINFOHEADER");
+        let width = i32::from_le_bytes(bmp[18..22].try_into().unwrap());
+        let height = i32::from_le_bytes(bmp[22..26].try_into().unwrap());
+        let bpp = u16::from_le_bytes(bmp[28..30].try_into().unwrap());
+        let compression = u32::from_le_bytes(bmp[30..34].try_into().unwrap());
+        assert_eq!((width, height), (expected_width, expected_height), "{path} dimensions");
+        assert_eq!(bpp, 24, "{path} is 24-bit RGB");
+        assert_eq!(compression, 0, "{path} is uncompressed BI_RGB");
+        bmp
+    };
+    let bg_nsis = &config("tauri.conf.json")["bundle"]["windows"]["nsis"];
+    let iwd_nsis = &iwd["bundle"]["windows"]["nsis"];
+    assert_eq!(bg_nsis["sidebarImage"], "windows/bg-sidebar.bmp");
+    assert_eq!(bg_nsis["headerImage"], "windows/bg-header.bmp");
+    assert_eq!(iwd_nsis["sidebarImage"], "windows/iwd-sidebar.bmp");
+    assert_eq!(iwd_nsis["headerImage"], "windows/iwd-header.bmp");
+    assert_ne!(
+        check_bmp("windows/bg-sidebar.bmp", 164, 314),
+        check_bmp("windows/iwd-sidebar.bmp", 164, 314)
+    );
+    assert_ne!(
+        check_bmp("windows/bg-header.bmp", 150, 57),
+        check_bmp("windows/iwd-header.bmp", 150, 57)
+    );
 }
 
 /// Each app updates itself only from its own feed, checks setups against its own key, and its
