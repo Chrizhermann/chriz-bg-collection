@@ -310,6 +310,105 @@ fn is_left_out(patterns: &[String], name: &str) -> bool {
     patterns.iter().any(|pattern| wildcard_match(pattern, name))
 }
 
+/// Whether `name` is a known mod, installer, uninstaller or overlay helper rather than the
+/// game executable itself.
+pub(crate) fn is_non_game_root_executable(name: &str) -> bool {
+    const NON_GAME_PATTERNS: &[&str] = &[
+        "setup-*",
+        "weidu.exe",
+        "infinityloader.exe",
+        "oalinst.exe",
+        "unins*",
+        "*uninstall*",
+        "dlcmerger*",
+        "galaxy*",
+        "crash*",
+        "bg radar overlay.exe",
+        "bgradaroverlay.exe",
+        "vcredist*",
+        "dxsetup.exe",
+    ];
+    NON_GAME_PATTERNS
+        .iter()
+        .any(|pattern| wildcard_match(pattern, name))
+}
+
+/// Resolves the game executable relative path in `root` for `role`.
+///
+/// Checks `preferred` first, then [`GameRole::known_executables`], and finally any unambiguous
+/// direct regular `.exe` in `root` that is not a mod, installer or overlay helper. Returns
+/// `None` when `preferred` or a matched known executable is a link/non-file, or when no game
+/// executable exists.
+pub fn resolve_game_executable<F: FileSystemProvider>(
+    fs_provider: &F,
+    root: &Path,
+    role: GameRole,
+    preferred: &str,
+) -> Option<String> {
+    match direct_relative_kind_or_missing(fs_provider, root, preferred, FileKind::File) {
+        Ok(true) => return Some(preferred.to_owned()),
+        Err(()) => return None,
+        Ok(false) => {}
+    }
+    let entries = sorted_entries(fs_provider, root).ok()?;
+    for known in role.known_executables() {
+        if known.eq_ignore_ascii_case(preferred) {
+            continue;
+        }
+        if let Some(entry) = entries.iter().find(|entry| {
+            entry
+                .name
+                .to_str()
+                .is_some_and(|name| name.eq_ignore_ascii_case(known))
+        }) {
+            return (entry.kind == FileKind::File)
+                .then(|| entry.name.to_str().map(str::to_owned))
+                .flatten();
+        }
+    }
+    let candidates = entries
+        .iter()
+        .filter(|entry| entry.kind == FileKind::File)
+        .filter_map(|entry| {
+            let name = entry.name.to_str()?;
+            let lower = name.to_ascii_lowercase();
+            (lower.ends_with(".exe") && !is_non_game_root_executable(name)).then_some((entry, name))
+        })
+        .collect::<Vec<_>>();
+    if let Some((_, name)) = candidates
+        .iter()
+        .find(|(entry, _)| fs_provider.product_version(&entry.path).is_ok())
+    {
+        return Some((*name).to_owned());
+    }
+    if candidates.len() == 1 {
+        return Some(candidates[0].1.to_owned());
+    }
+    None
+}
+
+fn has_direct_bif_archive<F: FileSystemProvider>(fs_provider: &F, root: &Path) -> bool {
+    if direct_relative_kind(fs_provider, root, "data", FileKind::Directory).is_err() {
+        return false;
+    }
+    sorted_entries(fs_provider, &root.join("data")).is_ok_and(|entries| {
+        entries.iter().any(|entry| {
+            entry.kind == FileKind::File
+                && entry
+                    .name
+                    .to_str()
+                    .is_some_and(|name| name.to_ascii_lowercase().ends_with(".bif"))
+        })
+    })
+}
+
+fn is_data_bif_path(relative: &str) -> bool {
+    let folded = folded_path(relative);
+    folded.starts_with("data/")
+        && !folded["data/".len()..].contains('/')
+        && folded.ends_with(".bif")
+}
+
 pub(crate) fn inspect_profile_paths<F: FileSystemProvider>(
     fs_provider: &F,
     profiles: &[&GameProfile],
@@ -367,18 +466,21 @@ pub(crate) fn inspect_profile_paths<F: FileSystemProvider>(
             path: root.to_path_buf(),
             source,
         })?;
-    let version_path = canonical_root.join(normalized_path(&profile.executable));
-    let (build, version_error) = match direct_relative_kind(
+    let resolved_executable = resolve_game_executable(
         fs_provider,
         &canonical_root,
+        profile.role,
         &profile.executable,
-        FileKind::File,
-    ) {
-        Ok(()) => match fs_provider.product_version(&version_path) {
-            Ok(version) => (Some(version), None),
-            Err(error) => (None, Some(error.to_string())),
-        },
-        Err(()) => (
+    );
+    let (build, version_error) = match &resolved_executable {
+        Some(executable) => {
+            let version_path = canonical_root.join(normalized_path(executable));
+            match fs_provider.product_version(&version_path) {
+                Ok(version) => (Some(version), None),
+                Err(error) => (None, Some(error.to_string())),
+            }
+        }
+        None => (
             None,
             Some("the game program is missing or is a link".to_owned()),
         ),
@@ -394,6 +496,16 @@ pub(crate) fn inspect_profile_paths<F: FileSystemProvider>(
         .find(|candidate| same_version(candidate) && candidate.storefront == storefront)
         .or_else(|| profiles.iter().copied().find(same_version))
         .unwrap_or(profile);
+    let resolved_executable = if resolved_executable.is_some() {
+        resolved_executable
+    } else {
+        resolve_game_executable(
+            fs_provider,
+            &canonical_root,
+            profile.role,
+            &profile.executable,
+        )
+    };
     inspect_with_profile(
         fs_provider,
         profile,
@@ -401,6 +513,7 @@ pub(crate) fn inspect_profile_paths<F: FileSystemProvider>(
         Source {
             build,
             version_error,
+            resolved_executable,
             storefront,
             language,
         },
@@ -429,6 +542,7 @@ struct Observation {
 struct Source<'a> {
     build: Option<String>,
     version_error: Option<String>,
+    resolved_executable: Option<String>,
     storefront: Storefront,
     language: Option<&'a str>,
 }
@@ -442,9 +556,13 @@ fn inspect_with_profile<F: FileSystemProvider>(
     let Source {
         build,
         version_error,
+        resolved_executable,
         storefront,
         language,
     } = source;
+    let effective_executable = resolved_executable
+        .as_deref()
+        .unwrap_or(profile.executable.as_str());
     let mut findings = Vec::new();
     let tested_build = build.as_deref() == Some(profile.product_version.as_str());
     if !tested_build {
@@ -463,7 +581,7 @@ fn inspect_with_profile<F: FileSystemProvider>(
         findings.push(GameFinding {
             kind: FindingKind::UnsupportedVersion,
             message,
-            paths: vec![root.join(normalized_path(&profile.executable))],
+            paths: vec![root.join(normalized_path(effective_executable))],
         });
     }
     let other_language = language.filter(|language| !is_english(language));
@@ -486,11 +604,22 @@ fn inspect_with_profile<F: FileSystemProvider>(
     let mut missing_sod = Vec::new();
     let mut missing_required = Vec::new();
     for relative in &profile.required_files {
+        let check_relative = if relative.eq_ignore_ascii_case(&profile.executable) {
+            effective_executable
+        } else {
+            relative.as_str()
+        };
         let path = root.join(normalized_path(relative));
-        match direct_relative_kind(fs_provider, root, relative, FileKind::File) {
-            Ok(()) => {}
-            Err(()) if sod_paths.contains(&relative.to_ascii_lowercase()) => missing_sod.push(path),
-            Err(()) => missing_required.push(relative.clone()),
+        match direct_relative_kind_or_missing(fs_provider, root, check_relative, FileKind::File) {
+            Ok(true) => {}
+            Ok(false)
+                if !sod_paths.contains(&relative.to_ascii_lowercase())
+                    && is_data_bif_path(relative)
+                    && has_direct_bif_archive(fs_provider, root) => {}
+            Ok(false) | Err(()) if sod_paths.contains(&relative.to_ascii_lowercase()) => {
+                missing_sod.push(path);
+            }
+            Ok(false) | Err(()) => missing_required.push(relative.clone()),
         }
     }
     let sod_merged = !missing_sod.is_empty()
@@ -535,7 +664,13 @@ fn inspect_with_profile<F: FileSystemProvider>(
     }
 
     let left_out_patterns = left_out_root_patterns(profile);
-    let observation = observe_profile(fs_provider, profile, root, &left_out_patterns);
+    let observation = observe_profile(
+        fs_provider,
+        profile,
+        root,
+        &left_out_patterns,
+        effective_executable,
+    );
     findings.extend(left_out_findings(
         fs_provider,
         profile,
@@ -607,7 +742,7 @@ fn inspect_with_profile<F: FileSystemProvider>(
     };
 
     if !same_variant && !blocked && reference_store && tested_build {
-        if observation.complete_fingerprints && fingerprint_variants.is_empty() {
+        if !observation.complete_fingerprints || fingerprint_variants.is_empty() {
             findings.push(GameFinding {
                 kind: FindingKind::UnknownFingerprint,
                 message: format!(
@@ -617,7 +752,14 @@ fn inspect_with_profile<F: FileSystemProvider>(
                 paths: profile
                     .fingerprint_files
                     .iter()
-                    .map(|path| root.join(normalized_path(path)))
+                    .map(|path| {
+                        let actual = if path.eq_ignore_ascii_case(&profile.executable) {
+                            effective_executable
+                        } else {
+                            path.as_str()
+                        };
+                        root.join(normalized_path(actual))
+                    })
                     .collect(),
             });
         }
@@ -794,6 +936,7 @@ fn observe_profile<F: FileSystemProvider>(
     profile: &GameProfile,
     root: &Path,
     left_out_patterns: &[String],
+    effective_executable: &str,
 ) -> Observation {
     let mut observation = Observation {
         complete_fingerprints: true,
@@ -802,13 +945,18 @@ fn observe_profile<F: FileSystemProvider>(
     };
 
     for relative in &profile.fingerprint_files {
-        let path = root.join(normalized_path(relative));
-        match direct_relative_kind_or_missing(fs_provider, root, relative, FileKind::File) {
+        let actual_relative = if relative.eq_ignore_ascii_case(&profile.executable) {
+            effective_executable
+        } else {
+            relative.as_str()
+        };
+        let path = root.join(normalized_path(actual_relative));
+        match direct_relative_kind_or_missing(fs_provider, root, actual_relative, FileKind::File) {
             Ok(true) => match fs_provider.read(&path) {
                 Ok(bytes) => {
                     observation
                         .fingerprints
-                        .insert(folded_path(relative), hash_bytes(&bytes));
+                        .insert(folded_path(actual_relative), hash_bytes(&bytes));
                 }
                 Err(_) => {
                     observation.complete_fingerprints = false;
@@ -817,7 +965,7 @@ fn observe_profile<F: FileSystemProvider>(
             },
             Ok(false) => {
                 observation.complete_fingerprints = false;
-                observation.missing.insert(folded_path(relative));
+                observation.missing.insert(folded_path(actual_relative));
             }
             Err(()) => {
                 observation.complete_fingerprints = false;

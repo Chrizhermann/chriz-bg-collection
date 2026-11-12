@@ -757,8 +757,8 @@ fn publish_create_once(path: &Path, bytes: &[u8]) -> Result<(), RegistryError> {
             source,
         })?;
         drop(file);
-        fs::hard_link(&temporary, path).map_err(|source| {
-            if path.exists() {
+        crate::fs_retry::rename_noclobber(&temporary, path).map_err(|source| {
+            if source.kind() == std::io::ErrorKind::AlreadyExists || path.exists() {
                 RegistryError::CreateOnceConflict {
                     path: path.to_path_buf(),
                 }
@@ -770,15 +770,11 @@ fn publish_create_once(path: &Path, bytes: &[u8]) -> Result<(), RegistryError> {
             }
         })
     })();
-    let cleanup = fs::remove_file(&temporary);
     if let Err(error) = result {
-        let _ = cleanup;
+        let _ = fs::remove_file(&temporary);
         return Err(error);
     }
-    cleanup.map_err(|source| RegistryError::Io {
-        path: temporary,
-        source,
-    })
+    Ok(())
 }
 
 fn validate_hash(label: &str, value: &str) -> Result<(), RegistryError> {

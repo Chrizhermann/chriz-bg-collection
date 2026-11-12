@@ -1718,10 +1718,12 @@ impl NativeBridge {
             .file_name()
             .and_then(|name| name.to_str())
             .unwrap_or_default();
-        let game_executable =
-            self.flavor.standalone.as_ref().is_some_and(|collection| {
-                launch_name.eq_ignore_ascii_case(collection.game_executable)
-            });
+        let game_executable = self
+            .flavor
+            .primary_role()
+            .known_executables()
+            .iter()
+            .any(|known| launch_name.eq_ignore_ascii_case(known));
         if !launch_name.eq_ignore_ascii_case("InfinityLoader.exe") && !game_executable {
             return Err(CommandError::new(
                 "managed_launch_invalid",

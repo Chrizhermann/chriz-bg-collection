@@ -1494,3 +1494,39 @@ fn standalone_save_name_falls_back_to_the_game_not_eet() {
         identity.engine_name
     );
 }
+
+#[test]
+fn staging_bg2ee_with_baldur_ii_exe_materializes_independent_canonical_baldur_exe_and_resumes() {
+    let temp = tempfile::tempdir().unwrap();
+    let (layout, _, bg2) = layout(&temp);
+    fs::write(bg2.join("BaldurII.exe"), b"gog 2.7.3 game binary").unwrap();
+
+    let first = stage_game_copy(&layout, GameRole::Bg2ee).unwrap();
+
+    // Source remains untouched (no Baldur.exe written to the player's GOG folder).
+    assert!(!bg2.join("Baldur.exe").exists());
+    assert_eq!(
+        fs::read(layout.game_root().join("BaldurII.exe")).unwrap(),
+        b"gog 2.7.3 game binary"
+    );
+    assert_eq!(
+        fs::read(layout.game_root().join("Baldur.exe")).unwrap(),
+        b"gog 2.7.3 game binary"
+    );
+    assert!(!same_file::is_same_file(
+        layout.game_root().join("BaldurII.exe"),
+        layout.game_root().join("Baldur.exe"),
+    )
+    .unwrap());
+
+    // Re-staging over an already staged directory with synthesized Baldur.exe reuses staged
+    // source files cleanly and recreates the independent canonical executable.
+    let second = stage_game_copy(&layout, GameRole::Bg2ee).unwrap();
+    assert_eq!(second.copied_files, 0);
+    assert_eq!(second.reused_files, first.copied_files);
+    assert_eq!(second.source_fingerprint, first.source_fingerprint);
+    assert_eq!(
+        fs::read(layout.game_root().join("Baldur.exe")).unwrap(),
+        b"gog 2.7.3 game binary"
+    );
+}

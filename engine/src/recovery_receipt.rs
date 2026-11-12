@@ -807,23 +807,31 @@ fn publish_if_missing(path: &Path, bytes: &[u8]) -> Result<(), String> {
         file.sync_all()
             .map_err(|error| format!("{}: {error}", temporary.display()))?;
         drop(file);
-        match fs::hard_link(&temporary, path) {
+        match crate::fs_retry::rename_noclobber(&temporary, path) {
             Ok(()) => Ok(()),
-            Err(link_error) => match fs::symlink_metadata(path) {
-                Ok(_) => reconcile_existing(path, bytes),
-                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-                    Err(format!("{}: {link_error}", path.display()))
+            Err(move_error) => {
+                let cleanup = fs::remove_file(&temporary);
+                match fs::symlink_metadata(path) {
+                    Ok(_) => {
+                        reconcile_existing(path, bytes)?;
+                        cleanup.map_err(|error| format!("{}: {error}", temporary.display()))
+                    }
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                        let _ = cleanup;
+                        Err(format!("{}: {move_error}", path.display()))
+                    }
+                    Err(error) => {
+                        let _ = cleanup;
+                        Err(format!("{}: {error}", path.display()))
+                    }
                 }
-                Err(error) => Err(format!("{}: {error}", path.display())),
-            },
+            }
         }
     })();
-    let cleanup = fs::remove_file(&temporary);
     if let Err(error) = result {
-        let _ = cleanup;
+        let _ = fs::remove_file(&temporary);
         return Err(error);
     }
-    cleanup.map_err(|error| format!("{}: {error}", temporary.display()))?;
     sync_directory(parent)
 }
 

@@ -143,9 +143,18 @@ fn plan(ctx: &Context<'_>, catalog: &catalog::Catalog) -> Result<Plan, String> {
         "weidu.conf".into(),
         "engine.lua".into(),
         "chitin.key".into(),
-        "Baldur.exe".into(),
         "override/KITLIST.2DA".into(),
     ];
+    let mut game_executables = 0_usize;
+    for candidate in crate::games::GameRole::Bg2ee.known_executables() {
+        if game.join(candidate).exists() {
+            paths.push((*candidate).to_string());
+            game_executables += 1;
+        }
+    }
+    if game_executables == 0 {
+        paths.push("Baldur.exe".into());
+    }
     paths.extend(description::TABLES.iter().map(|p| format!("override/{p}")));
     for entry in walkdir::WalkDir::new(game.join("lang")).follow_links(false) {
         let entry = entry.map_err(err)?;

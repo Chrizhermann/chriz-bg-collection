@@ -591,9 +591,9 @@ impl SessionStore {
             source,
         })?;
         drop(temporary);
-        if let Err(source) = fs::hard_link(&temporary_path, &final_path) {
+        if let Err(source) = crate::fs_retry::rename_noclobber(&temporary_path, &final_path) {
             let _ = fs::remove_file(&temporary_path);
-            if final_path.exists() {
+            if source.kind() == std::io::ErrorKind::AlreadyExists || final_path.exists() {
                 return Err(ledger_error(&final_path, "final record already exists"));
             }
             return Err(EngineError::Io {
@@ -601,10 +601,6 @@ impl SessionStore {
                 source,
             });
         }
-        fs::remove_file(&temporary_path).map_err(|source| EngineError::Io {
-            path: temporary_path,
-            source,
-        })?;
         sync_directory(&self.ledger_root)?;
         Ok(record)
     }
@@ -1567,9 +1563,9 @@ fn write_create_once(path: &Path, bytes: &[u8]) -> Result<()> {
         source,
     })?;
     drop(file);
-    if let Err(source) = fs::hard_link(&temporary, path) {
+    if let Err(source) = crate::fs_retry::rename_noclobber(&temporary, path) {
         let _ = fs::remove_file(&temporary);
-        if path.exists() {
+        if source.kind() == std::io::ErrorKind::AlreadyExists || path.exists() {
             return Err(ledger_error(path, "create-once file already exists"));
         }
         return Err(EngineError::Io {
@@ -1577,10 +1573,6 @@ fn write_create_once(path: &Path, bytes: &[u8]) -> Result<()> {
             source,
         });
     }
-    fs::remove_file(&temporary).map_err(|source| EngineError::Io {
-        path: temporary,
-        source,
-    })?;
     if let Some(parent) = path.parent() {
         sync_directory(parent)?;
     }
