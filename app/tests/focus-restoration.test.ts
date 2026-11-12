@@ -85,6 +85,7 @@ describe("live typing focus and selection preservation", () => {
     document.body.append(root);
     await mountApp(root, backend);
     await new Promise(resolve => setTimeout(resolve, 0));
+    inspectedPaths.length = 0;
 
     const input = root.querySelector<HTMLInputElement>("#install-location")!;
     input.focus();
