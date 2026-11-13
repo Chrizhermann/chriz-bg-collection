@@ -601,6 +601,17 @@ fn weidu_command(invocation: &Invocation) -> Command {
         // Keep WeiDU in the background; its output and prompts still use our pipes.
         command.creation_flags(CREATE_NO_WINDOW);
     }
+    #[cfg(unix)]
+    {
+        // Keep WeiDU %USER_DIRECTORY% (used by EET/macros.tph AT_NOW on Unix) isolated to the
+        // attempt directory rather than writing into the player's real ~/.local/share tree.
+        if let Some(attempt_dir) = invocation.debug_path.parent() {
+            let xdg_data_home = attempt_dir.join("xdg-data");
+            let _ = std::fs::create_dir_all(&xdg_data_home);
+            command.env("XDG_DATA_HOME", xdg_data_home);
+        }
+    }
+    super::process_group::configure_command(&mut command);
     command
 }
 

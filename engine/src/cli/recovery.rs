@@ -374,7 +374,8 @@ fn inspect(request: &SupervisedRecoveryRequest) -> Result<Inspected, CliError> {
         }
         previous = after;
     }
-    if fs::read(root.join("game/WeiDU.log")).map_err(error)? != previous {
+    let game_log = crate::weidu::log::resolve_weidu_log(&root.join("game")).map_err(error)?;
+    if fs::read(game_log).map_err(error)? != previous {
         return Err(error(
             "current game log differs from the completed recovery chain",
         ));
@@ -561,7 +562,7 @@ fn final_logs(
             } else {
                 "game"
             };
-            let path = root.join(folder).join("WeiDU.log");
+            let path = crate::weidu::log::resolve_weidu_log(&root.join(folder)).map_err(error)?;
             if !direct_regular_file(&path) {
                 return Err(error("final mod list is not a direct file"));
             }

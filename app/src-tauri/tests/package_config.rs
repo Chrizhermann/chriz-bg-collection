@@ -200,14 +200,51 @@ fn the_iwd_app_has_its_own_icon() {
     };
 
     assert_eq!(
+        config("tauri.conf.json")["bundle"]["targets"],
+        serde_json::json!(["nsis", "deb", "appimage"])
+    );
+    assert_eq!(
         config("tauri.conf.json")["bundle"]["icon"],
-        serde_json::json!(["icons/icon.ico"])
+        serde_json::json!([
+            "icons/32x32.png",
+            "icons/128x128.png",
+            "icons/128x128@2x.png",
+            "icons/icon.png",
+            "icons/icon.ico"
+        ])
     );
     let iwd = config("tauri.iwd.conf.json");
     assert_eq!(
         iwd["bundle"]["icon"],
-        serde_json::json!(["icons/iwd/icon.ico"])
+        serde_json::json!([
+            "icons/iwd/32x32.png",
+            "icons/iwd/128x128.png",
+            "icons/iwd/128x128@2x.png",
+            "icons/iwd/icon.png",
+            "icons/iwd/icon.ico"
+        ])
     );
+    for (path, expected_side) in [
+        ("icons/32x32.png", 32_u32),
+        ("icons/128x128.png", 128),
+        ("icons/128x128@2x.png", 256),
+        ("icons/icon.png", 256),
+        ("icons/iwd/32x32.png", 32),
+        ("icons/iwd/128x128.png", 128),
+        ("icons/iwd/128x128@2x.png", 256),
+        ("icons/iwd/icon.png", 256),
+    ] {
+        let png = fs::read(crate_root.join(path)).unwrap();
+        assert_eq!(&png[..8], b"\x89PNG\r\n\x1a\n", "{path} is a PNG file");
+        let width = u32::from_be_bytes(png[16..20].try_into().unwrap());
+        let height = u32::from_be_bytes(png[20..24].try_into().unwrap());
+        assert_eq!(
+            (width, height),
+            (expected_side, expected_side),
+            "{path} dimensions"
+        );
+        assert_eq!((png[24], png[25]), (8, 6), "{path} is 8-bit RGBA");
+    }
     assert_eq!(
         iwd["bundle"]["windows"]["nsis"]["installerIcon"],
         "icons/iwd/icon.ico"

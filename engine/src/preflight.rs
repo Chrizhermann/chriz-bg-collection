@@ -1439,18 +1439,351 @@ fn filter_running_process_image(
     ))
 }
 
-#[cfg(windows)]
 fn is_relevant_process_name(name: &str) -> bool {
     let name = name.to_ascii_lowercase();
     matches!(
         name.as_str(),
-        "baldur.exe" | "icewind.exe" | "infinityloader.exe" | "weidu.exe" | "eeex.exe"
-    ) || (name.starts_with("setup-") && name.ends_with(".exe"))
+        "baldur.exe"
+            | "icewind.exe"
+            | "infinityloader.exe"
+            | "infinityloader."
+            | "infinityloader"
+            | "weidu.exe"
+            | "weidu"
+            | "eeex.exe"
+            | "baldursgate"
+            | "baldursgateii"
+            | "icewinddale"
+    ) || (name.starts_with("setup-")
+        && ((name.len() > "setup-.exe".len() && name.ends_with(".exe"))
+            || (name.len() > "setup-".len() && !name.contains('.'))))
 }
 
-#[cfg(not(windows))]
+#[cfg(target_os = "linux")]
+fn system_running_executable_paths() -> io::Result<Vec<PathBuf>> {
+    linux_proc::running_executable_paths(Path::new("/proc"), Some(std::process::id()))
+}
+
+#[cfg(not(any(windows, target_os = "linux")))]
 fn system_running_executable_paths() -> io::Result<Vec<PathBuf>> {
     Ok(Vec::new())
+}
+
+#[cfg(any(target_os = "linux", test))]
+mod linux_proc {
+    use std::fs;
+    use std::io;
+    use std::path::{Path, PathBuf};
+
+    use super::is_relevant_process_name;
+
+    #[derive(Debug, Default)]
+    pub(super) struct ProcSnapshot {
+        pub(super) comm: Option<String>,
+        pub(super) exe: Option<PathBuf>,
+        pub(super) cwd: Option<PathBuf>,
+        pub(super) cmdline: Vec<String>,
+    }
+
+    pub(super) fn running_executable_paths(
+        proc_root: &Path,
+        self_pid: Option<u32>,
+    ) -> io::Result<Vec<PathBuf>> {
+        let mut paths = Vec::new();
+        for entry in fs::read_dir(proc_root)? {
+            let entry = match entry {
+                Ok(entry) => entry,
+                Err(error) if is_ignored_proc_error(&error) => continue,
+                Err(error) => return Err(error),
+            };
+            let name = entry.file_name();
+            let Some(pid_text) = name
+                .to_str()
+                .filter(|s| !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit()))
+            else {
+                continue;
+            };
+            let Ok(pid) = pid_text.parse::<u32>() else {
+                continue;
+            };
+            if self_pid.is_some_and(|me| me == pid) {
+                continue;
+            }
+            let pid_dir = entry.path();
+            let comm = match fs::read_to_string(pid_dir.join("comm")) {
+                Ok(text) => Some(text.trim_end_matches(['\r', '\n']).to_owned()),
+                Err(error) if is_ignored_proc_error(&error) => None,
+                Err(error) => return Err(error),
+            };
+            let cmdline = match fs::read(pid_dir.join("cmdline")) {
+                Ok(bytes) => parse_nul_delimited_args(&bytes),
+                Err(error) if is_ignored_proc_error(&error) => Vec::new(),
+                Err(error) => return Err(error),
+            };
+            let exe = read_proc_symlink(&pid_dir.join("exe"))?;
+            let preliminary = ProcSnapshot {
+                comm,
+                exe,
+                cwd: None,
+                cmdline,
+            };
+            if !snapshot_is_relevant(&preliminary) {
+                continue;
+            }
+            let cwd = read_proc_symlink(&pid_dir.join("cwd"))?;
+            let snapshot = ProcSnapshot { cwd, ..preliminary };
+            collect_paths_from_snapshot(&snapshot, &mut paths);
+        }
+        Ok(paths)
+    }
+
+    fn is_ignored_proc_error(error: &io::Error) -> bool {
+        // Processes can exit mid-scan (NotFound / ESRCH) or belong to another uid
+        // (PermissionDenied). Cross-user processes still fail the exclusive TLK write probe.
+        matches!(
+            error.kind(),
+            io::ErrorKind::NotFound | io::ErrorKind::PermissionDenied | io::ErrorKind::InvalidInput
+        ) || error.raw_os_error() == Some(3)
+    }
+
+    fn read_proc_symlink(path: &Path) -> io::Result<Option<PathBuf>> {
+        match fs::read_link(path) {
+            Ok(target) => Ok(Some(strip_deleted_suffix(target))),
+            Err(error) if is_ignored_proc_error(&error) => Ok(None),
+            Err(error) => Err(error),
+        }
+    }
+
+    pub(super) fn strip_deleted_suffix(path: PathBuf) -> PathBuf {
+        match path.to_str().and_then(|s| s.strip_suffix(" (deleted)")) {
+            Some(trimmed) if !trimmed.is_empty() => PathBuf::from(trimmed),
+            _ => path,
+        }
+    }
+
+    pub(super) fn parse_nul_delimited_args(bytes: &[u8]) -> Vec<String> {
+        bytes
+            .split(|byte| *byte == 0)
+            .filter(|part| !part.is_empty())
+            .map(|part| String::from_utf8_lossy(part).into_owned())
+            .collect()
+    }
+
+    fn extract_file_name(raw: &str) -> &str {
+        raw.rsplit(['/', '\\'])
+            .find(|segment| !segment.is_empty())
+            .unwrap_or(raw)
+    }
+
+    pub(super) fn normalize_wine_or_posix_arg(arg: &str) -> Option<PathBuf> {
+        let trimmed = arg.trim();
+        if trimmed.is_empty() || trimmed.contains('\0') {
+            return None;
+        }
+        let bytes = trimmed.as_bytes();
+        if bytes.len() >= 3
+            && (bytes[0] == b'z' || bytes[0] == b'Z')
+            && bytes[1] == b':'
+            && (bytes[2] == b'\\' || bytes[2] == b'/')
+        {
+            let rest = trimmed[2..].replace('\\', "/");
+            return Some(PathBuf::from(rest));
+        }
+        Some(PathBuf::from(trimmed.replace('\\', "/")))
+    }
+
+    fn is_posix_or_host_absolute(path: &Path) -> bool {
+        path.is_absolute() || path.to_string_lossy().starts_with('/')
+    }
+
+    fn snapshot_is_relevant(snapshot: &ProcSnapshot) -> bool {
+        if snapshot
+            .comm
+            .as_deref()
+            .is_some_and(is_relevant_process_name)
+        {
+            return true;
+        }
+        if snapshot
+            .exe
+            .as_ref()
+            .and_then(|exe| exe.file_name())
+            .and_then(|name| name.to_str())
+            .is_some_and(is_relevant_process_name)
+        {
+            return true;
+        }
+        snapshot
+            .cmdline
+            .iter()
+            .any(|arg| is_relevant_process_name(extract_file_name(arg)))
+    }
+
+    pub(super) fn collect_paths_from_snapshot(snapshot: &ProcSnapshot, paths: &mut Vec<PathBuf>) {
+        if !snapshot_is_relevant(snapshot) {
+            return;
+        }
+        if let Some(exe) = &snapshot.exe {
+            paths.push(exe.clone());
+        }
+        if let Some(cwd) = &snapshot.cwd {
+            paths.push(cwd.clone());
+        }
+        let mut next_is_game_arg = false;
+        for arg in &snapshot.cmdline {
+            if arg.eq_ignore_ascii_case("--game") {
+                next_is_game_arg = true;
+                continue;
+            }
+            let explicit_game_value = if next_is_game_arg {
+                next_is_game_arg = false;
+                Some(arg.as_str())
+            } else {
+                arg.strip_prefix("--game=")
+            };
+            if let Some(raw_game) = explicit_game_value {
+                if let Some(parsed) = normalize_wine_or_posix_arg(raw_game) {
+                    if is_posix_or_host_absolute(&parsed) {
+                        paths.push(parsed);
+                    } else if let Some(cwd) = &snapshot.cwd {
+                        paths.push(cwd.join(parsed));
+                    }
+                }
+                continue;
+            }
+            if is_relevant_process_name(extract_file_name(arg)) {
+                if let Some(parsed) = normalize_wine_or_posix_arg(arg) {
+                    if is_posix_or_host_absolute(&parsed) {
+                        paths.push(parsed);
+                    } else if let Some(cwd) = &snapshot.cwd {
+                        paths.push(cwd.join(parsed));
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod linux_proc_tests {
+    use super::linux_proc::*;
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn strip_deleted_suffix_removes_kernel_marker() {
+        assert_eq!(
+            strip_deleted_suffix(PathBuf::from("/tmp/game/setup-foo (deleted)")),
+            PathBuf::from("/tmp/game/setup-foo")
+        );
+        assert_eq!(
+            strip_deleted_suffix(PathBuf::from("/tmp/game/Baldur.exe")),
+            PathBuf::from("/tmp/game/Baldur.exe")
+        );
+    }
+
+    #[test]
+    fn collects_wine_z_drive_relative_args_and_native_weidu_cwd() {
+        let mut out = Vec::new();
+        // Wine/Proton launching Baldur.exe via Z:\...
+        collect_paths_from_snapshot(
+            &ProcSnapshot {
+                comm: Some("Baldur.exe".into()),
+                exe: Some(PathBuf::from(
+                    "/home/deck/.steam/proton/bin/wine64-preloader",
+                )),
+                cwd: Some(PathBuf::from("/home/deck/Games/CEBG/game")),
+                cmdline: vec![r"Z:\home\deck\Games\CEBG\game\Baldur.exe".into()],
+            },
+            &mut out,
+        );
+        assert!(out.contains(&PathBuf::from("/home/deck/Games/CEBG/game")));
+        assert!(out.contains(&PathBuf::from("/home/deck/Games/CEBG/game/Baldur.exe")));
+
+        // Native weidu invoked from host tool cache with cwd = staged game dir and relative --game
+        out.clear();
+        collect_paths_from_snapshot(
+            &ProcSnapshot {
+                comm: Some("weidu".into()),
+                exe: Some(PathBuf::from("/home/deck/.local/share/chriz/weidu")),
+                cwd: Some(PathBuf::from("/home/deck/Games/CEBG/game")),
+                cmdline: vec![
+                    "/home/deck/.local/share/chriz/weidu".into(),
+                    "--game".into(),
+                    ".".into(),
+                    "Baldur.exe".into(),
+                ],
+            },
+            &mut out,
+        );
+        assert!(out.contains(&PathBuf::from("/home/deck/Games/CEBG/game")));
+        assert!(out.contains(&PathBuf::from("/home/deck/Games/CEBG/game/.")));
+        assert!(out.contains(&PathBuf::from("/home/deck/Games/CEBG/game/Baldur.exe")));
+
+        // Truncated comm from InfinityLoader.exe (15 bytes = "InfinityLoader.")
+        out.clear();
+        collect_paths_from_snapshot(
+            &ProcSnapshot {
+                comm: Some("InfinityLoader.".into()),
+                exe: None,
+                cwd: Some(PathBuf::from("/home/deck/Games/CEBG/game")),
+                cmdline: vec!["./InfinityLoader.exe".into()],
+            },
+            &mut out,
+        );
+        assert!(out.contains(&PathBuf::from("/home/deck/Games/CEBG/game")));
+
+        // Unrelated shell is ignored even inside the folder
+        out.clear();
+        collect_paths_from_snapshot(
+            &ProcSnapshot {
+                comm: Some("bash".into()),
+                exe: Some(PathBuf::from("/bin/bash")),
+                cwd: Some(PathBuf::from("/home/deck/Games/CEBG/game")),
+                cmdline: vec!["/bin/bash".into()],
+            },
+            &mut out,
+        );
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn scans_synthetic_proc_root_and_skips_self_pid_and_unrelated_entries() {
+        let temp = TempDir::new().unwrap();
+        let proc_root = temp.path();
+        fs::create_dir(proc_root.join("sys")).unwrap();
+
+        let self_pid = proc_root.join("100");
+        fs::create_dir(&self_pid).unwrap();
+        fs::write(self_pid.join("comm"), "Baldur.exe\n").unwrap();
+        fs::write(
+            self_pid.join("cmdline"),
+            b"Z:\\home\\deck\\Games\\BG\\Baldur.exe\0",
+        )
+        .unwrap();
+
+        let wine_pid = proc_root.join("202");
+        fs::create_dir(&wine_pid).unwrap();
+        fs::write(wine_pid.join("comm"), "wine64-preloade\n").unwrap();
+        fs::write(
+            wine_pid.join("cmdline"),
+            b"wine64\0Z:\\home\\deck\\Games\\CEBG\\game\\InfinityLoader.exe\0",
+        )
+        .unwrap();
+
+        let other_pid = proc_root.join("303");
+        fs::create_dir(&other_pid).unwrap();
+        fs::write(other_pid.join("comm"), "kate\n").unwrap();
+        fs::write(other_pid.join("cmdline"), b"/usr/bin/kate\0setup-eet.txt\0").unwrap();
+
+        let paths = running_executable_paths(proc_root, Some(100)).unwrap();
+        assert_eq!(
+            paths,
+            vec![PathBuf::from(
+                "/home/deck/Games/CEBG/game/InfinityLoader.exe"
+            )]
+        );
+    }
 }
 
 #[cfg(test)]

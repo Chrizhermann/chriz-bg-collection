@@ -187,7 +187,7 @@ struct PlanArgs {
     recipe: PathBuf,
     #[arg(long)]
     preset: String,
-    #[arg(long, default_value = "windows")]
+    #[arg(long, default_value = bg_engine::HOST_PLATFORM)]
     platform: String,
     /// Switch a feature group as `group-id=on|off`; an explicit `--feature` wins for a member.
     /// A member's prerequisite that is another member comes on with the group; one outside the
@@ -272,7 +272,7 @@ struct InstallArgs {
     managed_root: PathBuf,
     #[arg(long)]
     cache: PathBuf,
-    #[arg(long, default_value = "windows")]
+    #[arg(long, default_value = bg_engine::HOST_PLATFORM)]
     platform: String,
     /// Switch a feature group as `group-id=on|off`; an explicit `--feature` wins for a member.
     /// A member's prerequisite that is another member comes on with the group; one outside the

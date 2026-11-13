@@ -37,7 +37,7 @@ import { downloadDecisionDialog, focusDownloadDecision } from "./components/down
 import type { GameLogStatus, LaunchInstallResult } from "./contracts";
 import type { GameLogView } from "./components/game-log";
 import { RadarLaunchPreferences } from "./radar-launch-preference";
-import { collectionMismatch, flavor, sourceFor, sourceSlots, type SourceSlot } from "./flavor";
+import { collectionMismatch, flavor, isRadarSupported, sourceFor, sourceSlots, type SourceSlot } from "./flavor";
 import { copyText, createReportDialog, type ReportDialog, type ReportDialogModel, type ReportDiagnostics } from "./components/report-dialog";
 import { environmentFacts, failedComponentSubject, failedInstallationSubject, gameProblemSubject, generalSubject, leftOutSubject, reportBody, reportTitle, type ReportKind, type ReportSubject } from "./report";
 
@@ -232,6 +232,7 @@ class AppController implements AppHandle {
       });
     }
     this.#status = status;
+    this.#dispatch({ type: "set-platform", platform: status.platform ?? "windows" });
     this.#operationFeedback = completedAppUpdate(status.applicationVersion ?? status.engineVersion);
     this.#updates = { ...this.#updates,
       application: { ...this.#updates.application, currentVersion: status.applicationVersion ?? status.engineVersion },
@@ -439,6 +440,7 @@ class AppController implements AppHandle {
     this.#render();
     try {
       this.#status = await this.backend.selectProfile(profileId);
+      this.#dispatch({ type: "set-platform", platform: this.#status.platform ?? "windows" });
       this.#dispatch({ type: "reset-selection" });
       this.#setupView = { search: "", category: "" };
       await this.#evaluate(false);
@@ -772,7 +774,7 @@ class AppController implements AppHandle {
   #updateBadge(): void {
     const button = this.root.querySelector<HTMLButtonElement>('[data-action="updates"]');
     if (button) {
-      updateUpdatesControl(button, this.#updates);
+      updateUpdatesControl(button, this.#updates, isRadarSupported(this.#status));
       appendPatchAvailability(button, [...this.#checkedPatches.values()]);
     }
   }
@@ -1498,7 +1500,7 @@ class AppController implements AppHandle {
   }
 
   async #installCompletionRadar(installation: ManagedInstallation): Promise<void> {
-    if (!flavor.features.radar || installation.radarVersion || this.#radarAttempts.has(installation.id)) return;
+    if (!isRadarSupported(this.#status) || installation.radarVersion || this.#radarAttempts.has(installation.id)) return;
     this.#radarAttempts.add(installation.id);
     this.#addonFeedback = { installId: installation.id, state: "installing" };
     this.#render();
@@ -1767,7 +1769,7 @@ class AppController implements AppHandle {
     this.#launchFeedback.delete(installId);
     this.#render();
     try {
-      const result = await this.backend.launchInstall(installId, flavor.features.radar && Boolean(installation.radarVersion) && startRadar);
+      const result = await this.backend.launchInstall(installId, isRadarSupported(this.#status) && Boolean(installation.radarVersion) && startRadar);
       this.#launchFeedback.set(installId, result);
     } finally {
       this.#launchPending.delete(installId);
@@ -1875,7 +1877,7 @@ class AppController implements AppHandle {
 
   async #installRadar(installId: string): Promise<void> {
     const installation = this.#installations.find((item) => item.id === installId && item.available);
-    if (!flavor.features.radar || installation === undefined || this.#installingUpdate || this.#modUpgradeBusy || this.#patchBusy || this.#hotpatchBusy || this.#modUpdateBusy || this.#installedUpdateBusy) return;
+    if (!isRadarSupported(this.#status) || installation === undefined || this.#installingUpdate || this.#modUpgradeBusy || this.#patchBusy || this.#hotpatchBusy || this.#modUpdateBusy || this.#installedUpdateBusy) return;
     this.#installingUpdate = true;
     this.#beginOperation("Updating BG Radar Overlay", installId);
     this.#render();
@@ -2330,13 +2332,15 @@ class AppController implements AppHandle {
     const evaluation = this.#state.evaluation;
     const navigate = (route: Route): Promise<void> => this.navigate(route);
     const safely = (operation: () => Promise<void>): void => this.#safely(operation);
+    const radarSupported = isRadarSupported(this.#status);
     const renderHome = (): HTMLElement => homeScreen(
       this.#installations,
       this.#installations.find((installation) => installation.id === this.#installId) ?? null,
       {
         begin: () => safely(() => this.#beginNewInstallation()),
         launch: (installId, startRadar) => safely(() => this.#launchInstall(installId, startRadar)),
-        setStartRadar: flavor.features.radar ? (installId, enabled) => this.#radarLaunchPreferences.set(installId, enabled) : undefined,
+        setStartRadar: radarSupported ? (installId, enabled) => this.#radarLaunchPreferences.set(installId, enabled) : undefined,
+        radarSupported,
         openFolder: (installId) => safely(() => this.#openInstallFolder(installId)),
         openProfileFolder: (installId) => safely(() => this.#openProfileFolder(installId)),
         resume: (installId) => safely(() => this.#resumeManagedInstall(installId)),
@@ -2359,7 +2363,7 @@ class AppController implements AppHandle {
       this.#shortcutFeedback,
       this.#addonFeedback,
       {
-        startRadar: flavor.features.radar && this.#installId !== null && this.#radarLaunchPreferences.get(this.#installId),
+        startRadar: radarSupported && this.#installId !== null && this.#radarLaunchPreferences.get(this.#installId),
         pending: this.#installId !== null && this.#launchPending.has(this.#installId),
         feedback: this.#installId === null ? undefined : this.#launchFeedback.get(this.#installId),
       },
@@ -2422,7 +2426,8 @@ class AppController implements AppHandle {
           checkAgain: () => safely(() => this.#checkUpdates()),
           installApplication: (version) => safely(() => this.#installAppUpdate(version)),
           buildUpdatedCopy: (version) => safely(() => this.#buildUpdatedCopy(version)),
-          installRadar: flavor.features.radar && selectedInstallation && selected?.state !== "stale" ? () => safely(() => this.#installRadar(selectedInstallation.id)) : undefined,
+          radarSupported,
+          installRadar: radarSupported && selectedInstallation && selected?.state !== "stale" ? () => safely(() => this.#installRadar(selectedInstallation.id)) : undefined,
           installationName: selectedInstallation?.name,
           radarVersion: selectedInstallation?.radarVersion ?? null,
           customized: this.#installations.find(item => item.id === selected?.installId)?.customized,

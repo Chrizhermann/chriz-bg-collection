@@ -368,6 +368,8 @@ fn bootstrap_reports_the_bundled_iwd_collection_and_its_one_source() {
 fn the_baldurs_gate_bootstrap_has_no_collection_field() {
     let status = BootstrapResponse {
         mode: "native".to_owned(),
+        platform: "windows".to_owned(),
+        radar_supported: true,
         engine_version: "0".to_owned(),
         application_version: "0".to_owned(),
         profiles: Vec::new(),

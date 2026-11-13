@@ -128,7 +128,7 @@ fn verify_text_file_markers(
     max_bytes: u64,
 ) -> Result<(), PostconditionError> {
     validate_specification(relative_path, required, forbidden, max_bytes)?;
-    let candidate = canonical_root.join(relative_path);
+    let candidate = resolve_candidate_path(canonical_root, relative_path)?;
     let candidate_metadata = metadata_without_link(&candidate)?;
     if !candidate_metadata.is_file()
         || crate::reparse::metadata_is_link(&candidate, &candidate_metadata)
@@ -151,7 +151,11 @@ fn verify_text_file_markers(
             root: canonical_root.to_path_buf(),
         });
     }
-    verify_direct_ancestors(canonical_root, relative_path, &candidate)?;
+    let resolved_relative = candidate
+        .strip_prefix(canonical_root)
+        .map(|rel| rel.to_string_lossy().replace('\\', "/"))
+        .unwrap_or_else(|_| relative_path.to_owned());
+    verify_direct_ancestors(canonical_root, &resolved_relative, &candidate)?;
 
     let file = File::open(&canonical_path).map_err(|source| PostconditionError::Io {
         path: canonical_path.clone(),
@@ -295,9 +299,118 @@ fn contains_bytes(haystack: &[u8], needle: &[u8]) -> bool {
         .any(|window| window == needle)
 }
 
+fn resolve_candidate_path(
+    canonical_root: &Path,
+    relative_path: &str,
+) -> Result<PathBuf, PostconditionError> {
+    let exact = canonical_root.join(relative_path);
+    #[cfg(windows)]
+    {
+        let _ = metadata_without_link(&exact)?;
+        Ok(exact)
+    }
+    #[cfg(not(windows))]
+    {
+        match metadata_without_link(&exact) {
+            Ok(_) => return Ok(exact),
+            Err(PostconditionError::Io { ref source, .. })
+                if source.kind() == io::ErrorKind::NotFound => {}
+            Err(other) => return Err(other),
+        }
+        let mut current = canonical_root.to_path_buf();
+        let mut components = relative_path.split('/').peekable();
+        while let Some(part) = components.next() {
+            let is_leaf = components.peek().is_none();
+            let direct = current.join(part);
+            let next_path = match fs::symlink_metadata(&direct) {
+                Ok(meta) => {
+                    if !is_leaf
+                        && (!meta.is_dir() || crate::reparse::metadata_is_link(&direct, &meta))
+                    {
+                        return Err(PostconditionError::UnsafeAncestor {
+                            path: exact,
+                            ancestor: direct,
+                        });
+                    }
+                    direct
+                }
+                Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                    let mut matched: Option<(PathBuf, Metadata)> = None;
+                    for entry in
+                        fs::read_dir(&current).map_err(|source| PostconditionError::Io {
+                            path: current.clone(),
+                            source,
+                        })?
+                    {
+                        let entry = entry.map_err(|source| PostconditionError::Io {
+                            path: current.clone(),
+                            source,
+                        })?;
+                        if entry
+                            .file_name()
+                            .to_str()
+                            .is_some_and(|name| name.eq_ignore_ascii_case(part))
+                        {
+                            let entry_path = entry.path();
+                            let entry_meta = metadata_without_link(&entry_path)?;
+                            if matched.is_some() {
+                                return Err(PostconditionError::NotRegularFile {
+                                    path: exact,
+                                    reason: "ambiguous case-colliding postcondition path",
+                                });
+                            }
+                            matched = Some((entry_path, entry_meta));
+                        }
+                    }
+                    let Some((found_path, found_meta)) = matched else {
+                        return Err(PostconditionError::Io {
+                            path: direct,
+                            source: io::Error::from(io::ErrorKind::NotFound),
+                        });
+                    };
+                    if !is_leaf
+                        && (!found_meta.is_dir()
+                            || crate::reparse::metadata_is_link(&found_path, &found_meta))
+                    {
+                        return Err(PostconditionError::UnsafeAncestor {
+                            path: exact,
+                            ancestor: found_path,
+                        });
+                    }
+                    found_path
+                }
+                Err(source) => {
+                    return Err(PostconditionError::Io {
+                        path: direct,
+                        source,
+                    });
+                }
+            };
+            current = next_path;
+        }
+        Ok(current)
+    }
+}
+
 fn metadata_without_link(path: &Path) -> Result<Metadata, PostconditionError> {
     fs::symlink_metadata(path).map_err(|source| PostconditionError::Io {
         path: path.to_path_buf(),
         source,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolve_candidate_path_handles_mixed_case_segments() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = crate::reparse::canonicalize_flexible(temp.path()).unwrap();
+        fs::create_dir_all(root.join("Override")).unwrap();
+        fs::write(root.join("Override").join("KITLIST.2DA"), b"test").unwrap();
+
+        let resolved = resolve_candidate_path(&root, "override/kitlist.2da").unwrap();
+        assert_eq!(fs::read(resolved).unwrap(), b"test");
+    }
 }

@@ -5,6 +5,8 @@ pub mod consistency;
 pub mod error;
 pub mod flavor;
 mod installation_lookup_trace;
+#[cfg(any(not(windows), test))]
+pub mod linux_launch;
 mod removal_size;
 pub mod report;
 pub mod shortcut;

@@ -195,6 +195,23 @@ impl HeldFolder {
     pub(crate) fn replace_file(&self, name: &str, content: &[u8]) -> io::Result<()> {
         self.publish_file(name, content, true)
     }
+
+    /// Sets `0o755` permissions on an existing direct regular file in this folder on Unix;
+    /// no-op on other platforms.
+    #[cfg_attr(not(unix), allow(dead_code))]
+    pub(crate) fn set_executable(&self, name: &str) -> Result<(), EntryError> {
+        let (file, _) = self.open_file(name)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let path = self.path.join(name);
+            file.set_permissions(fs::Permissions::from_mode(0o755))
+                .map_err(|error| EntryError::io(path, error))?;
+        }
+        #[cfg(not(unix))]
+        let _ = file;
+        Ok(())
+    }
 }
 
 fn require_absolute(target_root: &Path) -> Result<&Path, EntryError> {
@@ -1065,9 +1082,35 @@ impl HeldFolder {
         })
     }
 
+    fn resolve_child_path(&self, name: &str) -> Result<PathBuf, EntryError> {
+        let exact = self.path.join(name);
+        check_name(name).map_err(|error| EntryError::io(exact.clone(), error))?;
+        match fs::symlink_metadata(&exact) {
+            Ok(_) => return Ok(exact),
+            Err(error) if error.kind() == ErrorKind::NotFound => {}
+            Err(error) => return Err(EntryError::io(exact, error)),
+        }
+        let mut matched: Option<PathBuf> = None;
+        for entry in
+            fs::read_dir(&self.path).map_err(|error| EntryError::io(self.path.clone(), error))?
+        {
+            let entry = entry.map_err(|error| EntryError::io(self.path.clone(), error))?;
+            let entry_name = entry.file_name();
+            if entry_name
+                .to_str()
+                .is_some_and(|text| text.eq_ignore_ascii_case(name))
+            {
+                if matched.is_some() {
+                    return Err(EntryError::not_direct(exact));
+                }
+                matched = Some(self.path.join(entry_name));
+            }
+        }
+        Ok(matched.unwrap_or(exact))
+    }
+
     pub(crate) fn descend(mut self, name: &str) -> Result<Self, EntryError> {
-        let path = self.path.join(name);
-        check_name(name).map_err(|error| EntryError::io(path.clone(), error))?;
+        let path = self.resolve_child_path(name)?;
         require_direct_directory(&path)?;
         self.path = path;
         self.removable = false;
@@ -1075,8 +1118,7 @@ impl HeldFolder {
     }
 
     fn descend_or_create(mut self, name: &str) -> Result<Self, EntryError> {
-        let path = self.path.join(name);
-        check_name(name).map_err(|error| EntryError::io(path.clone(), error))?;
+        let path = self.resolve_child_path(name)?;
         match fs::create_dir(&path) {
             Ok(()) => {}
             Err(error) if error.kind() == ErrorKind::AlreadyExists => {}
@@ -1089,8 +1131,7 @@ impl HeldFolder {
     }
 
     pub(crate) fn open_file(&self, name: &str) -> Result<(fs::File, Metadata), EntryError> {
-        let path = self.path.join(name);
-        check_name(name).map_err(|error| EntryError::io(path.clone(), error))?;
+        let path = self.resolve_child_path(name)?;
         // Opening a link, or a FIFO that would block, is never needed.
         let metadata =
             fs::symlink_metadata(&path).map_err(|error| EntryError::io(path.clone(), error))?;
@@ -1102,8 +1143,22 @@ impl HeldFolder {
     }
 
     pub(crate) fn contains(&self, name: &str) -> io::Result<bool> {
-        check_name(name)?;
-        match fs::symlink_metadata(self.path.join(name)) {
+        let path = match self.resolve_child_path(name) {
+            Ok(path) => path,
+            Err(EntryError {
+                kind: EntryErrorKind::NotDirect,
+                ..
+            }) => return Ok(true),
+            Err(EntryError {
+                kind: EntryErrorKind::Io(error),
+                ..
+            }) => return Err(error),
+            Err(EntryError {
+                kind: EntryErrorKind::Missing,
+                ..
+            }) => return Ok(false),
+        };
+        match fs::symlink_metadata(path) {
             Ok(_) => Ok(true),
             Err(error) if error.kind() == ErrorKind::NotFound => Ok(false),
             Err(error) => Err(error),
@@ -1126,16 +1181,18 @@ impl HeldFolder {
     }
 
     pub(crate) fn open_removable_file(&self, name: &str) -> Result<RemovableFile, EntryError> {
-        let (file, _) = self.open_file(name)?;
-        Ok(RemovableFile {
-            file,
-            path: self.path.join(name),
-        })
+        let path = self.resolve_child_path(name)?;
+        let metadata =
+            fs::symlink_metadata(&path).map_err(|error| EntryError::io(path.clone(), error))?;
+        if !metadata.is_file() {
+            return Err(EntryError::not_direct(path));
+        }
+        let file = fs::File::open(&path).map_err(|error| EntryError::io(path.clone(), error))?;
+        Ok(RemovableFile { file, path })
     }
 
     pub(crate) fn remove_empty_folder(&self, name: &str) -> Result<(), EntryError> {
-        let path = self.path.join(name);
-        check_name(name).map_err(|error| EntryError::io(path.clone(), error))?;
+        let path = self.resolve_child_path(name)?;
         require_direct_directory(&path)?;
         fs::remove_dir(&path).map_err(|error| EntryError::io(path, error))
     }
@@ -1219,8 +1276,7 @@ impl HeldFolder {
         content: &[u8],
         existing: Existing,
     ) -> Result<(), EntryError> {
-        let path = self.path.join(name);
-        check_name(name).map_err(|error| EntryError::io(path.clone(), error))?;
+        let path = self.resolve_child_path(name)?;
         if existing == Existing::Overwrite {
             match fs::symlink_metadata(&path) {
                 // A link, or a FIFO that would block, is never opened.
@@ -1267,11 +1323,18 @@ impl HeldFolder {
     }
 
     fn publish_file(&self, name: &str, content: &[u8], replace: bool) -> io::Result<()> {
-        check_name(name)?;
+        let target = self
+            .resolve_child_path(name)
+            .map_err(|error| match error.kind {
+                EntryErrorKind::Io(io_error) => io_error,
+                EntryErrorKind::NotDirect => {
+                    io::Error::new(ErrorKind::AlreadyExists, "ambiguous case-colliding file")
+                }
+                EntryErrorKind::Missing => io::Error::from(ErrorKind::NotFound),
+            })?;
         let mut temporary = tempfile::NamedTempFile::new_in(&self.path)?;
         temporary.write_all(content)?;
         temporary.as_file().sync_all()?;
-        let target = self.path.join(name);
         if replace {
             fs_retry::persist(temporary, &target)
         } else {

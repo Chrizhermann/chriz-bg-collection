@@ -13,6 +13,11 @@ export function sourceFor(slot: SourceSlot): SourceDefinition | undefined {
   return flavor.sources.find(source => source.slot === slot);
 }
 
+/** Whether the optional BG Radar Overlay is supported on this build and host OS. */
+export function isRadarSupported(status?: Pick<BackendStatus, "radarSupported">): boolean {
+  return flavor.features.radar && (status?.radarSupported ?? true);
+}
+
 /**
  * Why the backend's collection cannot serve this build, or null when it matches. The BG build
  * expects no collection; a standalone build expects its own flavor, game slots and roles.

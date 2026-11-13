@@ -154,15 +154,21 @@ impl RegistryProvider for SystemRegistry {
 }
 
 /// Folders where stores put games by default, for stores without usable records: the
-/// Beamdog client's `Games` folders and GOG's game libraries.
+/// Beamdog client's `Games` folders and GOG's game libraries, plus Linux Steam and Heroic
+/// Games Launcher paths.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct StoreFolders {
     /// Folders holding Beamdog game folders such as `00806`.
     pub beamdog_games: Vec<PathBuf>,
     /// Folders holding GOG game folders such as `Baldur's Gate Enhanced Edition`.
     pub gog_libraries: Vec<PathBuf>,
+    /// Extra Steam root folders beyond Windows registry records (e.g. `~/.local/share/Steam`).
+    pub steam_roots: Vec<PathBuf>,
+    /// Heroic Games Launcher GOG `installed.json` manifest paths.
+    pub heroic_gog_installed: Vec<PathBuf>,
 }
 
+#[cfg(windows)]
 impl StoreFolders {
     /// The default folders on this PC: `Beamdog\Games` under both Program Files folders,
     /// `GOG Games` on the system drive (the GOG installer's default) and `GOG Galaxy\Games`
@@ -191,7 +197,93 @@ impl StoreFolders {
                         .map(|root| root.join("GOG Galaxy").join("Games")),
                 )
                 .collect(),
+            steam_roots: Vec::new(),
+            heroic_gog_installed: Vec::new(),
         }
+    }
+}
+
+#[cfg(not(windows))]
+impl StoreFolders {
+    /// The default Steam, Heroic, GOG, and Beamdog locations on Linux and Unix desktops.
+    pub fn system() -> Self {
+        let env_abs = |key: &str| {
+            std::env::var_os(key)
+                .map(PathBuf::from)
+                .filter(|path| !path.as_os_str().is_empty() && path.is_absolute())
+        };
+        unix_store_folders(
+            env_abs("HOME").as_deref(),
+            env_abs("XDG_DATA_HOME").as_deref(),
+            env_abs("XDG_CONFIG_HOME").as_deref(),
+        )
+    }
+}
+
+#[cfg_attr(windows, allow(dead_code))]
+pub(crate) fn unix_store_folders(
+    home: Option<&Path>,
+    xdg_data_home: Option<&Path>,
+    xdg_config_home: Option<&Path>,
+) -> StoreFolders {
+    let data_home = xdg_data_home
+        .filter(|path| path.is_absolute())
+        .map(Path::to_path_buf)
+        .or_else(|| {
+            home.filter(|path| path.is_absolute())
+                .map(|home| home.join(".local/share"))
+        });
+    let config_home = xdg_config_home
+        .filter(|path| path.is_absolute())
+        .map(Path::to_path_buf)
+        .or_else(|| {
+            home.filter(|path| path.is_absolute())
+                .map(|home| home.join(".config"))
+        });
+    let abs_home = home.filter(|path| path.is_absolute());
+
+    let mut steam_roots = Vec::new();
+    if let Some(data) = &data_home {
+        steam_roots.push(data.join("Steam"));
+    }
+    if let Some(home) = abs_home {
+        steam_roots.push(home.join(".steam/steam"));
+        steam_roots.push(home.join(".steam/root"));
+        steam_roots.push(home.join(".var/app/com.valvesoftware.Steam/.local/share/Steam"));
+        steam_roots.push(home.join("snap/steam/common/.local/share/Steam"));
+    }
+
+    let mut gog_libraries = Vec::new();
+    if let Some(home) = abs_home {
+        gog_libraries.push(home.join("Games/Heroic"));
+        gog_libraries.push(home.join("GOG Games"));
+    }
+
+    let mut heroic_gog_installed = Vec::new();
+    if let Some(config) = &config_home {
+        heroic_gog_installed.push(config.join("heroic/gog_store/installed.json"));
+    }
+    if let Some(home) = abs_home {
+        heroic_gog_installed.push(
+            home.join(
+                ".var/app/com.heroicgameslauncher.hgl/config/heroic/gog_store/installed.json",
+            ),
+        );
+    }
+
+    let mut beamdog_games = Vec::new();
+    if let Some(home) = abs_home {
+        beamdog_games.push(home.join("Beamdog Library"));
+    }
+    if let Some(data) = &data_home {
+        beamdog_games.push(data.join("Beamdog/Games"));
+    }
+
+    StoreFolders {
+        beamdog_games,
+        gog_libraries,
+        steam_roots,
+        heroic_gog_installed,
     }
 }
 
@@ -225,8 +317,20 @@ pub fn discover_games_with<R: RegistryProvider, F: FileSystemProvider>(
     folders: &StoreFolders,
 ) -> Result<Vec<GameCandidate>> {
     let mut discovered = Vec::new();
-    discover_steam(profiles, registry, fs_provider, &mut discovered);
+    discover_steam(
+        profiles,
+        registry,
+        fs_provider,
+        &folders.steam_roots,
+        &mut discovered,
+    );
     discover_gog(profiles, registry, fs_provider, &mut discovered);
+    discover_heroic_gog(
+        profiles,
+        fs_provider,
+        &folders.heroic_gog_installed,
+        &mut discovered,
+    );
     discover_gog_folders(
         profiles,
         fs_provider,
@@ -287,9 +391,15 @@ fn discover_steam<R: RegistryProvider, F: FileSystemProvider>(
     profiles: &GameProfiles,
     registry: &R,
     fs_provider: &F,
+    extra_roots: &[PathBuf],
     output: &mut Vec<GameCandidate>,
 ) {
     let mut steam_roots = BTreeMap::<String, PathBuf>::new();
+    for root in extra_roots {
+        if !root.as_os_str().is_empty() && root.is_absolute() {
+            steam_roots.insert(folded_path(root), root.clone());
+        }
+    }
     for &(hive, key, value_name) in STEAM_REGISTRY_LOCATIONS {
         // A record that cannot be read or names no usable folder is skipped; the other
         // records may still find Steam.
@@ -506,6 +616,78 @@ fn discover_gog_folders<F: FileSystemProvider>(
                 language.as_deref(),
                 output,
             );
+        }
+    }
+}
+
+/// GOG games installed by Heroic Games Launcher via `gog_store/installed.json`.
+fn discover_heroic_gog<F: FileSystemProvider>(
+    profiles: &GameProfiles,
+    fs_provider: &F,
+    installed_manifests: &[PathBuf],
+    output: &mut Vec<GameCandidate>,
+) {
+    for manifest_path in installed_manifests {
+        let Ok(bytes) = fs_provider.read(manifest_path) else {
+            continue;
+        };
+        let Ok(document) = serde_json::from_slice::<serde_json::Value>(&bytes) else {
+            continue;
+        };
+        let Some(entries) = document
+            .get("installed")
+            .and_then(serde_json::Value::as_array)
+            .or_else(|| document.as_array())
+        else {
+            continue;
+        };
+        for entry in entries {
+            let Some(app_name) = entry
+                .get("appName")
+                .or_else(|| entry.get("app_name"))
+                .or_else(|| entry.get("gameID"))
+                .and_then(serde_json::Value::as_str)
+                .map(str::trim)
+                .filter(|id| !id.is_empty())
+            else {
+                continue;
+            };
+            let roles = gog_roles(profiles, app_name);
+            if roles.is_empty() {
+                continue;
+            }
+            let Some(install_path) = entry
+                .get("install_path")
+                .and_then(serde_json::Value::as_str)
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+            else {
+                continue;
+            };
+            let root = PathBuf::from(install_path);
+            if !root.is_absolute() {
+                continue;
+            }
+            let language = entry
+                .get("language")
+                .and_then(serde_json::Value::as_str)
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(str::to_owned)
+                .or_else(|| {
+                    gog_info_language(fs_provider, &root.join(format!("goggame-{app_name}.info")))
+                });
+            for role in roles {
+                let group = role_profiles(profiles, role, Storefront::Gog);
+                inspect_discovered(
+                    fs_provider,
+                    &group,
+                    &root,
+                    Storefront::Gog,
+                    language.as_deref(),
+                    output,
+                );
+            }
         }
     }
 }
@@ -748,9 +930,114 @@ fn folded_path(path: &Path) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
+    use std::collections::BTreeMap;
+    use std::io;
+    use std::path::{Path, PathBuf};
 
-    use super::{object, parse_vdf, text_value};
+    use super::{
+        discover_games_with, object, parse_vdf, text_value, unix_store_folders, RegistryHive,
+        RegistryProvider, StoreFolders,
+    };
+    use crate::games::{
+        DirectoryEntry, FileKind, FileSystemProvider, GameProfiles, GameRole, Storefront,
+    };
+
+    #[derive(Default)]
+    struct EmptyRegistry;
+    impl RegistryProvider for EmptyRegistry {
+        fn read_string(
+            &self,
+            _hive: RegistryHive,
+            _key: &str,
+            _name: &str,
+        ) -> io::Result<Option<String>> {
+            Ok(None)
+        }
+
+        fn subkeys(&self, _hive: RegistryHive, _key: &str) -> io::Result<Vec<String>> {
+            Ok(Vec::new())
+        }
+    }
+
+    #[derive(Default)]
+    struct FakeFs {
+        files: BTreeMap<PathBuf, Vec<u8>>,
+        dirs: Vec<PathBuf>,
+        versions: BTreeMap<PathBuf, String>,
+    }
+
+    impl FakeFs {
+        fn key(path: &Path) -> PathBuf {
+            PathBuf::from(path.to_string_lossy().replace('\\', "/"))
+        }
+
+        fn add_dir(&mut self, path: &Path) {
+            self.dirs.push(Self::key(path));
+        }
+
+        fn add_file(&mut self, path: &Path, bytes: &[u8]) {
+            self.files.insert(Self::key(path), bytes.to_vec());
+        }
+    }
+
+    impl FileSystemProvider for FakeFs {
+        fn read(&self, path: &Path) -> io::Result<Vec<u8>> {
+            self.files
+                .get(&Self::key(path))
+                .cloned()
+                .ok_or_else(|| io::Error::from(io::ErrorKind::NotFound))
+        }
+
+        fn read_dir(&self, path: &Path) -> io::Result<Vec<DirectoryEntry>> {
+            let prefix = Self::key(path);
+            let mut entries = Vec::new();
+            for dir in &self.dirs {
+                if dir.parent() == Some(prefix.as_path()) {
+                    if let Some(name) = dir.file_name() {
+                        entries.push(DirectoryEntry {
+                            name: name.to_os_string(),
+                            path: dir.clone(),
+                            kind: FileKind::Directory,
+                        });
+                    }
+                }
+            }
+            for file in self.files.keys() {
+                if file.parent() == Some(prefix.as_path()) {
+                    if let Some(name) = file.file_name() {
+                        entries.push(DirectoryEntry {
+                            name: name.to_os_string(),
+                            path: file.clone(),
+                            kind: FileKind::File,
+                        });
+                    }
+                }
+            }
+            Ok(entries)
+        }
+
+        fn file_kind(&self, path: &Path) -> io::Result<FileKind> {
+            let key = Self::key(path);
+            if self.files.contains_key(&key) {
+                Ok(FileKind::File)
+            } else if self.dirs.contains(&key) {
+                Ok(FileKind::Directory)
+            } else {
+                Err(io::Error::from(io::ErrorKind::NotFound))
+            }
+        }
+
+        fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
+            Ok(Self::key(path))
+        }
+
+        fn product_version(&self, executable: &Path) -> io::Result<String> {
+            self.versions
+                .get(&Self::key(executable))
+                .cloned()
+                .ok_or_else(|| io::Error::from(io::ErrorKind::InvalidData))
+        }
+    }
 
     #[test]
     fn parses_nested_keyvalues_and_escaped_paths() {
@@ -762,5 +1049,94 @@ mod tests {
         let folders = object(&parsed, "libraryfolders").unwrap();
         let one = object(folders, "1").unwrap();
         assert_eq!(text_value(one, "path"), Some(r"D:\Steam Library"));
+    }
+
+    #[test]
+    fn unix_store_folders_collect_xdg_steam_heroic_and_beamdog_paths() {
+        let home = if cfg!(windows) {
+            Path::new(r"C:\home\player")
+        } else {
+            Path::new("/home/player")
+        };
+        let xdg_data = if cfg!(windows) {
+            Path::new(r"C:\xdg\data")
+        } else {
+            Path::new("/xdg/data")
+        };
+        let xdg_cfg = if cfg!(windows) {
+            Path::new(r"C:\xdg\config")
+        } else {
+            Path::new("/xdg/config")
+        };
+        let folders = unix_store_folders(Some(home), Some(xdg_data), Some(xdg_cfg));
+        assert!(folders.steam_roots.contains(&xdg_data.join("Steam")));
+        assert!(folders.steam_roots.contains(&home.join(".steam/steam")));
+        assert!(folders
+            .heroic_gog_installed
+            .contains(&xdg_cfg.join("heroic/gog_store/installed.json")));
+        assert!(folders.gog_libraries.contains(&home.join("Games/Heroic")));
+        assert!(folders
+            .beamdog_games
+            .contains(&home.join("Beamdog Library")));
+        assert!(folders
+            .beamdog_games
+            .contains(&xdg_data.join("Beamdog/Games")));
+    }
+
+    #[test]
+    fn linux_steam_and_heroic_gog_discovery_scan_configured_paths() {
+        let temp = tempfile::tempdir().unwrap();
+        let steam_root = temp.path().join("Steam");
+        let bg2 = steam_root.join("steamapps/common/Baldur's Gate II Enhanced Edition");
+        let heroic_cfg = temp.path().join("heroic/gog_store/installed.json");
+        let gog_bg2 = temp.path().join("Games/Heroic/BG2EE");
+
+        let mut fs_provider = FakeFs::default();
+        for game_dir in [&bg2, &gog_bg2] {
+            fs_provider.add_dir(game_dir);
+            fs_provider.add_dir(&game_dir.join("data"));
+            fs_provider.add_dir(&game_dir.join("lang"));
+            fs_provider.add_dir(&game_dir.join("lang/en_US"));
+            fs_provider.add_file(&game_dir.join("Baldur.exe"), b"pe");
+            fs_provider.add_file(&game_dir.join("chitin.key"), b"key");
+            fs_provider.add_file(&game_dir.join("engine.lua"), b"engine_name = \"BG2\"");
+            fs_provider.add_file(&game_dir.join("data/DEFAULT.BIF"), b"bif");
+            fs_provider.add_file(&game_dir.join("lang/en_US/dialog.tlk"), b"tlk");
+            fs_provider
+                .versions
+                .insert(FakeFs::key(&game_dir.join("Baldur.exe")), "2.7.3.0".into());
+        }
+        fs_provider.add_file(
+            &steam_root.join("steamapps/appmanifest_257350.acf"),
+            br#""AppState" { "appid" "257350" "installdir" "Baldur's Gate II Enhanced Edition" "UserConfig" { "language" "english" } }"#,
+        );
+        let installed_json = serde_json::json!({
+            "installed": [{
+                "appName": "1207666373",
+                "install_path": gog_bg2.to_string_lossy(),
+                "language": "en-US"
+            }]
+        });
+        fs_provider.add_file(
+            &heroic_cfg,
+            serde_json::to_vec(&installed_json).unwrap().as_slice(),
+        );
+
+        let profiles = GameProfiles::load(
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../manifest/game-builds"),
+        )
+        .unwrap();
+        let folders = StoreFolders {
+            steam_roots: vec![steam_root],
+            heroic_gog_installed: vec![heroic_cfg],
+            ..StoreFolders::default()
+        };
+        let found = discover_games_with(&profiles, &EmptyRegistry, &fs_provider, &folders).unwrap();
+        assert!(found
+            .iter()
+            .any(|c| c.role == GameRole::Bg2ee && c.storefront == Storefront::Steam));
+        assert!(found
+            .iter()
+            .any(|c| c.role == GameRole::Bg2ee && c.storefront == Storefront::Gog));
     }
 }

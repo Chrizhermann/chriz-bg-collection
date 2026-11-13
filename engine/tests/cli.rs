@@ -779,6 +779,7 @@ fn executable_command(fixture: &ExecutableFixture) -> Command {
     let mut command = cli();
     command
         .env("LOCALAPPDATA", &fixture.app_data)
+        .env("XDG_DATA_HOME", &fixture.app_data)
         .env(TEST_DOCUMENTS_VARIABLE, &fixture.documents)
         .env("CHRIZ_TEST_MOCK_WEIDU_TP2", "EE_Fixpack/EE_Fixpack.tp2");
     command
@@ -1767,6 +1768,7 @@ fn install_group_switch_sees_an_explicit_prerequisite_override() {
         args.extend_from_slice(extra);
         let output = cli()
             .env("LOCALAPPDATA", &app_data)
+            .env("XDG_DATA_HOME", &app_data)
             .args(&args)
             .output()
             .expect("run guarded install");
@@ -1888,6 +1890,7 @@ fn path_errors_and_games_missing_required_files_fail_closed() {
     let mut command = cli();
     command
         .env("LOCALAPPDATA", &app_data)
+        .env("XDG_DATA_HOME", &app_data)
         .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
     let output = command.output().expect("run guarded install");
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
@@ -1910,6 +1913,7 @@ fn target_lock_contention_is_a_distinct_failure() {
     let mut command = cli();
     command
         .env("LOCALAPPDATA", &app_data)
+        .env("XDG_DATA_HOME", &app_data)
         .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
     let output = command.output().expect("run contending install");
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
@@ -1931,6 +1935,7 @@ fn source_target_overlap_is_rejected_before_campaign_state_is_created() {
     let mut command = cli();
     command
         .env("LOCALAPPDATA", &app_data)
+        .env("XDG_DATA_HOME", &app_data)
         .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
     let output = command.output().expect("run overlapping install");
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
@@ -1946,6 +1951,7 @@ fn campaign_identity_freezes_payload_archives_and_extracted_tool_bytes_separatel
     let mut command = cli();
     command
         .env("LOCALAPPDATA", &app_data)
+        .env("XDG_DATA_HOME", &app_data)
         .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
     let output = command.output().expect("start guarded campaign");
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
@@ -1988,6 +1994,7 @@ fn install_against_an_existing_campaign_is_not_silently_treated_as_resume() {
         let mut command = cli();
         command
             .env("LOCALAPPDATA", &app_data)
+            .env("XDG_DATA_HOME", &app_data)
             .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
         command.output().expect("run guarded install")
     };
@@ -2014,6 +2021,7 @@ fn resume_uses_the_frozen_recipe_and_report_and_diagnostics_remain_available() {
     let mut install = cli();
     install
         .env("LOCALAPPDATA", &app_data)
+        .env("XDG_DATA_HOME", &app_data)
         .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
     let installed = install.output().expect("start guarded campaign");
     assert_eq!(installed.status.code(), Some(1), "{}", stderr(&installed));
@@ -2029,6 +2037,7 @@ fn resume_uses_the_frozen_recipe_and_report_and_diagnostics_remain_available() {
     let mut resume = cli();
     resume
         .env("LOCALAPPDATA", &app_data)
+        .env("XDG_DATA_HOME", &app_data)
         .args(["--json", "resume", managed.to_str().unwrap()]);
     let resumed = resume.output().expect("resume guarded campaign");
     assert_eq!(resumed.status.code(), Some(1), "{}", stderr(&resumed));
@@ -2062,6 +2071,7 @@ fn report_rejects_a_receipt_whose_attempt_directory_or_campaign_identity_is_forg
     let mut install = cli();
     install
         .env("LOCALAPPDATA", &app_data)
+        .env("XDG_DATA_HOME", &app_data)
         .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
     let installed = install.output().expect("start guarded campaign");
     assert_eq!(installed.status.code(), Some(1), "{}", stderr(&installed));
@@ -2103,6 +2113,7 @@ fn report_rejects_a_failed_receipt_missing_a_planned_run_row() {
     let mut install = cli();
     install
         .env("LOCALAPPDATA", &app_data)
+        .env("XDG_DATA_HOME", &app_data)
         .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
     let installed = install.output().expect("start guarded campaign");
     assert_eq!(installed.status.code(), Some(1), "{}", stderr(&installed));
@@ -2643,6 +2654,7 @@ fn a_preset_answer_leaves_a_failed_optional_run_out_and_the_installation_complet
     // The receipt verifies against the ledger, as every completed installation's does.
     let report = cli()
         .env("LOCALAPPDATA", &fixture.app_data)
+        .env("XDG_DATA_HOME", &fixture.app_data)
         .args(["--json", "report", fixture.managed.to_str().unwrap()])
         .output()
         .expect("run report");
@@ -8276,6 +8288,7 @@ fn standalone_command(fixture: &StandaloneFixture) -> Command {
     let mut command = cli();
     command
         .env("LOCALAPPDATA", &fixture.app_data)
+        .env("XDG_DATA_HOME", &fixture.app_data)
         .env("CHRIZ_BG_COLLECTION_TEST_DOCUMENTS", &fixture.documents)
         .env("CHRIZ_TEST_MOCK_WEIDU_TP2", "IWD_Fix/IWD_Fix.tp2");
     command
@@ -8560,6 +8573,7 @@ fn a_conflicting_application_data_folder_is_rejected_before_anything_changes() {
     fs::create_dir(&cache).unwrap();
     let mut eet = cli();
     eet.env("LOCALAPPDATA", temp.path().join("app-data"))
+        .env("XDG_DATA_HOME", temp.path().join("app-data"))
         .args(["--app-data-directory", IWD_APP_DATA])
         .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
     let output = eet.output().expect("run EET install with another folder");
@@ -8665,6 +8679,7 @@ fn recipes_reject_sources_shaped_for_the_other_game() {
     let mut command = cli();
     command
         .env("LOCALAPPDATA", temp.path().join("app-data"))
+        .env("XDG_DATA_HOME", temp.path().join("app-data"))
         .args([
             "--json",
             "install",
@@ -8709,6 +8724,7 @@ fn legacy_eet_campaign_is_resumed_and_completed_by_this_engine() {
         command
             .env("CHRIZ_BG_COLLECTION_TEST_RUNNING_EXECUTABLES", "")
             .env("LOCALAPPDATA", &fixture.app_data)
+            .env("XDG_DATA_HOME", &fixture.app_data)
             .env("CHRIZ_BG_COLLECTION_TEST_DOCUMENTS", &fixture.documents)
             .env("CHRIZ_TEST_MOCK_WEIDU_TP2", "EE_Fixpack/EE_Fixpack.tp2")
             .args(install_args(
@@ -8932,6 +8948,7 @@ fn resume_refuses_a_campaign_inside_its_application_data_folder() {
     let mut resume = standalone_command(&fixture);
     resume
         .env("LOCALAPPDATA", &other_local)
+        .env("XDG_DATA_HOME", &other_local)
         .args(["--json", "resume", managed.to_str().unwrap()]);
     let output = resume.output().expect("resume inside application data");
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));

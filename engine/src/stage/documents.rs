@@ -7,7 +7,7 @@
 //! created. Other builds use the real folder, unless a debug build names one in that variable.
 
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Names an isolated folder that stands in for the Documents folder.
 ///
@@ -133,10 +133,106 @@ impl Drop for ComInitializationGuard {
 #[cfg(not(windows))]
 #[cfg_attr(feature = "test-documents", allow(dead_code))]
 fn known_folder() -> io::Result<PathBuf> {
-    Err(io::Error::new(
-        io::ErrorKind::Unsupported,
-        "the system Documents resolver is available only on Windows",
-    ))
+    let dir = resolve_unix_documents_path(std::env::var_os, std::fs::read_to_string)?;
+    std::fs::create_dir_all(&dir)?;
+    Ok(dir)
+}
+
+#[cfg_attr(windows, allow(dead_code))]
+fn resolve_unix_documents_path(
+    env_get: impl Fn(&str) -> Option<std::ffi::OsString>,
+    read_file: impl Fn(&Path) -> io::Result<String>,
+) -> io::Result<PathBuf> {
+    if let Some(raw) = env_get("XDG_DOCUMENTS_DIR").filter(|value| !value.is_empty()) {
+        let dir = PathBuf::from(raw);
+        if !dir.is_absolute() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "XDG_DOCUMENTS_DIR is not absolute",
+            ));
+        }
+        return Ok(dir);
+    }
+
+    let home = env_get("HOME").filter(|value| !value.is_empty());
+    let home_dir = home.as_ref().map(PathBuf::from);
+    if let Some(ref home_path) = home_dir {
+        if !home_path.is_absolute() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "HOME is not absolute",
+            ));
+        }
+    }
+
+    let config_home = env_get("XDG_CONFIG_HOME")
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .filter(|path| path.is_absolute())
+        .or_else(|| home_dir.as_ref().map(|home| home.join(".config")));
+
+    if let Some(config_dir) = config_home {
+        let user_dirs = config_dir.join("user-dirs.dirs");
+        match read_file(&user_dirs) {
+            Ok(content) => {
+                if let Some(parsed) = parse_xdg_documents_dir(&content, home_dir.as_deref())? {
+                    return Ok(parsed);
+                }
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(_) => {}
+        }
+    }
+
+    let Some(home_path) = home_dir else {
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "HOME is unavailable to resolve the Documents folder",
+        ));
+    };
+    Ok(home_path.join("Documents"))
+}
+
+#[cfg_attr(windows, allow(dead_code))]
+fn parse_xdg_documents_dir(content: &str, home: Option<&Path>) -> io::Result<Option<PathBuf>> {
+    for raw_line in content.lines() {
+        let line = raw_line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let line = line.strip_prefix("export ").map_or(line, str::trim_start);
+        let Some(value) = line.strip_prefix("XDG_DOCUMENTS_DIR=") else {
+            continue;
+        };
+        let value = value.trim();
+        let unquoted = if (value.starts_with('"') && value.ends_with('"') && value.len() >= 2)
+            || (value.starts_with('\'') && value.ends_with('\'') && value.len() >= 2)
+        {
+            &value[1..value.len() - 1]
+        } else {
+            value
+        };
+        let expanded = if let Some(rest) = unquoted
+            .strip_prefix("${HOME}")
+            .or_else(|| unquoted.strip_prefix("$HOME"))
+        {
+            let Some(home) = home else {
+                continue;
+            };
+            let trimmed = rest.trim_start_matches(['/', '\\']);
+            if trimmed.is_empty() {
+                home.to_path_buf()
+            } else {
+                home.join(trimmed)
+            }
+        } else {
+            PathBuf::from(unquoted)
+        };
+        if expanded.is_absolute() {
+            return Ok(Some(expanded));
+        }
+    }
+    Ok(None)
 }
 
 #[cfg(test)]
@@ -185,5 +281,48 @@ mod tests {
             documents,
             PathBuf::from(OsString::from_wide(&buffer[..length]))
         );
+    }
+
+    #[test]
+    fn unix_documents_resolver_uses_env_user_dirs_and_home_fallback() {
+        let root = tempfile::tempdir().unwrap();
+        let home = root.path().join("home");
+        let custom = root.path().join("custom-docs");
+        let from_xdg_file = home.join("Dokumente");
+
+        let resolved_env = resolve_unix_documents_path(
+            |name| match name {
+                "XDG_DOCUMENTS_DIR" => Some(custom.clone().into_os_string()),
+                "HOME" => Some(home.clone().into_os_string()),
+                _ => None,
+            },
+            |_| unreachable!("env takes precedence over user-dirs.dirs"),
+        )
+        .unwrap();
+        assert_eq!(resolved_env, custom);
+
+        let user_dirs = "# comment\nXDG_DOCUMENTS_DIR=\"$HOME/Dokumente\"\n";
+        let resolved_user_dirs = resolve_unix_documents_path(
+            |name| match name {
+                "HOME" => Some(home.clone().into_os_string()),
+                _ => None,
+            },
+            |path| {
+                assert_eq!(path, home.join(".config").join("user-dirs.dirs"));
+                Ok(user_dirs.to_owned())
+            },
+        )
+        .unwrap();
+        assert_eq!(resolved_user_dirs, from_xdg_file);
+
+        let fallback = resolve_unix_documents_path(
+            |name| match name {
+                "HOME" => Some(home.clone().into_os_string()),
+                _ => None,
+            },
+            |_| Err(io::Error::from(io::ErrorKind::NotFound)),
+        )
+        .unwrap();
+        assert_eq!(fallback, home.join("Documents"));
     }
 }

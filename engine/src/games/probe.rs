@@ -85,7 +85,6 @@ impl FileSystemProvider for SystemFileSystem {
         crate::reparse::canonicalize_flexible(path)
     }
 
-    #[cfg(windows)]
     fn product_version(&self, executable: &Path) -> io::Result<String> {
         let bytes = fs::read(executable)?;
         let image = pelite::PeFile::from_bytes(&bytes).map_err(|error| {
@@ -118,14 +117,6 @@ impl FileSystemProvider for SystemFileSystem {
             fixed.dwProductVersion.Minor,
             fixed.dwProductVersion.Patch,
             fixed.dwProductVersion.Build
-        ))
-    }
-
-    #[cfg(not(windows))]
-    fn product_version(&self, _executable: &Path) -> io::Result<String> {
-        Err(io::Error::new(
-            io::ErrorKind::Unsupported,
-            "Windows PE ProductVersion inspection is unavailable on this platform",
         ))
     }
 }
@@ -385,6 +376,27 @@ pub fn resolve_game_executable<F: FileSystemProvider>(
         return Some(candidates[0].1.to_owned());
     }
     None
+}
+
+fn has_native_linux_game_markers<F: FileSystemProvider>(fs_provider: &F, root: &Path) -> bool {
+    const NATIVE_LINUX_MARKERS: &[&str] = &[
+        "BaldursGate",
+        "BaldursGateII",
+        "IcewindDale",
+        "BaldursGate64",
+        "BaldursGateII64",
+        "IcewindDale64",
+        "start.sh",
+    ];
+    NATIVE_LINUX_MARKERS.iter().any(|marker| {
+        direct_relative_kind_or_missing(fs_provider, root, marker, FileKind::File) == Ok(true)
+            || direct_relative_kind_or_missing(
+                fs_provider,
+                root,
+                &format!("game/{marker}"),
+                FileKind::File,
+            ) == Ok(true)
+    })
 }
 
 fn has_direct_bif_archive<F: FileSystemProvider>(fs_provider: &F, root: &Path) -> bool {
@@ -655,10 +667,18 @@ fn inspect_with_profile<F: FileSystemProvider>(
         });
     }
     if !missing_required.is_empty() {
+        let missing_executable = missing_required
+            .iter()
+            .any(|path| path.eq_ignore_ascii_case(&profile.executable));
         let english = missing_required
             .iter()
             .any(|path| path.eq_ignore_ascii_case("lang/en_US/dialog.tlk"));
-        let message = if english {
+        let message = if missing_executable && has_native_linux_game_markers(fs_provider, root) {
+            format!(
+                "This folder holds the native Linux build instead of the Windows build that EEex and InfinityLoader need ({}). Switch this game to the Windows version run via Proton or Wine (Steam: Properties -> Compatibility -> Force the use of a specific Steam Play compatibility tool (Proton); Heroic/GOG: install the Windows build), then check again.",
+                missing_required.join(", ")
+            )
+        } else if english {
             format!(
                 "The English game texts are missing ({}). The collection installs English texts and needs them. Repair or reinstall the game with English included, then check again.",
                 missing_required.join(", ")
@@ -1450,12 +1470,141 @@ fn metadata_kind(path: &Path, metadata: &fs::Metadata) -> FileKind {
 
 #[cfg(test)]
 mod tests {
-    use super::wildcard_match;
+    use super::*;
+    use crate::games::{Eligibility, GameProfiles, GameRole, Storefront};
+
+    fn write_u16_le(buf: &mut [u8], offset: usize, value: u16) {
+        buf[offset..offset + 2].copy_from_slice(&value.to_le_bytes());
+    }
+
+    fn write_u32_le(buf: &mut [u8], offset: usize, value: u32) {
+        buf[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+    }
+
+    fn minimal_pe_with_product_version(major: u16, minor: u16, patch: u16, build: u16) -> Vec<u8> {
+        let mut pe = vec![0_u8; 0x400];
+        pe[0..2].copy_from_slice(b"MZ");
+        write_u32_le(&mut pe, 0x3C, 0x40);
+        pe[0x40..0x44].copy_from_slice(b"PE\0\0");
+
+        // COFF header at 0x44
+        write_u16_le(&mut pe, 0x44, 0x8664); // AMD64
+        write_u16_le(&mut pe, 0x46, 1); // NumberOfSections
+        write_u16_le(&mut pe, 0x54, 0xF0); // SizeOfOptionalHeader
+        write_u16_le(&mut pe, 0x56, 0x0022); // Characteristics
+
+        // Optional header PE32+ at 0x58
+        write_u16_le(&mut pe, 0x58, 0x020B);
+        write_u32_le(&mut pe, 0x78, 0x1000); // SectionAlignment
+        write_u32_le(&mut pe, 0x7C, 0x200); // FileAlignment
+        write_u32_le(&mut pe, 0x90, 0x2000); // SizeOfImage
+        write_u32_le(&mut pe, 0x94, 0x200); // SizeOfHeaders
+        write_u32_le(&mut pe, 0xC4, 16); // NumberOfRvaAndSizes
+                                         // DataDirectory[2] = IMAGE_DIRECTORY_ENTRY_RESOURCE at 0x58 + 112 + 16 = 0xD8
+        write_u32_le(&mut pe, 0xD8, 0x1000);
+        write_u32_le(&mut pe, 0xDC, 0x200);
+
+        // .rsrc section header at 0x148
+        pe[0x148..0x150].copy_from_slice(b".rsrc\0\0\0");
+        write_u32_le(&mut pe, 0x150, 0x200); // VirtualSize
+        write_u32_le(&mut pe, 0x154, 0x1000); // VirtualAddress
+        write_u32_le(&mut pe, 0x158, 0x200); // SizeOfRawData
+        write_u32_le(&mut pe, 0x15C, 0x200); // PointerToRawData
+        write_u32_le(&mut pe, 0x16C, 0x4000_0040);
+
+        // .rsrc payload at file offset 0x200 (RVA 0x1000)
+        let rsrc = 0x200;
+        write_u16_le(&mut pe, rsrc + 0x0E, 1); // root: 1 id entry
+        write_u32_le(&mut pe, rsrc + 0x10, 16); // RT_VERSION
+        write_u32_le(&mut pe, rsrc + 0x14, 0x8000_0018);
+
+        write_u16_le(&mut pe, rsrc + 0x18 + 0x0E, 1); // id dir
+        write_u32_le(&mut pe, rsrc + 0x28, 1); // id = 1
+        write_u32_le(&mut pe, rsrc + 0x2C, 0x8000_0030);
+
+        write_u16_le(&mut pe, rsrc + 0x30 + 0x0E, 1); // lang dir
+        write_u32_le(&mut pe, rsrc + 0x40, 0x0409);
+        write_u32_le(&mut pe, rsrc + 0x44, 0x48);
+
+        // IMAGE_RESOURCE_DATA_ENTRY at rsrc + 0x48
+        write_u32_le(&mut pe, rsrc + 0x48, 0x1058); // RVA of VS_VERSION_INFO
+        write_u32_le(&mut pe, rsrc + 0x4C, 0x5C); // Size = 92 bytes
+
+        // VS_VERSION_INFO at rsrc + 0x58
+        let ver = rsrc + 0x58;
+        write_u16_le(&mut pe, ver, 0x5C); // wLength
+        write_u16_le(&mut pe, ver + 2, 52); // wValueLength
+        write_u16_le(&mut pe, ver + 4, 0); // wType (binary)
+        for (i, unit) in "VS_VERSION_INFO\0".encode_utf16().enumerate() {
+            write_u16_le(&mut pe, ver + 6 + i * 2, unit);
+        }
+        let fixed = rsrc + 0x80;
+        write_u32_le(&mut pe, fixed, 0xFEEF_04BD); // dwSignature
+        write_u32_le(&mut pe, fixed + 4, 0x0001_0000); // dwStrucVersion
+        write_u32_le(
+            &mut pe,
+            fixed + 16,
+            (u32::from(major) << 16) | u32::from(minor),
+        );
+        write_u32_le(
+            &mut pe,
+            fixed + 20,
+            (u32::from(patch) << 16) | u32::from(build),
+        );
+        pe
+    }
 
     #[test]
     fn wildcard_matching_is_case_insensitive_and_complete() {
         assert!(wildcard_match("setup-*", "Setup-DlcMerger.exe"));
         assert!(wildcard_match("*.debug.log", "weidu.DEBUG.LOG"));
         assert!(!wildcard_match("weidu.log", "old-weidu.log"));
+    }
+
+    #[test]
+    fn system_product_version_reads_pe_fixed_file_info_cross_platform() {
+        let temp = tempfile::tempdir().unwrap();
+        let exe = temp.path().join("Baldur.exe");
+        fs::write(&exe, minimal_pe_with_product_version(2, 7, 3, 0)).unwrap();
+        assert_eq!(SystemFileSystem.product_version(&exe).unwrap(), "2.7.3.0");
+
+        let non_pe = temp.path().join("start.sh");
+        fs::write(&non_pe, b"#!/bin/sh\n").unwrap();
+        assert!(SystemFileSystem.product_version(&non_pe).is_err());
+    }
+
+    #[test]
+    fn native_linux_game_build_reports_proton_and_windows_build_guidance() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("Baldurs Gate II Enhanced Edition");
+        fs::create_dir_all(root.join("lang/en_US")).unwrap();
+        fs::create_dir_all(root.join("data")).unwrap();
+        fs::write(root.join("BaldursGateII64"), b"\x7fELF").unwrap();
+        fs::write(root.join("chitin.key"), b"key").unwrap();
+        fs::write(root.join("engine.lua"), b"engine_name = \"BG2\"").unwrap();
+        fs::write(root.join("lang/en_US/dialog.tlk"), b"tlk").unwrap();
+        fs::write(root.join("data/DEFAULT.BIF"), b"bif").unwrap();
+
+        let profiles = GameProfiles::load(
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../manifest/game-builds"),
+        )
+        .unwrap();
+        let candidate = inspect_game_path(
+            &profiles,
+            &SystemFileSystem,
+            GameRole::Bg2ee,
+            Storefront::Steam,
+            &root,
+        )
+        .unwrap();
+        assert_eq!(candidate.eligibility, Eligibility::Ineligible);
+        let finding = candidate
+            .findings
+            .iter()
+            .find(|f| f.kind == FindingKind::MissingFiles)
+            .expect("expected MissingFiles finding");
+        assert!(finding.message.contains("native Linux build"));
+        assert!(finding.message.contains("Proton"));
+        assert!(finding.message.contains("Windows build"));
     }
 }

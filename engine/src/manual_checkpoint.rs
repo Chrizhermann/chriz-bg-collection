@@ -264,7 +264,17 @@ fn write_once<T: Serialize>(path: &Path, value: &T) -> Result<(), String> {
 
 pub fn read_logs(root: &Path) -> Result<(String, String), String> {
     let read = |name: &str| -> Result<String, String> {
-        let path = root.join(name).join("WeiDU.log");
+        let dir = root.join(name);
+        match fs::symlink_metadata(&dir) {
+            Ok(_) => direct(&dir)?,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(String::new()),
+            Err(e) => return Err(e.to_string()),
+        }
+        let Some(path) =
+            crate::weidu::log::resolve_optional_weidu_log(&dir).map_err(|e| e.to_string())?
+        else {
+            return Ok(String::new());
+        };
         direct(&path)?;
         match fs::read(&path) {
             Ok(bytes) => String::from_utf8(bytes)

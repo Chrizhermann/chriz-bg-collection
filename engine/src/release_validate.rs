@@ -161,6 +161,14 @@ pub fn validate_public_alpha_at(
         ),
     }
 
+    if let Err(error) = evaluate_preset(manifest, PUBLIC_ALPHA_PRESET, "linux") {
+        release_error(
+            &mut findings,
+            RULE_RELEASE_RECORD,
+            format!("public alpha preset cannot be evaluated for linux: {error}"),
+        );
+    }
+
     Ok(findings)
 }
 

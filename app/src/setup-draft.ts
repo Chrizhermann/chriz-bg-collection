@@ -46,7 +46,8 @@ function inputValue(value: unknown): value is InputValue {
 
 function selection(value: unknown): value is NormalizedSelection {
   if (!record(value) || !exactKeys(value, ["platform", "features", "inputs"])
-    || value.platform !== "windows" || !record(value.features) || !record(value.inputs)) return false;
+    || (value.platform !== "windows" && value.platform !== "linux")
+    || !record(value.features) || !record(value.inputs)) return false;
   return Object.entries(value.features).every(([id, enabled]) => identifier(id) && typeof enabled === "boolean")
     && Object.entries(value.inputs).every(([id, inputs]) => identifier(id) && record(inputs)
       && Object.entries(inputs).every(([inputId, input]) => identifier(inputId) && inputValue(input)));
@@ -106,7 +107,11 @@ export function loadSetupDraft(status: BackendStatus): { draft: SetupDraft | nul
   const profileAvailable = value.profileId === (status.selectedProfile ?? null)
     || (value.profileId !== null && status.profiles?.some(profile => profile.id === value.profileId) === true);
   // An available different profile is selected and its returned recipe checked by the caller.
-  if (!profileAvailable || (value.profileId === (status.selectedProfile ?? null) && value.recipeVersion !== status.recipeVersion)) {
+  if (
+    !profileAvailable
+    || (status.platform !== undefined && value.selection.platform !== status.platform)
+    || (value.profileId === (status.selectedProfile ?? null) && value.recipeVersion !== status.recipeVersion)
+  ) {
     clearSetupDraft();
     return { draft: null, notice: "Your saved setup belongs to a different collection version or an unavailable mod setup. Check the current recommended choices before installing." };
   }

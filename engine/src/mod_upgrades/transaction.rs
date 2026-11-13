@@ -236,8 +236,9 @@ pub fn active_upgrade(root: &Path) -> Result<Option<AppliedUpgrade>, String> {
         return Ok(None);
     };
     let a: Applied = read_json(&last.dir.join("applied.json"))?;
-    files::regular(&root.join("game/WeiDU.log"))?;
-    let current = files::hash(&root.join("game/WeiDU.log"))?;
+    let log = crate::weidu::log::resolve_weidu_log(&root.join("game")).map_err(err)?;
+    files::regular(&log)?;
+    let current = files::hash(&log)?;
     if current != a.upgrade.log_sha256 {
         // Compatibility with a subsequent, independently verified legacy description fix.
         let transition = crate::patches::active_log_transition(root)?;
@@ -257,8 +258,9 @@ fn verify_hashes(
         if skip_runtime && buffbot::runtime_mutable(name) {
             continue;
         }
-        files::regular(&game.join(name))?;
-        if files::hash(&game.join(name))? != *hash {
+        let path = files::resolve_relative(game, name)?;
+        files::regular(&path)?;
+        if files::hash(&path)? != *hash {
             return Err(format!("File changed: {name}"));
         }
     }
@@ -343,7 +345,7 @@ pub(super) fn check_restore(ctx: &Context<'_>, dir: &Path, undo: bool) -> Result
 /// crash reports on and off there, and that never touches what the update relies on.
 fn verify_guards(game: &Path, hashes: &BTreeMap<String, String>) -> Result<(), String> {
     for (name, hash) in hashes {
-        let path = game.join(name);
+        let path = files::resolve_relative(game, name)?;
         files::regular(&path)?;
         if files::hash(&path)? != *hash
             && !(name.eq_ignore_ascii_case("infinityloader.ini")
@@ -369,7 +371,8 @@ pub(super) fn prepare(
     let mut saved = BTreeMap::new();
     for (name, stamp) in &before {
         if !stamp.directory && buffbot::writable(name) {
-            let bytes = files::read(&ctx.game().join(name), 256 * 1024 * 1024)?;
+            let path = files::resolve_relative(&ctx.game(), name)?;
+            let bytes = files::read(&path, 256 * 1024 * 1024)?;
             let hash = sha256_bytes(&bytes);
             if plan.hashes.get(name) != Some(&hash) {
                 return Err("A file changed before backup.".into());
@@ -408,8 +411,9 @@ pub(super) fn finish(ctx: &Context<'_>, dir: &Path, p: &Prepared) -> Result<(), 
     let mut post = BTreeMap::new();
     for (name, stamp) in &after {
         if !stamp.directory && buffbot::writable(name) {
-            files::regular(&ctx.game().join(name))?;
-            post.insert(name.clone(), files::hash(&ctx.game().join(name))?);
+            let path = files::resolve_relative(&ctx.game(), name)?;
+            files::regular(&path)?;
+            post.insert(name.clone(), files::hash(&path)?);
         }
     }
     let upgrade = AppliedUpgrade {
@@ -422,7 +426,7 @@ pub(super) fn finish(ctx: &Context<'_>, dir: &Path, p: &Prepared) -> Result<(), 
             .get("weidu.log")
             .ok_or("Original mod list missing")?
             .clone(),
-        log_sha256: files::hash(&ctx.game().join("WeiDU.log"))?,
+        log_sha256: files::hash(&crate::weidu::log::resolve_weidu_log(&ctx.game()).map_err(err)?)?,
     };
     files::json_new(
         &dir.join("applied.json"),
@@ -459,13 +463,12 @@ pub fn restore_with_progress(
     }
     let p = load(&ctx.record.managed_root, &last.dir)?;
     check_restore(ctx, &last.dir, undo)?;
-    let existing = p
-        .plan
-        .hashes
-        .iter()
-        .filter(|(n, _)| ctx.game().join(n).exists())
-        .map(|(n, h)| (n.clone(), h.clone()))
-        .collect();
+    let mut existing = BTreeMap::new();
+    for (n, h) in &p.plan.hashes {
+        if files::resolve_relative(&ctx.game(), n)?.exists() {
+            existing.insert(n.clone(), h.clone());
+        }
+    }
     crate::patches::close_restore_check(&ctx.game(), &existing)?;
     crate::operation_progress::stage(progress, "restoring");
     restore_files(ctx, &last.dir, undo)?;
@@ -485,7 +488,7 @@ pub(super) fn restore_files(ctx: &Context<'_>, dir: &Path, undo: bool) -> Result
                     if stamp.directory {
                         None
                     } else {
-                        Some(files::hash(&ctx.game().join(name))?)
+                        Some(files::hash(&files::resolve_relative(&ctx.game(), name)?)?)
                     },
                 );
             }

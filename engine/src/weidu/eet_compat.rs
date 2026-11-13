@@ -27,6 +27,9 @@ pub(crate) struct EetCompatibilityInput<'a> {
     pub tp2: &'a str,
     pub components: &'a [u32],
     pub target_root: &'a Path,
+    /// Verified host WeiDU binary bytes, used on Unix to refresh `EET/bin/unix/.../weidu`.
+    #[cfg_attr(not(unix), allow(dead_code))]
+    pub weidu_bytes: Option<&'a [u8]>,
 }
 
 /// Written into each affected invocation's evidence directory, including old frozen retries.
@@ -47,18 +50,18 @@ pub(crate) struct EetCompatibilityEvidence {
     matched: Option<&'static str>,
 }
 
-/// Apply only to the Windows EET core, after source verification/materialization.
+/// Apply platform-specific compatibility fixes to staged EET core after materialization.
 /// Neither the original download nor extracted cache is rewritten.
 ///
-/// For the reviewed archive the whole file must be the reviewed original or its correction.
-/// When the official link served a different archive, or when EET comes from another artifact ID,
-/// only the exact faulty batch text is replaced, once, and a file without it is left as it is:
-/// upstream may have fixed or changed it.
+/// On Windows, fixes `EET/lib/macros.tph`'s `reg query` batch snippet for user Documents discovery
+/// (for newer drifted EET releases, only the exact faulty batch text is replaced).
+/// On Unix, replaces EET's pre-251 `EET/bin/unix/**/weidu` helpers with the host's verified
+/// WeiDU 251 binary (`0o755`) and marks bundled `lua` helpers executable so `AT_NOW` works on
+/// case-sensitive Linux filesystems.
 pub(crate) fn prepare(
     input: EetCompatibilityInput<'_>,
 ) -> Result<Option<EetCompatibilityEvidence>, String> {
-    if !cfg!(windows)
-        || input.mod_id != "eet"
+    if input.mod_id != "eet"
         || input.target != GameRoot::Bg2
         || !input.components.contains(&0)
         || !input
@@ -68,6 +71,20 @@ pub(crate) fn prepare(
     {
         return Ok(None);
     }
+    #[cfg(windows)]
+    {
+        prepare_windows(input)
+    }
+    #[cfg(not(windows))]
+    {
+        prepare_unix(input)
+    }
+}
+
+#[cfg(windows)]
+fn prepare_windows(
+    input: EetCompatibilityInput<'_>,
+) -> Result<Option<EetCompatibilityEvidence>, String> {
     let use_exact_reviewed_patch = !input.archive_drifted
         && input.artifact_id == ARTIFACT_ID
         && input.artifact_sha256.eq_ignore_ascii_case(ARCHIVE_SHA256);
@@ -95,6 +112,96 @@ pub(crate) fn prepare(
         observed_after_sha256: after,
         matched,
     }))
+}
+
+#[cfg_attr(not(unix), allow(dead_code))]
+fn prepare_unix(
+    input: EetCompatibilityInput<'_>,
+) -> Result<Option<EetCompatibilityEvidence>, String> {
+    if !input.target_root.is_absolute() {
+        return Err("EET compatibility target must be absolute".into());
+    }
+    let unix_dir = match HeldFolder::open(input.target_root, ["EET", "bin", "unix"]) {
+        Ok(folder) => folder,
+        Err(error) if matches!(error.kind, EntryErrorKind::Missing) => return Ok(None),
+        Err(error) => return Err(path_error(error)),
+    };
+    if unix_dir.contains("lua").map_err(|error| {
+        format!(
+            "Inspect EET compatibility path {}: {error}",
+            unix_dir.path().join("lua").display()
+        )
+    })? {
+        unix_dir.set_executable("lua").map_err(path_error)?;
+    }
+    let mut recorded: Option<(&'static str, String, String)> = None;
+    if let Some(weidu_bytes) = input.weidu_bytes {
+        if let Some((before, after)) = replace_unix_weidu(&unix_dir, "weidu", weidu_bytes)? {
+            recorded = Some(("EET/bin/unix/weidu", before, after));
+        }
+    }
+    match unix_dir.open_below(["x86_64"]) {
+        Ok(arch_dir) => {
+            if arch_dir.contains("lua").map_err(|error| {
+                format!(
+                    "Inspect EET compatibility path {}: {error}",
+                    arch_dir.path().join("lua").display()
+                )
+            })? {
+                arch_dir.set_executable("lua").map_err(path_error)?;
+            }
+            if let Some(weidu_bytes) = input.weidu_bytes {
+                if let Some((before, after)) = replace_unix_weidu(&arch_dir, "weidu", weidu_bytes)?
+                {
+                    recorded = Some(("EET/bin/unix/x86_64/weidu", before, after));
+                }
+            }
+        }
+        Err(error) if matches!(error.kind, EntryErrorKind::Missing) => {}
+        Err(error) => return Err(path_error(error)),
+    }
+    let Some((relative_path, before, after)) = recorded else {
+        return Ok(None);
+    };
+    Ok(Some(EetCompatibilityEvidence {
+        fix_id: "eet-unix-bin-weidu-v1",
+        artifact_id: input.artifact_id.to_owned(),
+        archive_sha256: input.artifact_sha256.to_ascii_lowercase(),
+        relative_path,
+        upstream_lf_sha256: "",
+        corrected_lf_sha256: "",
+        changed: before != after,
+        observed_before_sha256: before,
+        observed_after_sha256: after,
+        matched: None,
+    }))
+}
+
+#[cfg_attr(not(unix), allow(dead_code))]
+fn replace_unix_weidu(
+    folder: &HeldFolder,
+    name: &str,
+    weidu_bytes: &[u8],
+) -> Result<Option<(String, String)>, String> {
+    let path = folder.path().join(name);
+    let before = match folder.open_file(name) {
+        Ok((file, _)) => {
+            let mut bytes = Vec::new();
+            (&file).read_to_end(&mut bytes).map_err(|error| {
+                format!("Read EET compatibility path {}: {error}", path.display())
+            })?;
+            bytes
+        }
+        Err(error) if matches!(error.kind, EntryErrorKind::Missing) => return Ok(None),
+        Err(error) => return Err(path_error(error)),
+    };
+    if before != weidu_bytes {
+        folder.replace_file(name, weidu_bytes).map_err(|error| {
+            format!("Replace EET compatibility path {}: {error}", path.display())
+        })?;
+    }
+    folder.set_executable(name).map_err(path_error)?;
+    Ok(Some((sha256_bytes(&before), sha256_bytes(weidu_bytes))))
 }
 
 /// Replace the faulty batch text of a newer EET release, when it is there exactly once.
@@ -435,7 +542,8 @@ mod tests {
                 target,
                 tp2,
                 components,
-                target_root: temp.path()
+                target_root: temp.path(),
+                weidu_bytes: None,
             })
             .unwrap()
             .is_none());
@@ -461,6 +569,7 @@ mod tests {
             tp2: "EET/EET.tp2",
             components: &[0],
             target_root: temp.path(),
+            weidu_bytes: None,
         })
         .unwrap()
         .expect("custom EET artifact with faulty batch should be patched");
@@ -484,7 +593,67 @@ mod tests {
             tp2: "EET/EET.tp2",
             components: &[0],
             target_root,
+            weidu_bytes: None,
         }
+    }
+
+    #[test]
+    fn eet_compat_unix_replaces_bundled_weidu_and_marks_helpers_executable() {
+        let temp = tempfile::tempdir().unwrap();
+        let target = std::fs::canonicalize(temp.path()).unwrap();
+        let unix_dir = target.join("EET/bin/unix");
+        let arch_dir = unix_dir.join("x86_64");
+        std::fs::create_dir_all(&arch_dir).unwrap();
+        std::fs::write(unix_dir.join("lua"), b"old lua").unwrap();
+        std::fs::write(arch_dir.join("lua"), b"old lua 64").unwrap();
+        let weidu_dest = arch_dir.join("weidu");
+        std::fs::write(&weidu_dest, b"pre-251 weidu").unwrap();
+        let verified_bytes = b"\x7fELF-verified-weidu-251";
+
+        let evidence = prepare_unix(EetCompatibilityInput {
+            mod_id: "eet",
+            artifact_id: ARTIFACT_ID,
+            artifact_sha256: ARCHIVE_SHA256,
+            archive_drifted: false,
+            target: GameRoot::Bg2,
+            tp2: "EET/EET.tp2",
+            components: &[0],
+            target_root: &target,
+            weidu_bytes: Some(verified_bytes),
+        })
+        .unwrap()
+        .expect("unix bin compatibility should record replacement");
+
+        assert!(evidence.changed);
+        assert_eq!(evidence.relative_path, "EET/bin/unix/x86_64/weidu");
+        assert_eq!(std::fs::read(&weidu_dest).unwrap(), verified_bytes);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            for p in [
+                unix_dir.join("lua"),
+                arch_dir.join("lua"),
+                weidu_dest.clone(),
+            ] {
+                let mode = std::fs::metadata(p).unwrap().permissions().mode();
+                assert_eq!(mode & 0o111, 0o111);
+            }
+        }
+        // Idempotent retry leaves bytes unchanged.
+        let retry = prepare_unix(EetCompatibilityInput {
+            mod_id: "eet",
+            artifact_id: ARTIFACT_ID,
+            artifact_sha256: ARCHIVE_SHA256,
+            archive_drifted: false,
+            target: GameRoot::Bg2,
+            tp2: "EET/EET.tp2",
+            components: &[0],
+            target_root: &target,
+            weidu_bytes: Some(verified_bytes),
+        })
+        .unwrap()
+        .unwrap();
+        assert!(!retry.changed);
     }
 
     #[cfg(windows)]
@@ -691,6 +860,7 @@ mod tests {
                 tp2: "EET/EET.tp2",
                 components: &[0, 100],
                 target_root: temp.path(),
+                weidu_bytes: None,
             })
             .unwrap()
             .unwrap();
