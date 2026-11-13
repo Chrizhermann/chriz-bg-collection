@@ -99,6 +99,28 @@ class ThirdPartyNoticeTests(unittest.TestCase):
         self.assertIn("Original required text.", first)
         self.assertIn("Upstream attribution.", first)
 
+    def test_enabled_dependency_names_follows_features_and_skips_unactivated_optionals(self):
+        package = {
+            "dependencies": [
+                {"name": "core-dep", "optional": False, "kind": None},
+                {"name": "build-dep", "optional": False, "kind": "build"},
+                {"name": "dev-dep", "optional": False, "kind": "dev"},
+                {"name": "gated-pkg", "optional": True, "kind": None},
+                {"name": "renamed-actual", "rename": "alias-dep", "optional": True, "kind": None},
+                {"name": "unused-opt", "optional": True, "kind": None},
+                {"name": "unused-gated", "optional": True, "kind": None},
+            ],
+            "features": {
+                "bundle": ["inner", "alias-dep"],
+                "inner": ["dep:gated-pkg"],
+                "unused-feat": ["dep:unused-gated"],
+            },
+        }
+        self.assertEqual(
+            notices.enabled_dependency_names(package, {"bundle"}),
+            {"core-dep", "build-dep", "gated-pkg", "renamed-actual"},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

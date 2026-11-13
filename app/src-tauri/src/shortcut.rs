@@ -152,8 +152,12 @@ fn desktop_entry_marker(install_id: &str) -> String {
 }
 
 #[cfg(not(windows))]
+#[allow(clippy::redundant_closure)]
 fn resolve_desktop_directory() -> Result<PathBuf, String> {
-    resolve_desktop_directory_with(std::env::var_os, std::fs::read_to_string)
+    resolve_desktop_directory_with(
+        |key| std::env::var_os(key),
+        |path| std::fs::read_to_string(path),
+    )
 }
 
 #[cfg(any(not(windows), test))]

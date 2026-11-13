@@ -152,7 +152,7 @@ jobs:
       - name: Verify locked dependency notices
         if: ${{ !cancelled() && (steps.native_tests.outcome == 'success' || steps.native_tests.outcome == 'failure') }}
         run: |
-          cargo fetch --locked --target x86_64-pc-windows-msvc --target x86_64-unknown-linux-gnu 2>&1 | Tee-Object -FilePath target/ci-evidence/cargo-fetch-notices.log
+          cargo fetch --locked 2>&1 | Tee-Object -FilePath target/ci-evidence/cargo-fetch-notices.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/generate-third-party-notices.py --check --npm-cache $env:CEBG_NPM_CACHE 2>&1 | Tee-Object -FilePath target/ci-evidence/dependency-notices.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -416,7 +416,7 @@ jobs:
         if: ${{ !cancelled() && (steps.native_tests.outcome == 'success' || steps.native_tests.outcome == 'failure') }}
         run: |
           set -euo pipefail
-          cargo fetch --locked --target x86_64-pc-windows-msvc --target x86_64-unknown-linux-gnu 2>&1 | tee target/ci-evidence/cargo-fetch-notices.log
+          cargo fetch --locked 2>&1 | tee target/ci-evidence/cargo-fetch-notices.log
           python tools/generate-third-party-notices.py --check --npm-cache "$CEBG_NPM_CACHE" 2>&1 | tee target/ci-evidence/dependency-notices.log
 
       - name: Build unsigned Linux development packages (Chriz Easy BG)

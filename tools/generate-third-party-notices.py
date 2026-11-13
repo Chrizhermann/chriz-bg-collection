@@ -89,26 +89,109 @@ def is_notice(path: str) -> bool:
     )
 
 
+def enabled_dependency_names(package: dict, active_features: set[str]) -> set[str]:
+    """Return dependency package names active via non-optional edges or enabled features."""
+    dependencies = [
+        dep for dep in package.get("dependencies", [])
+        if dep.get("kind") in (None, "build")
+    ]
+    enabled_keys = {
+        dep.get("rename") or dep["name"]
+        for dep in dependencies
+        if not dep.get("optional", False)
+    }
+    optional_keys = {
+        dep.get("rename") or dep["name"]
+        for dep in dependencies
+        if dep.get("optional", False)
+    }
+    feature_map = package.get("features", {})
+    seen_features = set(active_features)
+    stack = list(active_features)
+    while stack:
+        feature = stack.pop()
+        if feature in optional_keys:
+            enabled_keys.add(feature)
+        for item in feature_map.get(feature, []):
+            if item.startswith("dep:"):
+                enabled_keys.add(item[4:])
+            elif "/" not in item and item not in seen_features:
+                seen_features.add(item)
+                stack.append(item)
+    return {
+        dep["name"]
+        for dep in dependencies
+        if (dep.get("rename") or dep["name"]) in enabled_keys
+    }
+
+
 def cargo_packages(root: Path, cargo: str) -> list[tuple[str, str]]:
-    packages = set()
+    normal: set[tuple[str, str]] = set()
+    packages: set[tuple[str, str]] = set()
+    features_by_package: dict[tuple[str, str], set[str]] = {}
+    for target in TARGETS:
+        for edges, bucket in (("normal", normal), ("normal,build", packages)):
+            command = [
+                cargo, "tree", "--locked", "--offline", "--target", target,
+                "-p", "chriz-bg-app", "--edges", edges, "--prefix", "none",
+                "--format", "{p}|{f}",
+            ]
+            result = subprocess.run(command, cwd=root, capture_output=True, text=True, encoding="utf-8")
+            if result.returncode:
+                raise NoticeError(f"Offline cargo tree failed for {target}:\n{result.stderr.strip()}")
+            for line in result.stdout.splitlines():
+                if "|" not in line:
+                    raise NoticeError(f"Unexpected cargo tree output: {line}")
+                package_col, features_col = line.split("|", 1)
+                match = re.match(r"^(\S+) v(\S+)(?:\s|$)", package_col)
+                if not match:
+                    raise NoticeError(f"Cannot identify cargo dependency: {line}")
+                name, version = match.groups()
+                if name not in ("chriz-bg-app", "chriz-bg-engine"):
+                    bucket.add((name, version))
+                features_by_package.setdefault((name, version), set()).update(
+                    feat for feat in features_col.split(",") if feat
+                )
+
+    # `cargo tree --target <T>` still evaluates build-dependencies against the host OS; expand
+    # target-filtered metadata for build-only packages so Windows and Linux hosts agree.
+    build_only = packages - normal
     for target in TARGETS:
         command = [
-            cargo, "tree", "--locked", "--offline", "--target", target,
-            "-p", "chriz-bg-app", "--edges", "normal,build", "--prefix", "none",
-            "--format", "{p}|{l}",
+            cargo, "metadata", "--locked", "--offline",
+            "--format-version", "1", "--filter-platform", target,
         ]
         result = subprocess.run(command, cwd=root, capture_output=True, text=True, encoding="utf-8")
         if result.returncode:
-            raise NoticeError(f"Offline cargo tree failed for {target}:\n{result.stderr.strip()}")
-        for line in result.stdout.splitlines():
-            if "|" not in line:
-                raise NoticeError(f"Unexpected cargo tree output: {line}")
-            match = re.match(r"^(\S+) v(\S+)(?:\s|$)", line.split("|", 1)[0])
-            if not match:
-                raise NoticeError(f"Cannot identify cargo dependency: {line}")
-            name, version = match.groups()
-            if name not in ("chriz-bg-app", "chriz-bg-engine"):
-                packages.add((name, version))
+            raise NoticeError(f"Offline cargo metadata failed for {target}:\n{result.stderr.strip()}")
+        metadata = json.loads(result.stdout)
+        pkgs_by_id = {pkg["id"]: pkg for pkg in metadata["packages"]}
+        nodes_by_id = {node["id"]: node for node in metadata["resolve"]["nodes"]}
+        id_by_nv = {(pkg["name"], pkg["version"]): pkg["id"] for pkg in metadata["packages"]}
+        stack = [id_by_nv[nv] for nv in sorted(build_only) if nv in id_by_nv]
+        seen = set(stack)
+        while stack:
+            current = stack.pop()
+            if current not in nodes_by_id:
+                continue
+            pkg = pkgs_by_id[current]
+            nv = (pkg["name"], pkg["version"])
+            feats = features_by_package.get(
+                nv,
+                {"default"} if "default" in pkg.get("features", {}) else set(),
+            )
+            allowed = enabled_dependency_names(pkg, feats)
+            for dep in nodes_by_id[current]["deps"]:
+                dep_pkg = pkgs_by_id[dep["pkg"]]
+                if dep_pkg["name"] in allowed and any(
+                    dk.get("kind") in (None, "build") for dk in dep["dep_kinds"]
+                ):
+                    if dep["pkg"] not in seen:
+                        seen.add(dep["pkg"])
+                        stack.append(dep["pkg"])
+                        if dep_pkg["name"] not in ("chriz-bg-app", "chriz-bg-engine"):
+                            packages.add((dep_pkg["name"], dep_pkg["version"]))
+
     if not packages:
         raise NoticeError("Cargo returned no dependency packages")
     return sorted(packages)

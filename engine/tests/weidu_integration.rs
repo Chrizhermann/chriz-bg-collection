@@ -383,10 +383,10 @@ fn failed_component_rolls_back_while_successful_prefix_reconciles() {
 /// evidence says exactly that, so the installation can ask instead of needing a fresh copy. The
 /// debug file of a setup-name run holds only a header, so the engine reads the run's stdout.
 #[test]
-#[ignore = "requires CHRIZ_WEIDU_EXE pointing to the pinned WeiDU 249 Windows binary"]
+#[ignore = "requires CHRIZ_WEIDU_EXE pointing to the pinned WeiDU binary"]
 fn weidu_goes_on_after_a_failed_component_and_the_evidence_says_so() {
     let harness = Harness::new();
-    let components = [0, 30, 60];
+    let components = [0, 30, 10];
     let invocation = harness.invocation(
         "goes-on",
         InvocationMode::SetupName,
@@ -408,7 +408,7 @@ fn weidu_goes_on_after_a_failed_component_and_the_evidence_says_so() {
         ),
         Reconciliation::FailedAmong {
             failed: vec![30],
-            installed_after: vec![60],
+            installed_after: vec![10],
         },
         "before:\n{}\nafter:\n{}\noutput:\n{}\ndebug:\n{}",
         evidence.before_log,
@@ -425,7 +425,7 @@ fn weidu_goes_on_after_a_failed_component_and_the_evidence_says_so() {
         "the failing component's file survived WeiDU rollback"
     );
     harness.assert_protected_unchanged();
-    harness.assert_override_publications(&["tmcopy.ids", "tmbare.txt"]);
+    harness.assert_override_publications(&["tmcopy.ids", "tmfolder.txt"]);
 }
 
 /// A component can fail before it asks its prompt. WeiDU goes on to the next one, and that one's

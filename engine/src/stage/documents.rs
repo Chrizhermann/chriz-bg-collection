@@ -132,8 +132,12 @@ impl Drop for ComInitializationGuard {
 
 #[cfg(not(windows))]
 #[cfg_attr(feature = "test-documents", allow(dead_code))]
+#[allow(clippy::redundant_closure)]
 fn known_folder() -> io::Result<PathBuf> {
-    let dir = resolve_unix_documents_path(std::env::var_os, std::fs::read_to_string)?;
+    let dir = resolve_unix_documents_path(
+        |name| std::env::var_os(name),
+        |path| std::fs::read_to_string(path),
+    )?;
     std::fs::create_dir_all(&dir)?;
     Ok(dir)
 }
