@@ -1476,6 +1476,7 @@ pub(crate) mod tests {
     }
 
     /// Copy the folder `from` and everything in it to the new folder `to`.
+    #[cfg_attr(not(windows), allow(dead_code))]
     pub(crate) fn copy_dir(from: &Path, to: &Path) {
         fs::create_dir_all(to).unwrap();
         for entry in fs::read_dir(from).unwrap() {
@@ -1490,6 +1491,7 @@ pub(crate) mod tests {
     }
 
     /// Every file below `root` with its bytes, by path relative to `root` with `/` separators.
+    #[cfg_attr(not(windows), allow(dead_code))]
     pub(crate) fn tree(root: &Path) -> Vec<(String, Vec<u8>)> {
         let mut files = Vec::new();
         for entry in walkdir::WalkDir::new(root).follow_links(false) {

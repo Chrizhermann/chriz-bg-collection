@@ -3248,6 +3248,7 @@ pub fn diagnostics_for_managed_install(
     output_path: &Path,
 ) -> Result<DiagnosticsBundle, CliError> {
     let redact_roots = std::env::var_os("USERPROFILE")
+        .or_else(|| std::env::var_os("HOME"))
         .map(PathBuf::from)
         .into_iter()
         .collect();

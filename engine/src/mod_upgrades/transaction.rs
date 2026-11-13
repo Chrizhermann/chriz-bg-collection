@@ -513,6 +513,7 @@ pub(super) fn restore_files(ctx: &Context<'_>, dir: &Path, undo: bool) -> Result
 /// Restores the record `dir` through `held`, as production restoration does once its checks
 /// have passed and its restoration record is written.
 #[cfg(test)]
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(super) fn put_back_fixture(
     ctx: &Context<'_>,
     dir: &Path,

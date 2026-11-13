@@ -1,3 +1,5 @@
+#![cfg_attr(not(windows), allow(dead_code, unused_imports))]
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::{BufRead, BufReader, Cursor, Write};
@@ -685,15 +687,20 @@ fn install_versioned_game_executable(
     profile_name: &str,
     game_executable: &str,
 ) {
-    let system_root = std::env::var_os("SystemRoot").expect("SystemRoot for Windows fixture");
-    let executable = PathBuf::from(system_root).join("System32/notepad.exe");
-    let version = SystemFileSystem
-        .product_version(&executable)
-        .expect("read fixture PE ProductVersion");
     let old_bytes = fs::read(game.join(game_executable)).expect("read old fixture executable");
-    let new_bytes = fs::read(&executable).expect("read versioned fixture executable");
-    fs::write(game.join(game_executable), &new_bytes)
-        .expect("install versioned fixture executable");
+    #[cfg(windows)]
+    let new_bytes = {
+        let system_root = std::env::var_os("SystemRoot").expect("SystemRoot for Windows fixture");
+        let executable = PathBuf::from(system_root).join("System32/notepad.exe");
+        fs::read(&executable).expect("read versioned fixture executable")
+    };
+    #[cfg(not(windows))]
+    let new_bytes = minimal_pe_with_product_version(2, 7, 3, 0);
+    let installed = game.join(game_executable);
+    fs::write(&installed, &new_bytes).expect("install versioned fixture executable");
+    let version = SystemFileSystem
+        .product_version(&installed)
+        .expect("read fixture PE ProductVersion");
     let profile = recipe.join("game-builds").join(profile_name);
     let text = fs::read_to_string(&profile)
         .expect("read fixture profile")
@@ -703,6 +710,88 @@ fn install_versioned_game_executable(
         )
         .replace(&sha256_bytes(&old_bytes), &sha256_bytes(&new_bytes));
     fs::write(profile, text).expect("write executable fixture profile");
+}
+
+#[cfg(not(windows))]
+fn minimal_pe_with_product_version(major: u16, minor: u16, patch: u16, build: u16) -> Vec<u8> {
+    fn write_u16_le(buf: &mut [u8], offset: usize, value: u16) {
+        buf[offset..offset + 2].copy_from_slice(&value.to_le_bytes());
+    }
+
+    fn write_u32_le(buf: &mut [u8], offset: usize, value: u32) {
+        buf[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+    }
+
+    let mut pe = vec![0_u8; 0x400];
+    pe[0..2].copy_from_slice(b"MZ");
+    write_u32_le(&mut pe, 0x3C, 0x40);
+    pe[0x40..0x44].copy_from_slice(b"PE\0\0");
+
+    // COFF header at 0x44
+    write_u16_le(&mut pe, 0x44, 0x8664); // AMD64
+    write_u16_le(&mut pe, 0x46, 1); // NumberOfSections
+    write_u16_le(&mut pe, 0x54, 0xF0); // SizeOfOptionalHeader
+    write_u16_le(&mut pe, 0x56, 0x0022); // Characteristics
+
+    // Optional header PE32+ at 0x58
+    write_u16_le(&mut pe, 0x58, 0x020B);
+    write_u32_le(&mut pe, 0x78, 0x1000); // SectionAlignment
+    write_u32_le(&mut pe, 0x7C, 0x200); // FileAlignment
+    write_u32_le(&mut pe, 0x90, 0x2000); // SizeOfImage
+    write_u32_le(&mut pe, 0x94, 0x200); // SizeOfHeaders
+    write_u32_le(&mut pe, 0xC4, 16); // NumberOfRvaAndSizes
+                                     // DataDirectory[2] = IMAGE_DIRECTORY_ENTRY_RESOURCE at 0x58 + 112 + 16 = 0xD8
+    write_u32_le(&mut pe, 0xD8, 0x1000);
+    write_u32_le(&mut pe, 0xDC, 0x200);
+
+    // .rsrc section header at 0x148
+    pe[0x148..0x150].copy_from_slice(b".rsrc\0\0\0");
+    write_u32_le(&mut pe, 0x150, 0x200); // VirtualSize
+    write_u32_le(&mut pe, 0x154, 0x1000); // VirtualAddress
+    write_u32_le(&mut pe, 0x158, 0x200); // SizeOfRawData
+    write_u32_le(&mut pe, 0x15C, 0x200); // PointerToRawData
+    write_u32_le(&mut pe, 0x16C, 0x4000_0040);
+
+    // .rsrc payload at file offset 0x200 (RVA 0x1000)
+    let rsrc = 0x200;
+    write_u16_le(&mut pe, rsrc + 0x0E, 1); // root: 1 id entry
+    write_u32_le(&mut pe, rsrc + 0x10, 16); // RT_VERSION
+    write_u32_le(&mut pe, rsrc + 0x14, 0x8000_0018);
+
+    write_u16_le(&mut pe, rsrc + 0x18 + 0x0E, 1); // id dir
+    write_u32_le(&mut pe, rsrc + 0x28, 1); // id = 1
+    write_u32_le(&mut pe, rsrc + 0x2C, 0x8000_0030);
+
+    write_u16_le(&mut pe, rsrc + 0x30 + 0x0E, 1); // lang dir
+    write_u32_le(&mut pe, rsrc + 0x40, 0x0409);
+    write_u32_le(&mut pe, rsrc + 0x44, 0x48);
+
+    // IMAGE_RESOURCE_DATA_ENTRY at rsrc + 0x48
+    write_u32_le(&mut pe, rsrc + 0x48, 0x1058); // RVA of VS_VERSION_INFO
+    write_u32_le(&mut pe, rsrc + 0x4C, 0x5C); // Size = 92 bytes
+
+    // VS_VERSION_INFO at rsrc + 0x58
+    let ver = rsrc + 0x58;
+    write_u16_le(&mut pe, ver, 0x5C); // wLength
+    write_u16_le(&mut pe, ver + 2, 52); // wValueLength
+    write_u16_le(&mut pe, ver + 4, 0); // wType (binary)
+    for (i, unit) in "VS_VERSION_INFO\0".encode_utf16().enumerate() {
+        write_u16_le(&mut pe, ver + 6 + i * 2, unit);
+    }
+    let fixed = rsrc + 0x80;
+    write_u32_le(&mut pe, fixed, 0xFEEF_04BD); // dwSignature
+    write_u32_le(&mut pe, fixed + 4, 0x0001_0000); // dwStrucVersion
+    write_u32_le(
+        &mut pe,
+        fixed + 16,
+        (u32::from(major) << 16) | u32::from(minor),
+    );
+    write_u32_le(
+        &mut pe,
+        fixed + 20,
+        (u32::from(patch) << 16) | u32::from(build),
+    );
+    pe
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -4483,7 +4572,6 @@ fn console_lines(response: &Value) -> Vec<String> {
         .collect()
 }
 
-#[cfg(windows)]
 fn read_install_receipt(fixture: &ExecutableFixture) -> InstallReceipt {
     serde_json::from_slice(
         &fs::read(fixture.managed.join(".chriz/install-receipt.json"))

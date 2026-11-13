@@ -605,6 +605,7 @@ pub fn apply_with_progress(
 }
 
 #[cfg(test)]
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(super) fn run_prepared_fixture(
     ctx: &Context<'_>,
     dir: &Path,
@@ -615,6 +616,7 @@ pub(super) fn run_prepared_fixture(
 /// Places a test's own adapter `payload`, which its record holds, as production apply places
 /// the pinned one.
 #[cfg(test)]
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(super) fn place_adapter_fixture(
     held: &files::HeldTransaction,
     payload: &[(&str, u64, &str)],
@@ -624,6 +626,7 @@ pub(super) fn place_adapter_fixture(
 /// Restores the record `dir` of `ctx` through `held`, as production restoration does once its
 /// checks have passed and its restoration record is written.
 #[cfg(test)]
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(super) fn put_back_fixture(
     ctx: &Context<'_>,
     dir: &Path,

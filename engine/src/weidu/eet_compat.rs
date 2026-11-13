@@ -388,6 +388,7 @@ mod tests {
     }
 
     /// A staged `game` folder below `parent` whose macros.tph is the fixture's original.
+    #[cfg_attr(not(windows), allow(dead_code))]
     fn staged_game(parent: &Path) -> std::path::PathBuf {
         let game = parent.join("game");
         std::fs::create_dir_all(game.join("EET").join("lib")).unwrap();
@@ -595,6 +596,7 @@ mod tests {
         );
     }
 
+    #[cfg_attr(not(windows), allow(dead_code))]
     fn drifted_input(target_root: &Path) -> EetCompatibilityInput<'_> {
         EetCompatibilityInput {
             mod_id: "eet",

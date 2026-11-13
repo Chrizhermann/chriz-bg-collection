@@ -300,6 +300,7 @@ mod tests {
     }
 
     /// A staged root below `parent` with the reviewed fixture TP2; returns the root.
+    #[cfg_attr(not(windows), allow(dead_code))]
     fn staged_ui(parent: &Path) -> std::path::PathBuf {
         let root = parent.join("game");
         fs::create_dir_all(root.join("infinity_ui")).unwrap();
