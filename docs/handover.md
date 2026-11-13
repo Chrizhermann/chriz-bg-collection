@@ -2,6 +2,29 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 13 — Chriz Easy BG 0.1.5 and Chriz Easy IWD 0.1.12 released
+
+Published on 2026-11-12 at 23:31–23:32 UTC (2026-11-13 08:31–08:32 KST) from `main` at
+`c53ab22` (PR #141), live on both versioned releases, both update channels (`alpha` on
+`chriz-easy-bg`, `updates` on `chriz-easy-iwd`), and `bg.chrizfader.org`
+(`twitch-setup-chriz` PR #87):
+
+- **17 flexibility & robustness fixes across engine, bridge, and app (#141):**
+  - **Chriz Easy BG 0.1.5** (`Chriz.Easy.BG_0.1.5_x64-setup.exe`, 7,214,336 bytes, SHA-256
+    `a4619b53…`; bundled collection stays **0.1.2**): flexible canonical/junction/8.3 path
+    normalization (`canonicalize_flexible`), resilient cross-volume (`ERROR_NOT_SAME_DEVICE`) and
+    read-only attribute handling, ignoring benign OS metadata (`desktop.ini`, `Thumbs.db`,
+    `.DS_Store`, `__MACOSX`), expanded archive picker (`.7z`/`.rar`/`.tar.gz`/`.tgz`),
+    extra-file tolerance in hotpatch verification, focus/cursor-preserving path inputs, and
+    clearer antivirus exclusion guidance. See
+    [package-acceptance-0.1.5-2026-11-13.md](package-acceptance-0.1.5-2026-11-13.md) and
+    [release-notes-0.1.5.md](release-notes-0.1.5.md).
+  - **Chriz Easy IWD 0.1.12** (`Chriz.Easy.IWD_0.1.12_x64-setup.exe`, 7,139,676 bytes,
+    SHA-256 `5cebcdd7…`; bundled collection stays **0.1.10**): carries the same 17 engine/UI
+    flexibility and robustness fixes from PR #141. See
+    [package-acceptance-iwd-0.1.12-2026-11-13.md](package-acceptance-iwd-0.1.12-2026-11-13.md)
+    and [release-notes-iwd-0.1.12.md](release-notes-iwd-0.1.12.md).
+
 ## November 13 — Chriz Easy BG 0.1.4 and Chriz Easy IWD 0.1.11 released
 
 Published on 2026-11-12 at 21:18–21:19 UTC (2026-11-13 06:18–06:19 KST) from `main` at
