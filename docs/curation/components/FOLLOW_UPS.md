@@ -17,8 +17,8 @@ listed with their evidence under [Done since 2026-09-04](#done-since-2026-09-04)
 
 Cross-repository status. Component detail stays in the sections below and in the catalogs.
 
-Latest releases: Chriz Easy BG 0.1.2 and Chriz Easy IWD 0.1.10, both published on
-2026-11-09 UTC from `main` (see the [handover](../../handover.md)).
+Latest releases: Chriz Easy BG 0.1.5 and Chriz Easy IWD 0.1.12, both published on
+2026-11-12 UTC from `main` (see the [handover](../../handover.md)).
 
 On `main` for the next Chriz Easy BG version:
 
@@ -38,6 +38,14 @@ On `main` for the next Chriz Easy BG version:
   card in Customize, and "Details" opens that card. Chriz Easy IWD has no feature group and
   shows no card. See `docs/plans/2026-10-13-challenge-mode-group.md`. Open: no packaged app
   was built and no installation was run with it.
+- Planned next major milestones (Christopher, 2026-11-13; details under
+  [Conditional/future feature gates](#conditionalfuture-feature-gates)):
+  (1) integrate the first releases of `chriz-bg-magic`, `chriz-bg-kits` and
+  `chriz-bg-script-engine` into the Chriz Easy BG default (BG/EET first; IWD adaptation
+  later); (2) add full Linux / Steam Deck compatibility for the Default setup of both Chriz
+  Easy BG and Chriz Easy IWD once those three land; (3) run a separate install-order and
+  optional-catalog expansion audit so players can pick from a wider best-effort third-party
+  mod selection.
 
 **In progress (separate sessions)**
 
@@ -1090,6 +1098,34 @@ These are nonblocking while their parent feature remains unavailable.
   8 upstream commits and has 12 fork-only commits; compare its spell changes with the
   historical [Aura Balance Patch - Spells](AURA_BALANCE_PATCH_SPELLS.md) v1.0 before
   publishing and pinning. Aura is excluded from the recipe, so this blocks nothing.
+- [ ] First-release integration of our three core BG mods (`chriz-bg-magic`, `chriz-bg-kits`,
+  `chriz-bg-script-engine`) (Christopher, 2026-11-13): prepare the Chriz Easy BG recipe
+  switchover for their initial releases — replace Spell Revisions, Artisan's Kitpack and
+  Bardic Wonders in the BG default (`Recommended setup`), register the repositories in
+  `manifest/own-mods.toml` (with explicit holds for `chriz-easy-iwd` while they target BG/EET
+  only), wire `core_components` and `[[component_needs]]`, and verify with a full EET lab
+  install. Keep balancing and rollout focused on BG/EET first; adapting these three mods for
+  Chriz Easy IWD follows later.
+- [ ] Linux and Steam Deck compatibility for Chriz Easy BG and Chriz Easy IWD (Christopher,
+  2026-11-13): start once the first releases of `chriz-bg-magic`, `chriz-bg-kits` and
+  `chriz-bg-script-engine` are in the Chriz Easy BG default so Linux testing runs directly on
+  the new BG stack, while Chriz Easy IWD gains Linux support from the shared `main` codebase
+  with its current IWD default recipe. Target full compatibility for the Default (`Recommended
+  setup`) of both installers: native Linux Tauri app plus native Linux WeiDU >= 251 (replacing
+  the pinned 249 binary so case-sensitive Linux filesystems work without `tolower`/`ciopfs`)
+  installing into the Windows game build under Proton/Wine (required by EEex, with
+  `ProtonCompatibility=1`), Linux path/process/source-discovery support in `engine` and
+  `app/src-tauri`, VM/headless checks, and real-hardware testing with community Linux
+  volunteers. Non-default optional mods stay best-effort friendly compatibility via the
+  existing `failed_component` leave-out flow.
+- [ ] Broader optional mod catalog and install-order audit (Christopher, 2026-11-13; handle in
+  its own dedicated session later): review install-order slots and recipe rules so players can
+  choose and auto-download a wider range of third-party mods without us full-testing every
+  combination or guaranteeing bug-free gameplay. Respect author permissions and no-compilation
+  clauses strictly (consent before inclusion), keep third-party mods as-is (only install-order
+  placement, install-breaking conflict exclusions, and `failed_component` leave-out safety are
+  ours), and clearly distinguish the tested Default setup from best-effort optional mods in the
+  UI.
 
 ## Curation decisions still in Chris's review queue
 
