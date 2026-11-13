@@ -9,10 +9,14 @@ use crate::digest::sha256_bytes;
 use crate::held_folder::{EntryError, EntryErrorKind, HeldFolder};
 use crate::manifest::GameRoot;
 
+#[cfg_attr(not(windows), allow(dead_code))]
 const ARTIFACT_ID: &str = "eet-official-74e91d72bca5d073fa11c1d088b90d7ff0c7105d";
+#[cfg_attr(not(windows), allow(dead_code))]
 const ARCHIVE_SHA256: &str = "9834a53322b7fe9d8923bfde36c0e6bc8bef54d730d32ac29286b80d6f08287e";
 // Full upstream EET/lib/macros.tph, LF bytes, at the exact artifact commit above.
+#[cfg_attr(not(windows), allow(dead_code))]
 const ORIGINAL_SHA256: &str = "f7c6fc721f05d7bb38149f8f935153f80f6f4b0040df5ea637a5d7b955287168";
+#[cfg_attr(not(windows), allow(dead_code))]
 const CORRECTED_SHA256: &str = "1bd191c84ff6c890a5df5d8b556349ec54a996812d0d5f50998f9b86d524ef89";
 
 pub(crate) struct EetCompatibilityInput<'a> {
@@ -22,6 +26,7 @@ pub(crate) struct EetCompatibilityInput<'a> {
     pub artifact_sha256: &'a str,
     /// The official link served a different archive than the reviewed pin, so the staged
     /// files may be a newer EET release.
+    #[cfg_attr(not(windows), allow(dead_code))]
     pub archive_drifted: bool,
     pub target: GameRoot,
     pub tp2: &'a str,
@@ -207,6 +212,7 @@ fn replace_unix_weidu(
 /// Replace the faulty batch text of a newer EET release, when it is there exactly once.
 /// Returns the before/after hashes, or `None` when the file is missing, already has the
 /// corrected text, or lacks the faulty text: then nothing is written.
+#[cfg_attr(not(windows), allow(dead_code))]
 fn patch_drifted_file(target_root: &Path) -> Result<Option<(String, String)>, String> {
     if !target_root.is_absolute() {
         return Err("EET compatibility target must be absolute".into());
@@ -255,16 +261,19 @@ fn patch_drifted_file(target_root: &Path) -> Result<Option<(String, String)>, St
 // See THIRD_PARTY_NOTICES.md and docs/audits/2026-09-07-eet-attribution.md for provenance
 // and the upstream GPLv3 statement. CEBG's MIT license does not relicense this excerpt.
 // CORRECTED_BATCH records CEBG's 2026-09-07 correction to the Windows path handling.
+#[cfg_attr(not(windows), allow(dead_code))]
 const ORIGINAL_BATCH: &str = r#"@echo off
 for /f "tokens=3,*" %%a in ('reg query "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" /v Personal') do set DOC_DIR=%%a
 for /f "delims=" %%a in ('echo %DOC_DIR%') do echo %%a>"${temp_directory}\documents_path.txt""#;
 
+#[cfg_attr(not(windows), allow(dead_code))]
 const CORRECTED_BATCH: &str = r#"@echo off
 setlocal DisableDelayedExpansion
 for /f "tokens=2,*" %%a in ('reg query "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" /v Personal') do set "DOC_DIR=%%b"
 for /f "delims=" %%a in ('echo "%DOC_DIR%"') do >"${temp_directory}\documents_path.txt" echo %%~a
 endlocal"#;
 
+#[cfg_attr(not(windows), allow(dead_code))]
 fn corrected_bytes(
     input: &[u8],
     original_sha256: &str,
@@ -298,6 +307,7 @@ fn corrected_bytes(
     })
 }
 
+#[cfg_attr(not(windows), allow(dead_code))]
 fn patch_file(
     target_root: &Path,
     original_sha256: &str,
@@ -315,6 +325,7 @@ fn patch_file(
 }
 
 /// Rewrite `macros.tph` in the held `EET/lib` folder, replacing it in one step.
+#[cfg_attr(not(windows), allow(dead_code))]
 fn patch_in_folder(
     folder: &HeldFolder,
     original_sha256: &str,
@@ -340,6 +351,7 @@ fn patch_in_folder(
     Ok((sha256_bytes(&before), sha256_bytes(&after)))
 }
 
+#[cfg_attr(not(windows), allow(dead_code))]
 const MACROS: &str = "macros.tph";
 
 fn path_error(error: EntryError) -> String {

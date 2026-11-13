@@ -846,9 +846,15 @@ mod tests {
 
     #[test]
     fn recovery_uses_production_setup_name_for_bare_tp2() {
+        #[cfg(windows)]
         assert_eq!(
             recovery_setup_program(Path::new(r"C:\managed"), "HiddenGameplayOptions.tp2").unwrap(),
             PathBuf::from(r"C:\managed\game\Setup-hiddengameplayoptions.exe")
+        );
+        #[cfg(not(windows))]
+        assert_eq!(
+            recovery_setup_program(Path::new("/managed"), "HiddenGameplayOptions.tp2").unwrap(),
+            PathBuf::from("/managed/game/Setup-hiddengameplayoptions.exe")
         );
     }
 }

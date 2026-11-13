@@ -34,6 +34,10 @@ fn spawn_paced_feed(version: &str, signature: &str, artifact: Vec<u8>, pace: Pac
             "windows-x86_64": {
                 "url": artifact_url,
                 "signature": signature,
+            },
+            "linux-x86_64": {
+                "url": artifact_url,
+                "signature": signature,
             }
         }
     }))

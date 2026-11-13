@@ -722,12 +722,21 @@ fn installation_defaults_use_the_injected_home_without_creating_directories() {
         "reading defaults must not create the home path"
     );
 
-    let windows_defaults = installation_defaults(Path::new(r"C:\Users\Player"))
-        .expect("project Windows installation defaults");
-    assert_eq!(
-        windows_defaults.path,
-        r"C:\Users\Player\Games\Chriz Easy BG"
-    );
+    #[cfg(windows)]
+    {
+        let windows_defaults = installation_defaults(Path::new(r"C:\Users\Player"))
+            .expect("project Windows installation defaults");
+        assert_eq!(
+            windows_defaults.path,
+            r"C:\Users\Player\Games\Chriz Easy BG"
+        );
+    }
+    #[cfg(not(windows))]
+    {
+        let unix_defaults = installation_defaults(Path::new("/home/player"))
+            .expect("project Unix installation defaults");
+        assert_eq!(unix_defaults.path, "/home/player/Games/Chriz Easy BG");
+    }
 }
 
 #[test]
