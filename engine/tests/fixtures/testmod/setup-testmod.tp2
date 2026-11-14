@@ -63,3 +63,8 @@ COPY + ~.../testmod-inlined/tmbare.bat~ ~tmbare.bat~
 AT_NOW ~tmbare.bat~
 DELETE + ~tmbare.bat~
 COPY ~testmod/bare-result.txt~ ~override/tmbare.txt~
+
+BEGIN ~Publish a file after a failed component~
+DESIGNATED 70
+
+COPY_EXISTING ~spell.ids~ ~override/tmafter.ids~

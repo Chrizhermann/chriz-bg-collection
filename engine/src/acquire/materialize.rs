@@ -941,6 +941,8 @@ fn write_synced_temporary(payload: &PayloadFile, temporary: &Path) -> Result<(),
         })?;
     let mut hash = Sha256::new();
     let mut length = 0_u64;
+    let mut magic = [0_u8; 4];
+    let mut magic_len = 0_usize;
     let mut buffer = [0_u8; BUFFER_SIZE];
     loop {
         let read = input.read(&mut buffer).map_err(|source| AcquireError::Io {
@@ -958,6 +960,11 @@ fn write_synced_temporary(payload: &PayloadFile, temporary: &Path) -> Result<(),
                 path: temporary.to_path_buf(),
                 source,
             })?;
+        if magic_len < 4 {
+            let take = (4 - magic_len).min(read);
+            magic[magic_len..magic_len + take].copy_from_slice(&buffer[..take]);
+            magic_len += take;
+        }
         length = length.checked_add(read as u64).ok_or_else(|| {
             AcquireError::InvalidMaterialization("payload length overflowed u64".to_owned())
         })?;
@@ -970,6 +977,19 @@ fn write_synced_temporary(payload: &PayloadFile, temporary: &Path) -> Result<(),
             message: "extracted source changed during materialization".to_owned(),
         });
     }
+    #[cfg(unix)]
+    if &magic[..magic_len] == b"\x7fELF" {
+        use std::os::unix::fs::PermissionsExt;
+        output
+            .set_permissions(fs::Permissions::from_mode(0o755))
+            .map_err(|source| AcquireError::Io {
+                action: "set executable permissions on materialized binary",
+                path: temporary.to_path_buf(),
+                source,
+            })?;
+    }
+    #[cfg(not(unix))]
+    let _ = (&magic, magic_len);
     output.sync_all().map_err(|source| AcquireError::Io {
         action: "sync materialization temporary",
         path: temporary.to_path_buf(),

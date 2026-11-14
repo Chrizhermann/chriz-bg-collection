@@ -3248,6 +3248,7 @@ pub fn diagnostics_for_managed_install(
     output_path: &Path,
 ) -> Result<DiagnosticsBundle, CliError> {
     let redact_roots = std::env::var_os("USERPROFILE")
+        .or_else(|| std::env::var_os("HOME"))
         .map(PathBuf::from)
         .into_iter()
         .collect();
@@ -3612,6 +3613,7 @@ fn frozen_identity(frozen: &FrozenCliRecipe, id: &str) -> Result<FrozenIdentity,
             format!("selected plan references missing artifact {id:?}"),
         )
     })?;
+    let artifact = crate::weidu::host_tool::adapt_artifact_for_host(artifact);
     Ok(FrozenIdentity {
         id: artifact.id.clone(),
         version: artifact.version.clone(),
@@ -3632,6 +3634,7 @@ fn frozen_tool_identity(frozen: &FrozenCliRecipe, id: &str) -> Result<FrozenIden
             format!("selected plan references missing WeiDU artifact {id:?}"),
         )
     })?;
+    let artifact = crate::weidu::host_tool::adapt_artifact_for_host(artifact);
     let tool = artifact.tool.as_ref().ok_or_else(|| {
         CliError::new(
             "validation_failed",
@@ -3736,20 +3739,13 @@ fn validate_application_data_directory(name: &str) -> Result<(), CliError> {
 }
 
 fn local_application_data() -> Result<PathBuf, CliError> {
-    let root = std::env::var_os("LOCALAPPDATA").ok_or_else(|| {
-        CliError::new(
-            "application_data_unavailable",
-            "LOCALAPPDATA is unavailable; target locking cannot fail closed",
-        )
-    })?;
-    let root = PathBuf::from(root);
-    if !root.is_absolute() {
-        return Err(CliError::new(
-            "application_data_unavailable",
-            format!("LOCALAPPDATA is not absolute: {}", root.display()),
-        ));
-    }
-    Ok(root)
+    crate::lock::TargetLockNamespace::system_local_application_data().map_err(|error| {
+        let message = match error {
+            crate::lock::LockError::UnsafePath { reason, .. } => reason,
+            other => other.to_string(),
+        };
+        CliError::new("application_data_unavailable", message)
+    })
 }
 
 /// Target locks of every application and collection: the legacy Baldur's Gate `locks` folder,
@@ -4068,6 +4064,7 @@ fn map_orchestrator_error(
 struct GuardedCliDependencies<'a, S> {
     created: &'a CampaignCreated,
     frozen: &'a FrozenCliRecipe,
+    host_artifacts: BTreeMap<String, Artifact>,
     current_bg1: Option<GameCandidate>,
     current_bg2: GameCandidate,
     app_data: PathBuf,
@@ -4132,8 +4129,8 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
     fn reviewed_ui_correction(&self, run: &PlannedRun) -> bool {
         let (Some(mod_file), Some(artifact), Some(tool)) = (
             self.frozen.mods.get(&run.mod_id),
-            self.frozen.artifacts.get(&run.artifact_id),
-            self.frozen.artifacts.get(&run.weidu_artifact_id),
+            self.host_artifacts.get(&run.artifact_id),
+            self.host_artifacts.get(&run.weidu_artifact_id),
         ) else {
             return false;
         };
@@ -4149,9 +4146,11 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         sink: &'a S,
         controls: RunnerControlHandle,
     ) -> Self {
+        let host_artifacts = crate::weidu::host_tool::adapt_artifacts_for_host(&frozen.artifacts);
         Self {
             created,
             frozen,
+            host_artifacts,
             current_bg1,
             current_bg2,
             app_data,
@@ -4179,8 +4178,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                 sha256: identity.sha256.clone(),
                 length: identity.length,
                 obtainable: self
-                    .frozen
-                    .artifacts
+                    .host_artifacts
                     .get(&identity.id)
                     .is_some_and(|artifact| {
                         artifact.acquisition != AcquisitionPolicy::Blocked
@@ -4260,8 +4258,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
     }
 
     fn artifact(&self, id: &str) -> Result<&Artifact, StepFailure> {
-        self.frozen
-            .artifacts
+        self.host_artifacts
             .get(id)
             .ok_or_else(|| StepFailure::new(format!("frozen artifact {id:?} is missing")))
     }
@@ -5391,12 +5388,9 @@ impl<S: EventSink> CampaignPreflight for GuardedCliDependencies<'_, S> {
             .artifact_identities
             .iter()
             .try_fold(0_u64, |sum, identity| {
-                self.frozen
-                    .artifacts
-                    .get(&identity.id)
-                    .and_then(|artifact| {
-                        sum.checked_add(artifact.archive.limits.max_total_uncompressed_bytes)
-                    })
+                self.host_artifacts.get(&identity.id).and_then(|artifact| {
+                    sum.checked_add(artifact.archive.limits.max_total_uncompressed_bytes)
+                })
             })
             .ok_or_else(|| StepFailure::new("archive extraction byte count overflowed u64"))?;
         let subtotal = staged_copies
@@ -6256,6 +6250,7 @@ impl<S: EventSink> InvocationBuilder for GuardedCliDependencies<'_, S> {
                 tp2: &mod_file.tp2,
                 components,
                 target_root: self.target_root(run.target)?,
+                weidu_bytes: Some(tool.bytes()),
             })
             .map_err(step_error)?
         {
@@ -7404,10 +7399,9 @@ fn sync_direct_file(path: &Path) -> Result<(), StepFailure> {
 }
 
 fn read_optional_weidu_log(root: &Path) -> Result<Vec<u8>, StepFailure> {
-    let path = root.join("WeiDU.log");
-    match fs::symlink_metadata(&path) {
-        Ok(_) => read_direct_file(&path),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(Vec::new()),
+    match crate::weidu::log::resolve_optional_weidu_log(root) {
+        Ok(Some(path)) => read_direct_file(&path),
+        Ok(None) => Ok(Vec::new()),
         Err(error) => Err(step_error(error)),
     }
 }
@@ -8382,8 +8376,11 @@ mod tests {
             },
             artifact_identities: Vec::new(),
             tool_identities: Vec::new(),
-            staged_bg1: frozen.bg1.as_ref().map(|_| managed.join("bg1")),
-            staged_bg2: managed.join("game"),
+            staged_bg1: frozen
+                .bg1
+                .as_ref()
+                .map(|_| PathBuf::from(r"C:\Legacy Managed Install\bg1")),
+            staged_bg2: PathBuf::from(r"C:\Legacy Managed Install\game"),
         }
     }
 
@@ -8969,7 +8966,7 @@ mod tests {
         .expect("serialize review identity");
         let engine_name = "Chriz Easy BG - abc123def456".to_owned();
         let save_root = PathBuf::from(r"C:\Users\Player\Documents\Chriz Easy BG - abc123def456");
-        let launch_path = created.staged_bg2.join("Baldur.exe");
+        let launch_path = PathBuf::from(r"C:\Legacy Managed Install\game\Baldur.exe");
         let component = |component| LogComponentReceipt {
             tp2: "ee_fixpack/ee_fixpack.tp2".to_owned(),
             language: 0,
@@ -9092,7 +9089,10 @@ mod tests {
             panic!("legacy ledger record 0 is not a campaign creation");
         };
         assert!(!created.is_standalone());
-        assert_eq!(created.staged_bg1, Some(created.managed_root.join("bg1")));
+        assert_eq!(
+            created.staged_bg1,
+            Some(PathBuf::from(r"C:\Legacy Managed Install\bg1"))
+        );
         validate_frozen_cli_recipe(&created, &frozen).expect("legacy campaign stays resumable");
 
         let review = legacy_eet_golden("review-identity.json");

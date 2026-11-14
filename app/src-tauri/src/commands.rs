@@ -803,7 +803,7 @@ pub async fn check_updates(
     let mut summary =
         background(move || bridge.unconfigured_update_center(crate::flavor::APP_VERSION)).await?;
     // The overlay has its own releases, also in an app without an update feed.
-    let radar_check = crate::flavor::CURRENT.radar.then(|| {
+    let radar_check = (crate::flavor::CURRENT.radar && cfg!(windows)).then(|| {
         let radar_bridge = state
             .bridge
             .lock()

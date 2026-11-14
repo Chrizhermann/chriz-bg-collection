@@ -1,4 +1,4 @@
-#![cfg(windows)]
+#![cfg(any(windows, target_os = "linux"))]
 
 mod support;
 
@@ -19,16 +19,23 @@ use bg_engine::weidu::invocation::{
 use bg_engine::weidu::log::parse_active_entries;
 use bg_engine::weidu::runner::{run, RunOutcome, RunnerControl, RunnerRequest};
 use bg_engine::weidu::verify::{reconcile, ExpectedRun, Reconciliation};
+#[cfg(windows)]
 use pelite::image::IMAGE_FILE_MACHINE_AMD64;
+#[cfg(windows)]
 use pelite::pe64::{Pe, PeFile};
 use sha2::{Digest, Sha256};
+#[cfg(windows)]
 use support::environment::ScopedEnvVar;
 use support::fakegame::FakeGame;
 use tempfile::TempDir;
 use walkdir::WalkDir;
 
+#[cfg(windows)]
 const PINNED_WEIDU_SHA256: &str =
     "ad70f5897a6d0ba4b0d226f845a9b14cf345f56cc9697ca8d05cac9fe4932c1a";
+#[cfg(target_os = "linux")]
+const PINNED_WEIDU_SHA256: &str =
+    "881c6b62e031480c305b11cbdd6acabf8403d5550661d17e505872ccc4c7415d";
 const TESTMOD_TP2: &str = "setup-testmod.tp2";
 
 #[derive(Debug, PartialEq, Eq)]
@@ -122,7 +129,7 @@ impl Harness {
     }
 
     fn run_sync(&self, invocation: Invocation, attempt_name: &str) -> RunEvidence {
-        let before_log = read_optional(&self.game.root.join("WeiDU.log"));
+        let before_log = read_optional_weidu_log(&self.game.root);
         let debug_path = invocation.debug_path.clone();
         let output_log = self
             ._temp
@@ -146,7 +153,7 @@ impl Harness {
         RunEvidence {
             outcome,
             before_log,
-            after_log: read_optional(&self.game.root.join("WeiDU.log")),
+            after_log: read_optional_weidu_log(&self.game.root),
             debug: fs::read_to_string(debug_path).expect("read real WeiDU debug log"),
             stdout: fs::read_to_string(output_log.with_file_name("stdout.log"))
                 .expect("read real WeiDU stdout"),
@@ -376,10 +383,10 @@ fn failed_component_rolls_back_while_successful_prefix_reconciles() {
 /// evidence says exactly that, so the installation can ask instead of needing a fresh copy. The
 /// debug file of a setup-name run holds only a header, so the engine reads the run's stdout.
 #[test]
-#[ignore = "requires CHRIZ_WEIDU_EXE pointing to the pinned WeiDU 249 Windows binary"]
+#[ignore = "requires CHRIZ_WEIDU_EXE pointing to the pinned WeiDU binary"]
 fn weidu_goes_on_after_a_failed_component_and_the_evidence_says_so() {
     let harness = Harness::new();
-    let components = [0, 30, 60];
+    let components = [0, 30, 70];
     let invocation = harness.invocation(
         "goes-on",
         InvocationMode::SetupName,
@@ -401,7 +408,7 @@ fn weidu_goes_on_after_a_failed_component_and_the_evidence_says_so() {
         ),
         Reconciliation::FailedAmong {
             failed: vec![30],
-            installed_after: vec![60],
+            installed_after: vec![70],
         },
         "before:\n{}\nafter:\n{}\noutput:\n{}\ndebug:\n{}",
         evidence.before_log,
@@ -418,7 +425,7 @@ fn weidu_goes_on_after_a_failed_component_and_the_evidence_says_so() {
         "the failing component's file survived WeiDU rollback"
     );
     harness.assert_protected_unchanged();
-    harness.assert_override_publications(&["tmcopy.ids", "tmbare.txt"]);
+    harness.assert_override_publications(&["tmcopy.ids", "tmafter.ids"]);
 }
 
 /// A component can fail before it asks its prompt. WeiDU goes on to the next one, and that one's
@@ -483,7 +490,7 @@ fn unexpected_prompt_requires_attention_and_remains_alive_until_cancelled() {
             answer: b"beta\n".to_vec(),
         }],
     );
-    let before_log = read_optional(&harness.game.root.join("WeiDU.log"));
+    let before_log = read_optional_weidu_log(&harness.game.root);
     let output_log = harness
         ._temp
         .path()
@@ -546,7 +553,7 @@ fn unexpected_prompt_requires_attention_and_remains_alive_until_cancelled() {
     );
     runner.join().unwrap();
 
-    let after_log = read_optional(&harness.game.root.join("WeiDU.log"));
+    let after_log = read_optional_weidu_log(&harness.game.root);
     let process_output = fs::read_to_string(recorded_output_log).unwrap();
     assert_eq!(
         reconcile(
@@ -604,6 +611,7 @@ fn tested_explicit_relative_tp2_mode_runs_without_becoming_the_default() {
     harness.assert_override_publications(&["tmfolder.txt"]);
 }
 
+#[cfg(windows)]
 #[test]
 #[ignore = "requires CHRIZ_WEIDU_EXE pointing to the pinned WeiDU 249 Windows binary"]
 fn at_now_runs_a_bare_batch_name_from_the_game_folder_even_if_the_parent_disables_that_search() {
@@ -734,14 +742,28 @@ fn copy_fixture(source: &Path, target_root: &Path) {
 fn pinned_weidu(sandbox: &Path) -> VerifiedWeidu {
     let source_path = env::var_os("CHRIZ_WEIDU_EXE")
         .map(PathBuf::from)
-        .expect("set CHRIZ_WEIDU_EXE to the pinned WeiDU 249 binary");
+        .expect("set CHRIZ_WEIDU_EXE to the pinned WeiDU binary");
     let source_bytes = fs::read(&source_path).expect("read pinned WeiDU binary");
-    let pe = PeFile::from_bytes(&source_bytes).expect("pinned WeiDU is a valid PE32+ file");
-    assert_eq!(
-        pe.file_header().Machine,
-        IMAGE_FILE_MACHINE_AMD64,
-        "pinned WeiDU must target x64 Windows"
-    );
+    #[cfg(windows)]
+    {
+        let pe = PeFile::from_bytes(&source_bytes).expect("pinned WeiDU is a valid PE32+ file");
+        assert_eq!(
+            pe.file_header().Machine,
+            IMAGE_FILE_MACHINE_AMD64,
+            "pinned WeiDU must target x64 Windows"
+        );
+    }
+    #[cfg(target_os = "linux")]
+    {
+        assert!(
+            source_bytes.len() >= 20
+                && &source_bytes[..4] == b"\x7fELF"
+                && source_bytes[4] == 2
+                && source_bytes[5] == 1
+                && u16::from_le_bytes([source_bytes[18], source_bytes[19]]) == 0x3e,
+            "pinned WeiDU must target x86_64 Linux ELF"
+        );
+    }
 
     let version = Command::new(&source_path)
         .arg("--version")
@@ -752,9 +774,14 @@ fn pinned_weidu(sandbox: &Path) -> VerifiedWeidu {
         version.status.success(),
         "WeiDU --version failed: {version:?}"
     );
+    let expected_version = if cfg!(target_os = "linux") {
+        "WeiDU version 25100"
+    } else {
+        "WeiDU version 24900"
+    };
     assert!(
-        String::from_utf8_lossy(&version.stdout).contains("WeiDU version 24900"),
-        "integration tests require WeiDU 24900, got {:?}",
+        String::from_utf8_lossy(&version.stdout).contains(expected_version),
+        "integration tests require {expected_version}, got {:?}",
         String::from_utf8_lossy(&version.stdout)
     );
 
@@ -803,8 +830,13 @@ fn sha256_file(path: &Path) -> String {
     ))
 }
 
-fn read_optional(path: &Path) -> String {
-    match fs::read_to_string(path) {
+fn read_optional_weidu_log(root: &Path) -> String {
+    let Some(path) = bg_engine::weidu::log::resolve_optional_weidu_log(root)
+        .unwrap_or_else(|error| panic!("resolve WeiDU.log under {}: {error}", root.display()))
+    else {
+        return String::new();
+    };
+    match fs::read_to_string(&path) {
         Ok(text) => text,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
         Err(error) => panic!("read {}: {error}", path.display()),

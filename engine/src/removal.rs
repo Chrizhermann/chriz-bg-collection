@@ -605,6 +605,10 @@ fn reject_broad_root(root: &Path) -> Result<(), RemovalError> {
         "ProgramFiles(x86)",
         "APPDATA",
         "LOCALAPPDATA",
+        "XDG_DATA_HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_CACHE_HOME",
+        "XDG_STATE_HOME",
     ] {
         if let Some(path) = std::env::var_os(name)
             .map(PathBuf::from)
@@ -615,6 +619,56 @@ fn reject_broad_root(root: &Path) -> Result<(), RemovalError> {
                 return Err(failure(
                     "Refusing home, system, or application-data folder.",
                 ));
+            }
+        }
+    }
+    #[cfg(unix)]
+    {
+        for protected in [
+            "/bin",
+            "/boot",
+            "/dev",
+            "/etc",
+            "/lib",
+            "/lib64",
+            "/opt",
+            "/proc",
+            "/root",
+            "/run",
+            "/sbin",
+            "/srv",
+            "/sys",
+            "/tmp",
+            "/usr",
+            "/usr/bin",
+            "/usr/lib",
+            "/usr/local",
+            "/var",
+            "/var/cache",
+            "/var/lib",
+            "/var/log",
+            "/var/tmp",
+        ] {
+            if let Some(resolved) = resolvable_path(Path::new(protected))? {
+                if crate::reparse::windows_path_starts_with(&resolved, root) {
+                    return Err(failure(
+                        "Refusing home, system, or application-data folder.",
+                    ));
+                }
+            }
+        }
+        if let Some(home) = std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .filter(|path| path.is_absolute())
+        {
+            for sub in [".local", ".local/share", ".config", ".cache"] {
+                if let Some(resolved) = resolvable_path(&home.join(sub))? {
+                    if crate::reparse::windows_path_starts_with(&resolved, root) {
+                        return Err(failure(
+                            "Refusing home, system, or application-data folder.",
+                        ));
+                    }
+                }
             }
         }
     }

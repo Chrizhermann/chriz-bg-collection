@@ -221,4 +221,25 @@ describe("optional Radar launch", () => {
     await expect(new NativeBackend(invoke).launchInstall("one", startRadar)).resolves.toEqual(outcome);
     expect(invoke).toHaveBeenCalledWith("launch_install", { installId: "one", startRadar });
   });
+
+  it("hides Radar controls and launches with startRadar false when radarSupported is false", async () => {
+    class LinuxLaunchBackend extends LaunchBackend {
+      override getStatus() {
+        return Promise.resolve({
+          mode: "fixture" as const,
+          platform: "linux" as const,
+          radarSupported: false,
+          engineVersion: "0.1.0",
+          recipeVersion: "2026.09-fixture",
+          startupInstallId: null,
+        });
+      }
+    }
+    const backend = new LinuxLaunchBackend();
+    const { root, user } = await mount(backend);
+    expect(queryByRole(root, "checkbox", { name: "Start Radar with the game" })).toBeNull();
+    expect(root.textContent).not.toContain("BG Radar Overlay");
+    await user.click(play(root));
+    expect(backend.requests).toEqual([{ installId: "one", startRadar: false }]);
+  });
 });

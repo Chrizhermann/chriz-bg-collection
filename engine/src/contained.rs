@@ -84,7 +84,29 @@ fn final_path(file: &File, opened: &Path) -> io::Result<PathBuf> {
     }
 }
 
-#[cfg(not(windows))]
+#[cfg(target_os = "linux")]
+fn final_path(file: &File, opened: &Path) -> io::Result<PathBuf> {
+    use std::os::unix::io::AsRawFd;
+
+    let proc_fd = PathBuf::from(format!("/proc/self/fd/{}", file.as_raw_fd()));
+    match fs::read_link(&proc_fd) {
+        Ok(resolved) => Ok(resolved),
+        Err(_) => {
+            for ancestor in opened.ancestors() {
+                if ancestor.as_os_str().is_empty() {
+                    continue;
+                }
+                let metadata = fs::symlink_metadata(ancestor)?;
+                if crate::reparse::metadata_is_link(ancestor, &metadata) {
+                    return Err(outside(ancestor, "is a link or another reparse point"));
+                }
+            }
+            fs::canonicalize(opened)
+        }
+    }
+}
+
+#[cfg(all(not(windows), not(target_os = "linux")))]
 fn final_path(_file: &File, opened: &Path) -> io::Result<PathBuf> {
     fs::canonicalize(opened)
 }
@@ -136,7 +158,17 @@ fn open_without_following(path: &Path, directory: bool) -> io::Result<File> {
         }
         options.custom_flags(flags);
     }
-    #[cfg(not(windows))]
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+
+        let mut flags = libc::O_NOFOLLOW;
+        if directory {
+            flags |= libc::O_DIRECTORY;
+        }
+        options.custom_flags(flags);
+    }
+    #[cfg(not(any(windows, unix)))]
     let _ = directory;
     options.open(path)
 }

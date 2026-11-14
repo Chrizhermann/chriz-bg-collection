@@ -2,6 +2,7 @@
 
 pub(crate) mod config_files;
 pub(crate) mod eet_compat;
+pub(crate) mod host_tool;
 pub mod invocation;
 pub mod log;
 mod process_group;

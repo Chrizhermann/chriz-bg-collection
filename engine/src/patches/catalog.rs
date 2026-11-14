@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 pub const PATCH_ID: &str = "artisan-campaign-description-links-1.0";
 pub const ADAPTER: &str = "AKCB_KIT_DESCRIPTIONS";
-pub const TOOL_HASH: &str = "ad70f5897a6d0ba4b0d226f845a9b14cf345f56cc9697ca8d05cac9fe4932c1a";
+pub const TOOL_HASH: &str = crate::weidu::host_tool::active_weidu_exe_sha256();
 pub const OWNER_COMMIT: &str = "d16d35ba29c68aa18025a1c5323a8973986a97d9";
 pub const FILES: [(&str, u64, &str); 2] = [
     (

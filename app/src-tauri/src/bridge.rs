@@ -204,6 +204,15 @@ const MAX_REPORT_TEXT_BYTES: usize = 64 * 1024;
 #[doc(hidden)]
 pub trait BridgeSystem: Send + Sync {
     fn launch(&self, executable: &Path, working_directory: &Path) -> Result<(), String>;
+    fn launch_managed(
+        &self,
+        _managed_root: &Path,
+        _managed_save_root: Option<&Path>,
+        executable: &Path,
+        working_directory: &Path,
+    ) -> Result<(), String> {
+        self.launch(executable, working_directory)
+    }
     fn launch_radar(
         &self,
         executable: &Path,
@@ -230,6 +239,29 @@ impl BridgeSystem for SystemBridgeSystem {
             .map_err(|error| error.to_string())
     }
 
+    fn launch_managed(
+        &self,
+        managed_root: &Path,
+        managed_save_root: Option<&Path>,
+        executable: &Path,
+        working_directory: &Path,
+    ) -> Result<(), String> {
+        #[cfg(windows)]
+        {
+            let _ = (managed_root, managed_save_root);
+            self.launch(executable, working_directory)
+        }
+        #[cfg(not(windows))]
+        {
+            crate::linux_launch::launch_windows_executable(
+                managed_root,
+                managed_save_root,
+                executable,
+                working_directory,
+            )
+        }
+    }
+
     fn launch_radar(
         &self,
         executable: &Path,
@@ -254,6 +286,13 @@ impl BridgeSystem for SystemBridgeSystem {
     }
 
     fn current_exe(&self) -> Result<PathBuf, String> {
+        #[cfg(target_os = "linux")]
+        if let Some(appimage) = std::env::var_os("APPIMAGE") {
+            let candidate = PathBuf::from(appimage);
+            if candidate.is_absolute() && candidate.is_file() {
+                return Ok(candidate);
+            }
+        }
         std::env::current_exe().map_err(|error| error.to_string())
     }
 
@@ -694,6 +733,10 @@ pub struct RunSnapshotResponse {
 pub struct BootstrapResponse {
     /// Always `native` for this bridge.
     pub mode: String,
+    /// Host target platform identifier (`"windows"` or `"linux"`).
+    pub platform: String,
+    /// Whether the optional BG Radar Overlay is supported on this flavor and host OS.
+    pub radar_supported: bool,
     /// Compiled engine crate version.
     pub engine_version: String,
     pub application_version: String,
@@ -1140,12 +1183,14 @@ impl NativeBridge {
         plan_recipe(
             &self.recipe,
             &self.preset,
-            "windows",
+            bg_engine::HOST_PLATFORM,
             &SelectionOverrides::default(),
         )
         .map_err(CommandError::from_cli)?;
         Ok(BootstrapResponse {
             mode: "native".to_owned(),
+            platform: bg_engine::HOST_PLATFORM.to_owned(),
+            radar_supported: self.flavor.radar && cfg!(windows),
             engine_version: bg_engine::VERSION.to_owned(),
             application_version: crate::flavor::APP_VERSION.to_owned(),
             profiles: self.profiles(),
@@ -1766,14 +1811,25 @@ impl NativeBridge {
             &record.managed_root,
         ));
         self.system
-            .launch(&record.launch_path, working_directory)
+            .launch_managed(
+                &record.managed_root,
+                Some(&record.managed_save_root),
+                &record.launch_path,
+                working_directory,
+            )
             .map_err(|error| {
                 let recovery = if launch_name.eq_ignore_ascii_case("InfinityLoader.exe")
                     && !record.launch_path.is_file()
                 {
-                    "InfinityLoader.exe may have been quarantined by Windows Security or antivirus software. Restore it in Windows Security Protection history and add an exclusion for this game folder, or run diagnostics."
-                } else {
+                    if cfg!(windows) {
+                        "InfinityLoader.exe may have been quarantined by Windows Security or antivirus software. Restore it in Windows Security Protection history and add an exclusion for this game folder, or run diagnostics."
+                    } else {
+                        "InfinityLoader.exe is missing from this campaign folder. Run diagnostics or rebuild the campaign before launching it."
+                    }
+                } else if cfg!(windows) {
                     "Close any running game instance, then try again."
+                } else {
+                    "Check that Steam Proton or Wine is available, close any running game instance, and try again."
                 };
                 CommandError::new(
                     "managed_launch_failed",
@@ -1804,7 +1860,7 @@ impl NativeBridge {
         &self,
         install_id: &str,
     ) -> Result<bg_engine::radar::RadarInstallResult, CommandError> {
-        self.ensure_feature(self.flavor.radar, "BG Radar Overlay")?;
+        self.ensure_feature(self.flavor.radar && cfg!(windows), "BG Radar Overlay")?;
         let release = bg_engine::radar::check_latest().map_err(radar_error)?;
         let _guard = self.begin_app_update()?;
         let record = self.available_managed_install(install_id)?.record;
@@ -2607,11 +2663,22 @@ impl NativeBridge {
 
     fn registry(&self) -> Result<ManagedInstallRegistry, CommandError> {
         let app_data = self.app_data.as_ref().ok_or_else(|| {
+            let (recovery, detail) = if cfg!(windows) {
+                (
+                    "Restart Windows normally, then open the installer again.",
+                    "LOCALAPPDATA is missing or is not an absolute path",
+                )
+            } else {
+                (
+                    "Verify XDG_DATA_HOME or HOME is set, then open the installer again.",
+                    "XDG_DATA_HOME and HOME are unavailable or not absolute paths",
+                )
+            };
             CommandError::new(
                 "application_data_unavailable",
                 "Managed campaign records are unavailable.",
-                "Restart Windows normally, then open the installer again.",
-                "LOCALAPPDATA is missing or is not an absolute path",
+                recovery,
+                detail,
             )
         })?;
         ManagedInstallRegistry::open_or_create(app_data)
@@ -3109,12 +3176,12 @@ fn test_target_locks(app_data: &Path) -> Option<bg_engine::lock::TargetLockNames
     bg_engine::lock::TargetLockNamespace::in_local_application_data(app_data.parent()?).ok()
 }
 
-/// The app's installation registry below `LOCALAPPDATA`: `Chriz BG Collection`, or the folder a
+/// The app's installation registry below local application data (`LOCALAPPDATA` on Windows,
+/// `$XDG_DATA_HOME` or `$HOME/.local/share` on Unix): `Chriz BG Collection`, or the folder a
 /// standalone app's collection names.
 fn default_application_data_root(flavor: &AppFlavor) -> Option<PathBuf> {
-    let root = PathBuf::from(std::env::var_os("LOCALAPPDATA")?);
-    root.is_absolute()
-        .then(|| root.join(flavor.application_data_directory))
+    let root = bg_engine::lock::TargetLockNamespace::system_local_application_data().ok()?;
+    Some(root.join(flavor.application_data_directory))
 }
 
 /// Suggests the initial player-facing name and location beneath an injected home path.

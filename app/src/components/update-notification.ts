@@ -8,25 +8,28 @@ export interface UpdateAvailability {
   readonly radar: boolean;
 }
 
-export function getUpdateAvailability(updates: UpdateSummary): UpdateAvailability {
+export function getUpdateAvailability(
+  updates: UpdateSummary,
+  radarSupported = flavor.features.radar,
+): UpdateAvailability {
   const application = flavor.features.appUpdates && updates.application.state === "available" && updates.application.availableVersion !== null;
   const collection = (updates.recipe.state === "available" && updates.recipe.availableVersion !== null)
     || (updates.recipe.state === "requires-app" && application)
     || updates.managedCopies.some((copy) => copy.state === "update-available");
-  const radar = flavor.features.radar && updates.radar?.state === "available"
+  const radar = radarSupported && updates.radar?.state === "available"
     && updates.radar.currentVersion !== null
     && updates.radar.availableVersion !== null;
   return { application, collection, radar };
 }
 
-function availabilityText(availability: UpdateAvailability): string {
+function availabilityText(availability: UpdateAvailability, radarSupported: boolean): string {
   const names = [
     availability.application ? `${flavor.shortName} app` : null,
     availability.collection ? "collection" : null,
     availability.radar ? "BG Radar Overlay" : null,
   ].filter((name): name is string => name !== null);
   if (names.length === 0) {
-    return flavor.features.radar
+    return radarSupported
       ? `Check ${flavor.shortName} app, collection, and BG Radar Overlay versions.`
       : `Check ${flavor.shortName} app and collection versions.`;
   }
@@ -35,15 +38,19 @@ function availabilityText(availability: UpdateAvailability): string {
   return `New updates available: ${joined}.`;
 }
 
-export function updateUpdatesControl(button: HTMLButtonElement, updates: UpdateSummary): void {
-  const availability = getUpdateAvailability(updates);
+export function updateUpdatesControl(
+  button: HTMLButtonElement,
+  updates: UpdateSummary,
+  radarSupported = flavor.features.radar,
+): void {
+  const availability = getUpdateAvailability(updates, radarSupported);
   const available = availability.application || availability.collection || availability.radar;
   const container = button.closest<HTMLElement>(".update-nav-item") ?? button.parentElement;
   if (container === null) return;
   container.querySelectorAll(".update-badge, .update-tooltip").forEach((node) => node.remove());
   button.dataset.updateAvailable = String(available);
   button.removeAttribute("title");
-  const tooltip = element("span", "update-tooltip", availabilityText(availability));
+  const tooltip = element("span", "update-tooltip", availabilityText(availability, radarSupported));
   tooltip.id = "updates-availability-tooltip";
   tooltip.setAttribute("role", "tooltip");
   container.append(tooltip);

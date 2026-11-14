@@ -243,6 +243,7 @@ pub(crate) mod test_hook {
 
     /// Run `body` with `hook` called at every wait of a retried operation on this thread, right
     /// before the wait itself. The hook is dropped when `body` returns or panics.
+    #[cfg_attr(not(windows), allow(dead_code))]
     pub(crate) fn with_wait_hook<R>(
         hook: impl FnMut(Duration) + 'static,
         body: impl FnOnce() -> R,

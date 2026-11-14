@@ -121,6 +121,11 @@ impl VerifiedWeidu {
     pub fn sha256(&self) -> &str {
         &self.sha256
     }
+
+    /// Verified raw executable bytes.
+    pub fn bytes(&self) -> &[u8] {
+        &self.bytes
+    }
 }
 
 /// Immutable observations proven directly from one extracted WeiDU executable.
@@ -294,6 +299,7 @@ fn run_bounded_version_probe(verified: &VerifiedWeidu) -> Result<ProbeOutput, In
 
         command.creation_flags(CREATE_NO_WINDOW);
     }
+    super::process_group::configure_command(&mut command);
     let mut child = command
         .spawn()
         .map_err(|source| probe_error(verified, source))?;
@@ -481,6 +487,21 @@ pub fn parse_weidu_version_output(stdout: &[u8]) -> Result<String, InvocationErr
 }
 
 fn read_pe_machine(path: &Path, bytes: &[u8]) -> Result<PeMachine, InvocationError> {
+    #[cfg(unix)]
+    {
+        if bytes.starts_with(b"\x7fELF") {
+            parse_elf_machine(path, bytes)
+        } else {
+            parse_pe_machine(path, bytes)
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        parse_pe_machine(path, bytes)
+    }
+}
+
+fn parse_pe_machine(path: &Path, bytes: &[u8]) -> Result<PeMachine, InvocationError> {
     if bytes.len() < 0x40 || &bytes[..2] != b"MZ" {
         return Err(InvocationError::InvalidToolPe {
             path: path.to_path_buf(),
@@ -518,6 +539,28 @@ fn read_pe_machine(path: &Path, bytes: &[u8]) -> Result<PeMachine, InvocationErr
         _ => Err(InvocationError::InvalidToolPe {
             path: path.to_path_buf(),
         }),
+    }
+}
+
+#[cfg_attr(not(unix), allow(dead_code))]
+fn parse_elf_machine(path: &Path, bytes: &[u8]) -> Result<PeMachine, InvocationError> {
+    let invalid = || InvocationError::InvalidToolPe {
+        path: path.to_path_buf(),
+    };
+    // ELF64 little-endian header: magic(4) + class(1=64-bit) + data(1=LE) + ... + e_type@0x10 + e_machine@0x12.
+    if bytes.len() < 0x14 || &bytes[..4] != b"\x7fELF" || bytes[4] != 2 || bytes[5] != 1 {
+        return Err(invalid());
+    }
+    let e_type = u16::from_le_bytes(bytes[0x10..0x12].try_into().map_err(|_| invalid())?);
+    if !matches!(e_type, 2 | 3) {
+        return Err(invalid());
+    }
+    let e_machine = u16::from_le_bytes(bytes[0x12..0x14].try_into().map_err(|_| invalid())?);
+    match e_machine {
+        0x0003 => Ok(PeMachine::X86),
+        0x003e => Ok(PeMachine::X86_64),
+        0x00b7 => Ok(PeMachine::Arm64),
+        _ => Err(invalid()),
     }
 }
 
@@ -1166,6 +1209,11 @@ fn materialize_verified_tool(
         }
     }
 
+    super::host_tool::ensure_executable(&destination).map_err(|source| InvocationError::Io {
+        path: destination.clone(),
+        source,
+    })?;
+
     let program = crate::reparse::canonicalize_flexible(&destination).map_err(|source| {
         InvocationError::Io {
             path: destination.clone(),
@@ -1261,7 +1309,7 @@ mod tests {
 
     use super::{
         build, parse_weidu_version_output, validate_setup_name_declarations, InvocationError,
-        InvocationInput, ResolvedPrompt, StagedRoots, VerifiedWeidu,
+        InvocationInput, PeMachine, ResolvedPrompt, StagedRoots, VerifiedWeidu,
     };
     use crate::manifest::{GameRoot, InvocationMode, RunArg};
 
@@ -1730,5 +1778,32 @@ mod tests {
         drop(lock);
         fs::write(&path, b"replacement after release").unwrap();
         fs::rename(&path, &renamed).unwrap();
+    }
+
+    #[test]
+    fn elf64_machine_header_parses_supported_architectures_and_rejects_invalid() {
+        let make_elf = |class: u8, data: u8, e_type: u16, e_machine: u16| {
+            let mut header = vec![0_u8; 64];
+            header[..4].copy_from_slice(b"\x7fELF");
+            header[4] = class;
+            header[5] = data;
+            header[6] = 1;
+            header[0x10..0x12].copy_from_slice(&e_type.to_le_bytes());
+            header[0x12..0x14].copy_from_slice(&e_machine.to_le_bytes());
+            header
+        };
+        let path = Path::new("weidu");
+        assert_eq!(
+            super::parse_elf_machine(path, &make_elf(2, 1, 2, 0x003e)).unwrap(),
+            PeMachine::X86_64
+        );
+        assert_eq!(
+            super::parse_elf_machine(path, &make_elf(2, 1, 3, 0x00b7)).unwrap(),
+            PeMachine::Arm64
+        );
+        assert!(super::parse_elf_machine(path, b"MZ\0\0not-elf").is_err());
+        assert!(super::parse_elf_machine(path, &make_elf(1, 1, 2, 0x003e)).is_err());
+        assert!(super::parse_elf_machine(path, &make_elf(2, 1, 1, 0x003e)).is_err());
+        assert!(super::parse_elf_machine(path, &make_elf(2, 1, 2, 0xffff)).is_err());
     }
 }

@@ -430,7 +430,12 @@ impl Fixture {
         let hashes = before
             .iter()
             .filter(|(_, stamp)| !stamp.directory)
-            .map(|(name, _)| (name.clone(), files::hash(&game.join(name)).unwrap()))
+            .map(|(name, _)| {
+                (
+                    name.clone(),
+                    files::hash(&files::resolve_relative(&game, name).unwrap()).unwrap(),
+                )
+            })
             .collect::<BTreeMap<_, _>>();
         let backups = [
             "weidu.log",
@@ -445,7 +450,7 @@ impl Fixture {
         for name in backups.keys() {
             let destination = directory.join("affected").join(name);
             fs::create_dir_all(destination.parent().unwrap()).unwrap();
-            fs::copy(game.join(name), destination).unwrap();
+            fs::copy(files::resolve_relative(&game, name).unwrap(), destination).unwrap();
         }
         let prepared = serde_json::json!({
             "schema": 1, "upgrade_id": "buffbot-1.8.3-to-1.8.4",
@@ -465,7 +470,12 @@ impl Fixture {
         let post_hashes = after
             .iter()
             .filter(|(name, stamp)| !stamp.directory && backups.contains_key(*name))
-            .map(|(name, _)| (name.clone(), files::hash(&game.join(name)).unwrap()))
+            .map(|(name, _)| {
+                (
+                    name.clone(),
+                    files::hash(&files::resolve_relative(&game, name).unwrap()).unwrap(),
+                )
+            })
             .collect::<BTreeMap<_, _>>();
         let record = serde_json::json!({
             "prepared_sha256": sha256_bytes(&prepared_bytes),

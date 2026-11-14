@@ -120,14 +120,19 @@ pub struct TargetLockNamespace {
 }
 
 impl TargetLockNamespace {
-    /// The namespace below this user's `LOCALAPPDATA`. Fails closed when it is unset or unsafe,
-    /// because target locking cannot then guarantee exclusion.
+    /// Resolves the current user's local application-data directory (`%LOCALAPPDATA%` on
+    /// Windows, `$XDG_DATA_HOME` or `$HOME/.local/share` on Unix). Fails closed when unavailable
+    /// or not an absolute path.
+    pub fn system_local_application_data() -> Result<PathBuf, LockError> {
+        resolve_system_local_application_data(|key| std::env::var_os(key))
+    }
+
+    /// The namespace below this user's local application-data directory (`LOCALAPPDATA` on
+    /// Windows, `$XDG_DATA_HOME` / `$HOME/.local/share` on Unix). Fails closed when unavailable
+    /// or unsafe, because target locking cannot then guarantee exclusion.
     pub fn system() -> Result<Self, LockError> {
-        let local = std::env::var_os("LOCALAPPDATA").ok_or_else(|| LockError::UnsafePath {
-            path: PathBuf::from("%LOCALAPPDATA%"),
-            reason: "LOCALAPPDATA is unavailable; target locking cannot fail closed".to_owned(),
-        })?;
-        Self::in_local_application_data(PathBuf::from(local))
+        let local = Self::system_local_application_data()?;
+        Self::in_local_application_data(local)
     }
 
     /// The namespace below an explicit local application data folder. It must be an absolute,
@@ -294,6 +299,56 @@ fn validate_direct_directory(path: &Path) -> Result<(), LockError> {
         });
     }
     Ok(())
+}
+
+fn resolve_system_local_application_data(
+    get_env: impl Fn(&str) -> Option<std::ffi::OsString>,
+) -> Result<PathBuf, LockError> {
+    #[cfg(windows)]
+    {
+        let local = get_env("LOCALAPPDATA")
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| LockError::UnsafePath {
+                path: PathBuf::from("%LOCALAPPDATA%"),
+                reason: "LOCALAPPDATA is unavailable; target locking cannot fail closed".to_owned(),
+            })?;
+        let path = PathBuf::from(local);
+        if !path.is_absolute() {
+            return Err(LockError::UnsafePath {
+                path: path.clone(),
+                reason: format!("LOCALAPPDATA is not absolute: {}", path.display()),
+            });
+        }
+        Ok(path)
+    }
+    #[cfg(not(windows))]
+    {
+        if let Some(xdg) = get_env("XDG_DATA_HOME").filter(|value| !value.is_empty()) {
+            let path = PathBuf::from(xdg);
+            if !path.is_absolute() {
+                return Err(LockError::UnsafePath {
+                    path: path.clone(),
+                    reason: format!("XDG_DATA_HOME is not absolute: {}", path.display()),
+                });
+            }
+            return Ok(path);
+        }
+        let home = get_env("HOME")
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| LockError::UnsafePath {
+                path: PathBuf::from("$XDG_DATA_HOME"),
+                reason: "XDG_DATA_HOME and HOME are unavailable; target locking cannot fail closed"
+                    .to_owned(),
+            })?;
+        let home_path = PathBuf::from(home);
+        if !home_path.is_absolute() {
+            return Err(LockError::UnsafePath {
+                path: home_path.clone(),
+                reason: format!("HOME is not absolute: {}", home_path.display()),
+            });
+        }
+        Ok(home_path.join(".local").join("share"))
+    }
 }
 
 fn validate_direct_regular_file_if_present(path: &Path) -> Result<(), LockError> {

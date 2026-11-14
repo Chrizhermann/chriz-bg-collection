@@ -27,6 +27,7 @@ semver = "1"
 tauri = { version = "=2.11.5", features = [] }
 tauri-plugin-dialog = "=2.7.3"
 tauri-plugin-updater = "=2.11.0"
+tempfile = "3"
 time = { version = "0.3", features = ["formatting"] }
 toml = "1"
 zip = { version = "8", default-features = false, features = ["deflate"] }
@@ -43,4 +44,3 @@ chriz-bg-app = { path = ".", features = ["test-application-data"] }
 minisign = "0.9.1"
 # The opt-in updater acceptance test uses Tauri's mock runtime.
 tauri = { version = "=2.11.5", features = ["test"] }
-tempfile = "3"

@@ -177,7 +177,14 @@ pub fn ensure_existing_ancestors_are_directories(root: &Path) -> io::Result<()> 
                     ));
                 }
             }
-            Err(error) if error.kind() == io::ErrorKind::NotFound => continue,
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    io::ErrorKind::NotFound | io::ErrorKind::NotADirectory
+                ) =>
+            {
+                continue;
+            }
             Err(error) => return Err(error),
         }
     }
@@ -200,6 +207,12 @@ pub fn ensure_existing_ancestors_are_directories(root: &Path) -> io::Result<()> 
             }
         }
         Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+        Err(error) if error.kind() == io::ErrorKind::NotADirectory => {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("{} is not a direct non-reparse directory", root.display()),
+            ));
+        }
         Err(error) => return Err(error),
     }
     Ok(())
@@ -402,24 +415,28 @@ pub fn display_windows_path(path: &Path) -> PathBuf {
 
 fn normalized_key(path: &Path) -> String {
     let text = path.to_string_lossy();
-    let no_prefix = if let Some(unc) = text.strip_prefix(r"\\?\UNC\") {
-        format!(r"\\{unc}")
-    } else if let Some(local) = text.strip_prefix(r"\\?\") {
-        local.to_string()
-    } else {
-        text.into_owned()
-    };
-    let unified = no_prefix.replace('/', r"\");
-    let mut trimmed = unified.as_str();
-    while trimmed.len() > 3 && trimmed.ends_with('\\') {
-        trimmed = &trimmed[..trimmed.len() - 1];
-    }
     #[cfg(windows)]
     {
+        let no_prefix = if let Some(unc) = text.strip_prefix(r"\\?\UNC\") {
+            format!(r"\\{unc}")
+        } else if let Some(local) = text.strip_prefix(r"\\?\") {
+            local.to_string()
+        } else {
+            text.into_owned()
+        };
+        let unified = no_prefix.replace('/', r"\");
+        let mut trimmed = unified.as_str();
+        while trimmed.len() > 3 && trimmed.ends_with('\\') {
+            trimmed = &trimmed[..trimmed.len() - 1];
+        }
         trimmed.to_lowercase()
     }
     #[cfg(not(windows))]
     {
+        let mut trimmed = text.as_ref();
+        while trimmed.len() > 1 && trimmed.ends_with('/') {
+            trimmed = &trimmed[..trimmed.len() - 1];
+        }
         trimmed.to_string()
     }
 }
@@ -458,11 +475,14 @@ pub fn windows_path_starts_with(path: &Path, base: &Path) -> bool {
     if p == b {
         return true;
     }
-    if b.ends_with('\\') {
+    #[cfg(windows)]
+    let sep = '\\';
+    #[cfg(not(windows))]
+    let sep = '/';
+    if b.ends_with(sep) {
         return p.starts_with(&b);
     }
-    p.strip_prefix(&b)
-        .is_some_and(|rest| rest.starts_with('\\'))
+    p.strip_prefix(&b).is_some_and(|rest| rest.starts_with(sep))
 }
 
 #[cfg(test)]
@@ -546,5 +566,39 @@ mod tests {
         let target = temp.path().join("new-parent").join("leaf");
         let resolved = canonicalize_prospective(&target).unwrap();
         assert!(resolved.ends_with(Path::new("new-parent").join("leaf")));
+    }
+
+    #[test]
+    fn windows_path_starts_with_respects_platform_separators_and_case() {
+        #[cfg(not(windows))]
+        {
+            assert!(windows_path_starts_with(
+                Path::new("/tmp/game"),
+                Path::new("/")
+            ));
+            assert!(windows_path_starts_with(
+                Path::new("/tmp/game/child.txt"),
+                Path::new("/tmp/game/")
+            ));
+            assert!(!windows_path_starts_with(
+                Path::new("/tmp/game_other/child.txt"),
+                Path::new("/tmp/game")
+            ));
+            assert!(!windows_path_starts_with(
+                Path::new("/tmp/Game/child.txt"),
+                Path::new("/tmp/game")
+            ));
+        }
+        #[cfg(windows)]
+        {
+            assert!(windows_path_starts_with(
+                Path::new(r"C:\Games\BG2\chitin.key"),
+                Path::new(r"c:\games\bg2")
+            ));
+            assert!(!windows_path_starts_with(
+                Path::new(r"C:\Games\BG2Other\chitin.key"),
+                Path::new(r"C:\Games\BG2")
+            ));
+        }
     }
 }

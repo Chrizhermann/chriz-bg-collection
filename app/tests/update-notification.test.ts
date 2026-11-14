@@ -83,4 +83,16 @@ describe("Updates notification", () => {
     expect(tooltip.hidden).toBe(false);
     expect(button.hasAttribute("title")).toBe(false);
   });
+
+  it("suppresses Radar update availability and badge when radarSupported is false", () => {
+    const { shell, button } = updatesButton();
+    updateUpdatesControl(
+      button,
+      summary("up-to-date", "up-to-date", { state: "available", currentVersion: "1", availableVersion: "2", detail: "" }),
+      false,
+    );
+    expect(queryByText(shell, "New")).toBeNull();
+    expect(button.dataset.updateAvailable).toBe("false");
+    expect(getByRole(shell, "tooltip").textContent).not.toContain("Radar");
+  });
 });

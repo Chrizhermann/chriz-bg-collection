@@ -328,6 +328,13 @@ pub fn run<S: EventSink>(
         }
     };
 
+    #[cfg(unix)]
+    if let Some(attempt_dir) = request.invocation.debug_path.parent() {
+        if !attempt_dir.as_os_str().is_empty() {
+            let _ = std::fs::create_dir_all(attempt_dir.join("xdg-data"));
+        }
+    }
+
     let mut child = match weidu_command(&request.invocation).spawn() {
         Ok(child) => child,
         Err(error) => {
@@ -601,6 +608,16 @@ fn weidu_command(invocation: &Invocation) -> Command {
         // Keep WeiDU in the background; its output and prompts still use our pipes.
         command.creation_flags(CREATE_NO_WINDOW);
     }
+    #[cfg(unix)]
+    {
+        // Keep WeiDU %USER_DIRECTORY% (used by EET/macros.tph AT_NOW on Unix) isolated to the
+        // attempt directory rather than writing into the player's real ~/.local/share tree.
+        if let Some(attempt_dir) = invocation.debug_path.parent() {
+            let xdg_data_home = attempt_dir.join("xdg-data");
+            command.env("XDG_DATA_HOME", xdg_data_home);
+        }
+    }
+    super::process_group::configure_command(&mut command);
     command
 }
 
@@ -845,14 +862,22 @@ mod tests {
             identity_digest: "environment-test".to_owned(),
         });
 
-        // The one removal is the only explicit change: every other variable is inherited as-is.
-        assert_eq!(
-            command.get_envs().collect::<Vec<_>>(),
-            [(
+        // On Windows only `NoDefaultCurrentDirectoryInExePath` is removed; on Unix `XDG_DATA_HOME`
+        // is also scoped to the invocation's attempt directory so every other variable is inherited.
+        #[cfg(not(unix))]
+        let expected = [(
+            OsStr::new("NoDefaultCurrentDirectoryInExePath"),
+            None::<&OsStr>,
+        )];
+        #[cfg(unix)]
+        let expected = [
+            (
                 OsStr::new("NoDefaultCurrentDirectoryInExePath"),
-                None::<&OsStr>
-            )]
-        );
+                None::<&OsStr>,
+            ),
+            (OsStr::new("XDG_DATA_HOME"), Some(OsStr::new("xdg-data"))),
+        ];
+        assert_eq!(command.get_envs().collect::<Vec<_>>(), expected);
     }
 
     #[test]

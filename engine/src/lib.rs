@@ -45,3 +45,10 @@ pub use loader::Manifest;
 
 /// Compiled engine package version exposed to native presentation adapters.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Target platform identifier matching the host operating system.
+pub const HOST_PLATFORM: &str = if cfg!(target_os = "linux") {
+    "linux"
+} else {
+    "windows"
+};

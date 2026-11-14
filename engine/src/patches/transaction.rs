@@ -160,7 +160,7 @@ pub fn verified_log_suffix(
         }
         let p: Prepared = read_json(&dir.join("prepared.json"))?;
         let a: Applied = read_json(&dir.join("applied.json"))?;
-        let log = root.join("game/WeiDU.log");
+        let log = crate::weidu::log::resolve_weidu_log(&root.join("game")).map_err(err)?;
         files::regular(&log)?;
         if p.schema != 1
             || p.patch_id != catalog::PATCH_ID
@@ -340,7 +340,7 @@ fn restore_footprint(ctx: &Context<'_>, dir: &Path, p: &Prepared) -> Result<(), 
             if p.before.contains_key(name) || !adapter_scope(name) || !allowed(name) {
                 return Err("Invalid restoration cleanup declaration.".into());
             }
-            let path = ctx.game().join(name);
+            let path = files::resolve_relative(&ctx.game(), name)?;
             if path.exists() {
                 if let Some(hash) = hash {
                     files::regular(&path)?;
@@ -403,22 +403,39 @@ fn prepare_payload(ctx: &Context<'_>, dir: &Path) -> Result<PathBuf, String> {
         }
         files::create(&dir.join("payload").join(name), &bytes)?;
     }
+    let (tool_key, tool_url, tool_archive_length, tool_archive_sha256, tool_root) =
+        if cfg!(target_os = "linux") {
+            (
+                "patch-weidu-251",
+                crate::weidu::host_tool::LINUX_WEIDU_251_URL,
+                crate::weidu::host_tool::LINUX_WEIDU_251_ARCHIVE_LENGTH,
+                crate::weidu::host_tool::LINUX_WEIDU_251_ARCHIVE_SHA256,
+                crate::weidu::host_tool::LINUX_WEIDU_251_EXECUTABLE,
+            )
+        } else {
+            (
+                "patch-weidu-249",
+                crate::weidu::host_tool::WINDOWS_WEIDU_249_URL,
+                crate::weidu::host_tool::WINDOWS_WEIDU_249_ARCHIVE_LENGTH,
+                crate::weidu::host_tool::WINDOWS_WEIDU_249_ARCHIVE_SHA256,
+                "weidu.exe",
+            )
+        };
     let source = download(
         &cache,
-        "patch-weidu-249",
-        "https://github.com/WeiDUorg/weidu/releases/download/v249.00/WeiDU-Windows-249-amd64.zip",
-        2154755,
-        "b156910cbec69359fc2e42f6739aa959d49047d6fd3dc172f6bed88ffad8f927",
+        tool_key,
+        tool_url,
+        tool_archive_length,
+        tool_archive_sha256,
         vec!["release-assets.githubusercontent.com".into()],
     )?;
     let extraction = extract_archive(
         &source,
         &ctx.cache.join("patch-extracted"),
         &ArchiveRequirements {
-            artifact_sha256: "b156910cbec69359fc2e42f6739aa959d49047d6fd3dc172f6bed88ffad8f927"
-                .into(),
+            artifact_sha256: tool_archive_sha256.into(),
             format: ArchiveFormat::Zip,
-            expected_roots: vec!["weidu.exe".into()],
+            expected_roots: vec![tool_root.into()],
             expected_tp2_paths: vec![],
             limits: ArchiveLimits {
                 max_entries: 64,
@@ -429,10 +446,11 @@ fn prepare_payload(ctx: &Context<'_>, dir: &Path) -> Result<PathBuf, String> {
         },
     )
     .map_err(err)?;
-    let source = extraction.root.join("weidu.exe");
+    let source = extraction.root.join(tool_root);
     VerifiedWeidu::verify(&source, catalog::TOOL_HASH).map_err(err)?;
     let tool = dir.join("weidu.exe");
     files::create(&tool, &files::read(&source, 8 * 1024 * 1024)?)?;
+    crate::weidu::host_tool::ensure_executable(&tool).map_err(err)?;
     Ok(tool)
 }
 
@@ -470,7 +488,7 @@ pub fn apply_with_progress(
             "Installation changed since you checked it. Check again before applying.".into(),
         );
     }
-    if ctx.game().join(catalog::ADAPTER).exists() {
+    if files::resolve_relative(&ctx.game(), catalog::ADAPTER)?.exists() {
         return Err(
             "The patch adapter already exists; automatic replacement is not allowed.".into(),
         );
@@ -541,7 +559,10 @@ pub fn apply_with_progress(
         "weidu.log",
         "weidu.conf",
     ] {
-        let bytes = files::read(&ctx.game().join(name), 16 * 1024 * 1024)?;
+        let bytes = files::read(
+            &files::resolve_relative(&ctx.game(), name)?,
+            16 * 1024 * 1024,
+        )?;
         let hash = sha256_bytes(&bytes);
         files::create(&dir.join("affected").join(name), &bytes)?;
         backups.insert(name.into(), hash);
@@ -584,6 +605,7 @@ pub fn apply_with_progress(
 }
 
 #[cfg(test)]
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(super) fn run_prepared_fixture(
     ctx: &Context<'_>,
     dir: &Path,
@@ -594,6 +616,7 @@ pub(super) fn run_prepared_fixture(
 /// Places a test's own adapter `payload`, which its record holds, as production apply places
 /// the pinned one.
 #[cfg(test)]
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(super) fn place_adapter_fixture(
     held: &files::HeldTransaction,
     payload: &[(&str, u64, &str)],
@@ -603,6 +626,7 @@ pub(super) fn place_adapter_fixture(
 /// Restores the record `dir` of `ctx` through `held`, as production restoration does once its
 /// checks have passed and its restoration record is written.
 #[cfg(test)]
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(super) fn put_back_fixture(
     ctx: &Context<'_>,
     dir: &Path,
@@ -643,6 +667,7 @@ fn apply_inner(ctx: &Context<'_>, dir: &Path, tool: &Path, p: &Prepared) -> Resu
         &catalog::FILES,
     )?;
     VerifiedWeidu::verify(tool, catalog::TOOL_HASH).map_err(err)?;
+    crate::weidu::host_tool::ensure_executable(tool).map_err(err)?;
     // Deny write/delete replacement of the executable while the runner owns it.
     let mut options = OpenOptions::new();
     options.read(true);
@@ -709,11 +734,8 @@ fn apply_inner(ctx: &Context<'_>, dir: &Path, tool: &Path, p: &Prepared) -> Resu
         .collect();
     unchanged_hashes(&ctx.game(), &unchanged)?;
     let old = fs::read_to_string(dir.join("affected/weidu.log")).map_err(err)?;
-    let new = String::from_utf8(files::read(
-        &ctx.game().join("WeiDU.log"),
-        16 * 1024 * 1024,
-    )?)
-    .map_err(err)?;
+    let log = crate::weidu::log::resolve_weidu_log(&ctx.game()).map_err(err)?;
+    let new = String::from_utf8(files::read(&log, 16 * 1024 * 1024)?).map_err(err)?;
     let old = crate::weidu::log::parse_active_entries(&old).map_err(err)?;
     let new = crate::weidu::log::parse_active_entries(&new).map_err(err)?;
     // WeiDU may regenerate comments from TP2 translations; component identities/order
@@ -737,8 +759,9 @@ fn apply_inner(ctx: &Context<'_>, dir: &Path, tool: &Path, p: &Prepared) -> Resu
             created.push(name.clone());
         }
         if after.get(&name).is_some_and(|s| !s.directory) {
-            files::regular(&ctx.game().join(&name))?;
-            hashes.insert(name.clone(), files::hash(&ctx.game().join(&name))?);
+            let path = files::resolve_relative(&ctx.game(), &name)?;
+            files::regular(&path)?;
+            hashes.insert(name.clone(), files::hash(&path)?);
         }
     }
     files::json_new(
@@ -809,7 +832,7 @@ fn restore_inner(ctx: &Context<'_>, dir: &Path, undo: bool) -> Result<(), String
                     if stamp.directory {
                         None
                     } else {
-                        Some(files::hash(&ctx.game().join(name))?)
+                        Some(files::hash(&files::resolve_relative(&ctx.game(), name)?)?)
                     },
                 );
             }

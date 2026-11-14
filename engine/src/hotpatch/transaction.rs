@@ -434,8 +434,9 @@ pub(super) fn installed_components(
     game: &Path,
     hotpatch: &Hotpatch,
 ) -> Result<BTreeSet<u32>, String> {
+    let log = crate::weidu::log::resolve_weidu_log(game).map_err(files::err)?;
     let installed = parse_active_entries(&String::from_utf8_lossy(&files::read(
-        &game.join("WeiDU.log"),
+        &log,
         16 * 1024 * 1024,
     )?))
     .map_err(files::err)?;
@@ -584,15 +585,16 @@ pub(super) fn weidu_tool(
     base: &crate::Manifest,
     artifact_id: &str,
 ) -> Result<(PathBuf, String), String> {
-    let tool_artifact = base
+    let raw_artifact = base
         .artifacts
         .get(artifact_id)
         .ok_or("The installation's recipe has no WeiDU for this change.")?;
+    let tool_artifact = crate::weidu::host_tool::adapt_artifact_for_host(raw_artifact);
     let tool_spec = tool_artifact
         .tool
         .as_ref()
         .ok_or("The installation's WeiDU artifact is not a tool.")?;
-    let tool = unpack(ctx, tool_artifact)?.join(&tool_spec.executable);
+    let tool = unpack(ctx, &tool_artifact)?.join(&tool_spec.executable);
     VerifiedWeidu::verify(&tool, &tool_spec.sha256).map_err(files::err)?;
     Ok((tool, tool_spec.sha256.to_ascii_lowercase()))
 }
@@ -779,12 +781,14 @@ pub(super) fn prepare_record(
     }
     let tool = dir.join("weidu.exe");
     files::create(&tool, &files::read(&sources.tool, TOOL_LIMIT)?)?;
+    crate::weidu::host_tool::ensure_executable(&tool).map_err(files::err)?;
     if files::hash(&tool)? != sources.tool_sha256 {
         return Err("The WeiDU copy changed.".into());
     }
     let mut saved = BTreeMap::new();
     for name in &saved_names {
-        let bytes = files::read(&ctx.game().join(name), 512 * 1024 * 1024)?;
+        let path = files::resolve_relative(&ctx.game(), name)?;
+        let bytes = files::read(&path, 512 * 1024 * 1024)?;
         let hash = sha256_bytes(&bytes);
         if current.files.get(name).map(|identity| &identity.sha256) != Some(&hash) {
             return Err(format!(
@@ -877,9 +881,10 @@ pub(super) fn place_payload(ctx: &Context<'_>, dir: &Path, p: &Prepared) -> Resu
 
 fn run_weidu(ctx: &Context<'_>, dir: &Path, p: &Prepared) -> Result<(), String> {
     let evidence = invoke_weidu(ctx, dir, p, true)?;
+    let log = crate::weidu::log::resolve_weidu_log(&ctx.game()).map_err(files::err)?;
     finished_as_planned(
         &files::read(&dir.join("affected/weidu.log"), 16 * 1024 * 1024)?,
-        &files::read(&ctx.game().join("WeiDU.log"), 16 * 1024 * 1024)?,
+        &files::read(&log, 16 * 1024 * 1024)?,
         &evidence.debug,
         &evidence.stdout,
         &p.package,
@@ -908,6 +913,7 @@ pub(super) fn invoke_weidu(
 ) -> Result<WeiduEvidence, String> {
     let tool = dir.join("weidu.exe");
     VerifiedWeidu::verify(&tool, &p.tool_sha256).map_err(files::err)?;
+    crate::weidu::host_tool::ensure_executable(&tool).map_err(files::err)?;
     // Nobody may replace the executable while it runs.
     let mut options = OpenOptions::new();
     options.read(true);
@@ -1023,8 +1029,9 @@ pub(super) fn record_applied(
         16 * 1024 * 1024,
     )?))
     .map_err(files::err)?;
+    let log = crate::weidu::log::resolve_weidu_log(&ctx.game()).map_err(files::err)?;
     let new = parse_active_entries(&String::from_utf8_lossy(&files::read(
-        &ctx.game().join("WeiDU.log"),
+        &log,
         16 * 1024 * 1024,
     )?))
     .map_err(files::err)?;
@@ -1122,7 +1129,8 @@ pub(super) fn keep_preimages(
         let source = sources.get(earlier.sha256.as_str()).ok_or_else(|| {
             format!("No earlier copy of {name} was kept, so the hotpatch could not be undone.")
         })?;
-        let bytes = files::read(&ctx.game().join(source), 512 * 1024 * 1024)?;
+        let source_path = files::resolve_relative(&ctx.game(), source)?;
+        let bytes = files::read(&source_path, 512 * 1024 * 1024)?;
         if sha256_bytes(&bytes) != earlier.sha256 {
             return Err(format!("The earlier copy of {name} changed."));
         }
@@ -1259,7 +1267,10 @@ fn plan_restore(
                         })
                         .map(|(other, _)| other.clone())
                         .ok_or_else(|| format!("No earlier copy of {name} is available."))?;
-                    files::read(&ctx.game().join(source), 512 * 1024 * 1024)?
+                    files::read(
+                        &files::resolve_relative(&ctx.game(), &source)?,
+                        512 * 1024 * 1024,
+                    )?
                 };
                 if sha256_bytes(&bytes) != earlier.sha256 {
                     return Err(format!("The earlier copy of {name} changed."));

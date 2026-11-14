@@ -13,6 +13,7 @@ export interface UpdateActions extends InstallPatchActions, InstalledUpdateActio
   readonly installApplication: (version: string) => void | Promise<void>;
   readonly buildUpdatedCopy: (version: string) => void | Promise<void>;
   readonly installRadar?: () => void | Promise<void>;
+  readonly radarSupported?: boolean;
   readonly installationName?: string;
   readonly radarVersion?: string | null;
 }
@@ -119,6 +120,7 @@ function versionRow(
 }
 
 export function updatesScreen(updates: UpdateSummary, actions: UpdateActions, checking = false, installing = false): HTMLElement {
+  const radarSupported = actions.radarSupported ?? flavor.features.radar;
   const operationBusy = installing || actions.patchBusy === true || actions.installedUpdateBusy === true || actions.modUpgradeBusy === true || actions.hotpatchBusy === true || actions.modUpdateBusy === true;
   const page = element("div", "screen-stack updates-screen");
   const heading = element("div", "updates-heading");
@@ -185,7 +187,7 @@ export function updatesScreen(updates: UpdateSummary, actions: UpdateActions, ch
         ? "For your next playthrough"
         : localCollectionAvailable ? "Creates a separate game. Your selected installation stays unchanged." : undefined,
     `Included in ${flavor.shortName}`));
-  if (flavor.features.radar && updates.radar !== undefined) {
+  if (radarSupported && updates.radar !== undefined) {
     const radar = updates.radar;
     const notes = element("div", "update-changelog");
     notes.append(element("h3", undefined, "What's new"), element("p", undefined, radar.releaseNotes ?? "No changelog was included with this release."));
@@ -211,7 +213,7 @@ export function updatesScreen(updates: UpdateSummary, actions: UpdateActions, ch
   if (updates.recipe.state === "available" && updates.recipe.disposition !== "deferred-for-next-playthrough") {
     page.append(element("p", "update-note", "Collection updates create a new installation. Open the changelog for save compatibility."));
   }
-  if (flavor.features.radar && updates.radar !== undefined && actions.installRadar === undefined) {
+  if (radarSupported && updates.radar !== undefined && actions.installRadar === undefined) {
     page.append(element("p", "update-note", "Select a completed, available game installation to add BG Radar Overlay."));
   }
 

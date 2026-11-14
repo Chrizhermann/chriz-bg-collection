@@ -31,6 +31,24 @@ pub fn shortcut_file_name_for(flavor: &AppFlavor, display_name: &str) -> String 
     )
 }
 
+/// Produces a bounded Freedesktop `.desktop` filename for Linux launchers while preserving
+/// ordinary Unicode.
+pub fn desktop_entry_file_name(display_name: &str) -> String {
+    desktop_entry_file_name_for(crate::flavor::CURRENT, display_name)
+}
+
+/// [`desktop_entry_file_name`] for the desktop entries of one app flavor.
+pub fn desktop_entry_file_name_for(flavor: &AppFlavor, display_name: &str) -> String {
+    format!(
+        "Play {}.desktop",
+        shortcut_stem(
+            display_name,
+            MAX_SHORTCUT_STEM_UTF16 - "Play ".len(),
+            flavor
+        )
+    )
+}
+
 #[cfg(windows)]
 fn collision_file_name(request: &ShortcutRequest) -> String {
     let identity = bg_engine::digest::sha256_bytes(request.install_id.as_bytes());
@@ -121,8 +139,323 @@ pub fn create_desktop_shortcut(request: ShortcutRequest) -> Result<PathBuf, Stri
 }
 
 #[cfg(not(windows))]
-pub fn create_desktop_shortcut(_request: ShortcutRequest) -> Result<PathBuf, String> {
-    Err("Desktop shortcuts are supported only on Windows.".to_owned())
+pub fn create_desktop_shortcut(request: ShortcutRequest) -> Result<PathBuf, String> {
+    let desktop = resolve_desktop_directory()?;
+    std::fs::create_dir_all(&desktop)
+        .map_err(|error| format!("create desktop directory {}: {error}", desktop.display()))?;
+    write_desktop_entry(&desktop, &request)
+}
+
+#[cfg(any(not(windows), test))]
+fn desktop_entry_marker(install_id: &str) -> String {
+    format!("# chriz-install-id={install_id}")
+}
+
+#[cfg(not(windows))]
+#[allow(clippy::redundant_closure)]
+fn resolve_desktop_directory() -> Result<PathBuf, String> {
+    resolve_desktop_directory_with(
+        |key| std::env::var_os(key),
+        |path| std::fs::read_to_string(path),
+    )
+}
+
+#[cfg(any(not(windows), test))]
+fn resolve_desktop_directory_with(
+    get_env: impl Fn(&str) -> Option<std::ffi::OsString>,
+    read_file: impl Fn(&Path) -> std::io::Result<String>,
+) -> Result<PathBuf, String> {
+    if let Some(desktop) = get_env("XDG_DESKTOP_DIR").filter(|value| !value.is_empty()) {
+        let path = PathBuf::from(desktop);
+        if path.to_string_lossy().starts_with('/') {
+            return Ok(path);
+        }
+    }
+    let home = get_env("HOME")
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .filter(|path| path.to_string_lossy().starts_with('/'));
+    if let Some(config_home) = get_env("XDG_CONFIG_HOME")
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .filter(|path| path.to_string_lossy().starts_with('/'))
+        .or_else(|| home.as_ref().map(|h| h.join(".config")))
+    {
+        if let Ok(contents) = read_file(&config_home.join("user-dirs.dirs")) {
+            if let Some(parsed) = parse_xdg_desktop_dir(&contents, home.as_deref()) {
+                return Ok(parsed);
+            }
+        }
+    }
+    home.map(|path| path.join("Desktop")).ok_or_else(|| {
+        "Could not determine Unix desktop directory from XDG_DESKTOP_DIR or HOME.".to_owned()
+    })
+}
+
+#[cfg(any(not(windows), test))]
+fn parse_xdg_desktop_dir(contents: &str, home: Option<&Path>) -> Option<PathBuf> {
+    for raw_line in contents.lines() {
+        let line = raw_line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let Some(rest) = line.strip_prefix("XDG_DESKTOP_DIR=") else {
+            continue;
+        };
+        let value = rest.trim();
+        let unquoted = value
+            .strip_prefix('"')
+            .and_then(|s| s.strip_suffix('"'))
+            .or_else(|| value.strip_prefix('\'').and_then(|s| s.strip_suffix('\'')))
+            .unwrap_or(value);
+        if let Some(suffix) = unquoted.strip_prefix("$HOME/") {
+            let home = home?;
+            return Some(home.join(suffix));
+        }
+        if unquoted == "$HOME" {
+            return home.map(Path::to_path_buf);
+        }
+        if unquoted.starts_with('/') {
+            return Some(PathBuf::from(unquoted));
+        }
+    }
+    None
+}
+
+#[cfg(any(not(windows), test))]
+fn escape_desktop_string(value: &str) -> String {
+    let mut escaped = String::with_capacity(value.len());
+    for character in value.chars() {
+        match character {
+            '\\' => escaped.push_str("\\\\"),
+            '\n' => escaped.push_str("\\n"),
+            '\r' => escaped.push_str("\\r"),
+            '\t' => escaped.push_str("\\t"),
+            other => escaped.push(other),
+        }
+    }
+    escaped
+}
+
+#[cfg(any(not(windows), test))]
+fn escape_desktop_exec_token(token: &str) -> String {
+    let percent_escaped = token.replace('%', "%%");
+    let needs_quotes = percent_escaped.is_empty()
+        || percent_escaped.chars().any(|ch| {
+            ch.is_whitespace()
+                || matches!(
+                    ch,
+                    '"' | '\''
+                        | '\\'
+                        | '>'
+                        | '<'
+                        | '~'
+                        | '|'
+                        | '&'
+                        | ';'
+                        | '$'
+                        | '*'
+                        | '?'
+                        | '#'
+                        | '('
+                        | ')'
+                        | '`'
+                )
+        });
+    if !needs_quotes {
+        return percent_escaped;
+    }
+    let mut quoted = String::with_capacity(percent_escaped.len() + 4);
+    quoted.push('"');
+    for ch in percent_escaped.chars() {
+        if matches!(ch, '"' | '`' | '$' | '\\') {
+            quoted.push('\\');
+        }
+        quoted.push(ch);
+    }
+    quoted.push('"');
+    quoted
+}
+
+#[cfg(any(not(windows), test))]
+fn format_desktop_exec(target: &Path, arguments: &str) -> String {
+    let mut parts = vec![escape_desktop_exec_token(&target.to_string_lossy())];
+    for arg in arguments.split_whitespace() {
+        parts.push(escape_desktop_exec_token(arg));
+    }
+    parts.join(" ")
+}
+
+#[cfg(any(not(windows), test))]
+fn is_owned_desktop_entry(path: &Path, marker: &str) -> Result<bool, String> {
+    let metadata = std::fs::symlink_metadata(path)
+        .map_err(|error| format!("inspect desktop entry {}: {error}", path.display()))?;
+    if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() > 64 * 1024 {
+        return Ok(false);
+    }
+    let content = match std::fs::read_to_string(path) {
+        Ok(content) => content,
+        Err(_) => return Ok(false),
+    };
+    Ok(content.lines().any(|line| line.trim() == marker))
+}
+
+#[cfg(any(not(windows), test))]
+fn write_desktop_entry(desktop: &Path, request: &ShortcutRequest) -> Result<PathBuf, String> {
+    use std::fs;
+    use std::io::Write;
+
+    if !desktop.is_absolute()
+        || !request.target.is_absolute()
+        || !request.working_directory.is_absolute()
+    {
+        return Err("Desktop shortcut paths must be absolute.".to_owned());
+    }
+    for (label, value) in [
+        ("install_id", request.install_id.as_str()),
+        ("display_name", request.display_name.as_str()),
+        ("arguments", request.arguments.as_str()),
+    ] {
+        if value.contains('\0') || value.contains('\r') || value.contains('\n') {
+            return Err(format!(
+                "Desktop shortcut {label} cannot contain control breaks."
+            ));
+        }
+    }
+    if request.target.to_string_lossy().contains('\0')
+        || request.working_directory.to_string_lossy().contains('\0')
+    {
+        return Err("Desktop shortcut paths cannot contain null characters.".to_owned());
+    }
+
+    let product = crate::flavor::CURRENT;
+    let marker = desktop_entry_marker(&request.install_id);
+    let mut existing_owned: Option<PathBuf> = None;
+    if let Ok(entries) = fs::read_dir(desktop) {
+        let mut sorted = entries
+            .filter_map(Result::ok)
+            .map(|e| e.path())
+            .collect::<Vec<_>>();
+        sorted.sort();
+        for path in sorted {
+            if path.extension().and_then(|ext| ext.to_str()) == Some("desktop")
+                && is_owned_desktop_entry(&path, &marker)?
+            {
+                existing_owned = Some(path);
+                break;
+            }
+        }
+    }
+
+    let (destination, replacing_owned) = if let Some(owned_path) = existing_owned {
+        (owned_path, true)
+    } else {
+        let stem = shortcut_stem(
+            &request.display_name,
+            MAX_SHORTCUT_STEM_UTF16 - "Play ".len() - 12,
+            product,
+        );
+        let primary = desktop.join(desktop_entry_file_name(&request.display_name));
+        let mut candidate_slot: Option<PathBuf> = None;
+        let numbered = (2..=99).map(|index| desktop.join(format!("Play {stem} ({index}).desktop")));
+        let hash_bytes = bg_engine::digest::sha256_bytes(request.install_id.as_bytes());
+        let fallback = desktop.join(format!("Play {stem} ({}).desktop", &hash_bytes[..12]));
+        for candidate in std::iter::once(primary)
+            .chain(numbered)
+            .chain(std::iter::once(fallback))
+        {
+            match fs::symlink_metadata(&candidate) {
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                    candidate_slot = Some(candidate);
+                    break;
+                }
+                Ok(_) => continue,
+                Err(error) => {
+                    return Err(format!(
+                        "inspect desktop shortcut candidate {}: {error}",
+                        candidate.display()
+                    ))
+                }
+            }
+        }
+        let slot = candidate_slot.ok_or_else(|| {
+            format!(
+                "Could not find an unused desktop entry filename in {} for this {} installation.",
+                desktop.display(),
+                product.short_name
+            )
+        })?;
+        (slot, false)
+    };
+
+    let clean_name = request
+        .display_name
+        .chars()
+        .filter(|ch| !ch.is_control())
+        .collect::<String>();
+    let display_name = if clean_name.trim().is_empty() {
+        product.product_name.to_owned()
+    } else {
+        clean_name.trim().to_owned()
+    };
+    let contents = format!(
+        "[Desktop Entry]\n\
+         Version=1.0\n\
+         Type=Application\n\
+         Name={name}\n\
+         Comment={comment}\n\
+         Exec={exec}\n\
+         Path={work}\n\
+         Terminal=false\n\
+         Categories=Game;\n\
+         {marker}\n",
+        name = escape_desktop_string(&format!("Play {display_name}")),
+        comment = escape_desktop_string(&format!("{} launcher", product.product_name)),
+        exec = format_desktop_exec(&request.target, &request.arguments),
+        work = escape_desktop_string(&request.working_directory.to_string_lossy()),
+    );
+
+    let mut temp = tempfile::Builder::new()
+        .prefix(".chriz-desktop-")
+        .suffix(".tmp")
+        .tempfile_in(desktop)
+        .map_err(|error| {
+            format!(
+                "create temporary desktop entry in {}: {error}",
+                desktop.display()
+            )
+        })?;
+    temp.write_all(contents.as_bytes())
+        .and_then(|()| temp.flush())
+        .map_err(|error| format!("write desktop entry {}: {error}", destination.display()))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(temp.path(), fs::Permissions::from_mode(0o755)).map_err(|error| {
+            format!(
+                "set executable permission on desktop entry {}: {error}",
+                destination.display()
+            )
+        })?;
+    }
+    if replacing_owned {
+        temp.persist(&destination).map_err(|error| {
+            format!(
+                "update desktop entry {}: {}",
+                destination.display(),
+                error.error
+            )
+        })?;
+    } else {
+        temp.persist_noclobber(&destination).map_err(|error| {
+            format!(
+                "save desktop entry {}: {}",
+                destination.display(),
+                error.error
+            )
+        })?;
+    }
+    Ok(destination)
 }
 
 #[cfg(all(windows, test))]
@@ -610,5 +943,86 @@ mod tests {
             &fs::symlink_metadata(&original).expect("inspect preserved shortcut reparse fixture"),
         ));
         assert_eq!(fs::read(protected).expect("read protected target"), bytes);
+    }
+
+    #[test]
+    fn desktop_entry_writes_updates_owned_and_avoids_foreign_collision() {
+        let desktop = tempfile::tempdir().expect("create desktop dir");
+        let exe_dir = tempfile::tempdir().expect("create exe dir");
+        let work_dir = tempfile::tempdir().expect("create work dir");
+        let exe_path = exe_dir.path().join("chriz easy bg 100%");
+        let mut request = ShortcutRequest {
+            install_id: "campaign-1".to_owned(),
+            display_name: "My Campaign".to_owned(),
+            target: exe_path.clone(),
+            arguments: "--install-id=campaign-1".to_owned(),
+            working_directory: work_dir.path().to_path_buf(),
+        };
+
+        let created = write_desktop_entry(desktop.path(), &request).expect("write desktop entry");
+        assert_eq!(
+            created.file_name().and_then(|n| n.to_str()),
+            Some("Play My Campaign.desktop")
+        );
+        let text = fs::read_to_string(&created).expect("read desktop entry");
+        assert!(text.contains("Name=Play My Campaign\n"));
+        assert!(text.contains("# chriz-install-id=campaign-1\n"));
+        assert!(text.contains("100%%"));
+
+        // Renaming the campaign still updates the existing owned `.desktop` entry rather than leaving duplicates.
+        request.display_name = "Renamed Campaign".to_owned();
+        let updated =
+            write_desktop_entry(desktop.path(), &request).expect("update owned desktop entry");
+        assert_eq!(updated, created);
+        let updated_text = fs::read_to_string(&updated).expect("read updated desktop entry");
+        assert!(updated_text.contains("Name=Play Renamed Campaign\n"));
+
+        // Another campaign collides on filename against an unowned entry and gets a numbered slot.
+        let occupied = desktop.path().join("Play Other Run.desktop");
+        fs::write(&occupied, "[Desktop Entry]\nName=Foreign\n")
+            .expect("write foreign desktop file");
+        let other = ShortcutRequest {
+            install_id: "campaign-2".to_owned(),
+            display_name: "Other Run".to_owned(),
+            target: exe_path,
+            arguments: "--install-id=campaign-2".to_owned(),
+            working_directory: work_dir.path().to_path_buf(),
+        };
+        let second = write_desktop_entry(desktop.path(), &other).expect("avoid foreign collision");
+        assert_eq!(
+            second.file_name().and_then(|n| n.to_str()),
+            Some("Play Other Run (2).desktop")
+        );
+        assert_eq!(
+            fs::read_to_string(&occupied).expect("preserve foreign desktop file"),
+            "[Desktop Entry]\nName=Foreign\n"
+        );
+    }
+
+    #[test]
+    fn unix_desktop_directory_resolves_xdg_env_and_user_dirs() {
+        let from_env = resolve_desktop_directory_with(
+            |key| match key {
+                "XDG_DESKTOP_DIR" => Some(std::ffi::OsString::from("/custom/Desktop")),
+                "HOME" => Some(std::ffi::OsString::from("/home/deck")),
+                _ => None,
+            },
+            |_| Err(std::io::Error::from(std::io::ErrorKind::NotFound)),
+        )
+        .expect("resolve XDG_DESKTOP_DIR");
+        assert_eq!(from_env, PathBuf::from("/custom/Desktop"));
+
+        let from_user_dirs = resolve_desktop_directory_with(
+            |key| match key {
+                "HOME" => Some(std::ffi::OsString::from("/home/deck")),
+                _ => None,
+            },
+            |path| {
+                assert_eq!(path, Path::new("/home/deck/.config/user-dirs.dirs"));
+                Ok("# comment\nXDG_DESKTOP_DIR=\"$HOME/Schreibtisch\"\n".to_owned())
+            },
+        )
+        .expect("parse user-dirs.dirs");
+        assert_eq!(from_user_dirs, PathBuf::from("/home/deck/Schreibtisch"));
     }
 }

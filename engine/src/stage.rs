@@ -1575,15 +1575,13 @@ fn source_metadata_identity(_path: &Path, metadata: &fs::Metadata) -> Result<Str
     use std::os::unix::fs::MetadataExt;
 
     Ok(format!(
-        "{}:{}:{}:{}:{}:{}:{}:{}",
+        "{}:{}:{}:{}:{}:{}",
         metadata.dev(),
         metadata.ino(),
         metadata.mode(),
         metadata.size(),
         metadata.mtime(),
         metadata.mtime_nsec(),
-        metadata.ctime(),
-        metadata.ctime_nsec(),
     ))
 }
 
@@ -1597,6 +1595,7 @@ fn source_metadata_identity(path: &Path, metadata: &fs::Metadata) -> Result<Stri
     ))
 }
 
+#[cfg_attr(not(windows), allow(dead_code))]
 fn file_identity_hash(path: &Path) -> Result<u64> {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
