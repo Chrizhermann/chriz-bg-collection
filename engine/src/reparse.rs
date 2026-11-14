@@ -177,7 +177,14 @@ pub fn ensure_existing_ancestors_are_directories(root: &Path) -> io::Result<()> 
                     ));
                 }
             }
-            Err(error) if error.kind() == io::ErrorKind::NotFound => continue,
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    io::ErrorKind::NotFound | io::ErrorKind::NotADirectory
+                ) =>
+            {
+                continue;
+            }
             Err(error) => return Err(error),
         }
     }
@@ -200,6 +207,12 @@ pub fn ensure_existing_ancestors_are_directories(root: &Path) -> io::Result<()> 
             }
         }
         Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+        Err(error) if error.kind() == io::ErrorKind::NotADirectory => {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("{} is not a direct non-reparse directory", root.display()),
+            ));
+        }
         Err(error) => return Err(error),
     }
     Ok(())

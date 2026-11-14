@@ -8376,8 +8376,11 @@ mod tests {
             },
             artifact_identities: Vec::new(),
             tool_identities: Vec::new(),
-            staged_bg1: frozen.bg1.as_ref().map(|_| managed.join("bg1")),
-            staged_bg2: managed.join("game"),
+            staged_bg1: frozen
+                .bg1
+                .as_ref()
+                .map(|_| PathBuf::from(r"C:\Legacy Managed Install\bg1")),
+            staged_bg2: PathBuf::from(r"C:\Legacy Managed Install\game"),
         }
     }
 
@@ -8963,7 +8966,7 @@ mod tests {
         .expect("serialize review identity");
         let engine_name = "Chriz Easy BG - abc123def456".to_owned();
         let save_root = PathBuf::from(r"C:\Users\Player\Documents\Chriz Easy BG - abc123def456");
-        let launch_path = created.staged_bg2.join("Baldur.exe");
+        let launch_path = PathBuf::from(r"C:\Legacy Managed Install\game\Baldur.exe");
         let component = |component| LogComponentReceipt {
             tp2: "ee_fixpack/ee_fixpack.tp2".to_owned(),
             language: 0,
@@ -9086,7 +9089,10 @@ mod tests {
             panic!("legacy ledger record 0 is not a campaign creation");
         };
         assert!(!created.is_standalone());
-        assert_eq!(created.staged_bg1, Some(created.managed_root.join("bg1")));
+        assert_eq!(
+            created.staged_bg1,
+            Some(PathBuf::from(r"C:\Legacy Managed Install\bg1"))
+        );
         validate_frozen_cli_recipe(&created, &frozen).expect("legacy campaign stays resumable");
 
         let review = legacy_eet_golden("review-identity.json");

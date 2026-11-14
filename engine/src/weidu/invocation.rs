@@ -489,7 +489,11 @@ pub fn parse_weidu_version_output(stdout: &[u8]) -> Result<String, InvocationErr
 fn read_pe_machine(path: &Path, bytes: &[u8]) -> Result<PeMachine, InvocationError> {
     #[cfg(unix)]
     {
-        parse_elf_machine(path, bytes)
+        if bytes.starts_with(b"\x7fELF") {
+            parse_elf_machine(path, bytes)
+        } else {
+            parse_pe_machine(path, bytes)
+        }
     }
     #[cfg(not(unix))]
     {
@@ -497,7 +501,6 @@ fn read_pe_machine(path: &Path, bytes: &[u8]) -> Result<PeMachine, InvocationErr
     }
 }
 
-#[cfg_attr(unix, allow(dead_code))]
 fn parse_pe_machine(path: &Path, bytes: &[u8]) -> Result<PeMachine, InvocationError> {
     if bytes.len() < 0x40 || &bytes[..2] != b"MZ" {
         return Err(InvocationError::InvalidToolPe {

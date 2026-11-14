@@ -1575,15 +1575,13 @@ fn source_metadata_identity(_path: &Path, metadata: &fs::Metadata) -> Result<Str
     use std::os::unix::fs::MetadataExt;
 
     Ok(format!(
-        "{}:{}:{}:{}:{}:{}:{}:{}",
+        "{}:{}:{}:{}:{}:{}",
         metadata.dev(),
         metadata.ino(),
         metadata.mode(),
         metadata.size(),
         metadata.mtime(),
         metadata.mtime_nsec(),
-        metadata.ctime(),
-        metadata.ctime_nsec(),
     ))
 }
 
