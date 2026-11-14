@@ -386,7 +386,7 @@ fn failed_component_rolls_back_while_successful_prefix_reconciles() {
 #[ignore = "requires CHRIZ_WEIDU_EXE pointing to the pinned WeiDU binary"]
 fn weidu_goes_on_after_a_failed_component_and_the_evidence_says_so() {
     let harness = Harness::new();
-    let components = [0, 30, 10];
+    let components = [0, 30, 70];
     let invocation = harness.invocation(
         "goes-on",
         InvocationMode::SetupName,
@@ -408,7 +408,7 @@ fn weidu_goes_on_after_a_failed_component_and_the_evidence_says_so() {
         ),
         Reconciliation::FailedAmong {
             failed: vec![30],
-            installed_after: vec![10],
+            installed_after: vec![70],
         },
         "before:\n{}\nafter:\n{}\noutput:\n{}\ndebug:\n{}",
         evidence.before_log,
@@ -425,7 +425,7 @@ fn weidu_goes_on_after_a_failed_component_and_the_evidence_says_so() {
         "the failing component's file survived WeiDU rollback"
     );
     harness.assert_protected_unchanged();
-    harness.assert_override_publications(&["tmcopy.ids", "tmfolder.txt"]);
+    harness.assert_override_publications(&["tmcopy.ids", "tmafter.ids"]);
 }
 
 /// A component can fail before it asks its prompt. WeiDU goes on to the next one, and that one's
