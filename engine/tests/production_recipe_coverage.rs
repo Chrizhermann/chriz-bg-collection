@@ -236,6 +236,7 @@ fn blocked_and_blank_rows_never_resolve_and_no_legacy_fix_installer_is_present()
             "buffbot",
             "chriz-bg-modpack",
             "chriz-bg-rebalance",
+            "chriz-overhead-text",
             "chriz-sod-remix",
             "crossmodbg2",
             "dlcmerger",

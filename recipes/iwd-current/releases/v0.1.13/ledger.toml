@@ -1,0 +1,19 @@
+schema = 1
+recipe_id = "chriz-easy-iwd"
+version = "0.1.13"
+published_at = "2026-11-16T00:00:00Z"
+minimum_app_version = "0.1.1"
+supersedes = "0.1.10"
+
+[[changes]]
+id = "chriz-overhead-text"
+title = "Spoken overhead text stays visible above Tab nameplates and HP Over Head"
+summary = "Chriz Overhead Text v0.1.0 keeps spoken overhead lines visible when Reveal Details (Tab) or HP Over Head is active and stacks them 4 px above the nameplate instead of letting the nameplate hide them. It comes with new installations (with EEex); a game in progress keeps its overhead text behaviour."
+save_applicability = "new-game-only"
+urgency = "informational"
+covers = [
+  "artifact:chriz-overhead-text-0.1.0",
+  "feature:mod:chriz-overhead-text",
+  "feature:feature:chriz-overhead-text:component-0",
+  "run:chriz-overhead-text-main",
+]

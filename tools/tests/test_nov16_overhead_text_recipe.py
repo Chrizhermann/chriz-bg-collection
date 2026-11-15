@@ -170,6 +170,16 @@ class Nov16ChrizOverheadTextIntakeTests(unittest.TestCase):
                 row for row in acceptance["evidence"] if row["subject_id"] == subject_id
             )
             self.assertEqual(record["commit"], "626e0bce8cdf7678df32354b2309daf5e7dc657f")
+        iwd_ledger = load(ROOT / "recipes/iwd-current/releases/v0.1.13/ledger.toml")
+        self.assertEqual(iwd_ledger["supersedes"], "0.1.10")
+        self.assertIn(MOD, {change["id"] for change in iwd_ledger["changes"]})
+        iwd_catalog = load(ROOT / "hotpatches/iwd/catalog.toml")
+        base = next(row for row in iwd_catalog["bases"] if row["recipe_version"] == "0.1.13")
+        self.assertEqual(base["id"], "iwd-0.1.13")
+        self.assertEqual(
+            base["content_sha256"],
+            "3540064fb278f30e240eedec4d0a2e43aebc6f16e3ba0fa5ee11fd4630c521b8",
+        )
 
 
 if __name__ == "__main__":
