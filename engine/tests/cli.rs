@@ -1,3 +1,5 @@
+#![cfg_attr(not(windows), allow(dead_code, unused_imports))]
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::{BufRead, BufReader, Cursor, Write};
@@ -685,15 +687,20 @@ fn install_versioned_game_executable(
     profile_name: &str,
     game_executable: &str,
 ) {
-    let system_root = std::env::var_os("SystemRoot").expect("SystemRoot for Windows fixture");
-    let executable = PathBuf::from(system_root).join("System32/notepad.exe");
-    let version = SystemFileSystem
-        .product_version(&executable)
-        .expect("read fixture PE ProductVersion");
     let old_bytes = fs::read(game.join(game_executable)).expect("read old fixture executable");
-    let new_bytes = fs::read(&executable).expect("read versioned fixture executable");
-    fs::write(game.join(game_executable), &new_bytes)
-        .expect("install versioned fixture executable");
+    #[cfg(windows)]
+    let new_bytes = {
+        let system_root = std::env::var_os("SystemRoot").expect("SystemRoot for Windows fixture");
+        let executable = PathBuf::from(system_root).join("System32/notepad.exe");
+        fs::read(&executable).expect("read versioned fixture executable")
+    };
+    #[cfg(not(windows))]
+    let new_bytes = minimal_pe_with_product_version(2, 7, 3, 0);
+    let installed = game.join(game_executable);
+    fs::write(&installed, &new_bytes).expect("install versioned fixture executable");
+    let version = SystemFileSystem
+        .product_version(&installed)
+        .expect("read fixture PE ProductVersion");
     let profile = recipe.join("game-builds").join(profile_name);
     let text = fs::read_to_string(&profile)
         .expect("read fixture profile")
@@ -703,6 +710,88 @@ fn install_versioned_game_executable(
         )
         .replace(&sha256_bytes(&old_bytes), &sha256_bytes(&new_bytes));
     fs::write(profile, text).expect("write executable fixture profile");
+}
+
+#[cfg(not(windows))]
+fn minimal_pe_with_product_version(major: u16, minor: u16, patch: u16, build: u16) -> Vec<u8> {
+    fn write_u16_le(buf: &mut [u8], offset: usize, value: u16) {
+        buf[offset..offset + 2].copy_from_slice(&value.to_le_bytes());
+    }
+
+    fn write_u32_le(buf: &mut [u8], offset: usize, value: u32) {
+        buf[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+    }
+
+    let mut pe = vec![0_u8; 0x400];
+    pe[0..2].copy_from_slice(b"MZ");
+    write_u32_le(&mut pe, 0x3C, 0x40);
+    pe[0x40..0x44].copy_from_slice(b"PE\0\0");
+
+    // COFF header at 0x44
+    write_u16_le(&mut pe, 0x44, 0x8664); // AMD64
+    write_u16_le(&mut pe, 0x46, 1); // NumberOfSections
+    write_u16_le(&mut pe, 0x54, 0xF0); // SizeOfOptionalHeader
+    write_u16_le(&mut pe, 0x56, 0x0022); // Characteristics
+
+    // Optional header PE32+ at 0x58
+    write_u16_le(&mut pe, 0x58, 0x020B);
+    write_u32_le(&mut pe, 0x78, 0x1000); // SectionAlignment
+    write_u32_le(&mut pe, 0x7C, 0x200); // FileAlignment
+    write_u32_le(&mut pe, 0x90, 0x2000); // SizeOfImage
+    write_u32_le(&mut pe, 0x94, 0x200); // SizeOfHeaders
+    write_u32_le(&mut pe, 0xC4, 16); // NumberOfRvaAndSizes
+                                     // DataDirectory[2] = IMAGE_DIRECTORY_ENTRY_RESOURCE at 0x58 + 112 + 16 = 0xD8
+    write_u32_le(&mut pe, 0xD8, 0x1000);
+    write_u32_le(&mut pe, 0xDC, 0x200);
+
+    // .rsrc section header at 0x148
+    pe[0x148..0x150].copy_from_slice(b".rsrc\0\0\0");
+    write_u32_le(&mut pe, 0x150, 0x200); // VirtualSize
+    write_u32_le(&mut pe, 0x154, 0x1000); // VirtualAddress
+    write_u32_le(&mut pe, 0x158, 0x200); // SizeOfRawData
+    write_u32_le(&mut pe, 0x15C, 0x200); // PointerToRawData
+    write_u32_le(&mut pe, 0x16C, 0x4000_0040);
+
+    // .rsrc payload at file offset 0x200 (RVA 0x1000)
+    let rsrc = 0x200;
+    write_u16_le(&mut pe, rsrc + 0x0E, 1); // root: 1 id entry
+    write_u32_le(&mut pe, rsrc + 0x10, 16); // RT_VERSION
+    write_u32_le(&mut pe, rsrc + 0x14, 0x8000_0018);
+
+    write_u16_le(&mut pe, rsrc + 0x18 + 0x0E, 1); // id dir
+    write_u32_le(&mut pe, rsrc + 0x28, 1); // id = 1
+    write_u32_le(&mut pe, rsrc + 0x2C, 0x8000_0030);
+
+    write_u16_le(&mut pe, rsrc + 0x30 + 0x0E, 1); // lang dir
+    write_u32_le(&mut pe, rsrc + 0x40, 0x0409);
+    write_u32_le(&mut pe, rsrc + 0x44, 0x48);
+
+    // IMAGE_RESOURCE_DATA_ENTRY at rsrc + 0x48
+    write_u32_le(&mut pe, rsrc + 0x48, 0x1058); // RVA of VS_VERSION_INFO
+    write_u32_le(&mut pe, rsrc + 0x4C, 0x5C); // Size = 92 bytes
+
+    // VS_VERSION_INFO at rsrc + 0x58
+    let ver = rsrc + 0x58;
+    write_u16_le(&mut pe, ver, 0x5C); // wLength
+    write_u16_le(&mut pe, ver + 2, 52); // wValueLength
+    write_u16_le(&mut pe, ver + 4, 0); // wType (binary)
+    for (i, unit) in "VS_VERSION_INFO\0".encode_utf16().enumerate() {
+        write_u16_le(&mut pe, ver + 6 + i * 2, unit);
+    }
+    let fixed = rsrc + 0x80;
+    write_u32_le(&mut pe, fixed, 0xFEEF_04BD); // dwSignature
+    write_u32_le(&mut pe, fixed + 4, 0x0001_0000); // dwStrucVersion
+    write_u32_le(
+        &mut pe,
+        fixed + 16,
+        (u32::from(major) << 16) | u32::from(minor),
+    );
+    write_u32_le(
+        &mut pe,
+        fixed + 20,
+        (u32::from(patch) << 16) | u32::from(build),
+    );
+    pe
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -779,6 +868,7 @@ fn executable_command(fixture: &ExecutableFixture) -> Command {
     let mut command = cli();
     command
         .env("LOCALAPPDATA", &fixture.app_data)
+        .env("XDG_DATA_HOME", &fixture.app_data)
         .env(TEST_DOCUMENTS_VARIABLE, &fixture.documents)
         .env("CHRIZ_TEST_MOCK_WEIDU_TP2", "EE_Fixpack/EE_Fixpack.tp2");
     command
@@ -1767,6 +1857,7 @@ fn install_group_switch_sees_an_explicit_prerequisite_override() {
         args.extend_from_slice(extra);
         let output = cli()
             .env("LOCALAPPDATA", &app_data)
+            .env("XDG_DATA_HOME", &app_data)
             .args(&args)
             .output()
             .expect("run guarded install");
@@ -1888,6 +1979,7 @@ fn path_errors_and_games_missing_required_files_fail_closed() {
     let mut command = cli();
     command
         .env("LOCALAPPDATA", &app_data)
+        .env("XDG_DATA_HOME", &app_data)
         .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
     let output = command.output().expect("run guarded install");
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
@@ -1910,6 +2002,7 @@ fn target_lock_contention_is_a_distinct_failure() {
     let mut command = cli();
     command
         .env("LOCALAPPDATA", &app_data)
+        .env("XDG_DATA_HOME", &app_data)
         .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
     let output = command.output().expect("run contending install");
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
@@ -1931,6 +2024,7 @@ fn source_target_overlap_is_rejected_before_campaign_state_is_created() {
     let mut command = cli();
     command
         .env("LOCALAPPDATA", &app_data)
+        .env("XDG_DATA_HOME", &app_data)
         .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
     let output = command.output().expect("run overlapping install");
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
@@ -1946,6 +2040,7 @@ fn campaign_identity_freezes_payload_archives_and_extracted_tool_bytes_separatel
     let mut command = cli();
     command
         .env("LOCALAPPDATA", &app_data)
+        .env("XDG_DATA_HOME", &app_data)
         .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
     let output = command.output().expect("start guarded campaign");
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
@@ -1988,6 +2083,7 @@ fn install_against_an_existing_campaign_is_not_silently_treated_as_resume() {
         let mut command = cli();
         command
             .env("LOCALAPPDATA", &app_data)
+            .env("XDG_DATA_HOME", &app_data)
             .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
         command.output().expect("run guarded install")
     };
@@ -2014,6 +2110,7 @@ fn resume_uses_the_frozen_recipe_and_report_and_diagnostics_remain_available() {
     let mut install = cli();
     install
         .env("LOCALAPPDATA", &app_data)
+        .env("XDG_DATA_HOME", &app_data)
         .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
     let installed = install.output().expect("start guarded campaign");
     assert_eq!(installed.status.code(), Some(1), "{}", stderr(&installed));
@@ -2029,6 +2126,7 @@ fn resume_uses_the_frozen_recipe_and_report_and_diagnostics_remain_available() {
     let mut resume = cli();
     resume
         .env("LOCALAPPDATA", &app_data)
+        .env("XDG_DATA_HOME", &app_data)
         .args(["--json", "resume", managed.to_str().unwrap()]);
     let resumed = resume.output().expect("resume guarded campaign");
     assert_eq!(resumed.status.code(), Some(1), "{}", stderr(&resumed));
@@ -2062,6 +2160,7 @@ fn report_rejects_a_receipt_whose_attempt_directory_or_campaign_identity_is_forg
     let mut install = cli();
     install
         .env("LOCALAPPDATA", &app_data)
+        .env("XDG_DATA_HOME", &app_data)
         .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
     let installed = install.output().expect("start guarded campaign");
     assert_eq!(installed.status.code(), Some(1), "{}", stderr(&installed));
@@ -2103,6 +2202,7 @@ fn report_rejects_a_failed_receipt_missing_a_planned_run_row() {
     let mut install = cli();
     install
         .env("LOCALAPPDATA", &app_data)
+        .env("XDG_DATA_HOME", &app_data)
         .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
     let installed = install.output().expect("start guarded campaign");
     assert_eq!(installed.status.code(), Some(1), "{}", stderr(&installed));
@@ -2643,6 +2743,7 @@ fn a_preset_answer_leaves_a_failed_optional_run_out_and_the_installation_complet
     // The receipt verifies against the ledger, as every completed installation's does.
     let report = cli()
         .env("LOCALAPPDATA", &fixture.app_data)
+        .env("XDG_DATA_HOME", &fixture.app_data)
         .args(["--json", "report", fixture.managed.to_str().unwrap()])
         .output()
         .expect("run report");
@@ -4471,7 +4572,6 @@ fn console_lines(response: &Value) -> Vec<String> {
         .collect()
 }
 
-#[cfg(windows)]
 fn read_install_receipt(fixture: &ExecutableFixture) -> InstallReceipt {
     serde_json::from_slice(
         &fs::read(fixture.managed.join(".chriz/install-receipt.json"))
@@ -8276,6 +8376,7 @@ fn standalone_command(fixture: &StandaloneFixture) -> Command {
     let mut command = cli();
     command
         .env("LOCALAPPDATA", &fixture.app_data)
+        .env("XDG_DATA_HOME", &fixture.app_data)
         .env("CHRIZ_BG_COLLECTION_TEST_DOCUMENTS", &fixture.documents)
         .env("CHRIZ_TEST_MOCK_WEIDU_TP2", "IWD_Fix/IWD_Fix.tp2");
     command
@@ -8560,6 +8661,7 @@ fn a_conflicting_application_data_folder_is_rejected_before_anything_changes() {
     fs::create_dir(&cache).unwrap();
     let mut eet = cli();
     eet.env("LOCALAPPDATA", temp.path().join("app-data"))
+        .env("XDG_DATA_HOME", temp.path().join("app-data"))
         .args(["--app-data-directory", IWD_APP_DATA])
         .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
     let output = eet.output().expect("run EET install with another folder");
@@ -8665,6 +8767,7 @@ fn recipes_reject_sources_shaped_for_the_other_game() {
     let mut command = cli();
     command
         .env("LOCALAPPDATA", temp.path().join("app-data"))
+        .env("XDG_DATA_HOME", temp.path().join("app-data"))
         .args([
             "--json",
             "install",
@@ -8709,6 +8812,7 @@ fn legacy_eet_campaign_is_resumed_and_completed_by_this_engine() {
         command
             .env("CHRIZ_BG_COLLECTION_TEST_RUNNING_EXECUTABLES", "")
             .env("LOCALAPPDATA", &fixture.app_data)
+            .env("XDG_DATA_HOME", &fixture.app_data)
             .env("CHRIZ_BG_COLLECTION_TEST_DOCUMENTS", &fixture.documents)
             .env("CHRIZ_TEST_MOCK_WEIDU_TP2", "EE_Fixpack/EE_Fixpack.tp2")
             .args(install_args(
@@ -8932,6 +9036,7 @@ fn resume_refuses_a_campaign_inside_its_application_data_folder() {
     let mut resume = standalone_command(&fixture);
     resume
         .env("LOCALAPPDATA", &other_local)
+        .env("XDG_DATA_HOME", &other_local)
         .args(["--json", "resume", managed.to_str().unwrap()]);
     let output = resume.output().expect("resume inside application data");
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));

@@ -3659,7 +3659,12 @@ fn claim_new_root(root: &Path) -> Result<(), OrchestratorError> {
                 }
                 break;
             }
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory
+                ) =>
+            {
                 missing.push(existing.to_path_buf());
                 existing = existing
                     .parent()
@@ -3828,7 +3833,12 @@ fn prospective_identity(path: &Path) -> Result<PathBuf, OrchestratorError> {
                 }
                 return Ok(canonical);
             }
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory
+                ) =>
+            {
                 let name = existing
                     .file_name()
                     .ok_or_else(|| OrchestratorError::UnsafeTarget {

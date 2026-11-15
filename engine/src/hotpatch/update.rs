@@ -155,11 +155,9 @@ fn plain_version(version: &str) -> String {
 }
 
 fn installed(game: &Path, tp2_key: &str) -> Result<Option<Installed>, String> {
-    let all = parse_active_entries(&String::from_utf8_lossy(&files::read(
-        &game.join("WeiDU.log"),
-        LOG_LIMIT,
-    )?))
-    .map_err(files::err)?;
+    let log = crate::weidu::log::resolve_weidu_log(game).map_err(files::err)?;
+    let all = parse_active_entries(&String::from_utf8_lossy(&files::read(&log, LOG_LIMIT)?))
+        .map_err(files::err)?;
     let own = all
         .iter()
         .enumerate()
@@ -956,7 +954,7 @@ pub(super) fn plan(
         return Err("The release does not publish exactly the mod's folder.".into());
     }
     let old_facts = tp2_facts(&String::from_utf8_lossy(&files::read(
-        &ctx.game().join(&tp2),
+        &files::resolve_relative(&ctx.game(), &tp2)?,
         TP2_LIMIT,
     )?));
     let backup_folder = old_facts
@@ -1043,7 +1041,7 @@ pub(super) fn plan(
 /// Every existing file the run may replace or remove: WeiDU's own files, the mod's folder,
 /// WeiDU's records of it, and every file its uninstall lists name.
 fn saved_names(game: &Path, current: &GameFiles, p: &Plan) -> Result<BTreeSet<String>, String> {
-    let read = |name: &str| files::read(&game.join(name), LIST_LIMIT);
+    let read = |name: &str| files::read(&files::resolve_relative(game, name)?, LIST_LIMIT);
     let mut names = transaction::guarded(current, &p.language)
         .into_keys()
         .collect::<BTreeSet<_>>();
@@ -1097,12 +1095,13 @@ pub(super) fn prepare(
     }
     let copy = dir.join("weidu.exe");
     files::create(&copy, &files::read(tool, 16 * 1024 * 1024)?)?;
+    crate::weidu::host_tool::ensure_executable(&copy).map_err(files::err)?;
     if files::hash(&copy)? != tool_sha256 {
         return Err("The WeiDU copy changed.".into());
     }
     let mut saved = BTreeMap::new();
     for name in &saved_names {
-        let bytes = files::read(&ctx.game().join(name), COPY_LIMIT)?;
+        let bytes = files::read(&files::resolve_relative(&ctx.game(), name)?, COPY_LIMIT)?;
         let hash = sha256_bytes(&bytes);
         if current.files.get(name).map(|identity| &identity.sha256) != Some(&hash) {
             return Err(format!(
@@ -1148,9 +1147,10 @@ fn execute(
     place_release(ctx, dir, p)?;
     hide_later_rows(ctx, dir, p)?;
     let evidence = transaction::invoke_weidu(ctx, dir, p, false)?;
+    let log = crate::weidu::log::resolve_weidu_log(&ctx.game()).map_err(files::err)?;
     reinstalled_as_planned(
         &files::read(&dir.join("affected/weidu.log"), LOG_LIMIT)?,
-        &files::read(&ctx.game().join("WeiDU.log"), LOG_LIMIT)?,
+        &files::read(&log, LOG_LIMIT)?,
         &evidence,
         p,
         new_version,
@@ -1240,9 +1240,10 @@ pub(super) fn put_later_rows_back(
     p: &Prepared,
 ) -> Result<(), String> {
     let update = p.update.as_ref().ok_or("Not an update record.")?;
+    let log = crate::weidu::log::resolve_weidu_log(&ctx.game()).map_err(files::err)?;
     let merged = merged_log(
         &files::read(&dir.join("affected/weidu.log"), LOG_LIMIT)?,
-        &files::read(&ctx.game().join("WeiDU.log"), LOG_LIMIT)?,
+        &files::read(&log, LOG_LIMIT)?,
         &update.tp2,
     )?;
     let rows = parse_active_entries(&String::from_utf8_lossy(&merged)).map_err(files::err)?;
@@ -1444,7 +1445,7 @@ pub(super) fn record_applied(
     )?;
     own.extend(owned_files(
         &after,
-        |name| files::read(&ctx.game().join(name), LIST_LIMIT),
+        |name| files::read(&files::resolve_relative(&ctx.game(), name)?, LIST_LIMIT),
         &update.backup_folder,
         &p.package.components,
     )?);

@@ -13,7 +13,6 @@ use crate::resolve::PlannedRun;
 
 pub(crate) const LEGACY_FAILURE: &str = "explicit-relative-TP2 invocation is unavailable until the signed recipe schema records separately reviewed compatibility evidence; use setup-name mode";
 const ARCHIVE_SHA256: &str = "4bb0b81414b4198b866c3e7f2473479c7d1ee1f1a1bacd15c0e98913d5b83055";
-const TOOL_SHA256: &str = "ad70f5897a6d0ba4b0d226f845a9b14cf345f56cc9697ca8d05cac9fe4932c1a";
 
 /// Match the shipped mistake, not arbitrary explicit-mode recipes or other UI releases.
 pub(crate) fn reviewed(
@@ -22,6 +21,9 @@ pub(crate) fn reviewed(
     artifact: &Artifact,
     tool: &Artifact,
 ) -> bool {
+    let expected_archive = crate::weidu::host_tool::active_weidu_archive_sha256();
+    let expected_exe = crate::weidu::host_tool::active_weidu_exe_sha256();
+    let expected_length = crate::weidu::host_tool::active_weidu_exe_length();
     run.run_id == "game-interface-infinity-bg2"
         && run.mod_id == "infinity-ui"
         && mod_file.id == run.mod_id
@@ -40,11 +42,11 @@ pub(crate) fn reviewed(
         && run.weidu_artifact_id == "weidu-249-amd64"
         && mod_file.weidu_artifact_id == run.weidu_artifact_id
         && tool.id == run.weidu_artifact_id
-        && tool.source.sha256 == "b156910cbec69359fc2e42f6739aa959d49047d6fd3dc172f6bed88ffad8f927"
-        && tool
-            .tool
-            .as_ref()
-            .is_some_and(|spec| spec.sha256 == TOOL_SHA256 && spec.expected_length == 1_364_992)
+        && tool.source.sha256.eq_ignore_ascii_case(expected_archive)
+        && tool.tool.as_ref().is_some_and(|spec| {
+            spec.sha256.eq_ignore_ascii_case(expected_exe)
+                && spec.expected_length == expected_length
+        })
 }
 
 #[derive(Debug, Serialize)]
@@ -65,7 +67,7 @@ pub(crate) fn prepare(root: &Path) -> Result<Evidence, String> {
         fix_id: "infinity-ui-1.28-setup-name-v1",
         archive_sha256: ARCHIVE_SHA256,
         tp2_sha256,
-        weidu_sha256: TOOL_SHA256,
+        weidu_sha256: crate::weidu::host_tool::active_weidu_exe_sha256(),
         original_mode: InvocationMode::ExplicitTp2,
         effective_mode: InvocationMode::SetupName,
     })
@@ -157,7 +159,9 @@ mod tests {
         let mut mod_file = manifest.mods["infinity-ui"].clone();
         mod_file.invocation_mode = InvocationMode::ExplicitTp2;
         let artifact = &manifest.artifacts["infinity-ui-1.28"];
-        let tool = &manifest.artifacts["weidu-249-amd64"];
+        let tool = crate::weidu::host_tool::adapt_artifact_for_host(
+            &manifest.artifacts["weidu-249-amd64"],
+        );
         let run = PlannedRun {
             run_id: "game-interface-infinity-bg2".into(),
             mod_id: mod_file.id.clone(),
@@ -170,31 +174,31 @@ mod tests {
             weidu_artifact_id: tool.id.clone(),
             prompt_scripts: vec![],
         };
-        assert!(reviewed(&run, &mod_file, artifact, tool));
+        assert!(reviewed(&run, &mod_file, artifact, &tool));
         let mut changed = mod_file.clone();
         changed.invocation_mode = InvocationMode::SetupName;
-        assert!(!reviewed(&run, &changed, artifact, tool));
+        assert!(!reviewed(&run, &changed, artifact, &tool));
         changed = mod_file.clone();
         changed.language = 1;
-        assert!(!reviewed(&run, &changed, artifact, tool));
+        assert!(!reviewed(&run, &changed, artifact, &tool));
         changed = mod_file.clone();
         changed.tp2 = "other/infinity_ui.tp2".into();
-        assert!(!reviewed(&run, &changed, artifact, tool));
+        assert!(!reviewed(&run, &changed, artifact, &tool));
         let mut changed = artifact.clone();
         changed.source.sha256 = "00".repeat(32);
-        assert!(!reviewed(&run, &mod_file, &changed, tool));
+        assert!(!reviewed(&run, &mod_file, &changed, &tool));
         let mut changed = tool.clone();
         changed.tool.as_mut().unwrap().sha256 = "00".repeat(32);
         assert!(!reviewed(&run, &mod_file, artifact, &changed));
         let mut changed = run.clone();
         changed.components.push(1);
-        assert!(!reviewed(&changed, &mod_file, artifact, tool));
+        assert!(!reviewed(&changed, &mod_file, artifact, &tool));
         changed = run.clone();
         changed.target = GameRoot::Bg1;
-        assert!(!reviewed(&changed, &mod_file, artifact, tool));
+        assert!(!reviewed(&changed, &mod_file, artifact, &tool));
         changed = run;
         changed.mod_id = "other-ui".into();
-        assert!(!reviewed(&changed, &mod_file, artifact, tool));
+        assert!(!reviewed(&changed, &mod_file, artifact, &tool));
     }
 
     #[test]
@@ -296,6 +300,7 @@ mod tests {
     }
 
     /// A staged root below `parent` with the reviewed fixture TP2; returns the root.
+    #[cfg_attr(not(windows), allow(dead_code))]
     fn staged_ui(parent: &Path) -> std::path::PathBuf {
         let root = parent.join("game");
         fs::create_dir_all(root.join("infinity_ui")).unwrap();

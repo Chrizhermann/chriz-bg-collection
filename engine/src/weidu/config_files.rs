@@ -167,8 +167,7 @@ mod tests {
         assert_eq!(second, vec![expected(false)]);
     }
 
-    /// Windows names ignore case, so the recipe's spelling finds the published folder.
-    #[cfg(windows)]
+    /// Names ignore case on all supported hosts, so the recipe's spelling finds the published folder.
     #[test]
     fn finds_the_published_folder_whatever_the_case_of_its_name() {
         let root = tempfile::tempdir().unwrap();

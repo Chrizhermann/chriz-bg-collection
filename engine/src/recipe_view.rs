@@ -352,9 +352,9 @@ pub fn evaluate_preset(
 pub fn evaluate(manifest: &Manifest, selection: &Selection) -> Result<SelectionEvaluation> {
     crate::validate::check(manifest)?;
 
-    if selection.platform != "windows" {
+    if !matches!(selection.platform.as_str(), "windows" | "linux") {
         return Err(EngineError::InvalidSelection(format!(
-            "unsupported platform {:?}; recipe-v2 alpha supports windows",
+            "unsupported platform {:?}; supported platforms are \"windows\" and \"linux\"",
             selection.platform
         )));
     }

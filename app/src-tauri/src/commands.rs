@@ -342,7 +342,7 @@ fn local_path(selected: Option<FilePath>) -> Result<Option<PathBuf>, CommandErro
             path.simplified().into_path().map_err(|error| {
                 CommandError::new(
                     "local_choice_invalid",
-                    "The selected item could not be read as a local Windows path.",
+                    "The selected item could not be read as a local file or folder path.",
                     "Choose a local file or folder and try again.",
                     error.to_string(),
                 )
@@ -803,7 +803,7 @@ pub async fn check_updates(
     let mut summary =
         background(move || bridge.unconfigured_update_center(crate::flavor::APP_VERSION)).await?;
     // The overlay has its own releases, also in an app without an update feed.
-    let radar_check = crate::flavor::CURRENT.radar.then(|| {
+    let radar_check = (crate::flavor::CURRENT.radar && cfg!(windows)).then(|| {
         let radar_bridge = state
             .bridge
             .lock()

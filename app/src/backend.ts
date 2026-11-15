@@ -18,6 +18,7 @@ import type {
   GameLogFile,
   GameLogStatus,
   GameRole,
+  HostPlatform,
   HotpatchPreview,
   InstallationDefaults,
   InstallationRemovalPreview,
@@ -149,6 +150,8 @@ export type EventChannelFactory = (onMessage: (event: unknown) => void) => unkno
 
 type BootstrapWire = {
   readonly mode: "native";
+  readonly platform?: HostPlatform;
+  readonly radar_supported?: boolean;
   readonly application_version?: string;
   readonly engine_version: string;
   readonly recipe_version: string | null;
@@ -166,6 +169,8 @@ type BootstrapWire = {
 function projectStatus(status: BootstrapWire): BackendStatus {
   return {
     mode: status.mode,
+    ...(status.platform == null ? {} : { platform: status.platform }),
+    ...(status.radar_supported == null ? {} : { radarSupported: status.radar_supported }),
     applicationVersion: status.application_version,
     engineVersion: status.engine_version,
     recipeVersion: status.recipe_version,

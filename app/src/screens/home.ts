@@ -9,6 +9,7 @@ export interface HomeActions {
   readonly begin: () => void | Promise<void>;
   readonly launch: (installId: string, startRadar: boolean) => void | Promise<void>;
   readonly setStartRadar?: (installId: string, enabled: boolean) => void;
+  readonly radarSupported?: boolean;
   readonly openFolder: (installId: string) => void | Promise<void>;
   /** Opens the isolated game profile in Documents, where saves and custom portraits live. */
   readonly openProfileFolder?: (installId: string) => void | Promise<void>;
@@ -75,7 +76,10 @@ function installationPicker(
   return field;
 }
 
-function installationDetails(installation: ManagedInstallation): HTMLDetailsElement {
+function installationDetails(
+  installation: ManagedInstallation,
+  radarSupported = flavor.features.radar,
+): HTMLDetailsElement {
   const details = element("details", "installation-details");
   details.append(element("summary", undefined, "Installation details"));
   const rows = element("dl", "installation-detail-list");
@@ -87,7 +91,7 @@ function installationDetails(installation: ManagedInstallation): HTMLDetailsElem
   appendRow("Saves & portraits", installation.profilePath ?? null);
   appendRow("Installation receipt", installation.receiptPath);
   appendRow("Collection version", installation.recipeVersion ?? null);
-  if (flavor.features.radar) appendRow("BG Radar Overlay", installation.radarVersion ?? null);
+  if (radarSupported) appendRow("BG Radar Overlay", installation.radarVersion ?? null);
   appendRow("Mod check", installation.consistency?.detail ?? null);
   details.append(rows);
   return details;
@@ -140,7 +144,10 @@ function installedMods(installation: ManagedInstallation): HTMLDetailsElement | 
   return details;
 }
 
-export function firstPlayGuide(installation: ManagedInstallation): HTMLDetailsElement {
+export function firstPlayGuide(
+  installation: ManagedInstallation,
+  radarSupported = flavor.features.radar,
+): HTMLDetailsElement {
   const guide = element("details", "installation-details first-play-guide");
   guide.append(element("summary", undefined, "First-play tips"));
   const steps = element("ol");
@@ -156,7 +163,7 @@ export function firstPlayGuide(installation: ManagedInstallation): HTMLDetailsEl
   if (installation.profilePath) {
     steps.append(element("li", undefined, "Saves and custom portraits are kept in this installation's own folder in Documents. Open saves & portraits folder takes you there; put portrait images into its portraits folder."));
   }
-  if (flavor.features.radarTip) {
+  if (flavor.features.radarTip && radarSupported) {
     steps.append(element("li", undefined, installation.radarVersion
       ? `BG Radar Overlay ${installation.radarVersion} is installed. Select Start Radar with the game before pressing Play if you want to use it. Windows may ask for administrator approval. Its executable is in the BG Radar Overlay folder inside the game folder.`
       : "BG Radar Overlay is optional. You can add it from Updates after setup."));
@@ -218,6 +225,7 @@ export function homeScreen(
     disabled: actions.removalDisabled, onRename: actions.rename }));
   hero.append(identity);
 
+  const radarSupported = actions.radarSupported ?? flavor.features.radar;
   const cta = element("div", "launcher-cta");
   const utilities = element("div", "inline-actions launcher-actions launcher-utilities");
   let feedback: HTMLElement | null = null;
@@ -226,7 +234,7 @@ export function homeScreen(
     const radar = element("input");
     radar.type = "checkbox";
     radar.id = "start-radar";
-    radar.checked = flavor.features.radar && Boolean(selected.radarVersion) && launchState.startRadar;
+    radar.checked = radarSupported && Boolean(selected.radarVersion) && launchState.startRadar;
     radar.disabled = !selected.radarVersion || patchRecoveryNeeded || launchState.pending;
     radar.setAttribute("aria-describedby", "radar-launch-help");
     radar.addEventListener("change", () => {
@@ -241,11 +249,11 @@ export function homeScreen(
     const radarOption = element("div", "radar-launch-option");
     radarOption.append(radarLabel, radarHelp);
     const play = actionButton(launchState.pending ? "Starting game…" : `Play ${flavor.productName}`,
-      () => !patchRecoveryNeeded && !launchState.pending ? actions.launch(selected.id, radar.checked) : undefined);
+      () => !patchRecoveryNeeded && !launchState.pending ? actions.launch(selected.id, radarSupported && radar.checked) : undefined);
     play.classList.add("hero-play");
     play.disabled = patchRecoveryNeeded || launchState.pending;
     cta.append(play);
-    if (flavor.features.radar) cta.append(radarOption);
+    if (radarSupported) cta.append(radarOption);
     hero.append(cta);
 
     utilities.append(actionButton("Open game folder", () => actions.openFolder(selected.id), "quiet"));
@@ -338,8 +346,8 @@ export function homeScreen(
   const drawers = element("div", "launcher-drawers");
   const mods = installedMods(selected);
   if (mods !== null) drawers.append(mods);
-  if (selected.available && !patchRecoveryNeeded) drawers.append(firstPlayGuide(selected));
-  drawers.append(installationDetails(selected));
+  if (selected.available && !patchRecoveryNeeded) drawers.append(firstPlayGuide(selected, radarSupported));
+  drawers.append(installationDetails(selected, radarSupported));
   const gameLogActions = actions.gameLog;
   if (selected.available && gameLog !== null && gameLogActions !== undefined) {
     drawers.append(troubleshootingSection(gameLog, {

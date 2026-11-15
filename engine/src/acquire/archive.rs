@@ -3,7 +3,6 @@ use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
-#[cfg(windows)]
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use serde::{Deserialize, Serialize};
@@ -11,7 +10,7 @@ use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
 use zip::{CompressionMethod, ZipArchive};
 
-#[cfg(windows)]
+#[cfg(not(any(target_os = "linux", target_os = "netbsd")))]
 use widestring::WideCString;
 
 use crate::fs_retry;
@@ -426,32 +425,91 @@ fn describe_start(start: &[u8]) -> String {
 
 /// Held while an archive is open: UnRAR keeps its error state per process, so what one archive
 /// reports could answer for another opened meanwhile.
-#[cfg(windows)]
 static RAR_IN_USE: Mutex<()> = Mutex::new(());
 
 /// An open UnRAR archive, closed when dropped. A thread can hold only one.
-#[cfg(windows)]
 struct RarHandle {
     pointer: *const unrar_sys::Handle,
     _in_use: MutexGuard<'static, ()>,
 }
 
-#[cfg(windows)]
 impl Drop for RarHandle {
     fn drop(&mut self) {
         unsafe { unrar_sys::RARCloseArchive(self.pointer) };
     }
 }
 
+/// Decodes a NUL-terminated UnRAR `filename_w` buffer (`wchar_t` is 16-bit UTF-16 on Windows and
+/// 32-bit `wchar_t` on Unix targets).
+fn decode_rar_filename_w(raw: &[unrar_sys::WCHAR]) -> Result<String, AcquireError> {
+    let end = raw.iter().position(|&unit| unit == 0).unwrap_or(raw.len());
+    #[cfg(windows)]
+    {
+        String::from_utf16(&raw[..end]).map_err(|_| AcquireError::UnsafeArchiveEntry {
+            entry: "<non-Unicode RAR path>".to_owned(),
+            message: "archive entry path is not Unicode".to_owned(),
+        })
+    }
+    #[cfg(not(windows))]
+    {
+        let mut out = String::with_capacity(end);
+        for &unit in &raw[..end] {
+            let ch = u32::try_from(i64::from(unit))
+                .ok()
+                .and_then(char::from_u32)
+                .ok_or_else(|| AcquireError::UnsafeArchiveEntry {
+                    entry: "<non-Unicode RAR path>".to_owned(),
+                    message: "archive entry path is not Unicode".to_owned(),
+                })?;
+            out.push(ch);
+        }
+        Ok(out)
+    }
+}
+
+fn decode_rar_filename_w_lossy(raw: &[unrar_sys::WCHAR]) -> String {
+    let end = raw.iter().position(|&unit| unit == 0).unwrap_or(raw.len());
+    #[cfg(windows)]
+    {
+        String::from_utf16_lossy(&raw[..end]).replace('\\', "/")
+    }
+    #[cfg(not(windows))]
+    {
+        raw[..end]
+            .iter()
+            .map(|&unit| {
+                u32::try_from(i64::from(unit))
+                    .ok()
+                    .and_then(char::from_u32)
+                    .unwrap_or(char::REPLACEMENT_CHARACTER)
+            })
+            .collect::<String>()
+            .replace('\\', "/")
+    }
+}
+
 /// Opens `path` with UnRAR. The handle is closed when the result is dropped, also when UnRAR
 /// returns one for a file it then finds is no archive: an unclosed handle would keep the file
 /// open, so it could not be removed. `Err` carries UnRAR's open result.
-#[cfg(windows)]
 fn open_rar(path: &Path, mode: u32) -> Result<(RarHandle, unrar_sys::OpenArchiveDataEx), u32> {
-    let path = WideCString::from_os_str(path).map_err(|_| unrar_sys::ERAR_EOPEN as u32)?;
-    let mut open = unrar_sys::OpenArchiveDataEx::new(path.as_ptr().cast(), mode);
+    #[cfg(any(target_os = "linux", target_os = "netbsd"))]
+    let (path_guard, open_data) = {
+        use std::os::unix::ffi::OsStrExt;
+        let c_path = std::ffi::CString::new(path.as_os_str().as_bytes())
+            .map_err(|_| unrar_sys::ERAR_EOPEN as u32)?;
+        let open = unrar_sys::OpenArchiveDataEx::new(c_path.as_ptr(), mode);
+        (c_path, open)
+    };
+    #[cfg(not(any(target_os = "linux", target_os = "netbsd")))]
+    let (path_guard, open_data) = {
+        let wide_path = WideCString::from_os_str(path).map_err(|_| unrar_sys::ERAR_EOPEN as u32)?;
+        let open = unrar_sys::OpenArchiveDataEx::new(wide_path.as_ptr().cast(), mode);
+        (wide_path, open)
+    };
+    let mut open = open_data;
     let in_use = RAR_IN_USE.lock().unwrap_or_else(PoisonError::into_inner);
     let handle = unsafe { unrar_sys::RAROpenArchiveEx(std::ptr::from_mut(&mut open).cast_const()) };
+    drop(path_guard);
     if handle.is_null() {
         return Err(open.open_result);
     }
@@ -467,7 +525,6 @@ fn open_rar(path: &Path, mode: u32) -> Result<(RarHandle, unrar_sys::OpenArchive
 
 /// [`open_rar`] for unpacking: a file that UnRAR cannot open as an archive is refused as such,
 /// while a failure of this computer stays an I/O error, so that the step stops for a retry.
-#[cfg(windows)]
 fn open_rar_archive(
     archive_path: &Path,
     mode: u32,
@@ -492,7 +549,6 @@ fn open_rar_archive(
 /// seek, so that code alone does not prove the computer at fault; but it proves no damage
 /// either. Damage has codes of its own, a bad checksum or header (12) or an unknown format, so a
 /// failed read stays a failure that a resume retries instead of making the archive unusable.
-#[cfg(windows)]
 fn rar_local_failure(code: i64) -> bool {
     [
         unrar_sys::ERAR_NO_MEMORY,
@@ -506,7 +562,6 @@ fn rar_local_failure(code: i64) -> bool {
     .any(|local| code == i64::from(local))
 }
 
-#[cfg(windows)]
 fn rar_local_error(action: &'static str, path: &Path, code: i64) -> AcquireError {
     AcquireError::Io {
         action,
@@ -526,7 +581,6 @@ fn rar_local_error(action: &'static str, path: &Path, code: i64) -> AcquireError
 /// them, as unpacking checks them, and the test stops at the announced size, which they bound.
 /// At the first entry beyond them the check ends without a problem, since unpacking refuses
 /// the archive for it without reading any file's data.
-#[cfg(windows)]
 fn rar_container_problem(
     path: &Path,
     limits: &ArchiveLimits,
@@ -648,11 +702,7 @@ fn rar_container_problem(
             ));
         }
         if process != unrar_sys::ERAR_SUCCESS || tested.refused || tested.length != announced {
-            let name = unsafe {
-                WideCString::from_ptr_truncate(header.filename_w.as_ptr(), header.filename_w.len())
-            }
-            .to_string_lossy()
-            .replace('\\', "/");
+            let name = decode_rar_filename_w_lossy(&header.filename_w);
             let entry = if name.is_empty() {
                 "an entry".to_owned()
             } else {
@@ -680,7 +730,6 @@ fn rar_container_problem(
 
 /// What testing one RAR entry produced: its length, and whether it gave more than its budget,
 /// asked for something a test cannot answer, or was stopped.
-#[cfg(windows)]
 struct RarTestState<'a> {
     length: u64,
     /// The most the test may produce: the entry's announced size, which the archive limits
@@ -693,7 +742,6 @@ struct RarTestState<'a> {
 
 /// Counts the data UnRAR tests without keeping it, up to the entry's budget; a password or
 /// volume request is refused, and a stop ends the test.
-#[cfg(windows)]
 extern "C" fn rar_test_callback(
     message: unrar_sys::UINT,
     user_data: unrar_sys::LPARAM,
@@ -726,16 +774,6 @@ extern "C" fn rar_test_callback(
             -1
         }
     }
-}
-
-/// Self-extracting RAR archives are unpacked only by the Windows installer, which checks them.
-#[cfg(not(windows))]
-fn rar_container_problem(
-    _path: &Path,
-    _limits: &ArchiveLimits,
-    _stop: &StopSignal,
-) -> Result<Option<String>, AcquireError> {
-    Ok(None)
 }
 
 fn extract_with_rule(
@@ -1220,22 +1258,6 @@ fn validate_central_directory<R: Read + std::io::Seek>(
     )
 }
 
-#[cfg(not(windows))]
-fn validate_rar_entries(
-    archive_path: &Path,
-    _expected_roots: &[String],
-    _expected_tp2_paths: &[String],
-    _limits: &ArchiveLimits,
-    _rule: LayoutRule,
-) -> Result<(Vec<ValidatedEntry>, Option<String>), AcquireError> {
-    Err(AcquireError::ArchiveFormat {
-        path: archive_path.to_path_buf(),
-        message: "self-extracting RAR archives are supported only by the Windows installer"
-            .to_owned(),
-    })
-}
-
-#[cfg(windows)]
 fn validate_rar_entries(
     archive_path: &Path,
     expected_roots: &[String],
@@ -1294,15 +1316,7 @@ fn validate_rar_entries(
                 limits.max_entries
             )));
         }
-        let name = unsafe {
-            WideCString::from_ptr_truncate(header.filename_w.as_ptr(), header.filename_w.len())
-        }
-        .to_os_string()
-        .into_string()
-        .map_err(|_| AcquireError::UnsafeArchiveEntry {
-            entry: "<non-Unicode RAR path>".to_owned(),
-            message: "archive entry path is not Unicode".to_owned(),
-        })?;
+        let name = decode_rar_filename_w(&header.filename_w)?;
         let is_directory = header.flags & unrar_sys::RHDF_DIRECTORY != 0;
         let normalized = normalize_relative_path(&name, is_directory)?;
         let depth = normalized.split('/').count();
@@ -1817,6 +1831,34 @@ fn unpacked_read_error(
     }
 }
 
+fn maybe_set_unix_elf_executable(
+    file: &File,
+    magic: &[u8],
+    path: &Path,
+) -> Result<(), AcquireError> {
+    #[cfg(unix)]
+    if magic == b"\x7fELF" {
+        use std::os::unix::fs::PermissionsExt;
+        file.set_permissions(fs::Permissions::from_mode(0o755))
+            .map_err(|source| AcquireError::Io {
+                action: "set executable permissions on extracted binary",
+                path: path.to_path_buf(),
+                source,
+            })?;
+    }
+    #[cfg(not(unix))]
+    let _ = (file, magic, path);
+    Ok(())
+}
+
+fn capture_elf_magic(magic: &mut [u8; 4], magic_len: &mut usize, chunk: &[u8]) {
+    if *magic_len < 4 {
+        let take = (4 - *magic_len).min(chunk.len());
+        magic[*magic_len..*magic_len + take].copy_from_slice(&chunk[..take]);
+        *magic_len += take;
+    }
+}
+
 fn extract_zip_entries(
     archive_path: &Path,
     entries: &[ValidatedEntry],
@@ -1859,6 +1901,8 @@ fn extract_zip_entries(
         })?;
         let mut hash = Sha256::new();
         let mut length = 0_u64;
+        let mut magic = [0_u8; 4];
+        let mut magic_len = 0_usize;
         let mut buffer = [0_u8; BUFFER_SIZE];
         loop {
             let read = input.read(&mut buffer).map_err(|source| {
@@ -1885,6 +1929,7 @@ fn extract_zip_entries(
                     path: output.clone(),
                     source,
                 })?;
+            capture_elf_magic(&mut magic, &mut magic_len, &buffer[..read]);
             hash.update(&buffer[..read]);
         }
         if length != plan.size {
@@ -1898,6 +1943,7 @@ fn extract_zip_entries(
             path: output.clone(),
             source,
         })?;
+        maybe_set_unix_elf_executable(&output_file, &magic[..magic_len], &output)?;
         records.push(ExtractedFile {
             relative_path: plan.relative_path.clone(),
             length,
@@ -1907,27 +1953,13 @@ fn extract_zip_entries(
     write_extraction_marker(temporary, wrapper_directory, identity, records)
 }
 
-#[cfg(not(windows))]
-fn extract_rar_entries(
-    archive_path: &Path,
-    _entries: &[ValidatedEntry],
-    _temporary: &Path,
-    _wrapper_directory: Option<String>,
-    _identity: &ExtractionIdentity<'_>,
-) -> Result<(), AcquireError> {
-    Err(AcquireError::ArchiveFormat {
-        path: archive_path.to_path_buf(),
-        message: "self-extracting RAR archives are supported only by the Windows installer"
-            .to_owned(),
-    })
-}
-
-#[cfg(windows)]
 struct RarCallbackState {
     output: Option<File>,
     hash: Sha256,
     length: u64,
     expected_length: u64,
+    magic: [u8; 4],
+    magic_len: usize,
     /// What the archive did wrong.
     error: Option<String>,
     /// Writing the unpacked data failed on this computer, as on a full disk: an I/O failure
@@ -1935,7 +1967,6 @@ struct RarCallbackState {
     write_error: Option<std::io::Error>,
 }
 
-#[cfg(windows)]
 impl RarCallbackState {
     fn new(output: Option<File>, expected_length: u64) -> Self {
         Self {
@@ -1943,6 +1974,8 @@ impl RarCallbackState {
             hash: Sha256::new(),
             length: 0,
             expected_length,
+            magic: [0; 4],
+            magic_len: 0,
             error: None,
             write_error: None,
         }
@@ -1991,7 +2024,6 @@ impl RarCallbackState {
     }
 }
 
-#[cfg(windows)]
 extern "C" fn rar_callback(
     message: unrar_sys::UINT,
     user_data: unrar_sys::LPARAM,
@@ -2038,12 +2070,12 @@ extern "C" fn rar_callback(
         state.write_error = Some(error);
         return -1;
     }
+    capture_elf_magic(&mut state.magic, &mut state.magic_len, bytes);
     state.hash.update(bytes);
     state.length = next_length;
     0
 }
 
-#[cfg(windows)]
 fn extract_rar_entries(
     archive_path: &Path,
     entries: &[ValidatedEntry],
@@ -2094,11 +2126,7 @@ fn extract_rar_entries(
                 message: format!("UnRAR header read failed with code {code}"),
             });
         }
-        let current_name = unsafe {
-            WideCString::from_ptr_truncate(header.filename_w.as_ptr(), header.filename_w.len())
-        }
-        .to_string_lossy()
-        .replace('\\', "/");
+        let current_name = decode_rar_filename_w_lossy(&header.filename_w);
         if let Some(plan) = selected.get(&index) {
             if !current_name.eq_ignore_ascii_case(&plan.archive_path)
                 || ((u64::from(header.unp_size_high) << 32) | u64::from(header.unp_size))
@@ -2166,6 +2194,7 @@ fn extract_rar_entries(
                 path: output.clone(),
                 source,
             })?;
+            maybe_set_unix_elf_executable(&output_file, &state.magic[..state.magic_len], &output)?;
             let sha256 = hex::encode(state.hash.finalize());
             let metadata = fs::symlink_metadata(&output).map_err(|source| AcquireError::Io {
                 action: "inspect extracted RAR file",
@@ -3356,7 +3385,6 @@ mod served_container_tests {
         );
     }
 
-    #[cfg(windows)]
     fn crc32(bytes: &[u8]) -> u32 {
         let mut crc = !0_u32;
         for byte in bytes {
@@ -3368,7 +3396,6 @@ mod served_container_tests {
         !crc
     }
 
-    #[cfg(windows)]
     fn rar4_header(kind: u8, flags: u16, body: &[u8]) -> Vec<u8> {
         let size = u16::try_from(7 + body.len()).unwrap();
         let mut protected = vec![kind];
@@ -3381,14 +3408,12 @@ mod served_container_tests {
     }
 
     /// A stored RAR4 self-extractor with one file, as `tests/rar_archive.rs` builds them.
-    #[cfg(windows)]
     fn rar4_sfx(name: &str, payload: &[u8]) -> Vec<u8> {
         rar4_sfx_announcing(&[(name, payload, payload.len() as u32, crc32(payload))])
     }
 
     /// A stored RAR4 self-extractor whose files announce the given unpacked sizes and CRCs,
     /// which need not be those of their stored bytes.
-    #[cfg(windows)]
     fn rar4_sfx_announcing(entries: &[(&str, &[u8], u32, u32)]) -> Vec<u8> {
         let mut bytes = vec![b'M', b'Z'];
         bytes.resize(128, 0);
@@ -3417,7 +3442,6 @@ mod served_container_tests {
     /// unpacked with is never test-read: its data is not decompressed at all, and the check
     /// leaves it to unpacking, which refuses it from its headers alone. Each archive here would
     /// be reported as damaged if it were test-read, so `None` proves that it was not.
-    #[cfg(windows)]
     #[test]
     fn a_self_extractor_beyond_its_limits_is_refused_by_unpacking_without_being_test_read() {
         let payload: &[u8] = b"BACKUP ~evandra/backup~";
@@ -3490,7 +3514,6 @@ mod served_container_tests {
     /// UnRAR returns a handle also for a file that it then finds is no archive. The check closes
     /// it, so the refused download can be removed: an open handle would keep it from being
     /// deleted, and the refusal would fail on every attempt.
-    #[cfg(windows)]
     #[test]
     fn a_program_that_is_no_archive_can_be_removed_after_its_check() {
         let temporary = tempfile::TempDir::new().unwrap();
@@ -3578,7 +3601,6 @@ mod served_container_tests {
 
     /// A stop ends the check of a changed self-extractor, before a file is tested or while one
     /// is, instead of reading the rest of the archive.
-    #[cfg(windows)]
     #[test]
     fn a_stop_ends_the_check_of_a_self_extractor() {
         use std::sync::atomic::{AtomicUsize, Ordering};
@@ -3618,7 +3640,6 @@ mod served_container_tests {
         assert_eq!(check(&StopSignal::never()).unwrap(), None);
     }
 
-    #[cfg(windows)]
     #[test]
     fn a_self_extractor_is_framed_like_one_only_when_complete() {
         let archive = rar4_sfx("evandra/setup-evandra.tp2", b"BACKUP ~evandra/backup~");
@@ -3662,7 +3683,6 @@ mod served_container_tests {
 
     /// The fixture above stores its file; real packages compress theirs. Run with
     /// `CHRIZ_TEST_RAR_SFX` naming a published self-extracting RAR mod package.
-    #[cfg(windows)]
     #[test]
     fn a_real_self_extractor_is_complete_and_cut_copies_are_not_when_explicitly_supplied() {
         let Some(path) = std::env::var_os("CHRIZ_TEST_RAR_SFX") else {

@@ -22,7 +22,13 @@
     ]
   },
   "bundle": {
-    "icon": ["icons/iwd/icon.ico"],
+    "icon": [
+      "icons/iwd/32x32.png",
+      "icons/iwd/128x128.png",
+      "icons/iwd/128x128@2x.png",
+      "icons/iwd/icon.png",
+      "icons/iwd/icon.ico"
+    ],
     "windows": {
       "nsis": {
         "installerIcon": "icons/iwd/icon.ico",

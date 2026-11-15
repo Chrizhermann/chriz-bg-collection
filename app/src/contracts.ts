@@ -9,8 +9,12 @@ export type Route =
   | "build"
   | "complete";
 
+export type HostPlatform = "windows" | "linux";
+
 export interface BackendStatus {
   readonly mode: "fixture" | "native";
+  readonly platform?: HostPlatform;
+  readonly radarSupported?: boolean;
   readonly applicationVersion?: string;
   readonly engineVersion: string;
   readonly recipeVersion: string | null;

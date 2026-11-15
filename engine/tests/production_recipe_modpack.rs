@@ -630,7 +630,7 @@ fn story_xp_is_default_and_appearance_is_an_independent_optional_choice() {
             .unwrap()
             .iter()
             .any(|c| [610, 611, 630].contains(c)));
-        assert!(evaluate_preset(&manifest, "chris-recommended", "linux").is_err());
+        assert!(evaluate_preset(&manifest, "chris-recommended", "macos").is_err());
         let positions = |id: &str| {
             manifest
                 .collection
@@ -694,5 +694,20 @@ fn edwin_follows_the_selected_conversion_and_baeloth_remains_an_optional_late_ch
         assert!(position(edwin_run) < position("spell-rev-npc-spellbooks-bg2"));
         assert!(position("spell-rev-npc-spellbooks-bg2") < position(baeloth_run));
         assert!(position(baeloth_run) < position("buffbot-bg2"));
+    }
+}
+
+#[test]
+fn linux_platform_evaluates_bg_and_iwd_defaults_identically_to_windows() {
+    for directory in [
+        "manifest",
+        "recipes/curated-full-current",
+        "recipes/iwd-current",
+    ] {
+        let manifest = Manifest::load(&recipe_root().join("..").join(directory)).unwrap();
+        let windows = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        let linux = evaluate_preset(&manifest, "chris-recommended", "linux").unwrap();
+        assert_eq!(linux.plan, windows.plan, "{directory}");
+        assert_eq!(linux.findings, windows.findings, "{directory}");
     }
 }

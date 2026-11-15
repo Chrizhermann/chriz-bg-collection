@@ -47,7 +47,11 @@ fn settings_error(path: &Path, label: &str, reason: impl Into<String>) -> Engine
 
 /// The settings that the installed components in `game_root` rely on.
 fn required_settings(game_root: &Path) -> Result<Vec<Setting>> {
-    let path = game_root.join("WeiDU.log");
+    let Some(path) = crate::weidu::log::resolve_optional_weidu_log(game_root)
+        .map_err(|error| settings_error(game_root, PROFILE, error.to_string()))?
+    else {
+        return Ok(Vec::new());
+    };
     let Some(bytes) = read_optional_regular(&path)? else {
         return Ok(Vec::new());
     };

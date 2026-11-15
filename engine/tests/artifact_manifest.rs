@@ -465,10 +465,28 @@ fn sample_archive(machine: Option<u16>) -> Vec<u8> {
 
 fn minimal_pe(machine: u16) -> Vec<u8> {
     let mut bytes = vec![0_u8; 0x88];
-    bytes[0..2].copy_from_slice(b"MZ");
-    bytes[0x3c..0x40].copy_from_slice(&0x80_u32.to_le_bytes());
-    bytes[0x80..0x84].copy_from_slice(b"PE\0\0");
-    bytes[0x84..0x86].copy_from_slice(&machine.to_le_bytes());
+    #[cfg(unix)]
+    {
+        let elf_machine = match machine {
+            0x014c => 0x0003_u16,
+            0x8664 => 0x003e_u16,
+            0xaa64 => 0x00b7_u16,
+            other => other,
+        };
+        bytes[0..4].copy_from_slice(b"\x7fELF");
+        bytes[4] = 2;
+        bytes[5] = 1;
+        bytes[6] = 1;
+        bytes[0x10..0x12].copy_from_slice(&2_u16.to_le_bytes());
+        bytes[0x12..0x14].copy_from_slice(&elf_machine.to_le_bytes());
+    }
+    #[cfg(not(unix))]
+    {
+        bytes[0..2].copy_from_slice(b"MZ");
+        bytes[0x3c..0x40].copy_from_slice(&0x80_u32.to_le_bytes());
+        bytes[0x80..0x84].copy_from_slice(b"PE\0\0");
+        bytes[0x84..0x86].copy_from_slice(&machine.to_le_bytes());
+    }
     bytes
 }
 

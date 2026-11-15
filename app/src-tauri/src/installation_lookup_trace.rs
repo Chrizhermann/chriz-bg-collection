@@ -90,6 +90,7 @@ fn write_event(kind: &str, data: Value) {
             "working_directory": std::env::current_dir().ok(),
             // Deliberate allowlist: never serialize the rest of the environment.
             "local_app_data": std::env::var_os("LOCALAPPDATA").map(PathBuf::from),
+            "xdg_data_home": std::env::var_os("XDG_DATA_HOME").map(PathBuf::from),
             "trace_path": path,
         });
         sink.append(&header).ok()?;

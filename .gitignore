@@ -3,9 +3,17 @@
 /app/node_modules
 /app/src-tauri/gen
 /app/src-tauri/icons/*
+!/app/src-tauri/icons/32x32.png
+!/app/src-tauri/icons/128x128.png
+!/app/src-tauri/icons/128x128@2x.png
+!/app/src-tauri/icons/icon.png
 !/app/src-tauri/icons/icon.ico
 !/app/src-tauri/icons/iwd/
 /app/src-tauri/icons/iwd/*
+!/app/src-tauri/icons/iwd/32x32.png
+!/app/src-tauri/icons/iwd/128x128.png
+!/app/src-tauri/icons/iwd/128x128@2x.png
+!/app/src-tauri/icons/iwd/icon.png
 !/app/src-tauri/icons/iwd/icon.ico
 !/app/src-tauri/icons/iwd/icon.svg
 __pycache__/

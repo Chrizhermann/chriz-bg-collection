@@ -352,14 +352,28 @@ impl BridgeSystem for RecordingBridgeSystem {
     }
 
     fn current_exe(&self) -> Result<PathBuf, String> {
-        Ok(PathBuf::from(
-            r"C:\Program Files\Chriz Easy BG\Chriz Easy BG.exe",
-        ))
+        #[cfg(windows)]
+        {
+            Ok(PathBuf::from(
+                r"C:\Program Files\Chriz Easy BG\Chriz Easy BG.exe",
+            ))
+        }
+        #[cfg(not(windows))]
+        {
+            Ok(PathBuf::from("/opt/Chriz Easy BG/chriz-bg-app"))
+        }
     }
 
     fn create_desktop_shortcut(&self, request: ShortcutRequest) -> Result<PathBuf, String> {
         self.shortcuts.lock().unwrap().push(request);
-        Ok(PathBuf::from(r"C:\Users\Player\Desktop\Chriz Easy BG.lnk"))
+        #[cfg(windows)]
+        {
+            Ok(PathBuf::from(r"C:\Users\Player\Desktop\Chriz Easy BG.lnk"))
+        }
+        #[cfg(not(windows))]
+        {
+            Ok(PathBuf::from("/home/player/Desktop/Chriz Easy BG.desktop"))
+        }
     }
 }
 
@@ -722,12 +736,21 @@ fn installation_defaults_use_the_injected_home_without_creating_directories() {
         "reading defaults must not create the home path"
     );
 
-    let windows_defaults = installation_defaults(Path::new(r"C:\Users\Player"))
-        .expect("project Windows installation defaults");
-    assert_eq!(
-        windows_defaults.path,
-        r"C:\Users\Player\Games\Chriz Easy BG"
-    );
+    #[cfg(windows)]
+    {
+        let windows_defaults = installation_defaults(Path::new(r"C:\Users\Player"))
+            .expect("project Windows installation defaults");
+        assert_eq!(
+            windows_defaults.path,
+            r"C:\Users\Player\Games\Chriz Easy BG"
+        );
+    }
+    #[cfg(not(windows))]
+    {
+        let unix_defaults = installation_defaults(Path::new("/home/player"))
+            .expect("project Unix installation defaults");
+        assert_eq!(unix_defaults.path, "/home/player/Games/Chriz Easy BG");
+    }
 }
 
 #[test]
@@ -2927,15 +2950,27 @@ fn desktop_shortcut_uses_only_the_available_registry_identity_and_current_app() 
     let response = bridge
         .create_desktop_shortcut("install-shortcut")
         .expect("create shortcut from available install");
-    assert_eq!(response.path, r"C:\Users\Player\Desktop\Chriz Easy BG.lnk");
+    #[cfg(windows)]
+    let (expected_shortcut, expected_target, expected_dir) = (
+        r"C:\Users\Player\Desktop\Chriz Easy BG.lnk",
+        PathBuf::from(r"C:\Program Files\Chriz Easy BG\Chriz Easy BG.exe"),
+        PathBuf::from(r"C:\Program Files\Chriz Easy BG"),
+    );
+    #[cfg(not(windows))]
+    let (expected_shortcut, expected_target, expected_dir) = (
+        "/home/player/Desktop/Chriz Easy BG.desktop",
+        PathBuf::from("/opt/Chriz Easy BG/chriz-bg-app"),
+        PathBuf::from("/opt/Chriz Easy BG"),
+    );
+    assert_eq!(response.path, expected_shortcut);
     assert_eq!(
         system.shortcuts.lock().unwrap().as_slice(),
         &[ShortcutRequest {
             install_id: "install-shortcut".to_owned(),
             display_name: "Task 23 fixture".to_owned(),
-            target: PathBuf::from(r"C:\Program Files\Chriz Easy BG\Chriz Easy BG.exe"),
+            target: expected_target,
             arguments: "--install-id=install-shortcut".to_owned(),
-            working_directory: PathBuf::from(r"C:\Program Files\Chriz Easy BG"),
+            working_directory: expected_dir,
         }]
     );
     assert_eq!(
