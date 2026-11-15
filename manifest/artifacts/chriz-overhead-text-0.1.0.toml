@@ -1,0 +1,32 @@
+id = "chriz-overhead-text-0.1.0"
+name = "Chriz Overhead Text"
+version = "0.1.0"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/chriz-overhead-text/releases/download/v0.1.0/chriz-overhead-text-v0.1.0.zip"
+reference = "v0.1.0"
+expected_filename = "chriz-overhead-text-v0.1.0.zip"
+expected_length = 1277567
+sha256 = "a7023258fbc6f5621663ed40fd7927877f45a074d896002b36993c88b132ef9a"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["chriz_overhead_text"]
+tp2_paths = ["chriz_overhead_text/setup-chriz_overhead_text.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 64
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 8388608
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-overhead-text"
+license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/chriz-overhead-text/releases/tag/v0.1.0"
+reviewed_on = "2026-11-16"

@@ -147,6 +147,12 @@ const RUNS: &[(&str, &str, Phase, &[u32])] = &[
     ),
     ("klatu-armor-thieving-main", "klatu", Phase::Main, &[2150]),
     ("buffbot-main", "buffbot", Phase::Main, &[1, 0]),
+    (
+        "chriz-overhead-text-main",
+        "chriz-overhead-text",
+        Phase::Main,
+        &[0],
+    ),
     ("eeexremote-main", "eeexremote", Phase::Main, &[0]),
 ];
 
@@ -188,6 +194,11 @@ const INSTALLERS: &[(&str, &str, &str)] = &[
         "chriz-iwd-encounters",
         "chriz-iwd-encounters-0.2.2",
         "chriz-iwd-encounters/setup-chriz-iwd-encounters.tp2",
+    ),
+    (
+        "chriz-overhead-text",
+        "chriz-overhead-text-0.1.0",
+        "chriz_overhead_text/setup-chriz_overhead_text.tp2",
     ),
     ("dendjelion", "dendjelion-2.1", "dendjelion/Dendjelion.tp2"),
     ("dusky", "dusky-2.5", "Dusky/Dusky.tp2"),
@@ -350,6 +361,16 @@ const ARTIFACTS: &[Pin] = &[
         filename: "chriz-iwd-encounters-v0.2.2.zip",
         length: 381_722,
         sha256: "c9a653aeb61bee0f3b76e230e793b4f835bb2e5ce13de48d5f1dce630a94442c",
+    },
+    Pin {
+        id: "chriz-overhead-text-0.1.0",
+        version: "0.1.0",
+        kind: SourceKind::GithubRelease,
+        url: "https://github.com/Chrizhermann/chriz-overhead-text/releases/download/v0.1.0/chriz-overhead-text-v0.1.0.zip",
+        reference: "v0.1.0",
+        filename: "chriz-overhead-text-v0.1.0.zip",
+        length: 1_277_567,
+        sha256: "a7023258fbc6f5621663ed40fd7927877f45a074d896002b36993c88b132ef9a",
     },
     Pin {
         id: "dendjelion-2.1",
@@ -751,6 +772,7 @@ const RECOMMENDED: &[(&str, &[u32])] = &[
     ("cdtweaks-spell-save-penalties", &[2312]),
     ("klatu-armor-thieving-main", &[2150]),
     ("buffbot-main", &[1, 0]),
+    ("chriz-overhead-text-main", &[0]),
 ];
 
 #[test]
@@ -770,7 +792,7 @@ fn declares_a_standalone_iwdee_collection_with_its_own_data_folder() {
             .collect::<Vec<_>>(),
         [PRESET]
     );
-    assert_eq!(manifest.collection.features.len(), 321);
+    assert_eq!(manifest.collection.features.len(), 323);
     assert!(
         validate(&manifest).is_empty(),
         "authoring validation findings: {:?}",
@@ -882,10 +904,14 @@ fn pins_the_exact_ordered_runs_and_component_lists() {
         position(&manifest, "klatu-armor-thieving-main") + 1,
         position(&manifest, "buffbot-main")
     );
-    // BuffBot after EEex, late as in the BG installer.
+    // BuffBot and Chriz Overhead Text after EEex, late as in the BG installer.
     assert!(position(&manifest, "eeex-main") < position(&manifest, "buffbot-main"));
     assert_eq!(
         position(&manifest, "buffbot-main") + 1,
+        position(&manifest, "chriz-overhead-text-main")
+    );
+    assert_eq!(
+        position(&manifest, "chriz-overhead-text-main") + 1,
         position(&manifest, "eeexremote-main")
     );
 }
@@ -1023,7 +1049,7 @@ fn resolves_the_exact_recommended_plan() {
         .iter()
         .map(|run| run.components.len())
         .sum::<usize>();
-    assert_eq!(components, 140);
+    assert_eq!(components, 141);
 }
 
 #[test]
@@ -1583,4 +1609,26 @@ fn save_penalties_run_after_scs_and_default_to_arcane_and_divine() {
             .components_for("cdtweaks-spell-save-penalties"),
         Some(&[2312][..])
     );
+}
+
+#[test]
+fn chriz_overhead_text_is_on_by_default_and_needs_eeex() {
+    let manifest = recipe();
+    let evaluation = recommended(&manifest);
+    let mod_control = evaluation.view.control("mod:chriz-overhead-text").unwrap();
+    assert_eq!(mod_control.decision, Decision::Default);
+    assert_eq!(mod_control.readiness, Readiness::Ready);
+    assert!(mod_control.selected);
+    assert_eq!(
+        evaluation.plan.components_for("chriz-overhead-text-main"),
+        Some(&[0][..])
+    );
+
+    let mut without_eeex = Selection::defaults("windows");
+    without_eeex.set_feature("mod:eeex", false);
+    let without_eeex = evaluate(&manifest, &without_eeex).unwrap();
+    assert!(without_eeex
+        .plan
+        .components_for("chriz-overhead-text-main")
+        .is_none());
 }

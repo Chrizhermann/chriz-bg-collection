@@ -385,6 +385,13 @@ components = [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 4
 args = []
 
 [[runs]]
+run_id = "chriz-overhead-text-bg2"
+mod_id = "chriz-overhead-text"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
 run_id = "eeexremote-bg2"
 mod_id = "eeexremote"
 phase = "post-eet-end"
@@ -1005,6 +1012,18 @@ decision = "default"
 readiness = "ready"
 requires = ["mod:eeex"]
 components = [{ run_id = "bubb-spell-menu-bg2", component = 0 }]
+
+[[features]]
+id = "feature:chriz-overhead-text:component-0"
+title = "Keep overhead text visible with Reveal Details and overhead HP (EEex)"
+description = "Keep spoken overhead lines visible while Tab / Reveal Details or overhead HP labels are shown, stacking the spoken box above the nameplate or HP bar."
+category = "interface"
+source_label = "Chriz Overhead Text"
+group_label = "Interface"
+decision = "default"
+readiness = "ready"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-overhead-text-bg2", component = 0 }]
 
 [[features]]
 id = "feature:bggo:component-0"

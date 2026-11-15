@@ -143,9 +143,10 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # November 3: the Modpack alpha.15 pin adds default Marek's Boomerang Dagger 670 to
         # the main post-EET_end Modpack run.
         # November 4: Tweaks 3000 and 3010 are no longer defaults (Christopher, 2026-11-04).
-        self.assertEqual(len(without_controls), 465)
-        self.assertEqual(len(selected), 466)
-        self.assertEqual(len({run for run, _ in selected}), 69)
+        # November 16: Chriz Overhead Text adds default component 0 in its own run.
+        self.assertEqual(len(without_controls), 466)
+        self.assertEqual(len(selected), 467)
+        self.assertEqual(len({run for run, _ in selected}), 70)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
         controls_change = next(change for change in controls_ledger["changes"]
@@ -248,7 +249,8 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # November 3: BG1 NPC Project's 8 defaults and Modpack 130 are not; Modpack 670
         # (alpha.15 pin) is.
         # November 4: Tweaks 3000 and 3010 are no longer selected by default.
-        self.assertEqual(len(baseline), 466)
+        # November 16: Chriz Overhead Text 0 is selected by default.
+        self.assertEqual(len(baseline), 467)
         self.assertEqual(self.selected({feature_id: "off"}), baseline)
         baeloth = "feature:chriz-bg-modpack:component-235"
         self.assertEqual(self.features[baeloth]["decision"], "optional")

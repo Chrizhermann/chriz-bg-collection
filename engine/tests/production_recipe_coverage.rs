@@ -52,6 +52,7 @@ fn catalog_for_mod(mod_id: &str) -> &'static str {
         "eet-end" => "EET_END",
         "eeex" => "EEEX",
         "eeexremote" => "EEEXREMOTE",
+        "chriz-overhead-text" => "CHRIZ_OVERHEAD_TEXT",
         "chriz-bg-modpack" => "CHRIZ-BG-MODPACK",
         "chriz-bg-rebalance" => "CHRIZ-BG-REBALANCE",
         "bubb-spell-menu" => "BUBB_SPELL_MENU_EXTENDED",

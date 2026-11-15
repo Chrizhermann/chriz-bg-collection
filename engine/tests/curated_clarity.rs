@@ -43,7 +43,8 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
     // The October 29 intake adds the default Sirene NPC for BG:EE run.
     // BG1 NPC Project became optional and unselected on November 3, so the bg1npc-bg1
     // run no longer runs by default.
-    assert_eq!(result.plan.runs.len(), 69);
+    // The November 16 intake adds the default Chriz Overhead Text run.
+    assert_eq!(result.plan.runs.len(), 70);
     assert_eq!(
         result
             .plan
@@ -77,7 +78,8 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         // Boomerang Dagger 670.
         // November 4: Tweaks 3000 (maximum HP on level-up) and 3010 (Maximum HP Creatures)
         // become unchecked options.
-        466
+        // November 16: Chriz Overhead Text adds default component 0.
+        467
     );
     // Scroll policy 430 hashes the final scrolls and spells, so it follows BuffBot.
     let (tail, rest) = result.plan.runs.split_last().unwrap();
