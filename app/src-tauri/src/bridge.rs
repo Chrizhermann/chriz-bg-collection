@@ -313,8 +313,10 @@ fn open_with_shell(target: &std::ffi::OsStr) -> Result<(), String> {
 
 #[cfg(not(windows))]
 fn open_with_shell(target: &std::ffi::OsStr) -> Result<(), String> {
-    Command::new("xdg-open")
-        .arg(target)
+    let mut command = Command::new("xdg-open");
+    command.arg(target);
+    crate::linux_launch::apply_clean_host_env(&mut command);
+    command
         .spawn()
         .map(|_| ())
         .map_err(|error| error.to_string())
@@ -2045,7 +2047,7 @@ impl NativeBridge {
             CommandError::new(
                 "diagnostics_path_invalid",
                 "The diagnostics path cannot be displayed safely.",
-                "Choose a local path with a Windows-compatible name and try again.",
+                "Choose a local path with a supported file or folder name and try again.",
                 error.technical_detail,
             )
         })?;

@@ -15,6 +15,8 @@ pub(crate) fn estimate(root: &Path) -> Option<u64> {
 }
 
 fn estimate_with_limits(root: &Path, deadline: Instant, mut entries_left: usize) -> Option<u64> {
+    #[cfg(unix)]
+    let proton_prefix = root.join(".chriz").join("proton");
     let mut total = 0_u64;
     let mut pending = vec![root.to_path_buf()];
     while let Some(directory) = pending.pop() {
@@ -36,6 +38,14 @@ fn estimate_with_limits(root: &Path, deadline: Instant, mut entries_left: usize)
             // DirEntry metadata does not follow links and reuses enumeration metadata
             // on Windows, avoiding a separate path lookup for every game resource.
             let metadata = entry.metadata().ok()?;
+            #[cfg(unix)]
+            if metadata.file_type().is_symlink()
+                && entry_path
+                    .strip_prefix(&proton_prefix)
+                    .is_ok_and(|rel| !rel.as_os_str().is_empty())
+            {
+                continue;
+            }
             if bg_engine::reparse::metadata_is_link(&entry_path, &metadata) {
                 return None;
             }
@@ -120,5 +130,39 @@ mod tests {
             fs::metadata(outside.join("private-save")).unwrap().len(),
             500
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn proton_prefix_symlinks_are_ignored_without_following_targets() {
+        use std::os::unix::fs::symlink;
+
+        let temp = tempfile::tempdir().unwrap();
+        let outside = temp.path().join("outside");
+        fs::create_dir(&outside).unwrap();
+        fs::write(outside.join("private-save"), [0; 500]).unwrap();
+
+        let managed = temp.path().join("managed");
+        let pfx = managed.join(".chriz/proton/pfx");
+        let dosdevices = pfx.join("dosdevices");
+        let docs = pfx.join("drive_c/users/steamuser/Documents");
+        fs::create_dir_all(managed.join("game")).unwrap();
+        fs::create_dir_all(&dosdevices).unwrap();
+        fs::create_dir_all(&docs).unwrap();
+        fs::write(managed.join("game/game.exe"), [0; 100]).unwrap();
+        fs::write(pfx.join("drive_c/wine.dll"), [0; 25]).unwrap();
+        symlink("/", dosdevices.join("z:")).unwrap();
+        symlink(&outside, docs.join("save")).unwrap();
+        assert_eq!(estimate(&managed), Some(125));
+
+        let escaped = temp.path().join("escaped");
+        fs::create_dir_all(escaped.join(".chriz")).unwrap();
+        symlink(&outside, escaped.join(".chriz/proton")).unwrap();
+        assert_eq!(estimate(&escaped), None);
+
+        let game_linked = temp.path().join("game-linked");
+        fs::create_dir_all(game_linked.join("game")).unwrap();
+        symlink(&outside, game_linked.join("game/linked")).unwrap();
+        assert_eq!(estimate(&game_linked), None);
     }
 }

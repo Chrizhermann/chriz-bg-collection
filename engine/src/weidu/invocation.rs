@@ -242,10 +242,22 @@ struct ProbeOutput {
     stdout: Vec<u8>,
 }
 
-fn run_bounded_version_probe(verified: &VerifiedWeidu) -> Result<ProbeOutput, InvocationError> {
-    let probe_dir = tempfile::Builder::new()
+fn create_probe_temp_dir(source_path: &Path) -> io::Result<tempfile::TempDir> {
+    if let Some(parent) = source_path.parent().filter(|parent| parent.is_dir()) {
+        if let Ok(dir) = tempfile::Builder::new()
+            .prefix(".chriz-bg-weidu-probe-")
+            .tempdir_in(parent)
+        {
+            return Ok(dir);
+        }
+    }
+    tempfile::Builder::new()
         .prefix("chriz-bg-weidu-probe-")
         .tempdir()
+}
+
+fn run_bounded_version_probe(verified: &VerifiedWeidu) -> Result<ProbeOutput, InvocationError> {
+    let probe_dir = create_probe_temp_dir(&verified.source_path)
         .map_err(|source| probe_error(verified, source))?;
     let probe_path = probe_dir.path().join("weidu-version-probe.exe");
     let mut created = OpenOptions::new()
@@ -292,6 +304,18 @@ fn run_bounded_version_probe(verified: &VerifiedWeidu) -> Result<ProbeOutput, In
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    #[cfg(unix)]
+    {
+        for sub in ["home", "xdg-data", "xdg-config", "xdg-cache"] {
+            let dir = probe_dir.path().join(sub);
+            fs::create_dir_all(&dir).map_err(|source| probe_error(verified, source))?;
+        }
+        command
+            .env("HOME", probe_dir.path().join("home"))
+            .env("XDG_DATA_HOME", probe_dir.path().join("xdg-data"))
+            .env("XDG_CONFIG_HOME", probe_dir.path().join("xdg-config"))
+            .env("XDG_CACHE_HOME", probe_dir.path().join("xdg-cache"));
+    }
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
@@ -348,7 +372,7 @@ fn run_bounded_version_probe(verified: &VerifiedWeidu) -> Result<ProbeOutput, In
                 timeout: TOOL_VERSION_PROBE_TIMEOUT,
             });
         }
-        match child.try_wait() {
+        match process_group.poll_exit(&mut child) {
             Ok(Some(status)) => break status,
             Ok(None) => thread::sleep(TOOL_VERSION_PROBE_POLL_INTERVAL),
             Err(source) => {
@@ -404,11 +428,19 @@ fn spawn_bounded_probe_reader<R: Read + Send + 'static>(
                 Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
                 Err(error) => return Err(error),
             };
-            let previous = total
-                .fetch_update(Ordering::AcqRel, Ordering::Acquire, |value| {
-                    Some(value.saturating_add(count))
-                })
-                .expect("bounded output counter update cannot fail");
+            let mut previous = total.load(Ordering::Acquire);
+            loop {
+                let next = previous.saturating_add(count);
+                match total.compare_exchange_weak(
+                    previous,
+                    next,
+                    Ordering::AcqRel,
+                    Ordering::Acquire,
+                ) {
+                    Ok(_) => break,
+                    Err(actual) => previous = actual,
+                }
+            }
             let retained = TOOL_VERSION_PROBE_OUTPUT_LIMIT
                 .saturating_sub(previous)
                 .min(count);
@@ -489,11 +521,7 @@ pub fn parse_weidu_version_output(stdout: &[u8]) -> Result<String, InvocationErr
 fn read_pe_machine(path: &Path, bytes: &[u8]) -> Result<PeMachine, InvocationError> {
     #[cfg(unix)]
     {
-        if bytes.starts_with(b"\x7fELF") {
-            parse_elf_machine(path, bytes)
-        } else {
-            parse_pe_machine(path, bytes)
-        }
+        parse_elf_machine(path, bytes)
     }
     #[cfg(not(unix))]
     {
@@ -501,6 +529,7 @@ fn read_pe_machine(path: &Path, bytes: &[u8]) -> Result<PeMachine, InvocationErr
     }
 }
 
+#[cfg_attr(unix, allow(dead_code))]
 fn parse_pe_machine(path: &Path, bytes: &[u8]) -> Result<PeMachine, InvocationError> {
     if bytes.len() < 0x40 || &bytes[..2] != b"MZ" {
         return Err(InvocationError::InvalidToolPe {
@@ -1805,5 +1834,22 @@ mod tests {
         assert!(super::parse_elf_machine(path, &make_elf(1, 1, 2, 0x003e)).is_err());
         assert!(super::parse_elf_machine(path, &make_elf(2, 1, 1, 0x003e)).is_err());
         assert!(super::parse_elf_machine(path, &make_elf(2, 1, 2, 0xffff)).is_err());
+
+        #[cfg(unix)]
+        {
+            let mut pe = vec![0_u8; 0x80];
+            pe[0..2].copy_from_slice(b"MZ");
+            pe[0x3c..0x40].copy_from_slice(&0x40_u32.to_le_bytes());
+            pe[0x40..0x44].copy_from_slice(b"PE\0\0");
+            pe[0x44..0x46].copy_from_slice(&0x8664_u16.to_le_bytes());
+            assert!(
+                super::read_pe_machine(path, &pe).is_err(),
+                "Unix tool verification must reject Windows PE binaries"
+            );
+            assert_eq!(
+                super::read_pe_machine(path, &make_elf(2, 1, 2, 0x003e)).unwrap(),
+                PeMachine::X86_64
+            );
+        }
     }
 }

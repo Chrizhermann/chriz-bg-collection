@@ -199,6 +199,7 @@ fn parse_xdg_desktop_dir(contents: &str, home: Option<&Path>) -> Option<PathBuf>
         if line.is_empty() || line.starts_with('#') {
             continue;
         }
+        let line = line.strip_prefix("export ").map_or(line, str::trim_start);
         let Some(rest) = line.strip_prefix("XDG_DESKTOP_DIR=") else {
             continue;
         };
@@ -208,12 +209,19 @@ fn parse_xdg_desktop_dir(contents: &str, home: Option<&Path>) -> Option<PathBuf>
             .and_then(|s| s.strip_suffix('"'))
             .or_else(|| value.strip_prefix('\'').and_then(|s| s.strip_suffix('\'')))
             .unwrap_or(value);
-        if let Some(suffix) = unquoted.strip_prefix("$HOME/") {
-            let home = home?;
-            return Some(home.join(suffix));
-        }
-        if unquoted == "$HOME" {
-            return home.map(Path::to_path_buf);
+        if let Some(rest) = unquoted
+            .strip_prefix("${HOME}")
+            .or_else(|| unquoted.strip_prefix("$HOME"))
+        {
+            let Some(home) = home else {
+                continue;
+            };
+            let trimmed = rest.trim_start_matches(['/', '\\']);
+            return Some(if trimmed.is_empty() {
+                home.to_path_buf()
+            } else {
+                home.join(trimmed)
+            });
         }
         if unquoted.starts_with('/') {
             return Some(PathBuf::from(unquoted));
@@ -1024,5 +1032,20 @@ mod tests {
         )
         .expect("parse user-dirs.dirs");
         assert_eq!(from_user_dirs, PathBuf::from("/home/deck/Schreibtisch"));
+
+        let from_exported_braced = parse_xdg_desktop_dir(
+            "export XDG_DESKTOP_DIR=\"${HOME}/Desktop\"\n",
+            Some(Path::new("/home/deck")),
+        );
+        assert_eq!(
+            from_exported_braced,
+            Some(PathBuf::from("/home/deck/Desktop"))
+        );
+
+        let from_exported_home = parse_xdg_desktop_dir(
+            "export XDG_DESKTOP_DIR=\"${HOME}\"\n",
+            Some(Path::new("/home/deck")),
+        );
+        assert_eq!(from_exported_home, Some(PathBuf::from("/home/deck")));
     }
 }

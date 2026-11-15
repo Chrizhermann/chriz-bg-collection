@@ -198,6 +198,44 @@ fn exports_eet_compatibility_hash_evidence_without_mod_payloads() {
 }
 
 #[test]
+fn exports_unix_mod_compatibility_evidence_without_mod_payloads() {
+    let fixture = fixture(false);
+    let evidence = br#"{"fix_id":"weidu-unix-mod-compatibility-v1","mod_id":"yeslicknpc-bg2","tp2":"yeslicknpc/yeslicknpc.tp2","patched_files":[{"relative_path":"yeslicknpc/lib/main_component.tpa","observed_before_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","observed_after_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]}"#;
+    write(
+        &fixture.managed,
+        ".chriz/attempts/attempt-001/steps/0001-0123456789abcdef/attempt-0001/unix-mod-compatibility.json",
+        evidence,
+    );
+    write(
+        &fixture.managed,
+        "game/yeslicknpc/lib/main_component.tpa",
+        b"not for diagnostics",
+    );
+    let bundle = export_diagnostics(&DiagnosticsRequest {
+        managed_root: fixture.managed,
+        attempt_id: Some("attempt-001".to_owned()),
+        output_path: fixture.output,
+        redact_roots: vec![fixture.home],
+        redact_user_names: Vec::new(),
+        redact_computer_names: Vec::new(),
+        missing_receipt_reason: None,
+    })
+    .unwrap();
+    let entries = zip_entries(&bundle.path);
+    let exported = entries
+        .iter()
+        .find(|(name, _)| name.ends_with("/unix-mod-compatibility.json"))
+        .expect("the applied Unix mod compatibility record must be included in diagnostics");
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&exported.1).unwrap(),
+        serde_json::from_slice::<serde_json::Value>(evidence).unwrap()
+    );
+    assert!(!entries
+        .iter()
+        .any(|(name, _)| name.ends_with("main_component.tpa")));
+}
+
+#[test]
 fn exports_config_file_evidence_without_the_placed_file() {
     let fixture = fixture(false);
     let evidence = br#"[{"component":3347,"path":"cdtweaks/cdtweaks.txt","sha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","created":true}]"#;

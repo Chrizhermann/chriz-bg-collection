@@ -587,6 +587,51 @@ fn discover_gog<R: RegistryProvider, F: FileSystemProvider>(
     }
 }
 
+fn resolve_direct_child<F: FileSystemProvider>(
+    fs_provider: &F,
+    parent: &Path,
+    expected_name: &str,
+    expected_kind: FileKind,
+) -> Option<PathBuf> {
+    let direct = parent.join(expected_name);
+    if matches!(fs_provider.file_kind(&direct), Ok(kind) if kind == expected_kind) {
+        #[cfg(not(windows))]
+        if let Ok(entries) = fs_provider.read_dir(parent) {
+            let matches = entries
+                .iter()
+                .filter(|entry| {
+                    entry
+                        .name
+                        .to_str()
+                        .is_some_and(|name| name.eq_ignore_ascii_case(expected_name))
+                })
+                .count();
+            if matches > 1 {
+                return None;
+            }
+        }
+        return Some(direct);
+    }
+    #[cfg(not(windows))]
+    {
+        let entries = fs_provider.read_dir(parent).ok()?;
+        let mut matched = entries.into_iter().filter(|entry| {
+            entry
+                .name
+                .to_str()
+                .is_some_and(|name| name.eq_ignore_ascii_case(expected_name))
+        });
+        let first = matched.next()?;
+        if matched.next().is_some() {
+            return None;
+        }
+        if matches!(fs_provider.file_kind(&first.path), Ok(kind) if kind == expected_kind) {
+            return Some(first.path);
+        }
+    }
+    None
+}
+
 /// GOG games in the default GOG folders, for installs whose registry record is missing. A
 /// folder counts only when it holds the game's `goggame-<id>.info` file.
 fn discover_gog_folders<F: FileSystemProvider>(
@@ -597,12 +642,21 @@ fn discover_gog_folders<F: FileSystemProvider>(
 ) {
     for library in libraries {
         for &(role, name) in GOG_FOLDER_NAMES {
-            let root = library.join(name);
+            let Some(root) = resolve_direct_child(fs_provider, library, name, FileKind::Directory)
+            else {
+                continue;
+            };
             let Some(info) = GOG_GAME_IDS
                 .iter()
                 .filter(|(id_role, _)| *id_role == role)
-                .map(|(_, id)| root.join(format!("goggame-{id}.info")))
-                .find(|info| matches!(fs_provider.file_kind(info), Ok(FileKind::File)))
+                .find_map(|(_, id)| {
+                    resolve_direct_child(
+                        fs_provider,
+                        &root,
+                        &format!("goggame-{id}.info"),
+                        FileKind::File,
+                    )
+                })
             else {
                 continue;
             };

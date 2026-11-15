@@ -336,10 +336,17 @@ pub fn resolve_game_executable<F: FileSystemProvider>(
     role: GameRole,
     preferred: &str,
 ) -> Option<String> {
-    match direct_relative_kind_or_missing(fs_provider, root, preferred, FileKind::File) {
-        Ok(true) => return Some(preferred.to_owned()),
+    match resolve_direct_relative_kind(fs_provider, root, preferred, FileKind::File) {
+        Ok(Some(resolved)) => {
+            if let Ok(relative) = resolved.strip_prefix(root) {
+                if let Some(text) = relative.to_str() {
+                    return Some(text.replace('\\', "/"));
+                }
+            }
+            return Some(preferred.to_owned());
+        }
         Err(()) => return None,
-        Ok(false) => {}
+        Ok(None) => {}
     }
     let entries = sorted_entries(fs_provider, root).ok()?;
     for known in role.known_executables() {
@@ -400,10 +407,12 @@ fn has_native_linux_game_markers<F: FileSystemProvider>(fs_provider: &F, root: &
 }
 
 fn has_direct_bif_archive<F: FileSystemProvider>(fs_provider: &F, root: &Path) -> bool {
-    if direct_relative_kind(fs_provider, root, "data", FileKind::Directory).is_err() {
+    let Ok(Some(data_dir)) =
+        resolve_direct_relative_kind(fs_provider, root, "data", FileKind::Directory)
+    else {
         return false;
-    }
-    sorted_entries(fs_provider, &root.join("data")).is_ok_and(|entries| {
+    };
+    sorted_entries(fs_provider, &data_dir).is_ok_and(|entries| {
         entries.iter().any(|entry| {
             entry.kind == FileKind::File
                 && entry
@@ -502,7 +511,15 @@ pub(crate) fn inspect_profile_paths<F: FileSystemProvider>(
     );
     let (build, version_error) = match &resolved_executable {
         Some(executable) => {
-            let version_path = canonical_root.join(normalized_path(executable));
+            let version_path = resolve_direct_relative_kind(
+                fs_provider,
+                &canonical_root,
+                executable,
+                FileKind::File,
+            )
+            .ok()
+            .flatten()
+            .unwrap_or_else(|| canonical_root.join(normalized_path(executable)));
             match fs_provider.product_version(&version_path) {
                 Ok(version) => (Some(version), None),
                 Err(error) => (None, Some(error.to_string())),
@@ -652,7 +669,8 @@ fn inspect_with_profile<F: FileSystemProvider>(
     }
     let sod_merged = !missing_sod.is_empty()
         && profile.role == GameRole::BgeeSod
-        && direct_relative_kind(fs_provider, root, SOD_MERGED_MARKER, FileKind::File).is_ok();
+        && direct_relative_kind_or_missing(fs_provider, root, SOD_MERGED_MARKER, FileKind::File)
+            == Ok(true);
     if sod_merged {
         findings.push(GameFinding {
             kind: FindingKind::SodMerged,
@@ -986,9 +1004,9 @@ fn observe_profile<F: FileSystemProvider>(
         } else {
             relative.as_str()
         };
-        let path = root.join(normalized_path(actual_relative));
-        match direct_relative_kind_or_missing(fs_provider, root, actual_relative, FileKind::File) {
-            Ok(true) => match fs_provider.read(&path) {
+        let fallback_path = root.join(normalized_path(actual_relative));
+        match resolve_direct_relative_kind(fs_provider, root, actual_relative, FileKind::File) {
+            Ok(Some(path)) => match fs_provider.read(&path) {
                 Ok(bytes) => {
                     observation
                         .fingerprints
@@ -999,59 +1017,57 @@ fn observe_profile<F: FileSystemProvider>(
                     observation.unreadable.push(path);
                 }
             },
-            Ok(false) => {
+            Ok(None) => {
                 observation.complete_fingerprints = false;
                 observation.missing.insert(folded_path(actual_relative));
             }
             Err(()) => {
                 observation.complete_fingerprints = false;
-                observation.unreadable.push(path);
+                observation.unreadable.push(fallback_path);
             }
         }
     }
 
     for surface in &profile.inventory_surfaces {
-        let surface_path = root.join(normalized_path(&surface.path));
+        let fallback_surface_path = root.join(normalized_path(&surface.path));
         match surface.kind {
-            InventoryKind::File => match direct_relative_kind_or_missing(
-                fs_provider,
-                root,
-                &surface.path,
-                FileKind::File,
-            ) {
-                Ok(false) if surface.allow_missing => {}
-                Ok(true) => match fs_provider.read(&surface_path) {
-                    Ok(bytes) => {
-                        observation.inventory.insert(
-                            folded_path(&surface.path),
-                            ObservedEntry {
-                                kind: InventoryEntryKind::File,
-                                sha256: Some(hash_bytes(&bytes)),
-                            },
-                        );
-                    }
-                    Err(_) => {
+            InventoryKind::File => {
+                match resolve_direct_relative_kind(fs_provider, root, &surface.path, FileKind::File)
+                {
+                    Ok(None) if surface.allow_missing => {}
+                    Ok(Some(surface_path)) => match fs_provider.read(&surface_path) {
+                        Ok(bytes) => {
+                            observation.inventory.insert(
+                                folded_path(&surface.path),
+                                ObservedEntry {
+                                    kind: InventoryEntryKind::File,
+                                    sha256: Some(hash_bytes(&bytes)),
+                                },
+                            );
+                        }
+                        Err(_) => {
+                            observation.complete_inventory = false;
+                            observation.unreadable.push(surface_path);
+                        }
+                    },
+                    Ok(None) => {
                         observation.complete_inventory = false;
-                        observation.unreadable.push(surface_path);
+                        observation.missing.insert(folded_path(&surface.path));
                     }
-                },
-                Ok(false) => {
-                    observation.complete_inventory = false;
-                    observation.missing.insert(folded_path(&surface.path));
+                    Err(()) => {
+                        observation.complete_inventory = false;
+                        observation.unreadable.push(fallback_surface_path);
+                    }
                 }
-                Err(()) => {
-                    observation.complete_inventory = false;
-                    observation.unreadable.push(surface_path);
-                }
-            },
-            InventoryKind::Tree => match direct_relative_kind_or_missing(
+            }
+            InventoryKind::Tree => match resolve_direct_relative_kind(
                 fs_provider,
                 root,
                 &surface.path,
                 FileKind::Directory,
             ) {
-                Ok(false) if surface.allow_missing => {}
-                Ok(true) => {
+                Ok(None) if surface.allow_missing => {}
+                Ok(Some(surface_path)) => {
                     let mut problems = Vec::new();
                     let listed = collect_tree(
                         fs_provider,
@@ -1068,20 +1084,28 @@ fn observe_profile<F: FileSystemProvider>(
                         observation.unreadable.extend(problems);
                     }
                 }
-                Ok(false) => {
+                Ok(None) => {
                     observation.complete_inventory = false;
                     observation.missing.insert(folded_path(&surface.path));
                 }
                 Err(()) => {
                     observation.complete_inventory = false;
-                    observation.unreadable.push(surface_path);
+                    observation.unreadable.push(fallback_surface_path);
                 }
             },
             InventoryKind::Matching => {
-                match direct_relative_kind(fs_provider, root, &surface.path, FileKind::Directory)
-                    .and_then(|()| sorted_entries(fs_provider, &surface_path))
-                {
-                    Ok(entries) => {
+                match resolve_direct_relative_kind(
+                    fs_provider,
+                    root,
+                    &surface.path,
+                    FileKind::Directory,
+                )
+                .and_then(|resolved| resolved.ok_or(()))
+                .and_then(|surface_path| {
+                    sorted_entries(fs_provider, &surface_path)
+                        .map(|entries| (surface_path, entries))
+                }) {
+                    Ok((_, entries)) => {
                         for entry in entries {
                             if crate::reparse::is_benign_os_metadata_filename(&entry.name)
                                 && entry.kind == FileKind::File
@@ -1110,7 +1134,7 @@ fn observe_profile<F: FileSystemProvider>(
                     }
                     Err(()) => {
                         observation.complete_inventory = false;
-                        observation.unreadable.push(surface_path);
+                        observation.unreadable.push(fallback_surface_path);
                     }
                 }
             }
@@ -1200,23 +1224,37 @@ fn scan_forbidden_residue<F: FileSystemProvider>(
         .iter()
         .filter(|residue| residue.surface != "." || residue.recursive)
     {
-        let directory = root.join(normalized_path(&residue.surface));
+        let fallback_directory = root.join(normalized_path(&residue.surface));
         let mut entries = Vec::new();
-        if direct_relative_kind(fs_provider, root, &residue.surface, FileKind::Directory)
-            .and_then(|()| {
-                collect_pattern_entries(fs_provider, &directory, residue.recursive, &mut entries)
-            })
-            .is_err()
-        {
-            findings.push((
-                format!(
-                    "Could not completely check {} for leftovers of earlier mod installs ({:?}).",
-                    residue.surface, residue.pattern
-                ),
-                vec![directory],
-            ));
-            continue;
-        }
+        let resolved_directory =
+            resolve_direct_relative_kind(fs_provider, root, &residue.surface, FileKind::Directory);
+        let directory = match resolved_directory {
+            Ok(Some(dir)) => {
+                if collect_pattern_entries(fs_provider, &dir, residue.recursive, &mut entries)
+                    .is_err()
+                {
+                    findings.push((
+                        format!(
+                            "Could not completely check {} for leftovers of earlier mod installs ({:?}).",
+                            residue.surface, residue.pattern
+                        ),
+                        vec![dir],
+                    ));
+                    continue;
+                }
+                dir
+            }
+            Ok(None) | Err(()) => {
+                findings.push((
+                    format!(
+                        "Could not completely check {} for leftovers of earlier mod installs ({:?}).",
+                        residue.surface, residue.pattern
+                    ),
+                    vec![fallback_directory],
+                ));
+                continue;
+            }
+        };
         let mut matched = entries
             .into_iter()
             .filter(|entry| {
@@ -1358,16 +1396,89 @@ fn digest_field(digest: &mut Sha256, label: &[u8], value: &[u8]) {
     digest.update(value);
 }
 
-fn direct_relative_kind<F: FileSystemProvider>(
+fn resolve_direct_relative<F: FileSystemProvider>(
+    fs_provider: &F,
+    root: &Path,
+    relative: &str,
+) -> std::result::Result<Option<(PathBuf, FileKind)>, ()> {
+    if relative == "." {
+        return fs_provider
+            .file_kind(root)
+            .map(|kind| Some((root.to_path_buf(), kind)))
+            .map_err(|_| ());
+    }
+
+    let mut components = relative.split('/').peekable();
+    let mut current = root.to_path_buf();
+    let mut terminal_kind = FileKind::Directory;
+    while let Some(component) = components.next() {
+        let is_last = components.peek().is_none();
+        let direct = current.join(component);
+        let (resolved_path, resolved_kind) = match fs_provider.file_kind(&direct) {
+            Ok(kind) => {
+                #[cfg(not(windows))]
+                if let Ok(entries) = fs_provider.read_dir(&current) {
+                    let matches = entries
+                        .iter()
+                        .filter(|entry| {
+                            entry
+                                .name
+                                .to_str()
+                                .is_some_and(|name| name.eq_ignore_ascii_case(component))
+                        })
+                        .count();
+                    if matches > 1 {
+                        return Err(());
+                    }
+                }
+                (direct, kind)
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                let entries = match fs_provider.read_dir(&current) {
+                    Ok(entries) => entries,
+                    Err(err) if err.kind() == io::ErrorKind::NotFound => return Ok(None),
+                    Err(_) => return Err(()),
+                };
+                let mut matched = entries.into_iter().filter(|entry| {
+                    entry
+                        .name
+                        .to_str()
+                        .is_some_and(|name| name.eq_ignore_ascii_case(component))
+                });
+                let Some(first) = matched.next() else {
+                    return Ok(None);
+                };
+                if matched.next().is_some() {
+                    return Err(());
+                }
+                let kind = match fs_provider.file_kind(&first.path) {
+                    Ok(kind) => kind,
+                    Err(err) if err.kind() == io::ErrorKind::NotFound => return Ok(None),
+                    Err(_) => return Err(()),
+                };
+                (first.path, kind)
+            }
+            Err(_) => return Err(()),
+        };
+        if !is_last && resolved_kind != FileKind::Directory {
+            return Err(());
+        }
+        current = resolved_path;
+        terminal_kind = resolved_kind;
+    }
+    Ok(Some((current, terminal_kind)))
+}
+
+fn resolve_direct_relative_kind<F: FileSystemProvider>(
     fs_provider: &F,
     root: &Path,
     relative: &str,
     terminal_kind: FileKind,
-) -> std::result::Result<(), ()> {
-    if direct_relative_kind_or_missing(fs_provider, root, relative, terminal_kind)? {
-        Ok(())
-    } else {
-        Err(())
+) -> std::result::Result<Option<PathBuf>, ()> {
+    match resolve_direct_relative(fs_provider, root, relative)? {
+        Some((path, kind)) if kind == terminal_kind => Ok(Some(path)),
+        Some(_) => Err(()),
+        None => Ok(None),
     }
 }
 
@@ -1377,30 +1488,8 @@ fn direct_relative_kind_or_missing<F: FileSystemProvider>(
     relative: &str,
     terminal_kind: FileKind,
 ) -> std::result::Result<bool, ()> {
-    if relative == "." {
-        return fs_provider
-            .file_kind(root)
-            .map(|kind| kind == terminal_kind)
-            .map_err(|_| ());
-    }
-
-    let components = relative.split('/').collect::<Vec<_>>();
-    let mut path = root.to_path_buf();
-    for (index, component) in components.iter().enumerate() {
-        path.push(component);
-        let expected = if index + 1 == components.len() {
-            terminal_kind
-        } else {
-            FileKind::Directory
-        };
-        match fs_provider.file_kind(&path) {
-            Ok(kind) if kind == expected => {}
-            Ok(_) => return Err(()),
-            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(false),
-            Err(_) => return Err(()),
-        }
-    }
-    Ok(true)
+    resolve_direct_relative_kind(fs_provider, root, relative, terminal_kind)
+        .map(|resolved| resolved.is_some())
 }
 
 fn hash_bytes(bytes: &[u8]) -> String {
@@ -1606,5 +1695,72 @@ mod tests {
         assert!(finding.message.contains("native Linux build"));
         assert!(finding.message.contains("Proton"));
         assert!(finding.message.contains("Windows build"));
+    }
+
+    #[test]
+    fn mixed_case_directories_and_sod_files_resolve_on_case_sensitive_fs() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("BGEE");
+        fs::create_dir_all(root.join("Data")).unwrap();
+        fs::create_dir_all(root.join("Lang/EN_US")).unwrap();
+        fs::create_dir_all(root.join("DLC")).unwrap();
+        fs::create_dir_all(root.join("Movies")).unwrap();
+        fs::create_dir_all(root.join("Override")).unwrap();
+        fs::write(
+            root.join("Baldur.exe"),
+            minimal_pe_with_product_version(2, 7, 3, 0),
+        )
+        .unwrap();
+        fs::write(root.join("chitin.key"), b"key").unwrap();
+        fs::write(root.join("engine.lua"), b"engine_name = \"BG1\"").unwrap();
+        fs::write(root.join("Data/25DEFLT.BIF"), b"bif").unwrap();
+        fs::write(root.join("Lang/EN_US/DIALOG.TLK"), b"tlk").unwrap();
+        fs::write(root.join("DLC/SOD-DLC.ZIP"), b"dlc").unwrap();
+        fs::write(root.join("Movies/SODCIN05.WBM"), b"mov").unwrap();
+        fs::write(root.join("Override/mod_file.2da"), b"modded").unwrap();
+
+        let profiles = GameProfiles::load(
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../manifest/game-builds"),
+        )
+        .unwrap();
+        let candidate = inspect_game_path(
+            &profiles,
+            &SystemFileSystem,
+            GameRole::BgeeSod,
+            Storefront::Steam,
+            &root,
+        )
+        .unwrap();
+        assert!(
+            !candidate
+                .findings
+                .iter()
+                .any(|f| f.kind == FindingKind::MissingSod || f.kind == FindingKind::MissingFiles),
+            "unexpected missing findings: {:?}",
+            candidate.findings
+        );
+        assert!(
+            candidate
+                .findings
+                .iter()
+                .any(|f| f.kind == FindingKind::Modified),
+            "expected Modified finding when Override/ holds mod residue: {:?}",
+            candidate.findings
+        );
+
+        #[cfg(not(windows))]
+        {
+            fs::create_dir_all(root.join("override")).unwrap();
+            let collided = resolve_direct_relative_kind(
+                &SystemFileSystem,
+                &root,
+                "override",
+                FileKind::Directory,
+            );
+            assert!(
+                collided.is_err(),
+                "case-colliding siblings must fail closed on case-sensitive filesystems"
+            );
+        }
     }
 }

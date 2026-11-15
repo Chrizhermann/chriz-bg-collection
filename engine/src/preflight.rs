@@ -27,6 +27,49 @@ const CREATOR_PROTECTED_ROOTS: [&str; 3] = [
 const DEFAULT_LANGUAGE: &str = "en_US";
 static WRITE_PROBE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
+/// Lua interpreter command names checked on Unix for EET's `which lua` requirement.
+pub(crate) const UNIX_LUA_CANDIDATES: &[&str] =
+    &["lua", "lua5.3", "lua5.4", "lua5.2", "lua5.1", "luajit"];
+
+/// Resolves the first executable regular file matching any name in `candidates` along `path_var`
+/// (or directly as a path when the candidate contains `/`).
+#[cfg(unix)]
+pub(crate) fn find_executable_in_path_var(
+    path_var: Option<&std::ffi::OsStr>,
+    candidates: &[&str],
+) -> Option<PathBuf> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dirs: Vec<PathBuf> = path_var
+        .map(|value| {
+            std::env::split_paths(value)
+                .filter(|dir| !dir.as_os_str().is_empty())
+                .collect()
+        })
+        .unwrap_or_default();
+    let is_exec_file = |path: &Path| {
+        fs::metadata(path).is_ok_and(|metadata| {
+            metadata.is_file() && (metadata.permissions().mode() & 0o111) != 0
+        })
+    };
+    for candidate in candidates {
+        if candidate.contains('/') {
+            let path = Path::new(candidate);
+            if is_exec_file(path) {
+                return Some(path.to_path_buf());
+            }
+            continue;
+        }
+        for dir in &dirs {
+            let path = dir.join(candidate);
+            if is_exec_file(&path) {
+                return Some(path);
+            }
+        }
+    }
+    None
+}
+
 /// One payload or executable tool input required by the frozen plan.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RequiredInput {
@@ -130,6 +173,9 @@ pub trait PreflightHost {
     fn probe_directory_writable(&self, path: &Path) -> io::Result<()>;
     fn running_executable_paths(&self) -> io::Result<Vec<PathBuf>>;
     fn probe_exclusive_writable_files(&self, paths: &[PathBuf]) -> Result<(), ExclusiveFileError>;
+    fn has_host_command(&self, _candidates: &[&str]) -> bool {
+        true
+    }
 }
 
 /// Exact file that prevented a simultaneous exclusive TLK probe.
@@ -179,6 +225,31 @@ impl PreflightHost for SystemPreflight {
 
     fn probe_exclusive_writable_files(&self, paths: &[PathBuf]) -> Result<(), ExclusiveFileError> {
         probe_exclusive_writable_files(paths)
+    }
+
+    fn has_host_command(&self, candidates: &[&str]) -> bool {
+        #[cfg(not(unix))]
+        {
+            let _ = candidates;
+            true
+        }
+        #[cfg(unix)]
+        {
+            #[cfg(any(debug_assertions, feature = "test-hooks"))]
+            if let Some(declared) = std::env::var_os("CHRIZ_BG_COLLECTION_TEST_HOST_COMMANDS") {
+                let raw = declared.to_string_lossy();
+                let commands: Vec<&str> = raw
+                    .split(',')
+                    .map(str::trim)
+                    .filter(|item| !item.is_empty())
+                    .collect();
+                return candidates
+                    .iter()
+                    .any(|candidate| commands.contains(candidate));
+            }
+            let path_var = std::env::var_os("PATH");
+            find_executable_in_path_var(path_var.as_deref(), candidates).is_some()
+        }
     }
 }
 
@@ -309,6 +380,40 @@ pub fn initial_preflight_with(
         &frozen.artifact_identities,
     )?;
     validate_required_inputs("tool", request.required_tools, &frozen.tool_identities)?;
+    if request
+        .current_plan
+        .runs
+        .iter()
+        .any(|run| run.mod_id == "eet" && run.components.contains(&0))
+    {
+        if !host.has_host_command(&["which"]) {
+            return Err(PreflightError::RequiredInputUnavailable {
+                kind: "host command",
+                id: "which".to_owned(),
+                reason: "EET on Linux requires `which` on PATH; install `which` via your package manager before starting the build".to_owned(),
+            });
+        }
+        if !host.has_host_command(UNIX_LUA_CANDIDATES) {
+            return Err(PreflightError::RequiredInputUnavailable {
+                kind: "host command",
+                id: "lua".to_owned(),
+                reason: "EET on Linux requires a Lua interpreter on PATH; install `lua5.3` (or `lua` / `lua5.4`) via your package manager before starting the build".to_owned(),
+            });
+        }
+    }
+    if request.current_plan.runs.iter().any(|run| {
+        matches!(
+            run.mod_id.as_str(),
+            "stratagems" | "randomiser" | "iwdification"
+        )
+    }) && !host.has_host_command(&["/usr/bin/perl"])
+    {
+        return Err(PreflightError::RequiredInputUnavailable {
+            kind: "host command",
+            id: "perl".to_owned(),
+            reason: "SSL script compilation on Linux requires `/usr/bin/perl`; install `perl` via your package manager before starting the build".to_owned(),
+        });
+    }
 
     let (target, writable_root) = destination_and_writable_root(request.destination)?;
     if is_creator_protected_destination(&target) {
@@ -1970,6 +2075,277 @@ mod process_tests {
             )
             .expect("filter query-only image conservatively");
             assert_eq!(filtered.is_none(), exit_code == 0);
+        }
+    }
+}
+
+#[cfg(test)]
+mod eet_host_command_tests {
+    use super::*;
+    use crate::games::{Eligibility, FindingKind, GameFinding, GameRole, Storefront};
+    use crate::manifest::{GameRoot, Phase};
+    use crate::recipe_view::NormalizedSelection;
+    use crate::resolve::PlannedRun;
+    use crate::session::{SessionEvent, SessionStore, SourceGameFingerprints};
+    use std::collections::BTreeMap;
+
+    struct HostWithCommands<'a>(&'a [&'a str]);
+
+    impl PreflightHost for HostWithCommands<'_> {
+        fn available_space(&self, _: &Path) -> io::Result<u64> {
+            Ok(u64::MAX)
+        }
+        fn volume_key(&self, _: &Path) -> io::Result<OsString> {
+            Ok("test-volume".into())
+        }
+        fn probe_directory_writable(&self, _: &Path) -> io::Result<()> {
+            Ok(())
+        }
+        fn running_executable_paths(&self) -> io::Result<Vec<PathBuf>> {
+            Ok(Vec::new())
+        }
+        fn probe_exclusive_writable_files(&self, _: &[PathBuf]) -> Result<(), ExclusiveFileError> {
+            Ok(())
+        }
+        fn has_host_command(&self, candidates: &[&str]) -> bool {
+            candidates.iter().any(|name| self.0.contains(name))
+        }
+    }
+
+    fn candidate(role: GameRole, root: PathBuf, fingerprint: String) -> GameCandidate {
+        GameCandidate {
+            role,
+            storefront: Storefront::Steam,
+            root: root.clone(),
+            build: Some("2.7.3.0".to_owned()),
+            eligibility: Eligibility::Eligible,
+            findings: vec![GameFinding {
+                kind: FindingKind::Fresh,
+                message: "fixture is fresh".to_owned(),
+                paths: vec![root],
+            }],
+            fingerprint: Some(fingerprint),
+        }
+    }
+
+    fn run_fixture(eet_run: bool, allowed: &[&str]) -> Result<PreflightReport, PreflightError> {
+        run_fixture_for_mod(if eet_run { "eet" } else { "eefixpack" }, eet_run, allowed)
+    }
+
+    fn run_fixture_for_mod(
+        mod_id: &str,
+        eet_run: bool,
+        allowed: &[&str],
+    ) -> Result<PreflightReport, PreflightError> {
+        let temp = tempfile::tempdir().unwrap();
+        let bg1_dir = temp.path().join("clean-bg1");
+        let bg2_dir = temp.path().join("clean-bg2");
+        let managed = temp.path().join("managed");
+        let cache = temp.path().join("cache");
+        for dir in [&bg1_dir, &bg2_dir, &managed, &cache] {
+            fs::create_dir(dir).unwrap();
+        }
+        let bg1_dir = fs::canonicalize(bg1_dir).unwrap();
+        let bg2_dir = fs::canonicalize(bg2_dir).unwrap();
+        let managed = fs::canonicalize(managed).unwrap();
+        let cache = fs::canonicalize(cache).unwrap();
+
+        let run = PlannedRun {
+            run_id: if mod_id == "eet" {
+                "eet-initialize-bg2".to_owned()
+            } else {
+                format!("{mod_id}-main")
+            },
+            mod_id: mod_id.to_owned(),
+            target: GameRoot::Bg2,
+            phase: if mod_id == "eet" {
+                Phase::EetInitialization
+            } else {
+                Phase::Main
+            },
+            components: vec![0],
+            args: Vec::new(),
+            postconditions: Vec::new(),
+            artifact_id: "artifact".to_owned(),
+            weidu_artifact_id: "weidu".to_owned(),
+            prompt_scripts: Vec::new(),
+        };
+        let plan = InstallPlan { runs: vec![run] };
+        let selection = NormalizedSelection {
+            platform: "linux".to_owned(),
+            features: BTreeMap::new(),
+            inputs: BTreeMap::new(),
+        };
+        let bg1_fp = "11".repeat(32);
+        let bg2_fp = "22".repeat(32);
+        let artifact = RequiredInput {
+            id: "artifact".to_owned(),
+            version: "1.0.0".to_owned(),
+            sha256: "aa".repeat(32),
+            length: 42,
+            obtainable: true,
+        };
+        let tool = RequiredInput {
+            id: "weidu".to_owned(),
+            version: "25100".to_owned(),
+            sha256: "bb".repeat(32),
+            length: 84,
+            obtainable: true,
+        };
+        let to_frozen = |input: &RequiredInput| FrozenIdentity {
+            id: input.id.clone(),
+            version: input.version.clone(),
+            sha256: input.sha256.clone(),
+            length: input.length,
+        };
+        let payload = b"synthetic-payload";
+        let envelope = b"{}";
+        let created = CampaignCreated {
+            install_id: "install-cmd-check".to_owned(),
+            attempt_id: "attempt-001".to_owned(),
+            managed_root: managed.clone(),
+            cache_root: cache,
+            recipe_payload: payload.to_vec(),
+            recipe_payload_sha256: sha256_bytes(payload),
+            recipe_envelope: envelope.to_vec(),
+            recipe_envelope_sha256: sha256_bytes(envelope),
+            selection_sha256: selection_digest(&selection).unwrap(),
+            normalized_selection: selection,
+            plan_sha256: plan_digest(&plan).unwrap(),
+            source_games: SourceGameFingerprints {
+                bg1: eet_run.then(|| bg1_fp.clone()),
+                bg2: bg2_fp.clone(),
+                standalone_role: (!eet_run).then_some(GameRole::Iwdee),
+            },
+            artifact_identities: vec![to_frozen(&artifact)],
+            tool_identities: vec![to_frozen(&tool)],
+            staged_bg1: eet_run.then(|| managed.join("bg1")),
+            staged_bg2: managed.join("game"),
+        };
+        let store =
+            SessionStore::create(&managed, SessionEvent::Created(Box::new(created))).unwrap();
+        let replay = store.replay().unwrap();
+        let bg1_cand = candidate(GameRole::BgeeSod, bg1_dir, bg1_fp);
+        let bg2_cand = candidate(
+            if eet_run {
+                GameRole::Bg2ee
+            } else {
+                GameRole::Iwdee
+            },
+            bg2_dir,
+            bg2_fp,
+        );
+        let artifacts = [artifact];
+        let tools = [tool];
+        initial_preflight_with(
+            &InitialPreflight {
+                bg1_source: eet_run.then_some(&bg1_cand),
+                bg2_source: &bg2_cand,
+                destination: &managed,
+                space: SpaceRequirement {
+                    staged_copies: 10,
+                    downloads: 10,
+                    extraction: 10,
+                    safety_margin: 10,
+                },
+                frozen_campaign: &replay,
+                current_plan: &plan,
+                expected_review_token: "token",
+                presented_review_token: "token",
+                required_artifacts: &artifacts,
+                required_tools: &tools,
+            },
+            &HostWithCommands(allowed),
+        )
+    }
+
+    #[test]
+    fn eet_preflight_requires_host_which_and_lua_commands() {
+        let missing_which = run_fixture(true, &[]).unwrap_err();
+        assert!(
+            matches!(
+                missing_which,
+                PreflightError::RequiredInputUnavailable {
+                    kind: "host command",
+                    ref id,
+                    ..
+                } if id == "which"
+            ),
+            "{missing_which}"
+        );
+
+        let missing_lua = run_fixture(true, &["which"]).unwrap_err();
+        assert!(
+            matches!(
+                missing_lua,
+                PreflightError::RequiredInputUnavailable {
+                    kind: "host command",
+                    ref id,
+                    ..
+                } if id == "lua"
+            ),
+            "{missing_lua}"
+        );
+
+        run_fixture(true, &["which", "lua5.3"]).expect("lua5.3 satisfies EET Lua requirement");
+    }
+
+    #[test]
+    fn standalone_preflight_does_not_require_host_lua_or_which() {
+        run_fixture(false, &[]).expect("standalone install needs neither which nor lua");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn unix_path_lookup_checks_executable_bit_and_prefers_lua53_over_lua54() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let temp = tempfile::tempdir().unwrap();
+        let bin1 = temp.path().join("bin1");
+        let bin2 = temp.path().join("bin2");
+        fs::create_dir_all(bin1.join("lua")).unwrap(); // directory named `lua` must be skipped
+        fs::create_dir_all(&bin2).unwrap();
+
+        let non_exec = bin1.join("lua5.3");
+        fs::write(&non_exec, b"#!/bin/sh\n").unwrap();
+        fs::set_permissions(&non_exec, fs::Permissions::from_mode(0o644)).unwrap();
+
+        let lua54 = bin1.join("lua5.4");
+        fs::write(&lua54, b"#!/bin/sh\n").unwrap();
+        fs::set_permissions(&lua54, fs::Permissions::from_mode(0o755)).unwrap();
+
+        let lua53 = bin2.join("lua5.3");
+        fs::write(&lua53, b"#!/bin/sh\n").unwrap();
+        fs::set_permissions(&lua53, fs::Permissions::from_mode(0o755)).unwrap();
+
+        let path_var = std::env::join_paths([&bin1, &bin2]).unwrap();
+        assert_eq!(
+            find_executable_in_path_var(Some(path_var.as_os_str()), UNIX_LUA_CANDIDATES),
+            Some(lua53.clone())
+        );
+        assert_eq!(
+            find_executable_in_path_var(None, &[lua53.to_str().unwrap()]),
+            Some(lua53)
+        );
+    }
+
+    #[test]
+    fn ssl_mods_preflight_requires_usr_bin_perl() {
+        for mod_id in ["stratagems", "randomiser", "iwdification"] {
+            let missing_perl = run_fixture_for_mod(mod_id, false, &[]).unwrap_err();
+            assert!(
+                matches!(
+                    missing_perl,
+                    PreflightError::RequiredInputUnavailable {
+                        kind: "host command",
+                        ref id,
+                        ..
+                    } if id == "perl"
+                ),
+                "{missing_perl}"
+            );
+            run_fixture_for_mod(mod_id, false, &["/usr/bin/perl"])
+                .expect("/usr/bin/perl satisfies SSL compilation requirement");
         }
     }
 }

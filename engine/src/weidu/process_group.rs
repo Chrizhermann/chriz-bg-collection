@@ -81,6 +81,13 @@ impl ProcessGroup {
         }
     }
 
+    pub(super) fn poll_exit(
+        &self,
+        child: &mut Child,
+    ) -> io::Result<Option<std::process::ExitStatus>> {
+        child.try_wait()
+    }
+
     pub(super) fn terminate(&self, _child: &mut Child) -> io::Result<()> {
         use windows_sys::Win32::System::JobObjects::TerminateJobObject;
 
@@ -129,17 +136,65 @@ impl ProcessGroup {
         Ok(())
     }
 
+    pub(super) fn poll_exit(
+        &self,
+        child: &mut Child,
+    ) -> io::Result<Option<std::process::ExitStatus>> {
+        let pgid = self.pgid.load(Ordering::SeqCst);
+        if pgid <= 0 {
+            return child.try_wait();
+        }
+        // Check leader completion with WNOWAIT before reaping so the zombie still pins `pgid`
+        // while we terminate any descendants that inherited stdout/stderr pipe handles.
+        // SAFETY: zeroed `siginfo_t` is POD and required so `si_pid()` is 0 when WNOHANG returns
+        // without a state change.
+        let mut info: libc::siginfo_t = unsafe { std::mem::zeroed() };
+        loop {
+            // SAFETY: `pgid` is an un-reaped child PID spawned in its own process group.
+            let rc = unsafe {
+                libc::waitid(
+                    libc::P_PID,
+                    pgid as libc::id_t,
+                    &mut info,
+                    libc::WEXITED | libc::WNOHANG | libc::WNOWAIT,
+                )
+            };
+            if rc == -1 {
+                let error = io::Error::last_os_error();
+                if error.kind() == io::ErrorKind::Interrupted {
+                    continue;
+                }
+                return Err(error);
+            }
+            break;
+        }
+        // SAFETY: kernel initialized `si_pid` (non-zero iff the target exited).
+        if unsafe { info.si_pid() } == 0 {
+            return Ok(None);
+        }
+        let _ = kill_process_group(pgid);
+        let status = child.wait()?;
+        self.pgid.store(0, Ordering::SeqCst);
+        Ok(Some(status))
+    }
+
     pub(super) fn terminate(&self, child: &mut Child) -> io::Result<()> {
         let pgid = self.pgid.load(Ordering::SeqCst);
-        if pgid > 0 {
-            kill_process_group(pgid)?;
-        }
-        match child.kill() {
+        let group_result = if pgid > 0 {
+            kill_process_group(pgid)
+        } else {
+            Ok(())
+        };
+        let kill_result = match child.kill() {
             Ok(()) => Ok(()),
             Err(error) if error.kind() == io::ErrorKind::InvalidInput => Ok(()),
-            Err(_) if pgid > 0 => Ok(()),
+            Err(_) if pgid > 0 && group_result.is_ok() => Ok(()),
             Err(error) => Err(error),
+        };
+        if child.wait().is_ok() {
+            self.pgid.store(0, Ordering::SeqCst);
         }
+        group_result.and(kill_result)
     }
 }
 

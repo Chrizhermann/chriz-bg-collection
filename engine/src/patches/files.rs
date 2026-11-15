@@ -83,77 +83,63 @@ pub fn safe_relative(name: &str) -> Result<(), String> {
 /// case-sensitive Unix filesystems while refusing symlinks and case collisions.
 pub(crate) fn resolve_relative(root: &Path, name: &str) -> Result<std::path::PathBuf, String> {
     safe_relative(name)?;
-    let exact = root.join(name);
     #[cfg(windows)]
     {
-        Ok(exact)
+        Ok(root.join(name))
     }
     #[cfg(not(windows))]
     {
-        match fs::symlink_metadata(&exact) {
-            Ok(_) => return Ok(exact),
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-            Err(error) => return Err(err(error)),
-        }
         let mut current = root.to_path_buf();
         let mut components = name.split('/').peekable();
         while let Some(part) = components.next() {
             let is_leaf = components.peek().is_none();
-            let direct = current.join(part);
-            let next_path = match fs::symlink_metadata(&direct) {
-                Ok(meta) => {
-                    if !is_leaf
-                        && (!meta.is_dir() || crate::reparse::metadata_is_link(&direct, &meta))
-                    {
-                        return Err(format!(
-                            "Linked path is not supported: {}",
-                            direct.display()
-                        ));
-                    }
-                    direct
-                }
+            let entries = match fs::read_dir(&current) {
+                Ok(entries) => entries,
                 Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-                    let mut matched: Option<(std::path::PathBuf, fs::Metadata)> = None;
-                    for entry in fs::read_dir(&current).map_err(err)? {
-                        let entry = entry.map_err(err)?;
-                        if entry
-                            .file_name()
-                            .to_str()
-                            .is_some_and(|text| text.eq_ignore_ascii_case(part))
-                        {
-                            let entry_path = entry.path();
-                            let entry_meta = fs::symlink_metadata(&entry_path).map_err(err)?;
-                            if matched.is_some() {
-                                return Err("Case-colliding files are not supported.".into());
-                            }
-                            matched = Some((entry_path, entry_meta));
-                        }
+                    current.push(part);
+                    for rest in components {
+                        current.push(rest);
                     }
-                    match matched {
-                        Some((found_path, found_meta)) => {
-                            if !is_leaf
-                                && (!found_meta.is_dir()
-                                    || crate::reparse::metadata_is_link(&found_path, &found_meta))
-                            {
-                                return Err(format!(
-                                    "Linked path is not supported: {}",
-                                    found_path.display()
-                                ));
-                            }
-                            found_path
-                        }
-                        None => {
-                            current.push(part);
-                            for rest in components {
-                                current.push(rest);
-                            }
-                            return Ok(current);
-                        }
-                    }
+                    return Ok(current);
                 }
                 Err(error) => return Err(err(error)),
             };
-            current = next_path;
+            let mut matched: Option<(std::path::PathBuf, fs::Metadata)> = None;
+            for entry in entries {
+                let entry = entry.map_err(err)?;
+                if entry
+                    .file_name()
+                    .to_str()
+                    .is_some_and(|text| text.eq_ignore_ascii_case(part))
+                {
+                    if matched.is_some() {
+                        return Err("Case-colliding files are not supported.".into());
+                    }
+                    let entry_path = entry.path();
+                    let entry_meta = fs::symlink_metadata(&entry_path).map_err(err)?;
+                    matched = Some((entry_path, entry_meta));
+                }
+            }
+            match matched {
+                Some((found_path, found_meta)) => {
+                    if crate::reparse::metadata_is_link(&found_path, &found_meta)
+                        || (!is_leaf && !found_meta.is_dir())
+                    {
+                        return Err(format!(
+                            "Linked path is not supported: {}",
+                            found_path.display()
+                        ));
+                    }
+                    current = found_path;
+                }
+                None => {
+                    current.push(part);
+                    for rest in components {
+                        current.push(rest);
+                    }
+                    return Ok(current);
+                }
+            }
         }
         Ok(current)
     }
@@ -614,5 +600,27 @@ mod tests {
 
         assert_eq!(fs::read(dst.join("Chitin.key")).unwrap(), b"key");
         assert_eq!(fs::read(dst.join("Override/WeiDU.log")).unwrap(), b"log");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn resolve_relative_refuses_leaf_symlinks_and_exact_case_collisions() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("game");
+        let outside = temp.path().join("outside.txt");
+        fs::create_dir_all(root.join("override")).unwrap();
+        fs::write(&outside, b"outside").unwrap();
+
+        let dangling_leaf = root.join("override/dangling.2da");
+        std::os::unix::fs::symlink(temp.path().join("does-not-exist"), &dangling_leaf).unwrap();
+        assert!(resolve_relative(&root, "override/dangling.2da").is_err());
+
+        let live_leaf = root.join("override/live.2da");
+        std::os::unix::fs::symlink(&outside, &live_leaf).unwrap();
+        assert!(resolve_relative(&root, "override/live.2da").is_err());
+
+        fs::create_dir_all(root.join("Override")).unwrap();
+        fs::write(root.join("override/exact.2da"), b"lower").unwrap();
+        assert!(resolve_relative(&root, "override/exact.2da").is_err());
     }
 }

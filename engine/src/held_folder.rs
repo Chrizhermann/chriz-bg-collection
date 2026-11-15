@@ -71,6 +71,23 @@ pub(crate) struct ListedEntry {
     /// A link or other reparse point; off Windows also any entry that is neither a plain file
     /// nor a folder.
     reparse_point: bool,
+    /// Off Windows, whether the directory listing observed a POSIX symbolic link (`lstat`).
+    #[cfg(not(windows))]
+    symlink: bool,
+}
+
+impl ListedEntry {
+    /// Whether this entry is a direct directory.
+    #[cfg_attr(not(unix), allow(dead_code))]
+    pub(crate) fn is_directory(&self) -> bool {
+        self.directory
+    }
+
+    /// Whether this entry is a link, reparse point, or non-regular/non-directory entry.
+    #[cfg_attr(not(unix), allow(dead_code))]
+    pub(crate) fn is_reparse_point(&self) -> bool {
+        self.reparse_point
+    }
 }
 
 /// A folder below a target root, opened from the root down. On Windows the target root and every
@@ -1064,6 +1081,31 @@ mod handles {
     }
 }
 
+#[cfg(not(windows))]
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum UnixTreeScope {
+    Root,
+    ChrizDir,
+    ProtonPrefix,
+    Strict,
+}
+
+#[cfg(not(windows))]
+impl UnixTreeScope {
+    fn child(self, name: &std::ffi::OsStr) -> Self {
+        match self {
+            Self::Root if name == ".chriz" => Self::ChrizDir,
+            Self::ChrizDir if name == "proton" => Self::ProtonPrefix,
+            Self::ProtonPrefix => Self::ProtonPrefix,
+            _ => Self::Strict,
+        }
+    }
+
+    fn allows_symlink(self) -> bool {
+        matches!(self, Self::ProtonPrefix)
+    }
+}
+
 /// Off Windows, which the installer does not support, links are refused by path.
 #[cfg(not(windows))]
 impl HeldFolder {
@@ -1085,11 +1127,6 @@ impl HeldFolder {
     fn resolve_child_path(&self, name: &str) -> Result<PathBuf, EntryError> {
         let exact = self.path.join(name);
         check_name(name).map_err(|error| EntryError::io(exact.clone(), error))?;
-        match fs::symlink_metadata(&exact) {
-            Ok(_) => return Ok(exact),
-            Err(error) if error.kind() == ErrorKind::NotFound => {}
-            Err(error) => return Err(EntryError::io(exact, error)),
-        }
         let mut matched: Option<PathBuf> = None;
         for entry in
             fs::read_dir(&self.path).map_err(|error| EntryError::io(self.path.clone(), error))?
@@ -1175,6 +1212,7 @@ impl HeldFolder {
                     directory: file_type.is_dir(),
                     // A link, or anything else that is neither a plain file nor a folder.
                     reparse_point: !file_type.is_dir() && !file_type.is_file(),
+                    symlink: file_type.is_symlink(),
                 })
             })
             .collect()
@@ -1217,6 +1255,15 @@ impl HeldFolder {
         last: &[&str],
         before_remove: &mut dyn FnMut(&Path) -> io::Result<()>,
     ) -> Result<(), EntryError> {
+        self.remove_contents_in_scope(last, before_remove, UnixTreeScope::Root)
+    }
+
+    fn remove_contents_in_scope(
+        &self,
+        last: &[&str],
+        before_remove: &mut dyn FnMut(&Path) -> io::Result<()>,
+        scope: UnixTreeScope,
+    ) -> Result<(), EntryError> {
         let mut entries = self
             .entries()
             .map_err(|error| EntryError::io(self.path.clone(), error))?;
@@ -1224,6 +1271,11 @@ impl HeldFolder {
         for entry in entries {
             let child = self.path.join(&entry.name);
             if entry.reparse_point {
+                if entry.symlink && scope.allows_symlink() {
+                    before_remove(&child).map_err(|error| EntryError::io(child.clone(), error))?;
+                    fs::remove_file(&child).map_err(|error| EntryError::io(child, error))?;
+                    continue;
+                }
                 return Err(EntryError::not_direct(child));
             }
             if entry.directory {
@@ -1232,7 +1284,7 @@ impl HeldFolder {
                     path: child.clone(),
                     removable: false,
                 };
-                inner.remove_contents(last, before_remove)?;
+                inner.remove_contents_in_scope(last, before_remove, scope.child(&entry.name))?;
                 before_remove(&child).map_err(|error| EntryError::io(child.clone(), error))?;
                 fs::remove_dir(&child).map_err(|error| EntryError::io(child, error))?;
             } else {
@@ -1244,6 +1296,13 @@ impl HeldFolder {
     }
 
     pub(crate) fn find_link_below(&self) -> Result<Option<PathBuf>, EntryError> {
+        self.find_link_below_in_scope(UnixTreeScope::Root)
+    }
+
+    fn find_link_below_in_scope(
+        &self,
+        scope: UnixTreeScope,
+    ) -> Result<Option<PathBuf>, EntryError> {
         let mut entries = self
             .entries()
             .map_err(|error| EntryError::io(self.path.clone(), error))?;
@@ -1251,6 +1310,9 @@ impl HeldFolder {
         for entry in entries {
             let child = self.path.join(&entry.name);
             if entry.reparse_point {
+                if entry.symlink && scope.allows_symlink() {
+                    continue;
+                }
                 return Ok(Some(child));
             }
             if entry.directory {
@@ -1258,7 +1320,7 @@ impl HeldFolder {
                     path: child,
                     removable: false,
                 };
-                if let Some(found) = inner.find_link_below()? {
+                if let Some(found) = inner.find_link_below_in_scope(scope.child(&entry.name))? {
                     return Ok(Some(found));
                 }
             }
@@ -2645,5 +2707,80 @@ pub(crate) mod tests {
 
         assert_eq!(entries(&checked), Vec::<String>::new());
         assert_eq!(tree(&other), before);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn descend_rejects_case_colliding_siblings_even_on_exact_match() {
+        let root = tempfile::tempdir().unwrap();
+        let game = root.path().join("game");
+        fs::create_dir_all(game.join("override")).unwrap();
+        fs::create_dir_all(game.join("Override")).unwrap();
+
+        let held = HeldFolder::open(&game, []).unwrap();
+        let error = held.descend("override").err().unwrap();
+        assert!(
+            matches!(error.kind, EntryErrorKind::NotDirect),
+            "unexpected error kind: {:?}",
+            error.kind
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn proton_prefix_symlinks_are_unlinked_without_touching_targets() {
+        use std::os::unix::fs::symlink;
+
+        let temp = tempfile::tempdir().unwrap();
+        let outside_saves = temp.path().join("outside-saves");
+        fs::create_dir_all(&outside_saves).unwrap();
+        fs::write(outside_saves.join("save1.gam"), CONTENT).unwrap();
+
+        let managed = temp.path().join("managed");
+        let pfx = managed.join(".chriz/proton/pfx");
+        let drive_c_docs = pfx.join("drive_c/users/chris/Documents");
+        let dosdevices = pfx.join("dosdevices");
+        fs::create_dir_all(managed.join("game")).unwrap();
+        fs::write(managed.join("game/chitin.key"), CONTENT).unwrap();
+        fs::create_dir_all(&drive_c_docs).unwrap();
+        fs::create_dir_all(&dosdevices).unwrap();
+        fs::create_dir_all(managed.join(".chriz/weidu-env/xdg-data")).unwrap();
+        fs::write(
+            managed.join(".chriz/weidu-env/xdg-data/baldur.lua"),
+            CONTENT,
+        )
+        .unwrap();
+        symlink("../drive_c", dosdevices.join("c:")).unwrap();
+        symlink(&outside_saves, drive_c_docs.join("Chriz Save")).unwrap();
+
+        let held = HeldFolder::open_for_removal(&managed).unwrap();
+        assert_eq!(held.find_link_below().unwrap(), None);
+        held.remove_contents(&[".chriz"], &mut |_| Ok(())).unwrap();
+        held.remove().unwrap();
+        assert!(!managed.exists());
+        assert_eq!(fs::read(outside_saves.join("save1.gam")).unwrap(), CONTENT);
+
+        // Symlinks at `.chriz/proton` itself or outside `.chriz/proton` are still rejected.
+        let escaped_managed = temp.path().join("escaped-managed");
+        fs::create_dir_all(escaped_managed.join(".chriz")).unwrap();
+        symlink(&outside_saves, escaped_managed.join(".chriz/proton")).unwrap();
+        let held_escaped = HeldFolder::open_for_removal(&escaped_managed).unwrap();
+        assert_eq!(
+            held_escaped.find_link_below().unwrap(),
+            Some(escaped_managed.join(".chriz/proton"))
+        );
+        let err = unwrap_error(held_escaped.remove_contents(&[".chriz"], &mut |_| Ok(())));
+        assert_eq!(kind(&err), "not direct");
+
+        let game_linked = temp.path().join("game-linked");
+        fs::create_dir_all(game_linked.join("game")).unwrap();
+        symlink(&outside_saves, game_linked.join("game/linked")).unwrap();
+        let held_game = HeldFolder::open_for_removal(&game_linked).unwrap();
+        assert_eq!(
+            held_game.find_link_below().unwrap(),
+            Some(game_linked.join("game/linked"))
+        );
+        let err = unwrap_error(held_game.remove_contents(&[".chriz"], &mut |_| Ok(())));
+        assert_eq!(kind(&err), "not direct");
     }
 }

@@ -256,6 +256,15 @@ pub fn run<S: EventSink>(
     controls: Receiver<RunnerControl>,
     sink: S,
 ) -> RunOutcome {
+    run_with_host_path(request, controls, sink, std::env::var_os("PATH").as_deref())
+}
+
+fn run_with_host_path<S: EventSink>(
+    request: RunnerRequest,
+    controls: Receiver<RunnerControl>,
+    sink: S,
+    #[cfg_attr(not(unix), allow(unused_variables))] host_path: Option<&std::ffi::OsStr>,
+) -> RunOutcome {
     let raw_log = match create_output_log(&request.output_log) {
         Ok(file) => Arc::new(Mutex::new(file)),
         Err(error) => {
@@ -331,11 +340,30 @@ pub fn run<S: EventSink>(
     #[cfg(unix)]
     if let Some(attempt_dir) = request.invocation.debug_path.parent() {
         if !attempt_dir.as_os_str().is_empty() {
-            let _ = std::fs::create_dir_all(attempt_dir.join("xdg-data"));
+            for (_, dir) in unix_isolated_env_dirs(attempt_dir) {
+                let _ = std::fs::create_dir_all(dir);
+            }
         }
     }
+    #[cfg(unix)]
+    let _unix_tool_bin = match prepare_unix_tool_bin(&request.invocation.program, host_path) {
+        Ok(dir) => dir,
+        Err(error) => {
+            emit_error(
+                &sink,
+                &request.step_id,
+                format!("could not prepare Unix helper shims: {error}"),
+            );
+            return RunOutcome::SpawnFailed;
+        }
+    };
+    #[cfg(unix)]
+    let unix_tool_bin_path = Some(_unix_tool_bin.path());
+    #[cfg(not(unix))]
+    let unix_tool_bin_path: Option<&std::path::Path> = None;
 
-    let mut child = match weidu_command(&request.invocation).spawn() {
+    let mut child = match weidu_command(&request.invocation, unix_tool_bin_path, host_path).spawn()
+    {
         Ok(child) => child,
         Err(error) => {
             emit_error(
@@ -419,7 +447,7 @@ pub fn run<S: EventSink>(
         }
 
         if exit_status.is_none() {
-            match child.try_wait() {
+            match process_group.poll_exit(&mut child) {
                 Ok(status) => exit_status = status,
                 Err(error) => {
                     emit_error(
@@ -583,7 +611,11 @@ pub fn run<S: EventSink>(
 }
 
 /// Configures, without spawning, the supervised child for one invocation.
-fn weidu_command(invocation: &Invocation) -> Command {
+fn weidu_command(
+    invocation: &Invocation,
+    #[cfg_attr(not(unix), allow(unused_variables))] unix_tool_bin: Option<&std::path::Path>,
+    #[cfg_attr(not(unix), allow(unused_variables))] host_path: Option<&std::ffi::OsStr>,
+) -> Command {
     let has_prompts = !invocation.prompts.is_empty();
     let mut command = Command::new(&invocation.program);
     command
@@ -610,15 +642,226 @@ fn weidu_command(invocation: &Invocation) -> Command {
     }
     #[cfg(unix)]
     {
-        // Keep WeiDU %USER_DIRECTORY% (used by EET/macros.tph AT_NOW on Unix) isolated to the
-        // attempt directory rather than writing into the player's real ~/.local/share tree.
+        // Isolate `HOME` / `XDG_*` per managed campaign (`.chriz/weidu-env`) for `AT_NOW` child
+        // tools and shells rather than touching the player's real `$HOME`; statically linked WeiDU
+        // 251 still resolves `%USER_DIRECTORY%` via `getpwuid(getuid())` across multi-step runs
+        // such as `EET` and `EET_end`.
         if let Some(attempt_dir) = invocation.debug_path.parent() {
-            let xdg_data_home = attempt_dir.join("xdg-data");
-            command.env("XDG_DATA_HOME", xdg_data_home);
+            for (name, dir) in unix_isolated_env_dirs(attempt_dir) {
+                command.env(name, dir);
+            }
+        }
+        if let Some(tool_bin) = unix_tool_bin {
+            command.env("PATH", prepended_unix_path(tool_bin, host_path));
         }
     }
     super::process_group::configure_command(&mut command);
     command
+}
+
+#[cfg(unix)]
+fn unix_campaign_env_root(attempt_dir: &std::path::Path) -> std::path::PathBuf {
+    for ancestor in attempt_dir.ancestors() {
+        if ancestor.file_name() == Some(std::ffi::OsStr::new(".chriz")) {
+            return ancestor.join("weidu-env");
+        }
+    }
+    attempt_dir.to_path_buf()
+}
+
+#[cfg(unix)]
+fn unix_isolated_env_dirs(
+    attempt_dir: &std::path::Path,
+) -> [(&'static str, std::path::PathBuf); 4] {
+    let root = unix_campaign_env_root(attempt_dir);
+    [
+        ("HOME", root.join("home")),
+        ("XDG_DATA_HOME", root.join("xdg-data")),
+        ("XDG_CONFIG_HOME", root.join("xdg-config")),
+        ("XDG_CACHE_HOME", root.join("xdg-cache")),
+    ]
+}
+
+#[cfg(unix)]
+fn prepare_unix_tool_bin(
+    program: &std::path::Path,
+    host_path: Option<&std::ffi::OsStr>,
+) -> io::Result<tempfile::TempDir> {
+    let dir = tempfile::Builder::new()
+        .prefix("chriz-bg-weidu-bin-")
+        .tempdir()?;
+    let weidu_target = if program.is_absolute() {
+        program.to_path_buf()
+    } else if program.components().count() > 1 {
+        std::env::current_dir()?.join(program)
+    } else {
+        let local = std::env::current_dir()?.join(program);
+        if local.exists() {
+            local
+        } else if let Some(name) = program.to_str() {
+            crate::preflight::find_executable_in_path_var(host_path, &[name]).unwrap_or(local)
+        } else {
+            local
+        }
+    };
+    std::os::unix::fs::symlink(&weidu_target, dir.path().join("weidu"))?;
+    if let Some(lua_target) = crate::preflight::find_executable_in_path_var(
+        host_path,
+        crate::preflight::UNIX_LUA_CANDIDATES,
+    ) {
+        write_unix_lua_shim(&dir.path().join("lua"), &lua_target)?;
+    }
+    Ok(dir)
+}
+
+#[cfg(unix)]
+fn write_unix_lua_shim(
+    shim_path: &std::path::Path,
+    lua_target: &std::path::Path,
+) -> io::Result<()> {
+    use std::os::unix::ffi::OsStrExt;
+    use std::os::unix::fs::OpenOptionsExt;
+
+    // WeiDU's `AT_NOW` without `EXACT` lowercases commands on Unix (for example `lua eet/lib/tlk_cnt.lua`
+    // in EET while the directory on case-sensitive filesystems is `EET/`). Resolve a missing `$1`
+    // script path case-insensitively segment by segment and fail closed on case ambiguity.
+    let mut script = Vec::from(
+        br#"#!/bin/sh
+if [ "$#" -ge 1 ]; then
+    target="$1"
+    case "$target" in
+        -*|"")
+            ;;
+        *)
+            if [ ! -e "$target" ] && [ ! -L "$target" ]; then
+                case "$target" in
+                    /*)
+                        cur="/"
+                        rest="${target#/}"
+                        ;;
+                    *)
+                        cur="."
+                        rest="$target"
+                        ;;
+                esac
+                ok=1
+                while [ -n "$rest" ]; do
+                    case "$rest" in
+                        */*)
+                            seg="${rest%%/*}"
+                            rest="${rest#*/}"
+                            ;;
+                        *)
+                            seg="$rest"
+                            rest=""
+                            ;;
+                    esac
+                    case "$seg" in
+                        ""|.)
+                            continue
+                            ;;
+                        ..)
+                            if [ "$cur" = "/" ]; then
+                                :
+                            elif [ "$cur" = "." ]; then
+                                cur=".."
+                            else
+                                cur="$cur/.."
+                            fi
+                            continue
+                            ;;
+                    esac
+                    if [ "$cur" = "." ]; then
+                        cand="$seg"
+                    elif [ "$cur" = "/" ]; then
+                        cand="/$seg"
+                    else
+                        cand="$cur/$seg"
+                    fi
+                    if [ -e "$cand" ] || [ -L "$cand" ]; then
+                        cur="$cand"
+                        continue
+                    fi
+                    if [ "$cur" = "/" ]; then
+                        glob_prefix=""
+                    else
+                        glob_prefix="$cur"
+                    fi
+                    seg_lc=$(printf '%s' "$seg" | PATH="$PATH:/usr/bin:/bin" LC_ALL=C tr 'A-Z' 'a-z')
+                    found=""
+                    ambiguous=0
+                    for entry in "$glob_prefix"/* "$glob_prefix"/.[!.]* "$glob_prefix"/..?*; do
+                        [ -e "$entry" ] || [ -L "$entry" ] || continue
+                        base="${entry##*/}"
+                        base_lc=$(printf '%s' "$base" | PATH="$PATH:/usr/bin:/bin" LC_ALL=C tr 'A-Z' 'a-z')
+                        if [ "$base_lc" = "$seg_lc" ]; then
+                            if [ -n "$found" ]; then
+                                ambiguous=1
+                                break
+                            fi
+                            found="$base"
+                        fi
+                    done
+                    if [ "$ambiguous" -eq 0 ] && [ -n "$found" ]; then
+                        if [ "$cur" = "." ]; then
+                            cur="$found"
+                        elif [ "$cur" = "/" ]; then
+                            cur="/$found"
+                        else
+                            cur="$cur/$found"
+                        fi
+                    else
+                        ok=0
+                        break
+                    fi
+                done
+                if [ "$ok" -eq 1 ] && { [ -e "$cur" ] || [ -L "$cur" ]; }; then
+                    shift
+                    set -- "$cur" "$@"
+                fi
+            fi
+            ;;
+    esac
+fi
+exec '"#
+            .as_slice(),
+    );
+    for &byte in lua_target.as_os_str().as_bytes() {
+        if byte == b'\'' {
+            script.extend_from_slice(br"'\''");
+        } else {
+            script.push(byte);
+        }
+    }
+    script.extend_from_slice(b"' \"$@\"\n");
+
+    {
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o755)
+            .open(shim_path)?;
+        file.write_all(&script)?;
+    }
+    Ok(())
+}
+
+#[cfg(unix)]
+fn prepended_unix_path(
+    tool_bin: &std::path::Path,
+    host_path: Option<&std::ffi::OsStr>,
+) -> std::ffi::OsString {
+    let base = host_path
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| std::ffi::OsStr::new("/usr/bin:/bin"));
+    let mut paths = vec![tool_bin.to_path_buf()];
+    paths.extend(std::env::split_paths(base).filter(|entry| !entry.as_os_str().is_empty()));
+    std::env::join_paths(paths).unwrap_or_else(|_| {
+        let mut fallback = std::ffi::OsString::from(tool_bin.as_os_str());
+        fallback.push(":");
+        fallback.push(base);
+        fallback
+    })
 }
 
 fn create_output_log(path: &std::path::Path) -> io::Result<File> {
@@ -853,17 +1096,21 @@ mod tests {
 
     #[test]
     fn child_inherits_the_environment_except_the_current_directory_search_opt_out() {
-        let command = weidu_command(&Invocation {
-            program: PathBuf::from("weidu.exe"),
-            cwd: PathBuf::from("game"),
-            args: Vec::new(),
-            prompts: Vec::new(),
-            debug_path: PathBuf::from("weidu.debug.log"),
-            identity_digest: "environment-test".to_owned(),
-        });
+        let command = weidu_command(
+            &Invocation {
+                program: PathBuf::from("weidu.exe"),
+                cwd: PathBuf::from("game"),
+                args: Vec::new(),
+                prompts: Vec::new(),
+                debug_path: PathBuf::from("weidu.debug.log"),
+                identity_digest: "environment-test".to_owned(),
+            },
+            None,
+            None,
+        );
 
-        // On Windows only `NoDefaultCurrentDirectoryInExePath` is removed; on Unix `XDG_DATA_HOME`
-        // is also scoped to the invocation's attempt directory so every other variable is inherited.
+        // On Windows only `NoDefaultCurrentDirectoryInExePath` is removed; on Unix HOME and XDG
+        // directories are also scoped to the attempt directory so nothing touches `$HOME`.
         #[cfg(not(unix))]
         let expected = [(
             OsStr::new("NoDefaultCurrentDirectoryInExePath"),
@@ -871,13 +1118,60 @@ mod tests {
         )];
         #[cfg(unix)]
         let expected = [
+            (OsStr::new("HOME"), Some(OsStr::new("home"))),
             (
                 OsStr::new("NoDefaultCurrentDirectoryInExePath"),
                 None::<&OsStr>,
             ),
+            (OsStr::new("XDG_CACHE_HOME"), Some(OsStr::new("xdg-cache"))),
+            (
+                OsStr::new("XDG_CONFIG_HOME"),
+                Some(OsStr::new("xdg-config")),
+            ),
             (OsStr::new("XDG_DATA_HOME"), Some(OsStr::new("xdg-data"))),
         ];
         assert_eq!(command.get_envs().collect::<Vec<_>>(), expected);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn unix_runner_terminates_orphaned_descendant_holding_pipes_on_leader_exit() {
+        use std::ffi::OsString;
+        use std::time::{Duration, Instant};
+
+        let temp = tempfile::tempdir().unwrap();
+        let attempt_dir = temp.path().join("attempt");
+        std::fs::create_dir_all(&attempt_dir).unwrap();
+        let command_line = "sleep 30 & echo leader-done ; exit 0".to_owned();
+        let controls = super::RunnerControlHandle::new();
+        let (sink, _events) = ChannelSink::unbounded();
+        let invocation = Invocation {
+            program: PathBuf::from("/bin/sh"),
+            cwd: temp.path().to_path_buf(),
+            args: vec![OsString::from("-c"), OsString::from(command_line)],
+            prompts: Vec::new(),
+            debug_path: attempt_dir.join("weidu.debug.log"),
+            identity_digest: "orphan-pipe-test".to_owned(),
+        };
+        let started = Instant::now();
+        let outcome = super::run_controlled(
+            super::RunnerRequest {
+                step_id: "step:orphan-pipe".to_owned(),
+                invocation,
+                output_log: attempt_dir.join("output.log"),
+                silence_threshold: Duration::from_secs(30),
+            },
+            &controls,
+            sink,
+        );
+        assert!(
+            matches!(outcome, super::RunOutcome::Exited { code: 0 }),
+            "unexpected outcome: {outcome:?}"
+        );
+        assert!(
+            started.elapsed() < Duration::from_secs(3),
+            "runner hung waiting on orphaned descendant pipe"
+        );
     }
 
     #[test]
@@ -886,5 +1180,183 @@ mod tests {
         let reader = thread::spawn(|| panic!("synthetic reader panic"));
 
         assert!(!join_readers(vec![reader], &sink, "install:test"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn unix_campaign_env_root_resolves_chriz_weidu_env_and_falls_back() {
+        let chriz_attempt =
+            PathBuf::from("/tmp/managed/.chriz/attempts/attempt-1/steps/0001-eet/attempt-0001");
+        assert_eq!(
+            super::unix_campaign_env_root(&chriz_attempt),
+            PathBuf::from("/tmp/managed/.chriz/weidu-env")
+        );
+        let fallback_attempt = PathBuf::from("/tmp/standalone/attempt-0001");
+        assert_eq!(
+            super::unix_campaign_env_root(&fallback_attempt),
+            fallback_attempt
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn unix_runner_exposes_weidu_and_lua53_shim_on_path() {
+        use std::ffi::OsString;
+        use std::os::unix::fs::PermissionsExt;
+        use std::time::Duration;
+
+        let temp = tempfile::tempdir().unwrap();
+        let fake_bin = temp.path().join("fake-bin");
+        let managed = temp.path().join("managed");
+        let attempt_dir = managed.join(".chriz/attempts/a1/steps/0001-eet/attempt-0001");
+        let game = managed.join("game");
+        std::fs::create_dir_all(&fake_bin).unwrap();
+        std::fs::create_dir_all(&attempt_dir).unwrap();
+        std::fs::create_dir_all(&game).unwrap();
+
+        let lua53 = fake_bin.join("lua5.3");
+        std::fs::write(
+            &lua53,
+            b"#!/bin/sh\n[ \"$1\" = \"--check\" ] && exit 0\nexit 2\n",
+        )
+        .unwrap();
+        std::fs::set_permissions(&lua53, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        let host_path = std::env::join_paths([
+            &fake_bin,
+            &PathBuf::from("/usr/bin"),
+            &PathBuf::from("/bin"),
+        ])
+        .unwrap();
+
+        let script = "which weidu >/dev/null && which lua >/dev/null && lua --check && printf '%s' \"$XDG_DATA_HOME\" > xdg.out";
+        let controls = super::RunnerControlHandle::new();
+        let registration = controls.register().unwrap();
+        let (sink, _events) = ChannelSink::unbounded();
+        let invocation = Invocation {
+            program: PathBuf::from("/bin/sh"),
+            cwd: game.clone(),
+            args: vec![OsString::from("-c"), OsString::from(script)],
+            prompts: Vec::new(),
+            debug_path: attempt_dir.join("weidu.debug.log"),
+            identity_digest: "unix-shim-test".to_owned(),
+        };
+        let outcome = super::run_with_host_path(
+            super::RunnerRequest {
+                step_id: "install:eet".to_owned(),
+                invocation,
+                output_log: attempt_dir.join("output.log"),
+                silence_threshold: Duration::from_secs(30),
+            },
+            registration.receiver().clone(),
+            sink,
+            Some(host_path.as_os_str()),
+        );
+        assert!(
+            matches!(outcome, super::RunOutcome::Exited { code: 0 }),
+            "unexpected outcome: {outcome:?}"
+        );
+        assert_eq!(
+            std::fs::read_to_string(game.join("xdg.out")).unwrap(),
+            managed.join(".chriz/weidu-env/xdg-data").to_string_lossy()
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn unix_lua_shim_resolves_lowercased_script_and_rejects_ambiguous_case() {
+        use std::ffi::OsString;
+        use std::os::unix::fs::PermissionsExt;
+        use std::time::Duration;
+
+        let temp = tempfile::tempdir().unwrap();
+        let fake_bin = temp.path().join("fake-bin");
+        let managed = temp.path().join("managed");
+        let attempt_dir = managed.join(".chriz/attempts/a1/steps/0001-eet/attempt-0001");
+        let game = managed.join("game");
+        let eet_lib = game.join("EET/lib");
+        std::fs::create_dir_all(&fake_bin).unwrap();
+        std::fs::create_dir_all(&attempt_dir).unwrap();
+        std::fs::create_dir_all(&eet_lib).unwrap();
+        std::fs::write(eet_lib.join("tlk_cnt.lua"), b"tlk-ok").unwrap();
+
+        let lua53 = fake_bin.join("lua5.3");
+        std::fs::write(
+            &lua53,
+            b"#!/bin/sh\n[ -r \"$1\" ] || exit 1\n/bin/cat \"$1\" > \"$2\"\n",
+        )
+        .unwrap();
+        std::fs::set_permissions(&lua53, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        let host_path = std::env::join_paths([&fake_bin]).unwrap();
+        let controls = super::RunnerControlHandle::new();
+
+        let outcome = {
+            let registration = controls.register().unwrap();
+            let (sink, _events) = ChannelSink::unbounded();
+            super::run_with_host_path(
+                super::RunnerRequest {
+                    step_id: "install:eet".to_owned(),
+                    invocation: Invocation {
+                        program: PathBuf::from("/bin/sh"),
+                        cwd: game.clone(),
+                        args: vec![
+                            OsString::from("-c"),
+                            OsString::from("lua eet/lib/tlk_cnt.lua out.txt"),
+                        ],
+                        prompts: Vec::new(),
+                        debug_path: attempt_dir.join("weidu.debug.log"),
+                        identity_digest: "unix-lua-shim-case-ok".to_owned(),
+                    },
+                    output_log: attempt_dir.join("output-ok.log"),
+                    silence_threshold: Duration::from_secs(30),
+                },
+                registration.receiver().clone(),
+                sink,
+                Some(host_path.as_os_str()),
+            )
+        };
+        assert!(
+            matches!(outcome, super::RunOutcome::Exited { code: 0 }),
+            "unexpected outcome: {outcome:?}"
+        );
+        assert_eq!(
+            std::fs::read_to_string(game.join("out.txt")).unwrap(),
+            "tlk-ok"
+        );
+
+        std::fs::create_dir_all(game.join("DupDir")).unwrap();
+        if std::fs::create_dir(game.join("DUPDIR")).is_ok() {
+            std::fs::write(game.join("DupDir/s.lua"), b"one").unwrap();
+            std::fs::write(game.join("DUPDIR/s.lua"), b"two").unwrap();
+            let reg_dup = controls.register().unwrap();
+            let (sink_dup, _events_dup) = ChannelSink::unbounded();
+            let outcome_dup = super::run_with_host_path(
+                super::RunnerRequest {
+                    step_id: "install:eet-dup".to_owned(),
+                    invocation: Invocation {
+                        program: PathBuf::from("/bin/sh"),
+                        cwd: game.clone(),
+                        args: vec![
+                            OsString::from("-c"),
+                            OsString::from("lua dupdir/s.lua dup.out"),
+                        ],
+                        prompts: Vec::new(),
+                        debug_path: attempt_dir.join("weidu-dup.debug.log"),
+                        identity_digest: "unix-lua-shim-case-dup".to_owned(),
+                    },
+                    output_log: attempt_dir.join("output-dup.log"),
+                    silence_threshold: Duration::from_secs(30),
+                },
+                reg_dup.receiver().clone(),
+                sink_dup,
+                Some(host_path.as_os_str()),
+            );
+            assert!(
+                !matches!(outcome_dup, super::RunOutcome::Exited { code: 0 }),
+                "ambiguous case collision unexpectedly succeeded: {outcome_dup:?}"
+            );
+            assert!(!game.join("dup.out").exists());
+        }
     }
 }

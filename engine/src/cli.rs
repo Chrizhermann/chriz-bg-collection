@@ -6259,6 +6259,20 @@ impl<S: EventSink> InvocationBuilder for GuardedCliDependencies<'_, S> {
                 &compatibility,
             )?;
         }
+        if let Some(compatibility) = crate::weidu::unix_compat::prepare(
+            crate::weidu::unix_compat::UnixModCompatibilityInput {
+                mod_id: &run.mod_id,
+                tp2: &mod_file.tp2,
+                target_root: self.target_root(run.target)?,
+            },
+        )
+        .map_err(step_error)?
+        {
+            write_json_once(
+                &attempt.evidence_root.join("unix-mod-compatibility.json"),
+                &compatibility,
+            )?;
+        }
         let invocation = build_invocation(
             &InvocationInput {
                 target: run.target,
@@ -7225,6 +7239,7 @@ fn pre_spawn_file_digests(
                         | CONFIG_FILES_EVIDENCE_FILE
                         | "eet-compatibility.json"
                         | "ui-invocation-compatibility.json"
+                        | "unix-mod-compatibility.json"
                 ))
         {
             return Err(StepFailure::new(format!(

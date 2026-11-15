@@ -9,4 +9,5 @@ mod process_group;
 pub mod recovery;
 pub mod runner;
 pub(crate) mod ui_compat;
+pub(crate) mod unix_compat;
 pub mod verify;
