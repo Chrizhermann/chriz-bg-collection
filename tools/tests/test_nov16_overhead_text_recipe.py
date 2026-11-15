@@ -154,6 +154,22 @@ class Nov16ChrizOverheadTextIntakeTests(unittest.TestCase):
             pin_list.count(f"| Chriz Overhead Text | 0.1.0 | `{MOD}` | `{SHA256[:12]}…` |"),
             2,
         )
+        for acceptance_path, subject_id in (
+            ("manifest/releases/v0.1.0-alpha.1/acceptance.toml", "chriz-overhead-text-bg2"),
+            (
+                "recipes/curated-full-current/releases/v0.1.0-alpha.1/acceptance.toml",
+                "chriz-overhead-text-bg2",
+            ),
+            (
+                "recipes/iwd-current/releases/v0.1.0-alpha.1/acceptance.toml",
+                "chriz-overhead-text-main",
+            ),
+        ):
+            acceptance = load(ROOT / acceptance_path)
+            record = next(
+                row for row in acceptance["evidence"] if row["subject_id"] == subject_id
+            )
+            self.assertEqual(record["commit"], "626e0bce8cdf7678df32354b2309daf5e7dc657f")
 
 
 if __name__ == "__main__":
