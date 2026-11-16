@@ -613,12 +613,7 @@ fn release_0_1_2_supersedes_0_1_1_requires_the_0_1_2_app_and_waits_for_the_next_
     assert_eq!(ledger, source);
     assert_eq!(ledger.version, "0.1.2");
     assert_eq!(ledger.published_at, "2026-11-10T00:00:00Z");
-    assert_eq!(
-        bg_engine::cli::recipe_release_version(&curated)
-            .unwrap()
-            .as_deref(),
-        Some("0.1.2")
-    );
+    // The bundled recipe moved on to 0.1.3 (November 16); 0.1.2's ledger stays as published.
     assert_eq!(ledger.supersedes.as_deref(), Some("0.1.1"));
 
     // The 0.1.1 app cannot use this recipe: its engine rejects the features'
@@ -682,6 +677,66 @@ fn release_0_1_2_supersedes_0_1_1_requires_the_0_1_2_app_and_waits_for_the_next_
 }
 
 #[test]
+fn release_0_1_3_supersedes_0_1_2_with_chriz_overhead_text_for_the_next_playthrough() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+    let curated = root.join("recipes/curated-full-current");
+    let ledger = load_release(&curated.join("releases/v0.1.3/ledger.toml")).unwrap();
+    let source = load_release(&root.join("manifest/releases/v0.1.3/ledger.toml")).unwrap();
+    assert_eq!(ledger, source);
+    assert_eq!(ledger.version, "0.1.3");
+    assert_eq!(ledger.published_at, "2026-11-16T00:00:00Z");
+    assert_eq!(
+        bg_engine::cli::recipe_release_version(&curated)
+            .unwrap()
+            .as_deref(),
+        Some("0.1.3")
+    );
+    assert_eq!(ledger.supersedes.as_deref(), Some("0.1.2"));
+    assert_eq!(ledger.minimum_app_version, "0.1.2");
+
+    let current = classify_updates("0.1.2", "0.1.2", std::slice::from_ref(&ledger)).unwrap();
+    assert_eq!(current.latest_version.as_deref(), Some("0.1.3"));
+    assert_eq!(
+        current.disposition,
+        UpdateDisposition::DeferredForNextPlaythrough
+    );
+    assert_eq!(current.changes, ledger.changes);
+    assert!(ledger
+        .changes
+        .iter()
+        .all(|change| change.save_applicability == SaveApplicability::NextPlaythrough));
+
+    let v012 = load_release(&curated.join("releases/v0.1.2/ledger.toml")).unwrap();
+    let skipped = classify_updates("0.1.1", "0.1.2", &[ledger.clone(), v012.clone()]).unwrap();
+    assert_eq!(skipped.latest_version.as_deref(), Some("0.1.3"));
+    assert_eq!(
+        skipped.changes,
+        [v012.changes, ledger.changes.clone()].concat()
+    );
+
+    let snapshot = released_snapshots()
+        .into_iter()
+        .find(|snapshot| snapshot["version"] == "0.1.3")
+        .expect("the 0.1.3 differences are recorded");
+    assert_eq!(snapshot["from_commit"], "c95db24");
+    assert_eq!(snapshot["to_commit"], "bc5fc11");
+    let differences = snapshot_differences(&snapshot);
+    assert_eq!(differences.len(), 3);
+    ensure_change_coverage(&differences, &ledger).unwrap();
+    assert_eq!(
+        ledger
+            .changes
+            .iter()
+            .flat_map(|change| change.covers.iter().map(String::as_str))
+            .collect::<BTreeSet<_>>(),
+        differences
+            .iter()
+            .map(|difference| difference.subject.as_str())
+            .collect::<BTreeSet<_>>()
+    );
+}
+
+#[test]
 fn coverage_error_names_uncovered_subject() {
     let differences = vec![RecipeDifference {
         subject: "run:missing".to_owned(),
@@ -722,9 +777,9 @@ fn ledger_covers_name_only_subject_kinds_the_recipe_diff_emits() {
                 }
             }
         }
-        // alpha.1, alpha.12 to alpha.20, 0.1.0, 0.1.1 and the next 0.1.2; published ledgers
-        // are never removed.
-        assert!(ledgers >= 13, "{profile}: only {ledgers} ledgers found");
+        // alpha.1, alpha.12 to alpha.20, 0.1.0, 0.1.1, 0.1.2 and the next 0.1.3; published
+        // ledgers are never removed.
+        assert!(ledgers >= 14, "{profile}: only {ledgers} ledgers found");
         assert_eq!(
             dead, shipped,
             "{profile}: covers that no recipe difference can match (kinds: {DIFF_SUBJECT_KINDS:?})"
