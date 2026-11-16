@@ -188,6 +188,15 @@ These changes apply to new installations; existing games and saves are unchanged
   `manifest/evidence/release-intake-20261116-chriz-overhead-text-chriz-easy-bg-chriz-easy-iwd.toml`.
   Combined full-collection EET and IWD:EE runtime checks remain untested. The 0.1.2 update ledger
   needs an entry covering `feature:feature:chriz-overhead-text:component-0`.
+- **BuffBot v1.16.2** (pinned 2026-11-16 in both Chriz Easy BG and Chriz Easy IWD) updates
+  the Italian translation catalog (`buffbot/lang/italian/setup.tra`, 72 updated entries across
+  the 252-entry catalog; [bg-eeex-buffbot#119](https://github.com/Chrizhermann/bg-eeex-buffbot/pull/119))
+  with no runtime Lua logic, `.menu`, component, order, default or save-schema changes. Owner
+  validation covers 2,124 offline tests and a BG2:EE 2.7.3.0 / EEex 1.3.1 headless suite with
+  909 passing checks plus a live Italian catalog smoke check; fresh-download evidence is in
+  `manifest/evidence/release-intake-20261116-buffbot-chriz-easy-bg-chriz-easy-iwd.toml`. The
+  next recipe update ledger needs an entry covering `artifact:buffbot-1.16.2` (existing games
+  already receive it via **Updates -> BuffBot**).
 
 ## Installer changelog
 

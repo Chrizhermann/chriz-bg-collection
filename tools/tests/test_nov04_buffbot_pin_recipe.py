@@ -29,7 +29,7 @@ PROFILES = ["manifest", "recipes/curated-full-current"]
 MOD = "buffbot"
 PIN = "buffbot-1.16.0"
 PREVIOUS = "buffbot-1.12.6"
-SUCCESSOR = "buffbot-1.16.1"
+SUCCESSOR = "buffbot-1.16.2"
 # Older pins that stay as history next to the superseded one.
 HISTORY = ["buffbot-1.10.1", "buffbot-1.11.0", "buffbot-1.12.1"]
 TAG = "v1.16.0"
