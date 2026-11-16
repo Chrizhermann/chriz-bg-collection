@@ -68,6 +68,11 @@ name = "Chriz Overhead Text"
 repository = "Chrizhermann/chriz-overhead-text"
 
 [[mods]]
+id = "chriz-iwd-party-dialog"
+name = "Chriz IWD Party Dialog"
+repository = "Chrizhermann/chriz-iwd-party-dialog"
+
+[[mods]]
 id = "artisans-kitpack"
 name = "Artisan's Kitpack (our fork)"
 repository = "Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch"

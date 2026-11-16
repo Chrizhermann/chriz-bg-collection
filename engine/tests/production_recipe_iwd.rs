@@ -153,6 +153,12 @@ const RUNS: &[(&str, &str, Phase, &[u32])] = &[
         Phase::Main,
         &[0],
     ),
+    (
+        "chriz-iwd-party-dialog-main",
+        "chriz-iwd-party-dialog",
+        Phase::Main,
+        &[0],
+    ),
     ("eeexremote-main", "eeexremote", Phase::Main, &[0]),
 ];
 
@@ -194,6 +200,11 @@ const INSTALLERS: &[(&str, &str, &str)] = &[
         "chriz-iwd-encounters",
         "chriz-iwd-encounters-0.2.2",
         "chriz-iwd-encounters/setup-chriz-iwd-encounters.tp2",
+    ),
+    (
+        "chriz-iwd-party-dialog",
+        "chriz-iwd-party-dialog-0.1.0",
+        "chriz-iwd-party-dialog/setup-chriz-iwd-party-dialog.tp2",
     ),
     (
         "chriz-overhead-text",
@@ -361,6 +372,16 @@ const ARTIFACTS: &[Pin] = &[
         filename: "chriz-iwd-encounters-v0.2.2.zip",
         length: 381_722,
         sha256: "c9a653aeb61bee0f3b76e230e793b4f835bb2e5ce13de48d5f1dce630a94442c",
+    },
+    Pin {
+        id: "chriz-iwd-party-dialog-0.1.0",
+        version: "0.1.0",
+        kind: SourceKind::GithubRelease,
+        url: "https://github.com/Chrizhermann/chriz-iwd-party-dialog/releases/download/v0.1.0/chriz-iwd-party-dialog-v0.1.0.zip",
+        reference: "v0.1.0",
+        filename: "chriz-iwd-party-dialog-v0.1.0.zip",
+        length: 1_282_596,
+        sha256: "d801101ca396b88b39995185bf4d784777a8f24a23bdb7e4746cda08a3bbe8e2",
     },
     Pin {
         id: "chriz-overhead-text-0.1.0",
@@ -773,6 +794,7 @@ const RECOMMENDED: &[(&str, &[u32])] = &[
     ("klatu-armor-thieving-main", &[2150]),
     ("buffbot-main", &[1, 0]),
     ("chriz-overhead-text-main", &[0]),
+    ("chriz-iwd-party-dialog-main", &[0]),
 ];
 
 #[test]
@@ -792,7 +814,7 @@ fn declares_a_standalone_iwdee_collection_with_its_own_data_folder() {
             .collect::<Vec<_>>(),
         [PRESET]
     );
-    assert_eq!(manifest.collection.features.len(), 323);
+    assert_eq!(manifest.collection.features.len(), 325);
     assert!(
         validate(&manifest).is_empty(),
         "authoring validation findings: {:?}",
@@ -904,7 +926,7 @@ fn pins_the_exact_ordered_runs_and_component_lists() {
         position(&manifest, "klatu-armor-thieving-main") + 1,
         position(&manifest, "buffbot-main")
     );
-    // BuffBot and Chriz Overhead Text after EEex, late as in the BG installer.
+    // BuffBot, Chriz Overhead Text, and Chriz IWD Party Dialog run after EEex, late.
     assert!(position(&manifest, "eeex-main") < position(&manifest, "buffbot-main"));
     assert_eq!(
         position(&manifest, "buffbot-main") + 1,
@@ -912,6 +934,10 @@ fn pins_the_exact_ordered_runs_and_component_lists() {
     );
     assert_eq!(
         position(&manifest, "chriz-overhead-text-main") + 1,
+        position(&manifest, "chriz-iwd-party-dialog-main")
+    );
+    assert_eq!(
+        position(&manifest, "chriz-iwd-party-dialog-main") + 1,
         position(&manifest, "eeexremote-main")
     );
 }
@@ -1049,7 +1075,7 @@ fn resolves_the_exact_recommended_plan() {
         .iter()
         .map(|run| run.components.len())
         .sum::<usize>();
-    assert_eq!(components, 141);
+    assert_eq!(components, 142);
 }
 
 #[test]
@@ -1630,5 +1656,27 @@ fn chriz_overhead_text_is_on_by_default_and_needs_eeex() {
     assert!(without_eeex
         .plan
         .components_for("chriz-overhead-text-main")
+        .is_none());
+}
+
+#[test]
+fn chriz_iwd_party_dialog_is_on_by_default_and_needs_eeex() {
+    let manifest = recipe();
+    let evaluation = recommended(&manifest);
+    let mod_control = evaluation.view.control("mod:chriz-iwd-party-dialog").unwrap();
+    assert_eq!(mod_control.decision, Decision::Default);
+    assert_eq!(mod_control.readiness, Readiness::Ready);
+    assert!(mod_control.selected);
+    assert_eq!(
+        evaluation.plan.components_for("chriz-iwd-party-dialog-main"),
+        Some(&[0][..])
+    );
+
+    let mut without_eeex = Selection::defaults("windows");
+    without_eeex.set_feature("mod:eeex", false);
+    let without_eeex = evaluate(&manifest, &without_eeex).unwrap();
+    assert!(without_eeex
+        .plan
+        .components_for("chriz-iwd-party-dialog-main")
         .is_none());
 }

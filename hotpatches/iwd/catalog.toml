@@ -25,6 +25,7 @@ runtime_files = [
     "eeex_scripts/override",
     # BuffBot 1.12: logs, the generated panel backgrounds, its innate helpers, exported presets.
     "buffbot_*.log",
+    "chriz_iwd_party_dialog.log",
     "override/bfbotbg*.mos",
     "override/bfbtch.spl",
     "override/bfbtcr.spl",

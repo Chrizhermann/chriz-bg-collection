@@ -130,8 +130,8 @@ class Nov16ChrizOverheadTextIntakeTests(unittest.TestCase):
                         run_ids.index("buffbot-main") + 1,
                         run_ids.index(expected_run_id),
                     )
-                    self.assertEqual(
-                        run_ids.index(expected_run_id) + 1,
+                    self.assertLess(
+                        run_ids.index(expected_run_id),
                         run_ids.index("eeexremote-main"),
                     )
 

@@ -1,0 +1,23 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-11-17"
+generator = "chriz-bg-author + check_native_component_order.py"
+command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 <TP2 path>; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python -I tools/check_native_component_order.py --recipe-root <recipe> --mod-id <mod> --archive <fresh downloaded ZIP>"
+scope = "Chriz IWD Party Dialog v0.1.0 (published 2026-11-16 23:06 UTC, a normal GitHub release, annotated tag commit 33fa3c1) is added as chriz-iwd-party-dialog-0.1.0 in recipes/iwd-current. The archive was downloaded anonymously into fresh caches for inspection and verification, passing the production acquisition and extraction contracts plus native WeiDU component-order verification. Owner verification in Chrizhermann/chriz-iwd-party-dialog separately covers 159 offline checks (WeiDU 249 synthetic installs, Lua 5.2 + LuaJIT 2.1 PE/hook/rollback checks including EEex UncapFPS EndDialog chaining, read-only icewind.exe 2.7.3.0 verification, and full 508-condition modded DLG corpus classification) plus a disposable quiet-lab run on IWD:EE 2.7.3.0 + EEex v1.3.1 verifying party-wide race/class unlocking, speaker/token handover, natural EXIT restoration, dead-member exclusion, and companion-talk isolation. This intake record is automated source/package verification, not a combined full-collection WeiDU install or full campaign gameplay acceptance."
+
+# 8 entries, 1,423,816 bytes uncompressed, largest entry 1,364,992 bytes, depth 4, compression ratio at most 4.79.
+[[artifacts]]
+mod_id = "chriz-iwd-party-dialog"
+artifact_id = "chriz-iwd-party-dialog-0.1.0"
+recipe_profiles = ["recipes/iwd-current"]
+source_reference = "v0.1.0"
+source_commit = "33fa3c17ccda5aaf989dc66f9dd3c489dedb94be"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-iwd-party-dialog/releases/download/v0.1.0/chriz-iwd-party-dialog-v0.1.0.zip"
+actual_length = 1282596
+actual_sha256 = "d801101ca396b88b39995185bf4d784777a8f24a23bdb7e4746cda08a3bbe8e2"
+tp2_sha256 = "2811b57764ceb429621916b07e506577f6200e2d0da23ad9b8c0847605266cbf"
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
