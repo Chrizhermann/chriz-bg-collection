@@ -29,8 +29,8 @@ PROFILES = ["manifest", "recipes/curated-full-current"]
 MOD = "buffbot"
 PIN = "buffbot-1.12.6"
 PREVIOUS = "buffbot-1.12.1"
-# The November 8 intake (test_nov08_buffbot_pin_recipe) moves both profiles to v1.16.1.
-SUCCESSOR = "buffbot-1.16.1"
+# The November 16 intake (test_nov16_buffbot_pin_recipe) moves both profiles to v1.16.2.
+SUCCESSOR = "buffbot-1.16.2"
 # Older pins that stay as history next to the superseded one.
 HISTORY = ["buffbot-1.10.1", "buffbot-1.11.0"]
 TAG = "v1.12.6"

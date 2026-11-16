@@ -29,10 +29,11 @@ PROFILES = ["manifest", "recipes/curated-full-current"]
 MOD = "buffbot"
 PIN = "buffbot-1.12.1"
 PREVIOUS = "buffbot-1.11.0"
-# The November 1 intake (test_nov01_buffbot_pin_recipe) moved both profiles to v1.12.6, and
-# the November 4 intake (test_nov04_buffbot_pin_recipe) to v1.16.0, and the November 8 intake
-# (test_nov08_buffbot_pin_recipe) to v1.16.1.
-SUCCESSOR = "buffbot-1.16.1"
+# The November 1 intake (test_nov01_buffbot_pin_recipe) moved both profiles to v1.12.6,
+# the November 4 intake (test_nov04_buffbot_pin_recipe) to v1.16.0, the November 8 intake
+# (test_nov08_buffbot_pin_recipe) to v1.16.1, and the November 16 intake
+# (test_nov16_buffbot_pin_recipe) to v1.16.2.
+SUCCESSOR = "buffbot-1.16.2"
 TAG = "v1.12.1"
 FILENAME = "buffbot-v1.12.1.zip"
 SHA256 = "7ab5f040b05d474edfb846b11bff5fda134ee468e3e3a289e6f788f33e34ed22"

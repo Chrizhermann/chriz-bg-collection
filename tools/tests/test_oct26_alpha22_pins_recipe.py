@@ -49,9 +49,9 @@ SUCCESSORS["buffbot"] = "buffbot-1.12.1"
 # The November 1 intake (test_nov01_buffbot_pin_recipe) replaces v1.12.1 with v1.12.6, which
 # keeps both components and their order.
 SUCCESSORS["buffbot"] = "buffbot-1.12.6"
-# The November 8 intake (test_nov08_buffbot_pin_recipe) replaces v1.16.0 with v1.16.1, which
+# The November 16 intake (test_nov16_buffbot_pin_recipe) replaces v1.16.1 with v1.16.2, which
 # also keeps both components and their order.
-SUCCESSORS["buffbot"] = "buffbot-1.16.1"
+SUCCESSORS["buffbot"] = "buffbot-1.16.2"
 # Components declared by a successor pin, checked against its own record; none is in a
 # record of this intake.
 LATER_COMPONENTS = {"chriz-bg-rebalance": {360}}

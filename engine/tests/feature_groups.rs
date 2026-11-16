@@ -403,18 +403,22 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // chriz-overhead-text-bg2 [0] before eeexremote-bg2 in both plans. Without that intake,
     // the November 8 digests return (manifest c90f8f1b…, 25301534…, 8dd9cf31…; curated
     // 4dcb1fd4…, 999046f1…, d5f6d9b9…).
+    // Re-pinned on November 16 for BuffBot v1.16.2 (complete Italian translation): in both
+    // recipes only the Recommended plan changes, in the BuffBot run's artifact id; components,
+    // order and the selection stay. With v1.16.1 restored, the preceding November 16 plan
+    // digests return (manifest ca0104b6…, curated dbad60a8…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
             "228825ab02bfd91190dc6ce3ae909fd28863a8936d11526ad21dc588390f5479",
             "637bff40a2fde3a6af3938b2e25eed38bed3357739566a9ea4cca5f507637151",
-            "ca0104b6a0615a86132ad91513212b3e206a271aa5ebd38af5ea3ec5bb08d3cd",
+            "794f3ecfb9b8d399741e8f68c424e133351cc76010dcaa82466c19306e9ea606",
         ),
         (
             "../recipes/curated-full-current",
             "fab413456c438136699bd56485b8f834e12f3b3c6a1ba340966c3668495ff8a4",
             "071398d8982d27c0316a63cf7edebecc97a87a2feb4388c44adae46099c04171",
-            "dbad60a87e2387a395f86ca64ecd7c7bb07508a15c4024fd6515cec769db19b0",
+            "0c3da570ec67625115f0b28f97e7bb313d10efabc3c408373a6607997287a8ad",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

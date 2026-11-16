@@ -3,6 +3,8 @@
 The release keeps the two component declarations, their order, the selected plan and save
 schema. It keeps 5E rows visible when a wrapper cannot name a usable target. These are static
 source/package assertions only, not a WeiDU installation or gameplay acceptance.
+The November 16 intake (test_nov16_buffbot_pin_recipe) supersedes this pin with v1.16.2; the
+v1.16.1 evidence record and BG historical artifacts stay as verified here.
 """
 
 from pathlib import Path
@@ -17,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[2]
 EVIDENCE = "manifest/evidence/release-intake-20261108-buffbot-chriz-easy-bg-chriz-easy-iwd.toml"
 MOD = "buffbot"
 PIN = "buffbot-1.16.1"
+SUCCESSOR = "buffbot-1.16.2"
 TAG = "v1.16.1"
 FILENAME = "buffbot-v1.16.1.zip"
 SHA256 = "e116ab16e98f055e398e23b3f1f417f61e37c9d2bf04aefced6c9a3f629ed31d"
@@ -61,33 +64,37 @@ class Nov08BuffBotV1161PinTests(unittest.TestCase):
                          "native_component_order_verified"):
                 self.assertIs(record[flag], True, flag)
 
-    def test_all_shipped_recipes_freeze_the_new_artifact_and_run(self):
+    def test_historical_bg_artifacts_stay_and_iwd_replaces_its_artifact(self):
         profiles = [
-            ("manifest", ROOT / "manifest"),
-            ("recipes/curated-full-current", ROOT / "recipes/curated-full-current"),
-            ("recipes/curated-full-current", self.generated),
-            ("recipes/iwd-current", ROOT / "recipes/iwd-current"),
+            ("manifest", ROOT / "manifest", True),
+            ("recipes/curated-full-current", ROOT / "recipes/curated-full-current", True),
+            ("recipes/curated-full-current", self.generated, True),
+            ("recipes/iwd-current", ROOT / "recipes/iwd-current", False),
         ]
-        for profile, directory in profiles:
+        for profile, directory, keeps_history in profiles:
             with self.subTest(profile=directory):
                 record = self.records[profile]
                 mod = load(directory / f"mods/{MOD}.toml")
-                artifact = load(directory / f"artifacts/{PIN}.toml")
-                self.assertEqual(mod["artifact_id"], PIN)
-                self.assertEqual(artifact["version"], TAG.removeprefix("v"))
-                self.assertEqual(artifact["source"]["reference"], TAG)
-                self.assertEqual(artifact["source"]["expected_filename"], FILENAME)
-                for key, evidence_key in (("url", "immutable_source_url"),
-                                          ("expected_length", "actual_length"),
-                                          ("sha256", "actual_sha256")):
-                    self.assertEqual(artifact["source"][key], record[evidence_key], key)
+                self.assertEqual(mod["artifact_id"], SUCCESSOR)
+                artifact_path = directory / f"artifacts/{PIN}.toml"
+                if keeps_history:
+                    artifact = load(artifact_path)
+                    self.assertEqual(artifact["version"], TAG.removeprefix("v"))
+                    self.assertEqual(artifact["source"]["reference"], TAG)
+                    self.assertEqual(artifact["source"]["expected_filename"], FILENAME)
+                    for key, evidence_key in (("url", "immutable_source_url"),
+                                              ("expected_length", "actual_length"),
+                                              ("sha256", "actual_sha256")):
+                        self.assertEqual(artifact["source"][key], record[evidence_key], key)
+                else:
+                    self.assertFalse(artifact_path.exists())
                 (run,) = [run for run in load(directory / "collection.toml")["runs"]
                           if run["mod_id"] == MOD]
                 self.assertEqual(run["components"], COMPONENTS)
 
-    def test_catalog_release_text_and_iwd_static_record_name_the_pin(self):
+    def test_catalog_and_historical_release_text_keep_the_v1161_record(self):
         catalog = (ROOT / "docs/curation/components/BUFFBOT.md").read_text(encoding="utf-8")
-        self.assertIn(f"Target release: **{TAG}**", catalog)
+        self.assertIn(TAG, catalog)
         self.assertIn(f"`{TAG_COMMIT[:7]}`", catalog)
         self.assertIn(EVIDENCE, catalog)
         changelog = (ROOT / "docs/plans/2026-10-14-next-release-changelogs.md").read_text(encoding="utf-8")
@@ -96,11 +103,8 @@ class Nov08BuffBotV1161PinTests(unittest.TestCase):
         self.assertIn("`artifact:buffbot-1.16.1`", changelog)
         iwd_notes = (ROOT / "docs/release-notes-iwd-0.1.9.md").read_text(encoding="utf-8")
         self.assertIn("BuffBot 1.16.1", iwd_notes)
-        acceptance = load(ROOT / "recipes/iwd-current/releases/v0.1.0-alpha.1/acceptance.toml")
-        record = next(row for row in acceptance["evidence"] if row["subject_id"] == "buffbot-main")
-        self.assertEqual(record["commit"], "7eecd33f992aadfb9bd90d5f20efe1f14c8ae9b9")
         pin_list = (ROOT / "docs/pin-list-2.7.md").read_text(encoding="utf-8")
-        self.assertEqual(pin_list.count(f"| BuffBot | 1.16.1 | `{MOD}` | `{SHA256[:12]}…` |"), 2)
+        self.assertNotIn("| BuffBot | 1.16.1 |", pin_list)
 
 
 if __name__ == "__main__":
