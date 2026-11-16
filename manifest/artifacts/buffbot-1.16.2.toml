@@ -1,15 +1,15 @@
-id = "buffbot-1.16.1"
+id = "buffbot-1.16.2"
 name = "BuffBot"
-version = "1.16.1"
+version = "1.16.2"
 acquisition = "fetch-only"
 
 [source]
 kind = "github-release"
-url = "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.16.1/buffbot-v1.16.1.zip"
-reference = "v1.16.1"
-expected_filename = "buffbot-v1.16.1.zip"
-expected_length = 5797598
-sha256 = "e116ab16e98f055e398e23b3f1f417f61e37c9d2bf04aefced6c9a3f629ed31d"
+url = "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.16.2/buffbot-v1.16.2.zip"
+reference = "v1.16.2"
+expected_filename = "buffbot-v1.16.2.zip"
+expected_length = 5798498
+sha256 = "ab2d95f589111d49f0b1e62cce47c2203e1cede91e7cd2316ffe76ce6ba6924a"
 redirect_hosts = ["release-assets.githubusercontent.com"]
 
 [archive]
@@ -28,5 +28,5 @@ max_compression_ratio = 100
 [provenance]
 homepage = "https://github.com/Chrizhermann/bg-eeex-buffbot"
 license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
-url = "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/tag/v1.16.1"
-reviewed_on = "2026-11-08"
+url = "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/tag/v1.16.2"
+reviewed_on = "2026-11-16"

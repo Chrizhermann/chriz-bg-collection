@@ -1,0 +1,23 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-11-16"
+generator = "tools/prepare_own_mod_pin.py"
+command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 <TP2 path>; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python -I tools/check_native_component_order.py --recipe-root <recipe> --mod-id <mod> --archive <fresh downloaded ZIP>"
+scope = "BuffBot v1.16.2 (published 2026-11-16 10:52 UTC, a normal GitHub release, tag commit 268af12) replaces buffbot-1.16.1 in manifest, recipes/curated-full-current, recipes/iwd-current. Each archive was downloaded anonymously into a fresh cache for the inspection and for each recipe's artifact TOML, and passed the production acquisition and extraction contracts. The superseded evidence records stay as history, and so do the superseded artifact TOMLs in manifest, recipes/curated-full-current; in recipes/iwd-current the new artifact TOML replaces the superseded one. This is automated source/package verification, not a WeiDU install or gameplay acceptance."
+
+# 230 entries, 7,199,641 bytes uncompressed, largest entry 1,364,992 bytes, depth 4, compression ratio at most 7.5.
+[[artifacts]]
+mod_id = "buffbot"
+artifact_id = "buffbot-1.16.2"
+recipe_profiles = ["manifest", "recipes/curated-full-current", "recipes/iwd-current"]
+source_reference = "v1.16.2"
+source_commit = "268af1268b07375ac1261d4a16c815e639b0e155"
+immutable_source_url = "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.16.2/buffbot-v1.16.2.zip"
+actual_length = 5798498
+actual_sha256 = "ab2d95f589111d49f0b1e62cce47c2203e1cede91e7cd2316ffe76ce6ba6924a"
+tp2_sha256 = "ff9cb2dfe7ddb44095a74d6f45b6ff79827b80118f159a3c61a69f97db843f0f"
+native_components = [1, 0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
