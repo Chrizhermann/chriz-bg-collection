@@ -483,5 +483,15 @@
       "feature:feature:iwdification:mandatory-components",
       "feature:feature:stratagems:mandatory-components"
     ]
+  },
+  {
+    "version": "0.1.3",
+    "from_commit": "c95db24",
+    "to_commit": "bc5fc11",
+    "subjects": [
+      "artifact:chriz-overhead-text-0.1.0",
+      "feature:feature:chriz-overhead-text:component-0",
+      "run:chriz-overhead-text-bg2"
+    ]
   }
 ]
