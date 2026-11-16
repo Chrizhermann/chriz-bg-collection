@@ -2,6 +2,30 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 16 — Chriz Easy BG 0.1.6 (collection 0.1.3) and Chriz Easy IWD 0.1.13 released
+
+Published on 2026-11-16 at 08:55–08:56 UTC (17:55–17:56 KST) from `main` at `3ff6993`
+(PRs #146 and #147), live on both versioned releases, both update channels (`alpha` on
+`chriz-easy-bg`, `updates` on `chriz-easy-iwd`), `Chrizhermann/chriz-easy-iwd` `README.md`
+(`f3b0663`), and `bg.chrizfader.org` (`twitch-setup-chriz` PR #101):
+
+- **Chriz Overhead Text v0.1.0 added by default to both installers (#146, #147):**
+  - **Chriz Easy BG 0.1.6** (`Chriz.Easy.BG_0.1.6_x64-setup.exe`, 7,222,877 bytes, SHA-256
+    `f1298d90…`; bundled collection **0.1.3** with **467 default components, 70 runs, 56
+    mods**): adds `Chriz Overhead Text v0.1.0` (`Chrizhermann/chriz-overhead-text`, component
+    `0`, default ON with EEex in `post-eet-end` right before `eeexremote-bg2`) so spoken
+    overhead lines (`DisplayStringHead*`, `VerbalConstant` subtitles) stay visible and stack
+    `4 px` cleanly above **Tab / Reveal Details** nameplates and **`HP Over Head`** labels. See
+    [package-acceptance-0.1.6-2026-11-16.md](package-acceptance-0.1.6-2026-11-16.md) and
+    [release-notes-0.1.6.md](release-notes-0.1.6.md).
+  - **Chriz Easy IWD 0.1.13** (`Chriz.Easy.IWD_0.1.13_x64-setup.exe`, 7,139,482 bytes,
+    SHA-256 `b761456b…`; bundled collection **0.1.13** / hotpatch base `iwd-0.1.13` with **31
+    mods, 141 components, and 18 companions**): adds `Chriz Overhead Text v0.1.0` by default
+    right after `buffbot-main` while preserving `iwd-0.1.10` for shipped `0.1.10`–`0.1.12`
+    player installations. See
+    [package-acceptance-iwd-0.1.13-2026-11-16.md](package-acceptance-iwd-0.1.13-2026-11-16.md)
+    and [release-notes-iwd-0.1.13.md](release-notes-iwd-0.1.13.md).
+
 ## November 13 — Chriz Easy BG 0.1.5 and Chriz Easy IWD 0.1.12 released
 
 Published on 2026-11-12 at 23:31–23:32 UTC (2026-11-13 08:31–08:32 KST) from `main` at
