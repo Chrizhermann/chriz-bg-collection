@@ -107,6 +107,22 @@ class Nov17ChrizIwdPartyDialogIntakeTests(unittest.TestCase):
         iwd_catalog = load(ROOT / "hotpatches/iwd/catalog.toml")
         self.assertIn("chriz_iwd_party_dialog.log", iwd_catalog["runtime_files"])
 
+        acceptance = load(self.recipe / "releases/v0.1.0-alpha.1/acceptance.toml")
+        record = next(
+            row for row in acceptance["evidence"] if row["subject_id"] == "chriz-iwd-party-dialog-main"
+        )
+        self.assertEqual(record["commit"], "583bf937288674b95bc25815c54674a33a97c42b")
+
+        iwd_ledger = load(self.recipe / "releases/v0.1.14/ledger.toml")
+        self.assertEqual(iwd_ledger["supersedes"], "0.1.13")
+        self.assertIn(MOD, {change["id"] for change in iwd_ledger["changes"]})
+        base = next(row for row in iwd_catalog["bases"] if row["recipe_version"] == "0.1.14")
+        self.assertEqual(base["id"], "iwd-0.1.14")
+        self.assertEqual(
+            base["content_sha256"],
+            "d0bb83c08061f3b55306a00df14dd3a6950f151b9a83d5f508951c9cc56ab523",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
