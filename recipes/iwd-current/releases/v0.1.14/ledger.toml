@@ -1,0 +1,30 @@
+schema = 1
+recipe_id = "chriz-easy-iwd"
+version = "0.1.14"
+published_at = "2026-11-17T00:00:00Z"
+minimum_app_version = "0.1.1"
+supersedes = "0.1.13"
+
+[[changes]]
+id = "buffbot-1.16.2"
+title = "BuffBot 1.16.2"
+summary = "BuffBot installs version 1.16.2 (was 1.16.1). A game in progress can get it through the BuffBot update."
+save_applicability = "new-game-only"
+urgency = "informational"
+covers = [
+  "artifact:buffbot-1.16.1",
+  "artifact:buffbot-1.16.2",
+]
+
+[[changes]]
+id = "chriz-iwd-party-dialog"
+title = "Party-wide class, kit, and race checks in world dialogues"
+summary = "Chriz IWD Party Dialog v0.1.0 checks all living party members in the current area for class, kit, and race requirements in world and quest conversations, switching the active speaker and dialogue tokens to the qualifying party member while keeping personal companion dialogues bound to Player1. It comes with new installations (with EEex); a game in progress keeps its dialogue behaviour."
+save_applicability = "new-game-only"
+urgency = "informational"
+covers = [
+  "artifact:chriz-iwd-party-dialog-0.1.0",
+  "feature:mod:chriz-iwd-party-dialog",
+  "feature:feature:chriz-iwd-party-dialog:component-0",
+  "run:chriz-iwd-party-dialog-main",
+]

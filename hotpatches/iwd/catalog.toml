@@ -25,6 +25,7 @@ runtime_files = [
     "eeex_scripts/override",
     # BuffBot 1.12: logs, the generated panel backgrounds, its innate helpers, exported presets.
     "buffbot_*.log",
+    "chriz_iwd_party_dialog.log",
     "override/bfbotbg*.mos",
     "override/bfbtch.spl",
     "override/bfbtcr.spl",
@@ -105,6 +106,12 @@ id = "iwd-0.1.13"
 label = "Chriz Easy IWD 0.1.13"
 recipe_version = "0.1.13"
 content_sha256 = "3540064fb278f30e240eedec4d0a2e43aebc6f16e3ba0fa5ee11fd4630c521b8"
+
+[[bases]]
+id = "iwd-0.1.14"
+label = "Chriz Easy IWD 0.1.14"
+recipe_version = "0.1.14"
+content_sha256 = "d0bb83c08061f3b55306a00df14dd3a6950f151b9a83d5f508951c9cc56ab523"
 
 # Christopher's twelve boss fights (Chriz IWD Encounters 0.2.0, 2026-11-04) for installations of
 # the releases before 0.1.6, which install them itself. Each fight takes effect where the party

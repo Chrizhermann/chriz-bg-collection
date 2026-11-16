@@ -354,6 +354,17 @@ phase = "main"
 components = [0]
 args = []
 
+# Christopher's own IWD:EE quality-of-life mod (added 2026-11-17, on by default): evaluates world
+# and quest dialogue class, kit, and race checks across all living party members in the current
+# area and hands dialogue speaker/tokens to the qualifying party member. Copies only
+# override/M_CIPDLG.lua after EEex; order-independent with Tweaks Anthology #1290 and companions.
+[[runs]]
+run_id = "chriz-iwd-party-dialog-main"
+mod_id = "chriz-iwd-party-dialog"
+phase = "main"
+components = [0]
+args = []
+
 # Needs EEex #1 and #8 at install time.
 [[runs]]
 run_id = "eeexremote-main"
@@ -4745,4 +4756,28 @@ decision = "mandatory"
 readiness = "ready"
 parent = "mod:chriz-overhead-text"
 components = [{ run_id = "chriz-overhead-text-main", component = 0 }]
+requires = ["feature:eeex:component-1"]
+
+# World and quest dialogue class, kit, and race checks evaluate across all living party members in
+# the current area, handing speaker attribution and tokens to the qualifying character while keeping
+# personal companion dialogues bound to Player1 (Christopher, 2026-11-17).
+[[features]]
+id = "mod:chriz-iwd-party-dialog"
+title = "Chriz IWD Party Dialog"
+description = "World and quest conversations check all living party members in the area for class, kit, and race requirements and switch the speaking party member accordingly."
+category = "convenience"
+source_label = "Chriz IWD Party Dialog"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:chriz-iwd-party-dialog:component-0"
+title = "Party-Wide Class, Kit & Race Checks in World Dialogues (EEex)"
+description = "Party-Wide Class, Kit & Race Checks in World Dialogues (EEex)"
+category = "convenience"
+source_label = "Chriz IWD Party Dialog"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:chriz-iwd-party-dialog"
+components = [{ run_id = "chriz-iwd-party-dialog-main", component = 0 }]
 requires = ["feature:eeex:component-1"]

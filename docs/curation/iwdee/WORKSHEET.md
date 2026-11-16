@@ -30,6 +30,10 @@ Added later:
 - Chriz Overhead Text 0.1.0, component 0 (keep spoken overhead text visible above Reveal Details
   nameplates and overhead HP labels via EEex), 2026-11-16: on by default in both installers. It
   copies only `override/M_CZOH.lua` after EEex.
+- Chriz IWD Party Dialog 0.1.0, component 0 (party-wide class, kit, and race checks in world and
+  quest dialogues with speaker/token handover via EEex), 2026-11-17: on by default in Chriz Easy
+  IWD. It copies only `override/M_CIPDLG.lua` after EEex and keeps personal companion talks bound
+  to `Player1`.
 
 Notes from the selection:
 - The quest mods' compatibility with each other can be tested later; Christopher said
