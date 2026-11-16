@@ -84,6 +84,10 @@ is described in [`docs/release-notes-0.1.1.md`](../release-notes-0.1.1.md).
   the 18 packs writes its player-soundset registration whatever `CHARSND.2DA` holds; the audio
   is unchanged. The generated packs are now 1.0.2, Ajantis is 2.0.1, Viconia BG1/BG2 are 1.0.1,
   and Garithos is 1.1.1. (ChrizFader's voicepacks v1.2.0)
+- **Spoken lines above characters stay visible with Tab / Reveal Details and overhead HP**
+  (Default). Holding or toggling Tab / Reveal Details or enabling `HP Over Head` no longer
+  suppresses or clears spoken overhead lines (`DisplayStringHead*`, `VerbalConstant`): the spoken
+  box stacks cleanly above the nameplate or HP bar. (Chriz Overhead Text v0.1.0)
 - **Smaller BuffBot changes** (Default):
   - New: five text sizes instead of three. Tiny and Huge join Small, Medium and Large, and
     your setting stays. Large and Huge change only the title and the button captions.
@@ -103,6 +107,7 @@ These changes apply to new installations; existing games and saves are unchanged
 - BuffBot v1.16.1 (was v1.12.6)
 - SoD Remix v0.6.17 (was v0.6.16)
 - ChrizFader's voicepacks v1.2.0 (was v1.1.0)
+- Chriz Overhead Text v0.1.0 (new)
 
 ### Notes for the release integrator
 
@@ -172,6 +177,17 @@ These changes apply to new installations; existing games and saves are unchanged
   466-component BG2:EE 2.7.3.0 Recommended installation that started and loaded a save;
   playing the changed scenes remains untested. The 0.1.2 update ledger needs an entry covering
   `artifact:chriz-sod-remix-0.6.17`.
+- **Chriz Overhead Text v0.1.0** (taken in 2026-11-16, Christopher's OK of that day) adds
+  component `0` as a default in both Chriz Easy BG (`chriz-overhead-text-bg2`, in `post-eet-end`
+  immediately before `eeexremote-bg2`) and Chriz Easy IWD (`chriz-overhead-text-main`,
+  immediately after `buffbot-main` and before `eeexremote-main`). The Recommended BG plan grows
+  from 466 to 467 components across 70 runs, and IWD's Recommended plan grows from 140 to 141
+  components. Owner verification covers 173 offline checks across synthetic `2.7.3.0`
+  BG:EE/SoD/BG2:EE/EET/IWD:EE layouts plus live in-game screenshots in a disposable BG2:EE
+  `2.7.3.0` + EEex `v1.3.1` lab; fresh-download/artifact-verify and native-order evidence are in
+  `manifest/evidence/release-intake-20261116-chriz-overhead-text-chriz-easy-bg-chriz-easy-iwd.toml`.
+  Combined full-collection EET and IWD:EE runtime checks remain untested. The 0.1.2 update ledger
+  needs an entry covering `feature:feature:chriz-overhead-text:component-0`.
 
 ## Installer changelog
 

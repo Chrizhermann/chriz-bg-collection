@@ -21,8 +21,8 @@ RUN = "chriz-bg-modpack-campaign-xp-bg2"
 CAMPAIGN_CAPS = "feature:chriz-bg-modpack:component-650"
 SOA_CAP = "feature:chriz-bg-modpack:component-651"
 CHAPTER_CAPS = "feature:chriz-bg-modpack:component-652"
-# Recommended component counts before this change (curated: the 0.1.2 lab installed 466).
-PROFILES = {"manifest": 371, "recipes/curated-full-current": 466}
+# Recommended component counts (curated: 466 in the 0.1.2 lab + Chriz Overhead Text 0 on Nov 16).
+PROFILES = {"manifest": 372, "recipes/curated-full-current": 467}
 
 
 def _load(path: Path) -> dict:

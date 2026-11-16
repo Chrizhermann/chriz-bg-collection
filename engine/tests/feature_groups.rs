@@ -397,18 +397,24 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // Recommended plan changes, in those runs' artifact ids; components, order and the
     // selection stay. With their prior pins restored, the November 8 preceding plan digests
     // return (manifest 666e2cbf…, curated da37cc38…).
+    // Re-pinned on November 16 for Chriz Overhead Text v0.1.0 (Christopher, 2026-11-16):
+    // feature:chriz-overhead-text:component-0 is on by default in both recipes, adding its
+    // feature to the collection digests, its preset entry to the selection digests, and
+    // chriz-overhead-text-bg2 [0] before eeexremote-bg2 in both plans. Without that intake,
+    // the November 8 digests return (manifest c90f8f1b…, 25301534…, 8dd9cf31…; curated
+    // 4dcb1fd4…, 999046f1…, d5f6d9b9…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "c90f8f1b57deda983af1eafb2ffdd987eba60c253907f14972d10c3fd144b855",
-            "253015344c72b69bd35011cb03f9dbf8ad395999deb9fa5a3278ed7baa943c1e",
-            "8dd9cf3126669c394047f39f21acb5f116a280a445ee21a2f08493e90351ef5f",
+            "228825ab02bfd91190dc6ce3ae909fd28863a8936d11526ad21dc588390f5479",
+            "637bff40a2fde3a6af3938b2e25eed38bed3357739566a9ea4cca5f507637151",
+            "ca0104b6a0615a86132ad91513212b3e206a271aa5ebd38af5ea3ec5bb08d3cd",
         ),
         (
             "../recipes/curated-full-current",
-            "4dcb1fd4fccc2609a013e458d1ddb1434be2dfc0ee9ea7d04544dbb73649a47f",
-            "999046f16958aecc0b39f4e9540ec03e5a2d510d81c871368d50f627f12e3fcb",
-            "d5f6d9b9734373de51836509901a65fbf30dee4a56f5992ad0dfaa31d4970d84",
+            "fab413456c438136699bd56485b8f834e12f3b3c6a1ba340966c3668495ff8a4",
+            "071398d8982d27c0316a63cf7edebecc97a87a2feb4388c44adae46099c04171",
+            "dbad60a87e2387a395f86ca64ecd7c7bb07508a15c4024fd6515cec769db19b0",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

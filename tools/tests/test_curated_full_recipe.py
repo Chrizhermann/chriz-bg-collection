@@ -468,7 +468,11 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # (Modpack 650 + 652, Christopher, 2026-11-10); only the group's members change,
                 # and without the two the November 4 digest
                 # d5086af1d90ea7199bc4da012f9d745608f6e32fb6cb1637d3481742ebca68f3 returns.
-                "452ae6d86c228f1ca830c9f5c1462a7a7643f3316a9d877ca8e0b73f6b5acde6",
+                # November 16: Chriz Overhead Text v0.1.0 adds default component 0 in its own
+                # post-EET_end run before eeexremote-bg2, requiring EEex's core (Christopher,
+                # 2026-11-16); without its run, feature and preset entry the November 10 digest
+                # 452ae6d86c228f1ca830c9f5c1462a7a7643f3316a9d877ca8e0b73f6b5acde6 returns.
+                "962d203f87d3e292240ef16dc997b64a07f76bf83d4c2ffa9ff634d72171bb5a",
             )
 
             legacy_bg1npc_groups = {

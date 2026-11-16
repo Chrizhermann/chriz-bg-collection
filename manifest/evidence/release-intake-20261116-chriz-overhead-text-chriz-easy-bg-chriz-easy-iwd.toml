@@ -1,0 +1,40 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-11-16"
+generator = "chriz-bg-author + check_native_component_order.py"
+command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 <TP2 path>; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python -I tools/check_native_component_order.py --recipe-root <recipe> --mod-id <mod> --archive <fresh downloaded ZIP>"
+scope = "Chriz Overhead Text v0.1.0 (published 2026-11-15 22:08 UTC, a normal GitHub release, annotated tag commit 2bbd76b) is added as chriz-overhead-text-0.1.0 in manifest, recipes/curated-full-current, and recipes/iwd-current. Each archive was downloaded anonymously into a fresh cache for the inspection and for each recipe's artifact TOML, and passed the production acquisition and extraction contracts plus native WeiDU component-order verification. Owner verification in Chrizhermann/chriz-overhead-text separately covers 173 offline checks (synthetic 2.7.3.0 BG:EE/SoD/BG2:EE/EET/IWD:EE layouts, LuaJIT hook/layout tests, Keystone x86-64 assembly check) and a disposable quiet-lab run on BG2:EE 2.7.3.0 + EEex v1.3.1 with live screenshots. This intake record is automated source/package verification, not a combined full-collection WeiDU install or campaign gameplay acceptance."
+
+# 7 entries, 1,391,478 bytes uncompressed, largest entry 1,364,992 bytes, depth 3, compression ratio at most 3.31.
+[[artifacts]]
+mod_id = "chriz-overhead-text"
+artifact_id = "chriz-overhead-text-0.1.0"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v0.1.0"
+source_commit = "2bbd76b803a76e18ab10621b4d0fc32050b5309a"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-overhead-text/releases/download/v0.1.0/chriz-overhead-text-v0.1.0.zip"
+actual_length = 1277567
+actual_sha256 = "a7023258fbc6f5621663ed40fd7927877f45a074d896002b36993c88b132ef9a"
+tp2_sha256 = "c0412909760ce209e6e3023c9711411eacad67c6bb96a69cf4fe1b622b1cdbb2"
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+# 7 entries, 1,391,478 bytes uncompressed, largest entry 1,364,992 bytes, depth 3, compression ratio at most 3.31.
+[[artifacts]]
+mod_id = "chriz-overhead-text"
+artifact_id = "chriz-overhead-text-0.1.0"
+recipe_profiles = ["recipes/iwd-current"]
+source_reference = "v0.1.0"
+source_commit = "2bbd76b803a76e18ab10621b4d0fc32050b5309a"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-overhead-text/releases/download/v0.1.0/chriz-overhead-text-v0.1.0.zip"
+actual_length = 1277567
+actual_sha256 = "a7023258fbc6f5621663ed40fd7927877f45a074d896002b36993c88b132ef9a"
+tp2_sha256 = "c0412909760ce209e6e3023c9711411eacad67c6bb96a69cf4fe1b622b1cdbb2"
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true

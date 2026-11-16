@@ -14,7 +14,7 @@ no installer references, such as older versions, are not listed.
 <!-- BEGIN GENERATED PINS -->
 ### Shipped recipe: `recipes/curated-full-current/`
 
-69 archives for 72 installers.
+70 archives for 73 installers.
 
 | Archive | Version | Used by | SHA-256 | Source |
 |---|---|---|---|---|
@@ -32,6 +32,7 @@ no installer references, such as older versions, are not listed.
 | The Tweaks Anthology | 7649ced6cd25865874d787ec1a9abbc67b068729 | `cdtweaks` | `117cd79cb518…` | [commit archive](https://codeload.github.com/Gibberlings3/Tweaks-Anthology/zip/7649ced6cd25865874d787ec1a9abbc67b068729) |
 | chriz-bg-modpack | 0.2.0-alpha.16 | `chriz-bg-modpack` | `668937ba7ea4…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.16/chriz-bg-modpack-v0.2.0-alpha.16.zip) |
 | CHRIZ-BG-REBALANCE | 0.8.11 | `chriz-bg-rebalance` | `c9e9adf57a06…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.11/chriz-bg-rebalance-v0.8.11-windows.zip) |
+| Chriz Overhead Text | 0.1.0 | `chriz-overhead-text` | `a7023258fbc6…` | [release asset](https://github.com/Chrizhermann/chriz-overhead-text/releases/download/v0.1.0/chriz-overhead-text-v0.1.0.zip) |
 | CHRIZ-SOD-REMIX | 0.6.17 | `chriz-sod-remix` | `d8ce264f4288…` | [release asset](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.17/chriz-sod-remix-v0.6.17.zip) |
 | Crossmod Banter Pack for Baldur's Gate II | 30 | `crossmodbg2` | `6b1555d1cf6f…` | [release asset](https://github.com/Gibberlings3/Crossmod_Banter_Pack_for_Baldurs_Gate_II/releases/download/v30/crossmod-banter-pack-for-baldurs-gate-ii-v30.iemod) |
 | DLC Merger | 2.1 | `dlcmerger` | `ea7584fd7285…` | [release asset](https://github.com/Argent77/A7-DlcMerger/releases/download/v2.1/DlcMerger-v2.1.iemod) |
@@ -90,7 +91,7 @@ no installer references, such as older versions, are not listed.
 
 ### Base recipe: `manifest/`
 
-63 archives for 66 installers.
+64 archives for 67 installers.
 
 | Archive | Version | Used by | SHA-256 | Source |
 |---|---|---|---|---|
@@ -105,6 +106,7 @@ no installer references, such as older versions, are not listed.
 | BuffBot | 1.16.1 | `buffbot` | `e116ab16e98f…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.16.1/buffbot-v1.16.1.zip) |
 | chriz-bg-modpack | 0.2.0-alpha.16 | `chriz-bg-modpack` | `668937ba7ea4…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.16/chriz-bg-modpack-v0.2.0-alpha.16.zip) |
 | CHRIZ-BG-REBALANCE | 0.8.11 | `chriz-bg-rebalance` | `c9e9adf57a06…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.11/chriz-bg-rebalance-v0.8.11-windows.zip) |
+| Chriz Overhead Text | 0.1.0 | `chriz-overhead-text` | `a7023258fbc6…` | [release asset](https://github.com/Chrizhermann/chriz-overhead-text/releases/download/v0.1.0/chriz-overhead-text-v0.1.0.zip) |
 | CHRIZ-SOD-REMIX | 0.6.17 | `chriz-sod-remix` | `d8ce264f4288…` | [release asset](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.17/chriz-sod-remix-v0.6.17.zip) |
 | Crossmod Banter Pack for Baldur's Gate II | 30 | `crossmodbg2` | `6b1555d1cf6f…` | [release asset](https://github.com/Gibberlings3/Crossmod_Banter_Pack_for_Baldurs_Gate_II/releases/download/v30/crossmod-banter-pack-for-baldurs-gate-ii-v30.iemod) |
 | DLC Merger | 2.1 | `dlcmerger` | `ea7584fd7285…` | [release asset](https://github.com/Argent77/A7-DlcMerger/releases/download/v2.1/DlcMerger-v2.1.iemod) |

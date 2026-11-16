@@ -3,7 +3,7 @@
 Generated from `docs/curation/components/` plus `manifest/curation-map.toml`; no WeiDU log is used as an inclusion source.
 The source column records the pinned installer identity, while the status is the engine-equivalent resolved-selection outcome for the recommended preset.
 
-Engine-equivalent resolved-selection summary: 488 default/mandatory rows — conditional inactive: 20, deferred: 4, selected for installation: 464.
+Engine-equivalent resolved-selection summary: 489 default/mandatory rows — conditional inactive: 20, deferred: 4, selected for installation: 465.
 
 | Curated row | Decision | Semantic target | Status | Current source/component identity | Reason |
 |---|---|---|---|---|---|
@@ -314,6 +314,7 @@ Engine-equivalent resolved-selection summary: 488 default/mandatory rows — con
 | `CHRIZ-SOD-REMIX:900` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.17 0.6.17 (v0.6.17), component 900 |  |
 | `CHRIZ-SOD-REMIX:910` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.17 0.6.17 (v0.6.17), component 910 |  |
 | `CHRIZ-SOD-REMIX:292` | default | `feature:chriz-sod-remix:component-292` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.17 0.6.17 (v0.6.17), component 292 |  |
+| `CHRIZ_OVERHEAD_TEXT:0` | default | `feature:chriz-overhead-text:component-0` | selected for installation | chriz-overhead-text → chriz-overhead-text-0.1.0 0.1.0 (v0.1.0), component 0 |  |
 | `CROSSMODBG2:0` | default | `feature:crossmodbg2:component-0` | selected for installation | crossmodbg2 → crossmodbg2-30 30 (v30), component 0 |  |
 | `CROSSMODBG2:1` | default | `feature:crossmodbg2:component-1` | selected for installation | crossmodbg2 → crossmodbg2-30 30 (v30), component 1 |  |
 | `CROSSMODBG2:2` | default | `feature:crossmodbg2:component-2` | selected for installation | crossmodbg2 → crossmodbg2-30 30 (v30), component 2 |  |

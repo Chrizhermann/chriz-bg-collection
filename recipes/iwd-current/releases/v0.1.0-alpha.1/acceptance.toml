@@ -346,6 +346,17 @@ status = "accepted"
 scope = "Static recipe source, component, order and recommended-plan assertions only; not live game acceptance."
 
 [[evidence]]
+subject_kind = "run"
+subject_id = "chriz-overhead-text-main"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "626e0bce8cdf7678df32354b2309daf5e7dc657f"
+test_artifact = "engine/tests/production_recipe_iwd.rs"
+date = "2026-11-16"
+status = "accepted"
+scope = "Static recipe source, component, order and recommended-plan assertions only; not live game acceptance."
+
+[[evidence]]
 subject_kind = "release"
 subject_id = "v0.1.0-alpha.1"
 kind = "runtime-test"

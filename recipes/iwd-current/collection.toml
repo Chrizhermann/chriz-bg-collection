@@ -344,6 +344,16 @@ phase = "main"
 components = [1, 0]
 args = []
 
+# Christopher's own EEex quality-of-life mod (added 2026-11-16, on by default as in the BG
+# installer): keeps spoken overhead lines visible above Reveal Details nameplates and overhead HP
+# labels. Needs EEex #1 at install time and copies only override/M_CZOH.lua.
+[[runs]]
+run_id = "chriz-overhead-text-main"
+mod_id = "chriz-overhead-text"
+phase = "main"
+components = [0]
+args = []
+
 # Needs EEex #1 and #8 at install time.
 [[runs]]
 run_id = "eeexremote-main"
@@ -4713,3 +4723,26 @@ decision = "mandatory"
 readiness = "ready"
 parent = "mod:klatu"
 components = [{ run_id = "klatu-armor-thieving-main", component = 2150 }]
+
+# Spoken overhead lines stay visible above Reveal Details nameplates and overhead HP labels
+# (Christopher, 2026-11-16), on by default as in the BG installer.
+[[features]]
+id = "mod:chriz-overhead-text"
+title = "Chriz Overhead Text"
+description = "Keeps spoken overhead lines visible while Tab / Reveal Details or overhead HP labels are shown, stacking the spoken box above the nameplate or HP bar."
+category = "interface"
+source_label = "Chriz Overhead Text"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:chriz-overhead-text:component-0"
+title = "Keep overhead text visible with Reveal Details and overhead HP (EEex)"
+description = "Keep overhead text visible with Reveal Details and overhead HP (EEex)"
+category = "interface"
+source_label = "Chriz Overhead Text"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:chriz-overhead-text"
+components = [{ run_id = "chriz-overhead-text-main", component = 0 }]
+requires = ["feature:eeex:component-1"]

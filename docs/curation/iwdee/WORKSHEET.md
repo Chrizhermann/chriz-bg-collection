@@ -27,6 +27,9 @@ Added later:
 - Klatu Tweaks and Fixes 1.7.4, component 2150 (thieves use their skills in any armor, no added
   penalties), 2026-11-09: on by default as in the BG installer ("Es ist einfach Quality of
   Life"). It runs after every mod that adds armor. His stream game got it the same day.
+- Chriz Overhead Text 0.1.0, component 0 (keep spoken overhead text visible above Reveal Details
+  nameplates and overhead HP labels via EEex), 2026-11-16: on by default in both installers. It
+  copies only `override/M_CZOH.lua` after EEex.
 
 Notes from the selection:
 - The quest mods' compatibility with each other can be tested later; Christopher said
