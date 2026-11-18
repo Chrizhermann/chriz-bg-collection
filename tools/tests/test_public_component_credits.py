@@ -104,7 +104,7 @@ class PublicComponentCreditsTests(unittest.TestCase):
         recipe_version = json.loads((self.recipe / "release.json").read_text(encoding="utf-8"))["version"]
         self.assertEqual(self.result["applicationVersion"], app_version)
         self.assertEqual(self.result["recipeVersion"], recipe_version)
-        self.assertEqual(recipe_version, "0.1.3")
+        self.assertEqual(recipe_version, "0.1.4")
         encoded = json.dumps(self.result).lower()
         for forbidden in ("artifact_id", "source_reference", "expected_filename", ".zip", ".iemod", "c:\\\\", "creator-full"):
             self.assertNotIn(forbidden, encoded)

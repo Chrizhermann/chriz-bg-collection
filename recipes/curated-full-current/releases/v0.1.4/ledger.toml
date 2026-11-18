@@ -1,0 +1,41 @@
+schema = 1
+recipe_id = "chriz-bg-collection"
+version = "0.1.4"
+# The planned publication date (UTC), fixed before packaging because the setup bundles this ledger.
+published_at = "2026-11-18T00:00:00Z"
+minimum_app_version = "0.1.2"
+supersedes = "0.1.3"
+
+[[changes]]
+id = "kitpack-and-bardic-save-and-rest-fixes"
+title = "Passive kit abilities and bard songs no longer block saving or resting"
+summary = "Awareness, Combat Casting and Tracking from Artisan's Kitpack, and songs, Inspirations and kit auras from Bardic Wonders, now allow you to save and rest while their passive effects are active. Visible enemies and active combat can still prevent saving or resting."
+save_applicability = "next-playthrough"
+urgency = "informational"
+covers = [
+  "artifact:artisans-kitpack-4.81a-dev.85928f9-chriz.7",
+  "artifact:bardicwonders-v2.9c-balance.8",
+  "artifact:bardicwonders-v2.9c-balance.9",
+]
+
+[[changes]]
+id = "rebalance-round-clock-time-jumps"
+title = "Round Clock counts time spent travelling and resting"
+summary = "Round Clock (BG Rebalance v0.8.12, component 361) counts time passed during travel, rest and scripted time jumps toward your next spell, item use or attack, the wait after using Hide in Shadows and the next contingency check. If Hide in Shadows is ready, you can use Stealth while paused. Round Clock is on by default with EEex."
+save_applicability = "next-playthrough"
+urgency = "informational"
+covers = [
+  "artifact:chriz-bg-rebalance-0.8.12",
+  "feature:feature:chriz-bg-rebalance:component-361",
+  "run:chriz-bg-rebalance-bg2",
+]
+
+[[changes]]
+id = "buffbot-1-16-2-italian-localization"
+title = "BuffBot updates its Italian translation"
+summary = "BuffBot v1.16.2 updates the Italian translation and leaves the rules, install order and save format unchanged. You can already get this version in a game you have installed under Updates > BuffBot."
+save_applicability = "next-playthrough"
+urgency = "informational"
+covers = [
+  "artifact:buffbot-1.16.2",
+]
