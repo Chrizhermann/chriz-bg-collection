@@ -40,8 +40,9 @@ LENGTH = 1_839_187
 TAG_COMMIT = "92479d1baa83e8b0780b7dfc3009dc8820478cc6"
 # The November 2 intake moved both profiles to v0.8.9, which collection 0.1.0 ships, and the
 # November 8 intake moves them to v0.8.11 for 0.1.2.
-SUCCESSOR = "chriz-bg-rebalance-0.8.11"
-SUCCESSOR_TAG = "v0.8.11"
+# November 18 appends Round Clock to the previously verified release menu.
+SUCCESSOR = "chriz-bg-rebalance-0.8.12"
+SUCCESSOR_TAG = "v0.8.12"
 RELEASED_010_TAG = "v0.8.9"
 RUN = "chriz-bg-rebalance-bg2"
 EEEX_RUN = "eeex-bg2"
@@ -204,7 +205,7 @@ class Oct29RebalanceV088PinTests(unittest.TestCase):
             self.assertEqual(features[ALAGHOR]["requires_any"], [ELDRITCH_KNIGHT, TRICKSTER_EQUIPMENT])
 
             baseline = self._selected(collection, preset)
-            self.assertEqual({component for run_id, component in baseline if run_id == RUN}, RECOMMENDED)
+            self.assertEqual({component for run_id, component in baseline if run_id == RUN}, RECOMMENDED | {361})
             for component, feature_id in NEW.items():
                 self.assertEqual(baseline - self._selected(collection, preset, **{feature_id: "off"}),
                                  {(RUN, component)})
@@ -223,7 +224,7 @@ class Oct29RebalanceV088PinTests(unittest.TestCase):
             self.assertFalse(set(NEW.values()) & set(group["members"]))
 
     def test_the_rebalance_run_follows_the_tp2_after_the_kitpack_yeslick_and_eeex(self):
-        native = self.record["native_components"]
+        native = [*self.record["native_components"], 361]
         self.assertEqual(NATIVE_RUN_ORDERS[RUN], [c for c in native if c in NATIVE_RUN_ORDERS[RUN]])
         self.assertIn([302, 410, 411, 420], [NATIVE_RUN_ORDERS[RUN][i:i + 4] for i in range(len(NATIVE_RUN_ORDERS[RUN]))])
         for _, directory in self.directories:
@@ -254,14 +255,14 @@ class Oct29RebalanceV088PinTests(unittest.TestCase):
     def test_catalog_and_changelog_name_the_pin_the_decision_and_the_order(self):
         rows = {row.component_id: row for row in load_catalogs(ROOT / "docs/curation/components")
                 if row.catalog == "CHRIZ-BG-REBALANCE"}
-        self.assertEqual(set(rows), set(self.record["native_components"]))
+        self.assertEqual(set(rows), set(self.record["native_components"]) | {361})
         for component in NEW:
             self.assertEqual(rows[component].decision, Decision.DEFAULT)
         text = (ROOT / "docs/curation/components/CHRIZ-BG-REBALANCE.md").read_text(encoding="utf-8")
         # The catalog names the current pin and keeps v0.8.8 as its predecessor.
         self.assertIn(f"**{SUCCESSOR_TAG}**", text)
         self.assertIn(f"{TAG} (2026-10-29 10:00 UTC, tag commit `{TAG_COMMIT[:7]}`)", text)
-        for phrase in ("36 curated entries, 27 recommended selections",
+        for phrase in ("37 curated entries, 28 recommended selections",
                        "Christopher's decision, 2026-10-29", "`LK_ALAGHOR`", "`C0PR#CL.SPL`",
                        "`..., 408, 302, 410, 411, 420, 421, ...`", "`1010000` rebuilds", EVIDENCE):
             self.assertIn(phrase, text)

@@ -68,7 +68,7 @@ Status 2026-10-25. Read-only research by a subagent. Neutral facts only: no reco
 | The Artisan's Kitpack (upstream) | Artemius_I / The Artisan / AionZ | release v4.81a (2024-05-05, no assets); master 85928f9 (2026-05-31) | tag-zip v4.81a, or branch (`https://github.com/TheArtisanBG/The-Artisan-s-Kitpack/archive/refs/heads/master.zip`) → commit pin | **implied:** main tp2 has no gate and ships an `iwdspells` folder (Pale Master); no IWD statement in the repo or on the website's kitpack page | none found (repo has no README; website kitpack page) | EEex needed by 8004, 10003, 10004 and 30001. `_npc` components are gated bgee/bg2ee/eet | Large kitpack | see fork |
 | Kitpack – Chriz Balance Patch | Chrizhermann | v4.81a-dev.85928f9-chriz.1 (2026-09-29); master 0798dc4 | GH-rel `https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.1/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.1.zip` | Same as upstream. Fork tweak 51010 is gated bgee/bg2ee/eet | README asks that any redistribution credit Artemius_I first and link to the current website | Fork README: with Spell Revisions, leave out 30001, 8101/8102, and npc 5102 and 10004 | Balance patch on the kitpack | artisans-kitpack-4.81a-dev.85928f9-chriz.1 |
 | Bardic Wonders (upstream) | The Artisan | tags up to v2.9c (2024-01-31); no releases; master 4e72d97 (2026-05-31) | tag-zip v2.9c, or branch (`https://github.com/TheArtisanBG/Bardic-Wonders/archive/refs/heads/master.zip`) → commit pin | **explicit:** the website says the kits and gameplay additions work with IWD:EE. Component 2001 (items) is gated bgee/bg2ee/eet | none found (README is a title only; website page) | 1012 and 2009 need EEex. Website: install after mods that add or change armour | Bard kits and songs | see fork |
-| Bardic Wonders – Chriz Balance Patch | Chrizhermann | v2.9c-balance.8 (2026-10-14); fork 8b454bf | GH-rel `https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.8/Bardic-Wonders-v2.9c-balance.8.zip` | Same as upstream. 3010 needs EEex and `CBRSPVER.2DA` from chriz-bg-rebalance (bg2ee/eet only), so 3010 cannot install on IWD:EE | not checked separately | — | Balance patch | bardicwonders-v2.9c-balance.8 (curated recipe; components 1001–1012, 2002, 2007, …) |
+| Bardic Wonders – Chriz Balance Patch | Chrizhermann | v2.9c-balance.8 (2026-10-14); fork 8b454bf | GH-rel `https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.8/Bardic-Wonders-v2.9c-balance.8.zip` | Same as upstream. 3010 needs EEex and `CBRSPVER.2DA` from BG Rebalance 420, which the IWD recipe does not select | not checked separately | — | Balance patch | bardicwonders-v2.9c-balance.8 (curated recipe; components 1001–1012, 2002, 2007, …) |
 | Faiths and Powers | UnearthedArcana (subtledoctor, Raduziel et al.) | 0.92 (2026-09-03) | tag-zip `https://github.com/UnearthedArcana/Faiths_and_Powers/archive/refs/tags/0.92.zip` (the release has no assets) | **gate:** many components admit iwdee; a few are `!iwdee` | none found (README has no copyright section) | README: install it as the very last kit mod, after all NPC mods | Deities, spheres, priest kits | — |
 | Scales of Balance | subtledoctor | 7.0.1 (2026-09-23) | tag-zip | **gate:** includes iwdee | Contact the author before reuse; credit expected; if the author cannot be reached, free non-commercial use is allowed; no profit-making or commercial use without express permission | — | Rules/kit mod | — |
 | Might & Guile | subtledoctor | 5.9.1 (2026-10-04) | tag-zip | **gate:** includes iwdee | Same terms as Scales of Balance | — | Rules/kit mod | — |
@@ -181,6 +181,7 @@ Expansion-area data, for verification only: the Artisan NPC repos contain area s
 
 | Item | Facts |
 |---|---|
+| BG Rebalance v0.8.12 | Chriz Easy IWD selects only Round Clock (361), on by default with EEex. Travel, rest and scripted time jumps count toward personal rounds and cooldowns. |
 | No reload / ironman | Owner update: this is a stream rule only, and the installer needs no mechanism. No existing IWD:EE ironman mod was found earlier; this was not researched further. |
 | Stat-roll limit (max 10 rerolls, 2 stored rolls) | **No existing mod found** that limits rerolls or stored rolls. |
 | Native behaviour | IWD:EE character creation has one Store/Recall slot. The reroll/store/recall logic lives in the UI.MENU Lua (CHARGEN_ABILITIES). |
@@ -207,11 +208,11 @@ Expansion-area data, for verification only: the Artisan NPC repos contain area s
   - Items and stores: stealing capped at 5 per shopkeeper; no Protection from Magic or Undead scrolls or potions.
   - Combat conduct: no off-screen casting before combat; no removing party members during combat; selected-fight exit locks.
   - Campaign-specific: the SoD filler exception; stronger dragons; SoD changes.
-- **Gates:** every chriz-bg-rebalance component is gated `REQUIRE_PREDICATE (GAME_IS ~bg2ee eet~)` (v0.8.5, origin/main 38a39f6; 110 at line 218, 301 at line 438, 330 at line 1615). 235 and 257 are BG and SoD content. **None of the four members, nor the variant, can install on IWD:EE.**
+- **Gates:** BG Rebalance v0.8.12 gates Challenge Mode components 110, 301 and 330 to `bg2ee eet`. Its separate Round Clock component 361 admits `bgee bg2ee eet iwdee`. 235 and 257 are BG and SoD content. **None of the four members, nor the variant, can install on IWD:EE.**
 
 **IWD:EE counterparts (facts only)**
 
-- **The group mechanism itself** (manifest group, setup-screen switch, test) does not depend on the game. Its members would need components that install on IWD:EE, and the chriz layer has none today.
+- **The group mechanism itself** (manifest group, setup-screen switch, test) does not depend on the game. An IWD Challenge Mode would need its own compatible members. Round Clock is independent of the group.
 - **Rule targets that exist in IWD:EE:**
   - Emotion spells exist (the SCS readme mentions them), so a 301-type rule has a target.
   - Dragons exist, and SCS Smarter Dragons installs on IWD:EE, so a 110-type rule has a base; 110 itself needs EEex + SCS and is BG-gated.
@@ -230,7 +231,7 @@ Expansion-area data, for verification only: the Artisan NPC repos contain area s
 - **EEUITweaks original** (AncientCowboy v1.5): no iwdee. The r-e-d fork is partial (section 8).
 - **IWDEE-UI-BGEE** (AedrianRansom v1.9): puts IWD:EE's UI into BG games, so it has no IWD:EE target.
 - **IWDification** (CEBG curated `iwdification-11`): the readme scopes it to bringing IWD elements into the Baldur's Gate series. IWD:EE is not in its compatibility list.
-- **chriz-bg-rebalance** (all components bg2ee/eet), **chriz-bg-modpack 235**, **chriz-sod-remix 257**.
+- **chriz-bg-rebalance 110, 301 and 330** (BG Challenge Mode choices), **chriz-bg-modpack 235**, **chriz-sod-remix 257**.
 - **Bardic Wonders fork 3010**, **Kitpack fork 51010**, and the Kitpack `_npc` components.
 - **Item Upgrade for IWD v7** (G3): `GAME_IS ~iwd how totlm iwd-in-bg2~`, i.e. classic IWD and IWD-in-BG2 only.
 - **IWD Fixpack v11** (G3): `GAME_IS ~iwd how totlm~`, classic only.

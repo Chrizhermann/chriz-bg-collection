@@ -345,7 +345,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // which removes its 8 defaults and the Kivan quest guard 130 from both plans.
     // Its Modpack alpha.15 pin adds default Marek's Boomerang Dagger 670, retained by alpha.16.
     // November 16: Chriz Overhead Text adds default component 0 to both plans.
-    // This 372-component base plan is distinct from the 467-component curated plan.
+    // November 18 adds Round Clock 361 to both plans, bringing the base to 373 and curated to 468.
     assert_eq!(
         evaluation
             .plan
@@ -353,7 +353,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        372
+        373
     );
 }
 

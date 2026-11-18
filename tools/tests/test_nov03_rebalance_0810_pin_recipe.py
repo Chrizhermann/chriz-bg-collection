@@ -30,7 +30,8 @@ PROFILES = ["manifest", "recipes/curated-full-current"]
 MOD = "chriz-bg-rebalance"
 PIN = "chriz-bg-rebalance-0.8.10"
 PREVIOUS = "chriz-bg-rebalance-0.8.9"
-SUCCESSOR = "chriz-bg-rebalance-0.8.11"
+# November 18 appends Round Clock to the previously verified release menu.
+SUCCESSOR = "chriz-bg-rebalance-0.8.12"
 TAG = "v0.8.10"
 COMMIT = "cd0ffa2dfa9b42e432e1ef9f59751eaa19cf75e1"
 URL = ("https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.10/"
@@ -144,7 +145,7 @@ class Nov03RebalanceV0810PinTests(unittest.TestCase):
                              (ROOT / "manifest" / name).read_bytes())
 
     def test_components_order_and_recommended_stay_and_302_needs_no_spell_revisions(self):
-        native = self.record["native_components"]
+        native = [*self.record["native_components"], 361]
         self.assertEqual(NATIVE_RUN_ORDERS[RUN], [c for c in native if c in NATIVE_RUN_ORDERS[RUN]])
         for _, directory in self.directories:
             collection = _load(directory / "collection.toml")
@@ -157,7 +158,7 @@ class Nov03RebalanceV0810PinTests(unittest.TestCase):
                 self.assertEqual([run["run_id"] for run in runs], [RUN])
                 self.assertEqual(runs[0]["components"], [c for c in native if c in runs[0]["components"]])
                 baseline = _selected(collection, preset)
-                self.assertEqual({component for run_id, component in baseline if run_id == RUN}, RECOMMENDED)
+                self.assertEqual({component for run_id, component in baseline if run_id == RUN}, RECOMMENDED | {361})
                 # 302 stays a default with no requirement; without Spell Revisions it is still
                 # selected, which v0.8.10 now installs.
                 flail = features[FLAIL]
@@ -173,7 +174,7 @@ class Nov03RebalanceV0810PinTests(unittest.TestCase):
     def test_catalog_pin_list_and_changelog_draft_name_the_pin(self):
         rows = {row.component_id: row for row in load_catalogs(ROOT / "docs/curation/components")
                 if row.catalog == "CHRIZ-BG-REBALANCE"}
-        self.assertEqual(set(rows), set(self.record["native_components"]))
+        self.assertEqual(set(rows), set(self.record["native_components"]) | {361})
         self.assertEqual(rows[302].decision, Decision.DEFAULT)
         catalog = " ".join((ROOT / "docs/curation/components/CHRIZ-BG-REBALANCE.md")
                            .read_text(encoding="utf-8").split())

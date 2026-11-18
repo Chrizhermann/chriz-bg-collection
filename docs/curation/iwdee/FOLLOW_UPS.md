@@ -16,8 +16,8 @@ user's decisions. Started 2026-09-10.
 - [ ] Review any new quest/item candidates; Frostforged remains deferred.
 - [ ] The recipe generator does not know what was added to `collection.toml` by hand: Chriz IWD
   Encounters' fights 300-410, its banter guard 110, Arszyk's Wonderful Decay, Klatu's
-  thievery in armor (2150), Chriz Overhead Text (0) and Chriz IWD Party Dialog (0). Add them
-  before it regenerates the recipe.
+  thievery in armor (2150), Chriz Overhead Text (0), Chriz IWD Party Dialog (0) and BG Rebalance v0.8.12
+  Round Clock (361, on by default with EEex). Add them before it regenerates the recipe.
 - [ ] Create the explicit IWD curation map and reconcile every catalog row to an outcome.
 
 ## SCS enhancement research

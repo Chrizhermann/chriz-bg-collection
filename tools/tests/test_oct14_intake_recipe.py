@@ -118,8 +118,9 @@ class Oct14IntakeTests(unittest.TestCase):
             # effect clocks 360 after 340 and v0.8.8 (test_oct29_rebalance_088_pin_recipe)
             # Druid weapons 410 and Alaghor of Clangeddin weapons 411 after 302, each checked
             # against its own evidence; the v0.8.3 rows keep their order.
-            self.assertEqual(components[-5:], [330, 331, 332, 340, 360])
-            v083_rows = [component for component in components if component not in (340, 360, 410, 411)]
+            # v0.8.12 appends Round Clock after these earlier changes.
+            self.assertEqual(components[-6:], [330, 331, 332, 340, 360, 361])
+            v083_rows = [component for component in components if component not in (340, 360, 361, 410, 411)]
             self.assertEqual(v083_rows, self._native("chriz-bg-rebalance", v083_rows))
             self.assertEqual((features[strict]["decision"], features[genius]["decision"], features[heroism]["decision"]),
                              ("optional", "default", "default"))

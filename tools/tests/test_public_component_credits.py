@@ -93,7 +93,9 @@ class PublicComponentCreditsTests(unittest.TestCase):
         self.assertIn(2999, actual["cdtweaks-bg2"])
         # November 16: Chriz Overhead Text adds component 0 in its own default run.
         self.assertEqual(actual["chriz-overhead-text-bg2"], [0])
-        self.assertEqual(self.result["componentCount"], 467)
+        # Round Clock adds one default to the existing BG Rebalance mod.
+        self.assertIn(361, actual["chriz-bg-rebalance-bg2"])
+        self.assertEqual(self.result["componentCount"], 468)
         self.assertEqual(len(actual), 70)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:

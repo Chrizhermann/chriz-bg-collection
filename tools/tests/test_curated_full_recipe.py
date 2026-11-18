@@ -89,7 +89,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
         run_id = "chriz-bg-rebalance-bg2"
         runs = tomllib.loads(collection)["runs"]
         run = next(run for run in runs if run["run_id"] == run_id)
-        self.assertEqual(run["components"][-15:], [408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360])
+        self.assertEqual(run["components"][-16:], [408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360, 361])
         # Regression: sorting numerical IDs recreated the September 30 failure.
         sorted_source = collection.replace(
             f"components = {run['components']}",
@@ -472,7 +472,9 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # post-EET_end run before eeexremote-bg2, requiring EEex's core (Christopher,
                 # 2026-11-16); without its run, feature and preset entry the November 10 digest
                 # 452ae6d86c228f1ca830c9f5c1462a7a7643f3316a9d877ca8e0b73f6b5acde6 returns.
-                "962d203f87d3e292240ef16dc997b64a07f76bf83d4c2ffa9ff634d72171bb5a",
+                # November 18 adds 361 to the Rebalance run, features and preset.
+                # Removing the addition restores the November 16 digest 962d203f….
+                "500c85f81fb179c00b9ae87b1f3f1188bf918b6cd9dd63a2e32767bdea47d937",
             )
 
             legacy_bg1npc_groups = {
@@ -791,23 +793,22 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertLess(order.index("cdtweaks-spell-save-penalties-bg2"), order.index("spell-rev-npc-spellbooks-bg2"))
             self.assertEqual(preset["selections"]["feature:evandra:component-1"], "on")
             bg_mod = tomllib.loads((output / "mods/chriz-bg-rebalance.toml").read_text(encoding="utf-8"))
-            # November 2: v0.8.9 (texts of 210/211) replaced v0.8.8; November 3 intake: v0.8.10
-            # (Flail of the Ages 302 without Spell Revisions), and November 8 v0.8.11, replace
-            # v0.8.9. All three artifacts stay.
-            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.8.11")
+            # Round Clock arrives in v0.8.12. Earlier BG artifacts remain as pin history.
+            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.8.12")
             bg_artifact = tomllib.loads(
-                (output / "artifacts/chriz-bg-rebalance-0.8.11.toml").read_text(encoding="utf-8")
+                (output / "artifacts/chriz-bg-rebalance-0.8.12.toml").read_text(encoding="utf-8")
             )
-            self.assertTrue((output / "artifacts/chriz-bg-rebalance-0.8.9.toml").exists())
+            for previous in ("0.8.11", "0.8.10", "0.8.9"):
+                self.assertTrue((output / f"artifacts/chriz-bg-rebalance-{previous}.toml").exists())
             self.assertTrue((output / "artifacts/chriz-bg-rebalance-0.8.8.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.3.1.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.4.0.toml").exists())
-            self.assertEqual(bg_artifact["version"], "0.8.11")
-            self.assertEqual(bg_artifact["source"]["reference"], "v0.8.11")
-            self.assertEqual(bg_artifact["source"]["expected_length"], 1813831)
+            self.assertEqual(bg_artifact["version"], "0.8.12")
+            self.assertEqual(bg_artifact["source"]["reference"], "v0.8.12")
+            self.assertEqual(bg_artifact["source"]["expected_length"], 1825506)
             self.assertEqual(
                 bg_artifact["source"]["sha256"],
-                "c9e9adf57a06b95bac055b4aee983b92690e3dacb2173b6c584cf4f75f059b34",
+                "f64314ab1462cef661dc4191e37e9d8911e95bd8df13ad44c3a09744b23847a8",
             )
             self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.3")
             for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14", "0.1.0-alpha.15", "0.1.0-alpha.16", "0.1.0-alpha.17", "0.1.0-alpha.18", "0.1.0-alpha.19", "0.1.0-alpha.20", "0.1.0", "0.1.1", "0.1.2", "0.1.3"):
@@ -1173,7 +1174,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
         self.assertTrue(all(f"feature:chriz-bg-rebalance:component-{id_}" not in features for id_ in (420, 421)))
         run = next(run for run in collection["runs"] if run["run_id"] == "chriz-bg-rebalance-bg2")
         self.assertEqual(run["phase"], "post-eet-end")
-        self.assertEqual(run["components"][-15:], [408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360])
+        self.assertEqual(run["components"][-16:], [408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360, 361])
 
     def test_shifted_dialogue_is_optional_and_requires_either_kit_without_eeex(self) -> None:
         collection = tomllib.loads((self.root / "manifest/collection.toml").read_text(encoding="utf-8"))

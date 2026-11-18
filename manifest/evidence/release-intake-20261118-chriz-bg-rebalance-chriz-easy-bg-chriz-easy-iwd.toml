@@ -1,0 +1,23 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-11-18"
+generator = "tools/prepare_own_mod_pin.py + chriz-bg-author + check_native_component_order.py"
+command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 <TP2 path>; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python -I tools/check_native_component_order.py --recipe-root <recipe> --mod-id <mod> --archive <fresh downloaded ZIP>"
+scope = "BG Rebalance v0.8.12 (Rebalance PR #28, published 2026-11-18 07:20 UTC) replaces v0.8.11 in both BG recipes and is the first IWD pin. Compared with the previous release, the TP2 retains the 36 earlier component numbers, English menu names and order, then appends Round Clock 361. Both installers enable it by default with EEex. IWD selects only 361. Fresh anonymous downloads passed artifact inspection and the acquisition and extraction contract for each recipe. The native-order check covered chriz-bg-rebalance-bg2 in both BG recipes and chriz-bg-rebalance-main in IWD. This record covers package and recipe verification."
+
+# 69 entries, 2,638,073 bytes uncompressed, largest entry 1,364,992 bytes, depth 4, compression ratio at most 16.3.
+[[artifacts]]
+mod_id = "chriz-bg-rebalance"
+artifact_id = "chriz-bg-rebalance-0.8.12"
+recipe_profiles = ["manifest", "recipes/curated-full-current", "recipes/iwd-current"]
+source_reference = "v0.8.12"
+source_commit = "2cb1b14dc7c465a66be8da272112b69ac28574bd"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.12/chriz-bg-rebalance-v0.8.12-windows.zip"
+actual_length = 1825506
+actual_sha256 = "f64314ab1462cef661dc4191e37e9d8911e95bd8df13ad44c3a09744b23847a8"
+tp2_sha256 = "5eec12295567dc3855cfe4a7a76aadfd155b64f6a752f8a2cbb763f537e057cc"
+native_components = [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 402, 403, 404, 405, 406, 407, 409, 408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360, 361]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true

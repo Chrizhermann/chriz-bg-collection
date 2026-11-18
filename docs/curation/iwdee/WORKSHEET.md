@@ -34,6 +34,8 @@ Added later:
   quest dialogues with speaker/token handover via EEex), 2026-11-17: on by default in Chriz Easy
   IWD. It copies only `override/M_CIPDLG.lua` after EEex and keeps personal companion talks bound
   to `Player1`.
+- BG Rebalance v0.8.12, selected 2026-11-18. Both installers enable Round Clock (361) by default
+  with EEex. It is the sole component in the IWD run, immediately after Chriz IWD Party Dialog.
 
 Notes from the selection:
 - The quest mods' compatibility with each other can be tested later; Christopher said
