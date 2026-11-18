@@ -20,9 +20,11 @@ use bg_engine::Manifest;
 // chriz.6 (November 2 intake) gives the white and greater white werewolves' overhand swing
 // frames in all eight directions, which stops a crash near walls; the three TP2s change only
 // their VERSION, so components, order and this route are unchanged.
-const ARTIFACT_ID: &str = "artisans-kitpack-4.81a-dev.85928f9-chriz.6";
-const ARTIFACT_SHA256: &str = "9644f01cdeeebf56912723e53267e91feb4404fb5c8d7305e0b112189095777e";
-const RELEASE_TAG: &str = "v4.81a-dev.85928f9-chriz.6";
+// chriz.7 (November 18 intake) repairs passive kit auras that could block saves and
+// rest. The three installers retain the same components and declaration order.
+const ARTIFACT_ID: &str = "artisans-kitpack-4.81a-dev.85928f9-chriz.7";
+const ARTIFACT_SHA256: &str = "6148fa21b58e181db1673f143e10d45fa2cecd2513ae9efa72e7969d066ab709";
+const RELEASE_TAG: &str = "v4.81a-dev.85928f9-chriz.7";
 
 // The main TP2's declaration order (issue 77): 10001 before 10002, and 1100 right after
 // 10004. WeiDU installs a batch in this order whatever order the run requests, and the
@@ -59,7 +61,9 @@ fn recipe() -> Manifest {
 #[test]
 fn freezes_the_upstream_based_release_identity_for_all_three_installers() {
     let manifest = recipe();
+    let curated = Manifest::load(&recipe_root().join("../recipes/curated-full-current")).unwrap();
     let artifact = &manifest.artifacts[ARTIFACT_ID];
+    assert_eq!(artifact, &curated.artifacts[ARTIFACT_ID]);
     assert_eq!(artifact.version, RELEASE_TAG.trim_start_matches('v'));
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
@@ -70,7 +74,7 @@ fn freezes_the_upstream_based_release_identity_for_all_three_installers() {
             "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/{RELEASE_TAG}/ArtisansKitpack-Chriz-Balance-Patch-{RELEASE_TAG}.zip"
         )
     );
-    assert_eq!(artifact.source.expected_length, Some(89_856_136));
+    assert_eq!(artifact.source.expected_length, Some(89_864_746));
     assert_eq!(artifact.source.sha256, ARTIFACT_SHA256);
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -103,6 +107,8 @@ fn freezes_the_upstream_based_release_identity_for_all_three_installers() {
     ] {
         let installer = &manifest.mods[mod_id];
         assert_eq!(installer.artifact_id, ARTIFACT_ID, "{mod_id}");
+        assert_eq!(curated.mods[mod_id].artifact_id, ARTIFACT_ID, "{mod_id}");
+        assert_eq!(curated.mods[mod_id].tp2, tp2, "{mod_id}");
         assert_eq!(installer.tp2, tp2, "{mod_id}");
         assert_eq!(installer.weidu_artifact_id, "weidu-249-amd64", "{mod_id}");
     }

@@ -14,7 +14,8 @@ profiles only. Nothing here is a game installation or gameplay acceptance. The N
 intake (test_nov03_rebalance_0810_pin_recipe) supersedes the Rebalance pin with v0.8.10 for
 0.1.2, and the November 8 intake (test_nov08_rebalance_0811_pin_recipe) supersedes that pin
 with v0.8.11; neither changes a component. The v0.8.9 record,
-artifacts and 0.1.0 texts stay as verified here.
+artifacts and 0.1.0 texts stay as verified here. The November 18 intake supersedes
+the Kitpack pin with chriz.7 without changing the components or order.
 """
 
 from pathlib import Path
@@ -43,6 +44,7 @@ PINS = {
                "v4.81a-dev.85928f9-chriz.6/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.6.zip",
         "length": 89_856_136,
         "sha256": "9644f01cdeeebf56912723e53267e91feb4404fb5c8d7305e0b112189095777e",
+        "successor": "artisans-kitpack-4.81a-dev.85928f9-chriz.7",
     },
     "rebalance": {
         "mods": ("chriz-bg-rebalance",),

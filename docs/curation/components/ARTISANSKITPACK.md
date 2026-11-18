@@ -1,11 +1,12 @@
 # ARTISANSKITPACK — components
 
 Listed at reference version **6.0**; refreshed for the selected fork release
-**chriz-v1.3.1** (`ac718614991e34b4f720807bec5edc96266c6c5e`). The recipes pin
+**chriz-v1.3.1** (`ac718614991e34b4f720807bec5edc96266c6c5e`). Both Chriz Easy BG
+recipes pin **v4.81a-dev.85928f9-chriz.7** (tag commit `b806532`, 2026-11-18), replacing
 **v4.81a-dev.85928f9-chriz.6** (tag commit `d70d213`, pinned 2026-11-02), which replaced
-chriz.5 (tag commit `10a4a29`, pinned 2026-10-29); its TP2 declares the same 59 components
-in the same order as listed here. Against chriz.1 it changes five things, the first three
-only when the EEex weapon usability is installed:
+chriz.5 (tag commit `10a4a29`, pinned 2026-10-29). The main TP2 declares the same 59 components
+in the same order. Changes since chriz.1 follow. The first three apply when EEex weapon
+usability is installed. [chriz.7 release](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/tag/v4.81a-dev.85928f9-chriz.7)
 
 - chriz.2: every sorcerer kit, the Dragon Disciple included, can equip daggers,
   quarterstaves, darts and slings without proficiency pips again, like mages. Since
@@ -55,12 +56,18 @@ only when the EEex weapon usability is installed:
   checks every werewolf animation for empty direction cycles. Only the two files and the
   three VERSION lines change.
 
-No component, order or decision changes. Existing installations are not changed by
-chriz.3, chriz.4, chriz.5 or chriz.6, which have no tail patch (Christopher, 2026-10-26
-and 2026-10-27: new installations only; chriz.5's and chriz.6's release notes say the
-same); chriz.2's
-sorcerer fix has one, `AKCB_SORCERER_WEAPONS`,
-which the collection does not install.
+- chriz.7 gives recurring kit auras, Combat Casting, Tracking, Totemic Guardian and
+  Bushido proximity checks save-compatible projectile delivery. It refreshes owned
+  profiles already registered by WeiDU and uses their current local IDs. Tracking still
+  reveals creatures, so visible hostiles can still prevent saving or resting. The
+  owner verified 154 offline and WeiDU tests, all three TP2 parses, and synthetic
+  BG2:EE/EET installer and We Overwrite mutation checks. Live playtesting is pending.
+  [chriz.7 release](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/tag/v4.81a-dev.85928f9-chriz.7)
+
+The component selection and native order carry forward. These fixes reach new collection
+installations, as described for the earlier fixes in chriz.5's and chriz.6's release notes.
+The separate chriz.2 sorcerer tail `AKCB_SORCERER_WEAPONS` is outside the collection.
+
 59 entries, 47 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
 
 ## UI/dependency notes

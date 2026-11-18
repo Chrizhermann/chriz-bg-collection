@@ -586,8 +586,13 @@ On `main` for the next Chriz Easy BG version:
     - Adding or removing it during a playthrough stays unsupported (Christopher's rule).
     - Pinned for alpha.22 in PR #56.
 - Spell Revisions, Artisan's Kitpack and Bardic Wonders forks frozen (Christopher,
-  2026-11-03): no more fixes or balancing; CEBG keeps the current pins until the own spell
-  mod and own kit mod replace them (design chats running).
+  2026-11-03) pending our spell and kit replacements. Christopher approved a save/rest
+  bug-fix exception for the Artisan and Bardic forks on 2026-11-18. The collection takes
+  chriz.7 for all three Artisan TP2s in both Chriz Easy BG recipes, and balance.9 for
+  Bardic in the curated BG recipe. The freeze on balance changes continues. The fixes
+  have installer-fixture coverage. Checking save/rest in the affected playthrough and the
+  separate visible-hostile refusal remains open.
+  [Artisan chriz.7](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/tag/v4.81a-dev.85928f9-chriz.7) · [Bardic balance.9](https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.9)
 - [x] BG1 NPC Project out of the default (Christopher, 2026-11-03). **Done** on
   2026-11-03 in [PR #88](https://github.com/Chrizhermann/chriz-bg-collection/pull/88)
   (merge commit `9eda4e6`): it is optional and unticked in Recommended and in the curated
@@ -863,8 +868,8 @@ content, evaluated component by component (keep, fix or extend).
   `a821992228c87a4bef75be4bc2fc833f8db46819` (still upstream head), update the renamed
   `Artisans_Warlock/Artisans_Warlock.TP2` path, and stop describing it as a v3.0 target.
   Waits for the Contingency prompt answer below.
-- [ ] Stale catalog wording: `BARDICWONDERS.md` cites `balance.4`/`balance.6`; `ABETTORHLAREBALANCE.md` still says
-  "keep unavailable" although the finite Abettor HLA work ships inside Bardic Wonders.
+- [ ] `ABETTORHLAREBALANCE.md` still says "keep unavailable" although the finite Abettor
+  HLA work ships inside Bardic Wonders.
 - [ ] [Sarah](SARAHTOB.md) portraits: captured with hashes on Modpack branch
   `codex/sarah-options`, but their artist and licence are unknown, so they are not
   published and the recipe has no feature for them.

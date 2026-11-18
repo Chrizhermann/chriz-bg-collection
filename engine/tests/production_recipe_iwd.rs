@@ -1663,12 +1663,17 @@ fn chriz_overhead_text_is_on_by_default_and_needs_eeex() {
 fn chriz_iwd_party_dialog_is_on_by_default_and_needs_eeex() {
     let manifest = recipe();
     let evaluation = recommended(&manifest);
-    let mod_control = evaluation.view.control("mod:chriz-iwd-party-dialog").unwrap();
+    let mod_control = evaluation
+        .view
+        .control("mod:chriz-iwd-party-dialog")
+        .unwrap();
     assert_eq!(mod_control.decision, Decision::Default);
     assert_eq!(mod_control.readiness, Readiness::Ready);
     assert!(mod_control.selected);
     assert_eq!(
-        evaluation.plan.components_for("chriz-iwd-party-dialog-main"),
+        evaluation
+            .plan
+            .components_for("chriz-iwd-party-dialog-main"),
         Some(&[0][..])
     );
 

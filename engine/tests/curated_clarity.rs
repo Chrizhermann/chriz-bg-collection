@@ -480,6 +480,10 @@ fn bard_spell_ceilings_are_default_and_gate_the_bardic_kit_adapter() {
     const REBALANCE: &str = "chriz-bg-rebalance-bg2";
     const BARDIC: &str = "bardicwonders-progression-bg2";
     let manifest = recipe();
+    assert_eq!(
+        manifest.mods["bardicwonders"].artifact_id,
+        "bardicwonders-v2.9c-balance.9"
+    );
     let baseline = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
     let has = |plan: &bg_engine::resolve::InstallPlan, run: &str, component: u32| {
         plan.components_for(run)

@@ -37,9 +37,10 @@ FILENAME = f"ArtisansKitpack-Chriz-Balance-Patch-{TAG}.zip"
 SHA256 = "b5527feef6d641a61f90c8faddaa98d1b81cff43a0141cd4748d9c099a5412a6"
 LENGTH = 89_698_447
 TAG_COMMIT = "10a4a2987c8a2898534022d1ce138ac5fd395ca4"
-# The November 2 intake moves all three installers to chriz.6.
-SUCCESSOR = "artisans-kitpack-4.81a-dev.85928f9-chriz.6"
-SUCCESSOR_TAG = "v4.81a-dev.85928f9-chriz.6"
+# The November 2 and November 18 intakes move all three installers to chriz.6 and chriz.7.
+SUCCESSOR = "artisans-kitpack-4.81a-dev.85928f9-chriz.7"
+SUCCESSOR_TAG = "v4.81a-dev.85928f9-chriz.7"
+COLLECTION_010_TAG = "v4.81a-dev.85928f9-chriz.6"
 # Mod id, its TP2 and the catalog that lists its components.
 INSTALLERS = {
     "artisanskitpack": ("ArtisansKitpack/ArtisansKitpack.TP2", "ARTISANSKITPACK"),
@@ -280,7 +281,7 @@ class Oct29KitpackChriz5PinTests(unittest.TestCase):
             with self.subTest(catalog=catalog):
                 self.assertEqual(set(rows[catalog]), set(self.records[mod_id]["native_components"]))
                 text = (ROOT / f"docs/curation/components/{catalog}.md").read_text(encoding="utf-8")
-                # The catalogs name the current pin and keep chriz.5 as its predecessor.
+                # The catalogs name the current pin and retain chriz.5 in its history.
                 self.assertIn(f"**{SUCCESSOR_TAG}**", text)
                 self.assertIn("chriz.5 (tag commit `10a4a29`, pinned 2026-10-29)", text)
         tweak_rows = rows["ARTISANSKITPACK_TWEAK"]
@@ -304,8 +305,8 @@ class Oct29KitpackChriz5PinTests(unittest.TestCase):
             self.assertIn(phrase, main)
         changelog = (ROOT / "docs/plans/2026-10-14-next-release-changelogs.md").read_text(encoding="utf-8")
         for phrase in ("**The Invisible Blade and Bardic Wonders' Dancer can use katanas** (Default)",
-                       "(Artisan's Kitpack fork chriz.5)", f"The Artisan's Kitpack fork {SUCCESSOR_TAG} (was chriz.1)",
-                       f"{SUCCESSOR_TAG} and The Tweaks Anthology", "**Artisan's Kitpack fork chriz.5**",
+                       "(Artisan's Kitpack fork chriz.5)", f"The Artisan's Kitpack fork {COLLECTION_010_TAG} (was chriz.1)",
+                       f"{COLLECTION_010_TAG} and The Tweaks Anthology", "**Artisan's Kitpack fork chriz.5**",
                        "shaman, Invisible Blade and Dancer weapon behavior until you install again"):
             self.assertIn(phrase, changelog)
         self.assertNotIn("The Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.4 (was", changelog)

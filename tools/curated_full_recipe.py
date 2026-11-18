@@ -127,18 +127,18 @@ CATEGORY_BY_GROUP = {
 
 
 ARTIFACTS = {
-    "bardicwonders-v2.9c-balance.8.toml": """id = "bardicwonders-v2.9c-balance.8"
+    "bardicwonders-v2.9c-balance.9.toml": """id = "bardicwonders-v2.9c-balance.9"
 name = "Bardic Wonders — Christopher's balance fork"
-version = "2.9c-balance.8"
+version = "2.9c-balance.9"
 acquisition = "fetch-only"
 
 [source]
 kind = "github-release"
-url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.8/Bardic-Wonders-v2.9c-balance.8.zip"
-reference = "v2.9c-balance.8"
-expected_filename = "Bardic-Wonders-v2.9c-balance.8.zip"
-expected_length = 5205399
-sha256 = "fa99ef91f39dfa4ae1fc15d234022e2623c359e991372f24afa116f5053feda1"
+url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.9/Bardic-Wonders-v2.9c-balance.9.zip"
+reference = "v2.9c-balance.9"
+expected_filename = "Bardic-Wonders-v2.9c-balance.9.zip"
+expected_length = 5220111
+sha256 = "e34af0d979e43e95885452d2b8133c009014558c40fd0ea9bfdcd958dbbb5708"
 redirect_hosts = ["release-assets.githubusercontent.com"]
 
 [archive]
@@ -157,8 +157,8 @@ max_compression_ratio = 512
 [provenance]
 homepage = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch"
 license = "Fetch-only Christopher Hermann fork; the collection does not redistribute it"
-url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.8"
-reviewed_on = "2026-10-14"
+url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.9"
+reviewed_on = "2026-11-18"
 """,
     "branwen-8.toml": """id = "branwen-8"
 name = "Branwen for BGII"
@@ -350,7 +350,7 @@ CDTWEAKS_3347_CONFIG = (
 
 
 MOD_SPECS = {
-    "bardicwonders": ("bardicwonders-v2.9c-balance.8", "Bardic Wonders", "BardicWonders/Setup-BardicWonders.tp2", "BARDICWONDERS"),
+    "bardicwonders": ("bardicwonders-v2.9c-balance.9", "Bardic Wonders", "BardicWonders/Setup-BardicWonders.tp2", "BARDICWONDERS"),
     "branwen": ("branwen-8", "Branwen for BGII", "Branwen/branwen.tp2", "BRANWEN"),
     "cdtweaks": ("cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729", "The Tweaks Anthology", "cdtweaks/setup-cdtweaks.tp2", "CDTWEAKS"),
     "evandra": ("evandra-2.2-windows", "Evandra NPC", "evandra/setup-evandra.tp2", "EVANDRA"),

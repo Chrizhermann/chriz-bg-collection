@@ -856,3 +856,59 @@ entry_count = 160
 max_entry_uncompressed_bytes = 8193400
 total_uncompressed_bytes = 42911947
 max_compression_ratio = 35
+
+[[artifacts]]
+# Fresh anonymous release download and production extraction verified 2026-11-18.
+artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.7"
+immutable_source_url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.7/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.7.zip"
+source_reference = "v4.81a-dev.85928f9-chriz.7"
+observed_final_host = "release-assets.githubusercontent.com"
+actual_length = 89864746
+actual_sha256 = "6148fa21b58e181db1673f143e10d45fa2cecd2513ae9efa72e7969d066ab709"
+wrapper_kind = "direct"
+materialized_publish_roots = ["ArtisansKitpack", "ArtisansKitpack_npc", "ArtisansKitpack_tweak"]
+declared_tp2_paths = ["ArtisansKitpack/ArtisansKitpack.TP2", "ArtisansKitpack_npc/ArtisansKitpack_npc.TP2", "ArtisansKitpack_tweak/ArtisansKitpack_tweak.TP2"]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 8
+max_entries = 4096
+max_entry_uncompressed_bytes = 8388608
+max_total_uncompressed_bytes = 134217728
+max_compression_ratio = 512
+
+[artifacts.observed_shape]
+max_depth = 7
+entry_count = 3028
+max_entry_uncompressed_bytes = 6142193
+total_uncompressed_bytes = 118400047
+max_compression_ratio = 432
+
+[[artifacts]]
+# Fresh anonymous release download and production extraction verified 2026-11-18.
+artifact_id = "bardicwonders-v2.9c-balance.9"
+immutable_source_url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.9/Bardic-Wonders-v2.9c-balance.9.zip"
+source_reference = "v2.9c-balance.9"
+observed_final_host = "release-assets.githubusercontent.com"
+actual_length = 5220111
+actual_sha256 = "e34af0d979e43e95885452d2b8133c009014558c40fd0ea9bfdcd958dbbb5708"
+wrapper_kind = "direct"
+materialized_publish_roots = ["BardicWonders"]
+declared_tp2_paths = ["BardicWonders/Setup-BardicWonders.tp2"]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 8
+max_entries = 1024
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 67108864
+max_compression_ratio = 512
+
+[artifacts.observed_shape]
+max_depth = 5
+entry_count = 856
+max_entry_uncompressed_bytes = 3311752
+total_uncompressed_bytes = 33115406
+max_compression_ratio = 432
