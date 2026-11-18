@@ -1,16 +1,17 @@
 # ARTISANSKITPACK_NPC — components
 
 Refreshed for the selected Artisan fork release **chriz-v1.3.1**
-(`ac718614991e34b4f720807bec5edc96266c6c5e`). The recipes pin
+(`ac718614991e34b4f720807bec5edc96266c6c5e`). Both Chriz Easy BG recipes pin
+**v4.81a-dev.85928f9-chriz.7** (tag commit `b806532`, 2026-11-18), replacing
 **v4.81a-dev.85928f9-chriz.6** (tag commit `d70d213`, pinned 2026-11-02), which replaced
-chriz.5 (tag commit `10a4a29`, pinned 2026-10-29); its NPC TP2
-declares the same 18 components in the same order as chriz.1 (the sorcerer, kit and
+chriz.5 (tag commit `10a4a29`, pinned 2026-10-29). The NPC TP2 declares the same 18 components in the same order as chriz.1 (the sorcerer, kit and
 class weapon fixes are in the main installer's libraries, see
 [ARTISANSKITPACK](ARTISANSKITPACK.md)). Besides its version, chriz.4's NPC TP2 only ends
 the two components that add kits, Rashemi Berserker Minsc `2001` and Red Wizard Edwin
 `5102`, with the pass that gives every class and kit ability table "apply `C0PR#CL`" at
-every level. chriz.5's and chriz.6's NPC TP2s change only their version; no component or
-decision changes.
+every level. In chriz.7 the NPC TP2 advances its version and the library used by `5102`
+refreshes the canonical `C0INAREL.PRO` when WeiDU has already registered it. The NPC
+selection and native order carry forward. [chriz.7 release](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/tag/v4.81a-dev.85928f9-chriz.7)
 18 entries, 6 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
 
 ## UI/dependency notes

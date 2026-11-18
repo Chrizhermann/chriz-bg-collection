@@ -407,17 +407,22 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // recipes only the Recommended plan changes, in the BuffBot run's artifact id; components,
     // order and the selection stay. With v1.16.1 restored, the preceding November 16 plan
     // digests return (manifest ca0104b6…, curated dbad60a8…).
-    for (dir, collection_sha, selection_sha, plan_sha) in [
+    // Re-pinned on November 18 for the save/rest fixes in Artisan chriz.7 (both BG
+    // recipes) and Bardic Wonders balance.9 (curated only). Restoring just those
+    // artifact IDs reproduces the previously frozen plan digests.
+    for (dir, collection_sha, selection_sha, plan_sha, previous_plan_sha) in [
         (
             "../manifest",
             "228825ab02bfd91190dc6ce3ae909fd28863a8936d11526ad21dc588390f5479",
             "637bff40a2fde3a6af3938b2e25eed38bed3357739566a9ea4cca5f507637151",
+            "21679388a966523c853019bcfd652a22f598ce4002c98cb8e317ad19a4739941",
             "794f3ecfb9b8d399741e8f68c424e133351cc76010dcaa82466c19306e9ea606",
         ),
         (
             "../recipes/curated-full-current",
             "fab413456c438136699bd56485b8f834e12f3b3c6a1ba340966c3668495ff8a4",
             "071398d8982d27c0316a63cf7edebecc97a87a2feb4388c44adae46099c04171",
+            "5728d3574cb2656fecd6bdd073948e0ab83642bc312a0b47baab138bf0ebc3a0",
             "0c3da570ec67625115f0b28f97e7bb313d10efabc3c408373a6607997287a8ad",
         ),
     ] {
@@ -429,6 +434,27 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
             "{dir}"
         );
         assert_eq!(plan_digest(&evaluation.plan).unwrap(), plan_sha, "{dir}");
+        let mut previous_plan = evaluation.plan;
+        for run in &mut previous_plan.runs {
+            let (current, previous) = match run.mod_id.as_str() {
+                "artisanskitpack" | "artisanskitpack-npc" | "artisanskitpack-tweak" => (
+                    "artisans-kitpack-4.81a-dev.85928f9-chriz.7",
+                    "artisans-kitpack-4.81a-dev.85928f9-chriz.6",
+                ),
+                "bardicwonders" => (
+                    "bardicwonders-v2.9c-balance.9",
+                    "bardicwonders-v2.9c-balance.8",
+                ),
+                _ => continue,
+            };
+            assert_eq!(run.artifact_id, current, "{dir}: {}", run.run_id);
+            run.artifact_id = previous.to_owned();
+        }
+        assert_eq!(
+            plan_digest(&previous_plan).unwrap(),
+            previous_plan_sha,
+            "{dir}"
+        );
         // The group and what says what components need are the only changes to the frozen
         // collection.
         let mut without_groups: Collection = manifest.collection.clone();

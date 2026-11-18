@@ -19,9 +19,9 @@ no installer references, such as older versions, are not listed.
 | Archive | Version | Used by | SHA-256 | Source |
 |---|---|---|---|---|
 | Ascalon's Questpack | 7.0 | `ac-quest` | `87c2feb30c89…` | [release asset](https://github.com/Gitjas/Ascalons_Questpack/releases/download/v7.0/ascalons-questpack-7.0.iemod) |
-| The Artisan's Kitpack - Chriz Balance Patch | 4.81a-dev.85928f9-chriz.6 | `artisanskitpack`, `artisanskitpack-npc`, `artisanskitpack-tweak` | `9644f01cdeee…` | [release asset](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.6/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.6.zip) |
+| The Artisan's Kitpack - Chriz Balance Patch | 4.81a-dev.85928f9-chriz.7 | `artisanskitpack`, `artisanskitpack-npc`, `artisanskitpack-tweak` | `6148fa21b58e…` | [release asset](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.7/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.7.zip) |
 | Ascension | 2.1.0 | `ascension` | `bd0ee14b3770…` | [release asset](https://github.com/Gibberlings3/Ascension/releases/download/2.1.0/ascension-2.1.0.zip) |
-| Bardic Wonders — Christopher's balance fork | 2.9c-balance.8 | `bardicwonders` | `fa99ef91f39d…` | [release asset](https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.8/Bardic-Wonders-v2.9c-balance.8.zip) |
+| Bardic Wonders — Christopher's balance fork | 2.9c-balance.9 | `bardicwonders` | `e34af0d979e4…` | [release asset](https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.9/Bardic-Wonders-v2.9c-balance.9.zip) |
 | The BG1 NPC Project | 32 | `bg1npc` | `8e34f397e960…` | [release asset](https://github.com/Gibberlings3/BG1NPC/releases/download/v32/the-bg1npc-project-v32.iemod) |
 | BG1 Unfinished Business | 17.1 | `bg1ub` | `5a525eb37f68…` | [release asset](https://github.com/Pocket-Plane-Group/bg1ub/releases/download/v17.1/bg1-unfinished-business-v17.1.iemod) |
 | Baldur's Gate Graphical Overhaul | 3.6 | `bggo` | `59e01a3dcf48…` | [release asset](https://github.com/Spellhold-Studios/Baldurs-Gate-Graphical-Overhaul/releases/download/v3.6/baldurs-gate-graphical-overhaul-v3.6.zip) |
@@ -96,7 +96,7 @@ no installer references, such as older versions, are not listed.
 | Archive | Version | Used by | SHA-256 | Source |
 |---|---|---|---|---|
 | Ascalon's Questpack | 7.0 | `ac-quest` | `87c2feb30c89…` | [release asset](https://github.com/Gitjas/Ascalons_Questpack/releases/download/v7.0/ascalons-questpack-7.0.iemod) |
-| The Artisan's Kitpack - Chriz Balance Patch | 4.81a-dev.85928f9-chriz.6 | `artisanskitpack`, `artisanskitpack-npc`, `artisanskitpack-tweak` | `9644f01cdeee…` | [release asset](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.6/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.6.zip) |
+| The Artisan's Kitpack - Chriz Balance Patch | 4.81a-dev.85928f9-chriz.7 | `artisanskitpack`, `artisanskitpack-npc`, `artisanskitpack-tweak` | `6148fa21b58e…` | [release asset](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.7/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.7.zip) |
 | Ascension | 2.1.0 | `ascension` | `bd0ee14b3770…` | [release asset](https://github.com/Gibberlings3/Ascension/releases/download/2.1.0/ascension-2.1.0.zip) |
 | The BG1 NPC Project | 32 | `bg1npc` | `8e34f397e960…` | [release asset](https://github.com/Gibberlings3/BG1NPC/releases/download/v32/the-bg1npc-project-v32.iemod) |
 | BG1 Unfinished Business | 17.1 | `bg1ub` | `5a525eb37f68…` | [release asset](https://github.com/Pocket-Plane-Group/bg1ub/releases/download/v17.1/bg1-unfinished-business-v17.1.iemod) |

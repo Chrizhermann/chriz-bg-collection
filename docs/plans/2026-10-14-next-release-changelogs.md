@@ -1,20 +1,49 @@
 # Next release — changelog drafts
 
-14 October 2026. Drafts for the release after app alpha.21 / collection alpha.20,
-on branch `claude/cebg-installer-fixes-20261014`. Nothing here is released.
+The current Chriz Easy BG draft is followed by the historical 0.1.2 and 0.1.0 drafts.
+The original drafts started on 14 October 2026, after app alpha.21 / collection alpha.20.
 Labels: **Mandatory** = always installed with its mod; **Default** = selected in
 Chris's Recommended; **Optional** = offered, unchecked; **Pending** = waiting for
 Christopher's choice. Version the next release properly; never republish over
 alpha.21. The [alpha.20 drafts](2026-10-13-next-release-changelogs.md) are already
-published. Christopher decided on 2026-11-01 that this release is app and collection
-**0.1.0** (prepared as alpha.22); the player-facing notes are in
+published. Christopher chose app and collection **0.1.0** for the alpha.22
+candidate on 2026-11-01. The player-facing notes are in
 [`docs/release-notes-0.1.0.md`](../release-notes-0.1.0.md).
+
+## Next Chriz Easy BG release (draft)
+
+### Changed behavior
+
+- **Saving and resting with passive kit abilities and bard songs.** Recurring Artisan's
+  Kitpack effects such as Awareness, Combat Casting and Tracking, and Bardic Wonders'
+  songs, Inspirations and kit auras now use projectiles that allow saving and resting.
+  Visible hostiles and active combat can still prevent both. The changes reach new
+  Chriz Easy BG installations after this recipe ships.
+  [Artisan chriz.7](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/tag/v4.81a-dev.85928f9-chriz.7) · [Bardic balance.9](https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.9)
+
+### Mod versions
+
+- The Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.7 (was chriz.6), main, NPC and tweak
+  installers in both Chriz Easy BG recipes.
+- Bardic Wonders v2.9c-balance.9 (was balance.8), curated Chriz Easy BG.
+
+### Notes for the release integrator
+
+- Christopher approved this save/rest bug-fix exception to the two forks' freeze on
+  2026-11-18. The pins carry forward the component selections and native order. Owner
+  evidence includes 154 Artisan offline and WeiDU tests and synthetic BG2:EE/EET
+  installer and We Overwrite checks. Bardic passed 211 automated tests, 54 WeiDU syntax
+  and version checks, and 15 native fixtures across BG2:EE, EET and IWD:EE. Live
+  gameplay and a combined collection install with these pins remain untested.
+  [Collection intake](../../manifest/evidence/release-intake-20261118-artisan-chriz7-bardic-balance9.toml)
+- The next recipe update ledger needs entries for
+  `artifact:artisans-kitpack-4.81a-dev.85928f9-chriz.7` and
+  `artifact:bardicwonders-v2.9c-balance.9`.
 
 ## Collection 0.1.2 (draft)
 
-Drafts for the next release, Chriz Easy BG 0.1.2, on the same branch. Nothing here is
-released. Everything after this section is the 0.1.0 draft, published on 2026-11-02; 0.1.1
-is described in [`docs/release-notes-0.1.1.md`](../release-notes-0.1.1.md).
+Historical draft for Chriz Easy BG 0.1.2. The 0.1.0 draft follows this section.
+[0.1.2 release notes](../release-notes-0.1.2.md) · [0.1.1 release notes](../release-notes-0.1.1.md)
 
 ### Changed behavior
 

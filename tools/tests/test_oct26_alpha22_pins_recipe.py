@@ -75,6 +75,9 @@ LATER_ROWS["ARTISANSKITPACK_TWEAK"] = {7205}
 SUCCESSORS.update({mod_id: "artisans-kitpack-4.81a-dev.85928f9-chriz.6"
                    for mod_id in ("artisanskitpack", "artisanskitpack-npc", "artisanskitpack-tweak")})
 SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.9"
+# The November 18 save/rest fixes move all three Kitpack installers to chriz.7.
+SUCCESSORS.update({mod_id: "artisans-kitpack-4.81a-dev.85928f9-chriz.7"
+                   for mod_id in ("artisanskitpack", "artisanskitpack-npc", "artisanskitpack-tweak")})
 # The November 8 Rebalance intake (test_nov08_rebalance_0811_pin_recipe) replaces v0.8.10 with
 # v0.8.11, which keeps every component and the order.
 SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.11"
