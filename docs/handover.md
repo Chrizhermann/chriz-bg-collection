@@ -2,6 +2,42 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 18 — Chriz Easy BG 0.1.7 (collection 0.1.4) and Chriz Easy IWD 0.1.14 (collection 0.1.15) released
+
+Published from [main at 62f4ab7](https://github.com/Chrizhermann/chriz-bg-collection/commit/62f4ab7bb3f7e64f86d15d3d3d48b3b699b4622f)
+after [PR #153](https://github.com/Chrizhermann/chriz-bg-collection/pull/153).
+The BG and IWD releases went live at 14:59:48 and 15:00:03 UTC, respectively, on 2026-11-18.
+The BG alpha and IWD updates feeds followed at 15:01:18 and 15:01:26 UTC. The IWD release
+README was updated at [cf0d42b](https://github.com/Chrizhermann/chriz-easy-iwd/commit/cf0d42b6eed2bb16ac3b2ef6c64da46c845f64c1).
+The live BG and IWD website pages showed the new versions and setup hashes after
+[website PR #105](https://github.com/Chrizhermann/twitch-setup-chriz/pull/105)
+merged at commit `2d6e30e89a72fff726939142880af29489bc42d9`.
+
+- **Both collections** ship the Italian BuffBot catalog update in v1.16.2
+  ([#149](https://github.com/Chrizhermann/chriz-bg-collection/pull/149)) and BG Rebalance
+  v0.8.12 with Round Clock (component 361), enabled by default with EEex
+  ([#152](https://github.com/Chrizhermann/chriz-bg-collection/pull/152)).
+- **Chriz Easy BG 0.1.7** bundles collection **0.1.4** with **468 default components,
+  70 runs, and 56 mods**. Artisan's Kitpack v4.81a-dev.85928f9-chriz.7 and Bardic Wonders
+  v2.9c-balance.9 fix save/rest blocks caused by passive projectiles
+  ([#151](https://github.com/Chrizhermann/chriz-bg-collection/pull/151)).
+  - `Chriz.Easy.BG_0.1.7_x64-setup.exe` (7,210,124 bytes), SHA-256
+    `40f8a5c011b4a7d4877315a9dd4d5624934cae652e7cd85eebb86873a7e2286e`.
+  - `alpha/latest.json` (1,031 bytes), SHA-256
+    `690dff2354ea0318c1fe4e2599b924c5d8a8b43af05c30352cf2d7075124bd93`.
+  - [Package acceptance](package-acceptance-0.1.7-2026-11-18.md) and
+    [release notes](release-notes-0.1.7.md).
+- **Chriz Easy IWD 0.1.14** bundles collection **0.1.15** and hotpatch base
+  `iwd-0.1.15` with **143 default components, 34 runs, 33 mods, and 18 companions**.
+  Chriz IWD Party Dialog v0.1.0 was introduced in recipe `iwd-0.1.14`
+  ([#150](https://github.com/Chrizhermann/chriz-bg-collection/pull/150)).
+  - `Chriz.Easy.IWD_0.1.14_x64-setup.exe` (7,142,731 bytes), SHA-256
+    `d9fb4f9d30861b2baf9454fc2cbbf27b212216d233989676a69bd5f57a67dc6b`.
+  - `updates/latest.json` (966 bytes), SHA-256
+    `89ec0261a900cf28659b96adbb795d23f855ba7ba1243dff72799cd445374332`.
+  - [Package acceptance](package-acceptance-iwd-0.1.14-2026-11-18.md) and
+    [release notes](release-notes-iwd-0.1.14.md).
+
 ## November 16 — Chriz Easy BG 0.1.6 (collection 0.1.3) and Chriz Easy IWD 0.1.13 released
 
 Published on 2026-11-16 at 08:55–08:56 UTC (17:55–17:56 KST) from `main` at `3ff6993`
