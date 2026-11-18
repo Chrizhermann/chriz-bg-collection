@@ -38,5 +38,4 @@ components across 34 install runs and 33 mods**, with **18 recruitable companion
 - Party Dialog and Round Clock come with a new installation. Choose **New installation**
   to use them for your next playthrough.
 
-The collection requires Icewind Dale: Enhanced Edition 2.7.3.0 and about 8 GB of free
-space on 64-bit Windows 10 or 11.
+Tested with Icewind Dale: Enhanced Edition 2.7.3.0 on 64-bit Windows 10 or 11 (about 8 GB of free space); other usable Windows copies install as Less tested.
