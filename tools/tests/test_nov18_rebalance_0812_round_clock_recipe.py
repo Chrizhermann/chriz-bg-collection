@@ -145,9 +145,9 @@ class RoundClockIntakeTests(unittest.TestCase):
                 self.assertEqual((record["commit"], record["date"], record["test_artifact"]),
                                  (PIN_COMMIT, "2026-11-18", test))
 
-    def test_round_clock_is_in_the_next_bg_changelog(self):
+    def test_round_clock_is_in_the_0_1_4_bg_changelog(self):
         changelog = (ROOT / "docs/plans/2026-10-14-next-release-changelogs.md").read_text(encoding="utf-8")
-        current, historical = changelog.split("\n## Next Chriz Easy BG release (draft)\n", 1)[1].split(
+        current, historical = changelog.split("\n## Collection 0.1.4 (draft)\n", 1)[1].split(
             "\n## Collection 0.1.2 (draft)\n", 1)
         behavior, rest = current.split("### Changed behavior\n", 1)[1].split("### Mod versions\n", 1)
         versions, notes = rest.split("### Notes for the release integrator\n", 1)

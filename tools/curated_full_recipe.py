@@ -23,7 +23,7 @@ from tools.curation_audit import Decision, RowKey, load_catalogs, load_curation_
 from tools.recipe_presentation import apply_feature_presentations, build_feature_presentations
 
 
-RECIPE_VERSION = "0.1.3"
+RECIPE_VERSION = "0.1.4"
 RECIPE_LABEL = "CEBG curated full setup"
 ADDED_CATALOGS = {
     "BARDICWONDERS",

@@ -1,0 +1,41 @@
+schema = 1
+recipe_id = "chriz-bg-collection"
+version = "0.1.4"
+# The planned publication date (UTC), fixed before packaging because the setup bundles this ledger.
+published_at = "2026-11-18T00:00:00Z"
+minimum_app_version = "0.1.2"
+supersedes = "0.1.3"
+
+[[changes]]
+id = "buffbot-1.16.2"
+title = "Updated Italian text in BuffBot"
+summary = "BuffBot v1.16.2 revises 72 of the 252 entries in its Italian translation catalog. New installations include it. For a game in progress, open Updates and choose BuffBot."
+save_applicability = "next-playthrough"
+urgency = "informational"
+covers = [
+  "artifact:buffbot-1.16.2",
+]
+
+[[changes]]
+id = "artisans-kitpack-and-bardic-wonders-save-rest-fixes"
+title = "Save and rest with passive kit abilities and bard songs"
+summary = "On new installations, you can save and rest while passive kit abilities such as Awareness and Tracking are active, or while a bard sings or maintains an inspiration or aura. Nearby enemies and active combat can still prevent saving and resting. The fixes come from Artisan's Kitpack chriz.7 and Bardic Wonders balance.9."
+save_applicability = "next-playthrough"
+urgency = "informational"
+covers = [
+  "artifact:artisans-kitpack-4.81a-dev.85928f9-chriz.7",
+  "artifact:bardicwonders-v2.9c-balance.8",
+  "artifact:bardicwonders-v2.9c-balance.9",
+]
+
+[[changes]]
+id = "chriz-bg-rebalance-round-clock"
+title = "Round Clock counts game time spent travelling and resting"
+summary = "Travel, rest and scripted time jumps now count toward the wait after casting a spell, using an item, swinging a weapon or trying to hide, and toward the next contingency check. When Hide in Shadows is ready again, you can use the Stealth button while paused. Round Clock (BG Rebalance v0.8.12, component 361) is on by default with EEex in new installations."
+save_applicability = "next-playthrough"
+urgency = "informational"
+covers = [
+  "artifact:chriz-bg-rebalance-0.8.12",
+  "feature:feature:chriz-bg-rebalance:component-361",
+  "run:chriz-bg-rebalance-bg2",
+]

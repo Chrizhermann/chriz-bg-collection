@@ -1,6 +1,6 @@
 # Next release — changelog drafts
 
-The current Chriz Easy BG draft is followed by the historical 0.1.2 and 0.1.0 drafts.
+The current Chriz Easy BG draft is followed by the 0.1.4, 0.1.2 and 0.1.0 drafts.
 The original drafts started on 14 October 2026, after app alpha.21 / collection alpha.20.
 Labels: **Mandatory** = always installed with its mod; **Default** = selected in
 Chris's Recommended; **Optional** = offered, unchecked; **Pending** = waiting for
@@ -11,6 +11,12 @@ candidate on 2026-11-01. The player-facing notes are in
 [`docs/release-notes-0.1.0.md`](../release-notes-0.1.0.md).
 
 ## Next Chriz Easy BG release (draft)
+
+Add changes for the release after collection 0.1.4 here.
+
+## Collection 0.1.4 (draft)
+
+Prepared for Chriz Easy BG 0.1.7. [0.1.7 release notes](../release-notes-0.1.7.md)
 
 ### Changed behavior
 
@@ -25,6 +31,8 @@ candidate on 2026-11-01. The player-facing notes are in
   casting a spell, using an item, swinging a weapon or trying to hide. It also counts
   toward the next contingency check. When Hide in Shadows is ready, you can use Stealth
   while paused. Only elapsed game time counts.
+- **BuffBot v1.16.2** updates the Italian catalog with consistent spell names and
+  option labels. Existing games can get the translation through **Updates → BuffBot**.
 
 ### Mod versions
 
@@ -32,6 +40,7 @@ candidate on 2026-11-01. The player-facing notes are in
   installers in both Chriz Easy BG recipes.
 - Bardic Wonders v2.9c-balance.9 (was balance.8), curated Chriz Easy BG.
 - BG Rebalance v0.8.12 (was v0.8.11), both Chriz Easy BG recipes (adds component 361; Chriz Easy IWD also adds component 361).
+- BuffBot v1.16.2 (was v1.16.1), both Chriz Easy installers.
 
 ### Notes for the release integrator
 
@@ -42,9 +51,9 @@ candidate on 2026-11-01. The player-facing notes are in
   and version checks, and 15 native fixtures across BG2:EE, EET and IWD:EE. Live
   gameplay and a combined collection install with these pins remain untested.
   [Collection intake](../../manifest/evidence/release-intake-20261118-artisan-chriz7-bardic-balance9.toml)
-- The next recipe update ledger needs entries for
-  `artifact:artisans-kitpack-4.81a-dev.85928f9-chriz.7` and
-  `artifact:bardicwonders-v2.9c-balance.9`.
+- The save and rest ledger entry covers `artifact:artisans-kitpack-4.81a-dev.85928f9-chriz.7`
+  and both sides of the Bardic artifact rename, `artifact:bardicwonders-v2.9c-balance.8`
+  and `artifact:bardicwonders-v2.9c-balance.9`.
 - The BG Rebalance intake verified the archive and native component order in all three
   recipes. Recommended selects 468 components in curated BG and 143 in IWD, where 361 is
   the only BG Rebalance component. [Collection intake](../../manifest/evidence/release-intake-20261118-chriz-bg-rebalance-chriz-easy-bg-chriz-easy-iwd.toml)
@@ -52,8 +61,14 @@ candidate on 2026-11-01. The player-facing notes are in
   and interrupted rest, and using Stealth while paused with components 360 and 361. The
   standalone IWD:EE quiet lab also verified paused Stealth. A combined full-collection
   install, EET and IWD campaign gameplay, waylaid travel and multiplayer remain untested.
-- The next BG recipe update ledger must cover `artifact:chriz-bg-rebalance-0.8.12` and
-  `feature:feature:chriz-bg-rebalance:component-361`.
+- The Round Clock ledger entry covers `artifact:chriz-bg-rebalance-0.8.12`,
+  `feature:feature:chriz-bg-rebalance:component-361` and `run:chriz-bg-rebalance-bg2`.
+- Both installers pinned BuffBot v1.16.2 on 2026-11-16. The update changes only the
+  version strings and 72 of the 252 entries in `buffbot/lang/italian/setup.tra`.
+  Its owner recorded 2,124 offline tests, 909 passing checks in a BG2:EE 2.7.3.0 /
+  EEex v1.3.1 lab and a live Italian catalog check. The ledger entry covers
+  `artifact:buffbot-1.16.2`.
+  [Italian translation](https://github.com/Chrizhermann/bg-eeex-buffbot/pull/119) · [Collection intake](../../manifest/evidence/release-intake-20261116-buffbot-chriz-easy-bg-chriz-easy-iwd.toml)
 
 ## Collection 0.1.2 (draft)
 
@@ -232,15 +247,6 @@ These changes apply to new installations; existing games and saves are unchanged
   `manifest/evidence/release-intake-20261116-chriz-overhead-text-chriz-easy-bg-chriz-easy-iwd.toml`.
   Combined full-collection EET and IWD:EE runtime checks remain untested. The 0.1.2 update ledger
   needs an entry covering `feature:feature:chriz-overhead-text:component-0`.
-- **BuffBot v1.16.2** (pinned 2026-11-16 in both Chriz Easy BG and Chriz Easy IWD) updates
-  the Italian translation catalog (`buffbot/lang/italian/setup.tra`, 72 updated entries across
-  the 252-entry catalog; [bg-eeex-buffbot#119](https://github.com/Chrizhermann/bg-eeex-buffbot/pull/119))
-  with no runtime Lua logic, `.menu`, component, order, default or save-schema changes. Owner
-  validation covers 2,124 offline tests and a BG2:EE 2.7.3.0 / EEex 1.3.1 headless suite with
-  909 passing checks plus a live Italian catalog smoke check; fresh-download evidence is in
-  `manifest/evidence/release-intake-20261116-buffbot-chriz-easy-bg-chriz-easy-iwd.toml`. The
-  next recipe update ledger needs an entry covering `artifact:buffbot-1.16.2` (existing games
-  already receive it via **Updates -> BuffBot**).
 
 ## Installer changelog
 
