@@ -32,7 +32,7 @@ URL = ("https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.
 LENGTH = 1_813_831
 SHA256 = "c9e9adf57a06b95bac055b4aee983b92690e3dacb2173b6c584cf4f75f059b34"
 RUN = "chriz-bg-rebalance-bg2"
-STATIC_COMMIT = "5de5d4b1293ce689da51e069fa691c5bc7e09dd8"
+ROUND_CLOCK_PIN_COMMIT = "05b1bd527dd73e3228b714cf4e8f02c661f19622"
 RECOMMENDED = {
     100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 410, 411,
     420, 421, 310, 130, 220, 320, 331, 332, 340, 360,
@@ -152,15 +152,10 @@ class Nov08RebalanceV0811PinTests(unittest.TestCase):
                 (record,) = [item for item in evidence if item["subject_kind"] == "run" and item["subject_id"] == RUN]
                 self.assertEqual((record["kind"], record["status"]), ("static-test", "accepted"))
                 self.assertEqual(record["test_artifact"], "engine/tests/production_recipe_chriz.rs")
-                if record["commit"] == STATIC_COMMIT:
-                    self.assertEqual(record["date"], "2026-11-08")
-                    self.assertEqual(record["scope"],
-                                     "Static recipe source, component, and order assertions only; not live game acceptance.")
-                else:
-                    self.assertRegex(record["commit"], r"^[0-9a-f]{40}$")
-                    self.assertEqual(record["date"], "2026-11-18")
-                    self.assertEqual(record["scope"], "Static recipe source, component (including Round Clock 361), "
-                                     "and order assertions only; not live game acceptance.")
+                self.assertEqual(record["commit"], ROUND_CLOCK_PIN_COMMIT)
+                self.assertEqual(record["date"], "2026-11-18")
+                self.assertEqual(record["scope"], "Static recipe source, component (including Round Clock 361), "
+                                 "and order assertions only; not live game acceptance.")
 
     def test_catalog_and_changelog_preserve_v0811_as_history(self):
         catalog = (ROOT / "docs/curation/components/CHRIZ-BG-REBALANCE.md").read_text(encoding="utf-8")

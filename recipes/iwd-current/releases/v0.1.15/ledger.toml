@@ -1,0 +1,19 @@
+schema = 1
+recipe_id = "chriz-easy-iwd"
+version = "0.1.15"
+published_at = "2026-11-18T00:00:00Z"
+minimum_app_version = "0.1.1"
+supersedes = "0.1.14"
+
+[[changes]]
+id = "chriz-bg-rebalance"
+title = "Round Clock counts time spent travelling and resting"
+summary = "New installations with EEex enable Round Clock from BG Rebalance v0.8.12. Travel, rest and scripted time jumps count toward the wait after casting, using an item, swinging a weapon or trying to hide. They also count toward the next contingency check. When Hide is ready, you can use Stealth while paused."
+save_applicability = "new-game-only"
+urgency = "informational"
+covers = [
+  "artifact:chriz-bg-rebalance-0.8.12",
+  "feature:mod:chriz-bg-rebalance",
+  "feature:feature:chriz-bg-rebalance:component-361",
+  "run:chriz-bg-rebalance-main",
+]
