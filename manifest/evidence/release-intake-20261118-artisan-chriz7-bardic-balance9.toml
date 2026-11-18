@@ -1,11 +1,17 @@
 schema = 1
 evidence_kind = "published-release-download-and-native-order-verification"
 verified_on = "2026-11-18"
-generator = "tools/prepare_own_mod_pin.py"
+# The artifact rows were combined from the per-mod evidence written by:
+#   python -B -I tools/prepare_own_mod_pin.py artisans-kitpack
+#   python -B -I tools/prepare_own_mod_pin.py bardic-wonders
+# The owner_releases rows were added from the owner release verification and CI results.
+# Bardic's curated recipe entries were edited in tools/curated_full_recipe.py before
+# preparing its pin. The script regenerated the curated recipe again after the
+# balance.8 descriptor was moved to historical references.
 command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 <TP2 path>; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python -I tools/check_native_component_order.py --recipe-root <recipe> --mod-id <mod> --archive <fresh downloaded ZIP>"
 scope = "Christopher approved these save and rest bug fixes for the frozen forks on 2026-11-18. Artisan's Kitpack chriz.7 replaces chriz.6 for the main, NPC and tweak installers in both BG recipes. Bardic Wonders balance.9 replaces balance.8 in the curated BG recipe. The IWD recipe ships neither fork. Each active artifact descriptor passed fresh anonymous inspection, production acquisition and extraction, and native component order checks. All release ZIP files in the published roots match their tagged merge tree byte for byte. The TP2 component numbers, names and native order match the previous pins. Artisan's three TP2s change only VERSION. Bardic's TP2 also hooks Bard description refreshes for existing options. The Artisan chriz.6 descriptors and prior evidence remain available. The superseded Bardic balance.8 descriptor is in historical-artifacts. The standalone Abettor tail remains byte-identical to balance.8 and stays outside the recipe. These checks cover source and packages. The owner release notes document synthetic installs and pending live gameplay verification."
 
-# 3028 entries, 118,400,047 bytes uncompressed, largest entry 6,142,193 bytes, depth 7, compression ratio at most 431.1.
+# 3028 entries, 118,400,047 bytes uncompressed, largest entry 6,142,193 bytes, depth 7, maximum compression ratio about 431.1.
 [[artifacts]]
 mod_id = "artisanskitpack"
 artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.7"
@@ -22,7 +28,7 @@ fresh_extraction = true
 published_release_verified = true
 native_component_order_verified = true
 
-# 3028 entries, 118,400,047 bytes uncompressed, largest entry 6,142,193 bytes, depth 7, compression ratio at most 431.1.
+# 3028 entries, 118,400,047 bytes uncompressed, largest entry 6,142,193 bytes, depth 7, maximum compression ratio about 431.1.
 [[artifacts]]
 mod_id = "artisanskitpack-npc"
 artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.7"
@@ -39,7 +45,7 @@ fresh_extraction = true
 published_release_verified = true
 native_component_order_verified = true
 
-# 3028 entries, 118,400,047 bytes uncompressed, largest entry 6,142,193 bytes, depth 7, compression ratio at most 431.1.
+# 3028 entries, 118,400,047 bytes uncompressed, largest entry 6,142,193 bytes, depth 7, maximum compression ratio about 431.1.
 [[artifacts]]
 mod_id = "artisanskitpack-tweak"
 artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.7"
@@ -56,7 +62,7 @@ fresh_extraction = true
 published_release_verified = true
 native_component_order_verified = true
 
-# 856 entries, 33,115,406 bytes uncompressed, largest entry 3,311,752 bytes, depth 5, compression ratio at most 431.1.
+# 856 entries, 33,115,406 bytes uncompressed, largest entry 3,311,752 bytes, depth 5, maximum compression ratio about 431.1.
 [[artifacts]]
 mod_id = "bardicwonders"
 artifact_id = "bardicwonders-v2.9c-balance.9"
