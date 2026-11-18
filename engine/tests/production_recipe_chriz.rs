@@ -37,13 +37,14 @@ const IMOEN_SOD_LEVEL_DUAL: &str = "feature:chriz-sod-remix:component-294";
 // Spellstrike 211 texts and keeps every component and the order; so does v0.8.10 (November 3
 // intake), which lets Flail of the Ages 302 install without Spell Revisions. v0.8.11 (November
 // 8 intake) writes every component's decided result and copies 420's tables by exact file name.
+// v0.8.12 adds Round Clock 361 as the final component and a default with EEex.
 const BG_REBALANCE_COMPONENTS: &[u32] = &[
     100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 410, 411, 420, 421,
-    310, 130, 220, 320, 331, 332, 340, 360,
+    310, 130, 220, 320, 331, 332, 340, 360, 361,
 ];
 const BG_REBALANCE_RUN_COMPONENTS: &[u32] = &[
     100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302,
-    410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360,
+    410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360, 361,
 ];
 const TEMPUS_COMPONENTS: &[u32] = &[400, 401, 404, 405, 407, 408];
 
@@ -242,24 +243,24 @@ fn offers_imoen_in_shadows_of_amn_as_one_choice_with_the_vanilla_dual_by_default
 fn freezes_the_reviewed_bg_rebalance_release() {
     let manifest = recipe();
     let artifact_id = &manifest.mods["chriz-bg-rebalance"].artifact_id;
-    assert_eq!(artifact_id, "chriz-bg-rebalance-0.8.11");
+    assert_eq!(artifact_id, "chriz-bg-rebalance-0.8.12");
     let artifact = &manifest.artifacts[artifact_id];
-    assert_eq!(artifact.version, "0.8.11");
+    assert_eq!(artifact.version, "0.8.12");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.11/chriz-bg-rebalance-v0.8.11-windows.zip"
+        "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.12/chriz-bg-rebalance-v0.8.12-windows.zip"
     );
-    assert_eq!(artifact.source.reference, "v0.8.11");
+    assert_eq!(artifact.source.reference, "v0.8.12");
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-bg-rebalance-v0.8.11-windows.zip")
+        Some("chriz-bg-rebalance-v0.8.12-windows.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(1_813_831));
+    assert_eq!(artifact.source.expected_length, Some(1_825_506));
     assert_eq!(
         artifact.source.sha256,
-        "c9e9adf57a06b95bac055b4aee983b92690e3dacb2173b6c584cf4f75f059b34"
+        "f64314ab1462cef661dc4191e37e9d8911e95bd8df13ad44c3a09744b23847a8"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -429,6 +430,11 @@ fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle()
                 Decision::Default,
                 1
             ),
+            (
+                "feature:chriz-bg-rebalance:component-361",
+                Decision::Default,
+                1
+            ),
             // v0.8.8: Druid weapons 410 and Alaghor of Clangeddin weapons 411 (Christopher,
             // 2026-10-29).
             (
@@ -472,7 +478,7 @@ fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle()
         Some(
             &[
                 100, 101, 111, 120, 121, 200, 210, 211, 302, 410, 411, 420, 421, 310, 130, 220,
-                320, 331, 332, 340, 360
+                320, 331, 332, 340, 360, 361
             ][..]
         )
     );
@@ -533,7 +539,7 @@ fn defaults_wing_buffet_spacing_with_scs_and_an_independent_optout() {
         Some(
             &[
                 100, 101, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 410, 411,
-                420, 421, 310, 130, 220, 320, 331, 332, 340, 360
+                420, 421, 310, 130, 220, 320, 331, 332, 340, 360, 361
             ][..]
         )
     );

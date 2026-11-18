@@ -22,7 +22,8 @@ CAMPAIGN_CAPS = "feature:chriz-bg-modpack:component-650"
 SOA_CAP = "feature:chriz-bg-modpack:component-651"
 CHAPTER_CAPS = "feature:chriz-bg-modpack:component-652"
 # Recommended component counts (curated: 466 in the 0.1.2 lab + Chriz Overhead Text 0 on Nov 16).
-PROFILES = {"manifest": 372, "recipes/curated-full-current": 467}
+# November 18 adds the independent Round Clock default to both profiles.
+PROFILES = {"manifest": 373, "recipes/curated-full-current": 468}
 
 
 def _load(path: Path) -> dict:

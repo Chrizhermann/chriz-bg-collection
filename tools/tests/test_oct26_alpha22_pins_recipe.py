@@ -80,7 +80,10 @@ SUCCESSORS.update({mod_id: "artisans-kitpack-4.81a-dev.85928f9-chriz.7"
                    for mod_id in ("artisanskitpack", "artisanskitpack-npc", "artisanskitpack-tweak")})
 # The November 8 Rebalance intake (test_nov08_rebalance_0811_pin_recipe) replaces v0.8.10 with
 # v0.8.11, which keeps every component and the order.
-SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.11"
+# November 18 adds Round Clock after all earlier declarations.
+SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.12"
+LATER_COMPONENTS["chriz-bg-rebalance"].add(361)
+LATER_ROWS["CHRIZ-BG-REBALANCE"].add(361)
 # The November 3 intake (test_nov03_modpack_alpha15_marek_dagger_recipe) replaces Modpack
 # alpha.14 with alpha.15, which declares Marek's Boomerang Dagger 670 between 660 and 650;
 # alpha.16 keeps that declaration.
@@ -307,7 +310,7 @@ class Oct26Alpha22PinBatchTests(unittest.TestCase):
             self.assertEqual(preset.get(REVISIONS), "on")
             runs = {run["run_id"]: run for run in collection["runs"]}
             # v0.8.6 declares 360 after 340 (test_oct27_alpha22_pins_recipe).
-            self.assertEqual(runs[REBALANCE_RUN]["components"][-5:], [330, 331, 332, 340, 360])
+            self.assertEqual(runs[REBALANCE_RUN]["components"][-6:], [330, 331, 332, 340, 360, 361])
             self.assertEqual(runs[REBALANCE_RUN]["phase"], "post-eet-end")
             baseline = self._selected(collection, preset)
             self.assertIn((REBALANCE_RUN, 340), baseline)

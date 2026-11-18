@@ -368,6 +368,17 @@ status = "accepted"
 scope = "Static recipe source, component, order and recommended-plan assertions only; not live game acceptance."
 
 [[evidence]]
+subject_kind = "run"
+subject_id = "chriz-bg-rebalance-main"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "05b1bd527dd73e3228b714cf4e8f02c661f19622"
+test_artifact = "engine/tests/production_recipe_iwd.rs"
+date = "2026-11-18"
+status = "accepted"
+scope = "Static tests cover the release pin, native run position, recommended component 361 and its removal when BG Rebalance or EEex is disabled."
+
+[[evidence]]
 subject_kind = "release"
 subject_id = "v0.1.0-alpha.1"
 kind = "runtime-test"

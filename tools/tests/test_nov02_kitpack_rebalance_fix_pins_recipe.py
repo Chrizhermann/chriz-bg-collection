@@ -57,8 +57,8 @@ PINS = {
                "chriz-bg-rebalance-v0.8.9-windows.zip",
         "length": 1_844_195,
         "sha256": "da03fe9e2a36f5af155311197e68d6f82ead270426015363fa161ad56e8ea6f2",
-        # The November 8 intake moves both profiles to v0.8.11.
-        "successor": "chriz-bg-rebalance-0.8.11",
+        # November 18 moves both BG profiles to v0.8.12 and appends Round Clock.
+        "successor": "chriz-bg-rebalance-0.8.12",
     },
 }
 REBALANCE_RUN = "chriz-bg-rebalance-bg2"
@@ -169,6 +169,8 @@ class Nov02FixPinsTests(unittest.TestCase):
                 for mod_id, record in self.records.items():
                     mod = _load(directory / f"mods/{mod_id}.toml")
                     native = record["native_components"]
+                    if mod_id == "chriz-bg-rebalance":
+                        native = [*native, 361]
                     self.assertTrue({component["id"] for component in mod["components"]} <= set(native), mod_id)
                     for run in (run for run in collection["runs"] if run["mod_id"] == mod_id):
                         self.assertEqual(run["components"], [c for c in native if c in run["components"]],

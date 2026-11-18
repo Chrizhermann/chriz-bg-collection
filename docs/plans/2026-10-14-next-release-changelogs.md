@@ -20,12 +20,18 @@ candidate on 2026-11-01. The player-facing notes are in
   Visible hostiles and active combat can still prevent both. The changes reach new
   Chriz Easy BG installations after this recipe ships.
   [Artisan chriz.7](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/tag/v4.81a-dev.85928f9-chriz.7) · [Bardic balance.9](https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.9)
+- **Round Clock** (BG Rebalance component 361, Default, requires EEex). Time spent
+  travelling, resting or advancing the clock in a script counts toward the wait after
+  casting a spell, using an item, swinging a weapon or trying to hide. It also counts
+  toward the next contingency check. When Hide in Shadows is ready, you can use Stealth
+  while paused. Only elapsed game time counts.
 
 ### Mod versions
 
 - The Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.7 (was chriz.6), main, NPC and tweak
   installers in both Chriz Easy BG recipes.
 - Bardic Wonders v2.9c-balance.9 (was balance.8), curated Chriz Easy BG.
+- BG Rebalance v0.8.12 (was v0.8.11), both Chriz Easy BG recipes (adds component 361; Chriz Easy IWD also adds component 361).
 
 ### Notes for the release integrator
 
@@ -39,6 +45,15 @@ candidate on 2026-11-01. The player-facing notes are in
 - The next recipe update ledger needs entries for
   `artifact:artisans-kitpack-4.81a-dev.85928f9-chriz.7` and
   `artifact:bardicwonders-v2.9c-balance.9`.
+- The BG Rebalance intake verified the archive and native component order in all three
+  recipes. Recommended selects 468 components in curated BG and 143 in IWD, where 361 is
+  the only BG Rebalance component. [Collection intake](../../manifest/evidence/release-intake-20261118-chriz-bg-rebalance-chriz-easy-bg-chriz-easy-iwd.toml)
+- Upstream's single-player BG2:EE 2.7.3.0 quiet lab covered world-map travel, completed
+  and interrupted rest, and using Stealth while paused with components 360 and 361. The
+  standalone IWD:EE quiet lab also verified paused Stealth. A combined full-collection
+  install, EET and IWD campaign gameplay, waylaid travel and multiplayer remain untested.
+- The next BG recipe update ledger must cover `artifact:chriz-bg-rebalance-0.8.12` and
+  `feature:feature:chriz-bg-rebalance:component-361`.
 
 ## Collection 0.1.2 (draft)
 

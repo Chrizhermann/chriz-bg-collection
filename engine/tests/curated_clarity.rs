@@ -79,7 +79,8 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         // November 4: Tweaks 3000 (maximum HP on level-up) and 3010 (Maximum HP Creatures)
         // become unchecked options.
         // November 16: Chriz Overhead Text adds default component 0.
-        467
+        // November 18: BG Rebalance adds Round Clock 361.
+        468
     );
     // Scroll policy 430 hashes the final scrolls and spells, so it follows BuffBot.
     let (tail, rest) = result.plan.runs.split_last().unwrap();
@@ -124,14 +125,14 @@ fn emotion_exclusivity_is_a_ready_optional_choice_with_an_independent_opt_in() {
     assert_eq!(feature.parent.as_deref(), Some("mod:chriz-bg-rebalance"));
     assert_eq!(
         manifest.mods["chriz-bg-rebalance"].artifact_id,
-        "chriz-bg-rebalance-0.8.11"
+        "chriz-bg-rebalance-0.8.12"
     );
     assert_eq!(
         baseline.plan.components_for("chriz-bg-rebalance-bg2"),
         Some(
             &[
                 100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 410,
-                411, 420, 421, 310, 130, 220, 320, 331, 332, 340, 360,
+                411, 420, 421, 310, 130, 220, 320, 331, 332, 340, 360, 361,
             ][..]
         )
     );

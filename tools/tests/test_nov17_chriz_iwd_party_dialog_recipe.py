@@ -85,7 +85,7 @@ class Nov17ChrizIwdPartyDialogIntakeTests(unittest.TestCase):
         )
         self.assertEqual(
             run_ids.index("chriz-iwd-party-dialog-main") + 1,
-            run_ids.index("eeexremote-main"),
+            run_ids.index("chriz-bg-rebalance-main"),
         )
 
         # BG recipes do not install this IWD-only mod.

@@ -4,6 +4,7 @@ The annotated tag is Rebalance PR #27's merge commit. Every component now writes
 result over edited game values, another mod's version, or missing owned pieces, and bard
 progression 420 copies its tables through their exact file names for case-sensitive WeiDU.
 The release keeps its 36 component declarations, their order and the Recommended selection.
+The November 18 intake supersedes this pin with v0.8.12 and appends Round Clock (361).
 
 Static pin, evidence, component, selection, order and release-text checks for both recipe
 profiles only. Nothing here is a game installation or gameplay acceptance.
@@ -31,7 +32,7 @@ URL = ("https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.
 LENGTH = 1_813_831
 SHA256 = "c9e9adf57a06b95bac055b4aee983b92690e3dacb2173b6c584cf4f75f059b34"
 RUN = "chriz-bg-rebalance-bg2"
-STATIC_COMMIT = "5de5d4b1293ce689da51e069fa691c5bc7e09dd8"
+ROUND_CLOCK_PIN_COMMIT = "05b1bd527dd73e3228b714cf4e8f02c661f19622"
 RECOMMENDED = {
     100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 410, 411,
     420, 421, 310, 130, 220, 320, 331, 332, 340, 360,
@@ -99,14 +100,14 @@ class Nov08RebalanceV0811PinTests(unittest.TestCase):
                      "native_component_order_verified"):
             self.assertIs(record[flag], True, flag)
 
-    def test_both_profiles_pin_v0811_and_keep_v0810(self):
+    def test_both_profiles_keep_v0811_and_v0810_as_history(self):
         for profile_name, directory in self.directories:
             with self.subTest(profile=str(directory)):
                 self.assertIn(profile_name, self.record["recipe_profiles"])
                 mod = _load(directory / f"mods/{MOD}.toml")
                 artifact = _load(directory / f"artifacts/{PIN}.toml")
                 previous = _load(directory / f"artifacts/{PREVIOUS}.toml")
-                self.assertEqual(mod["artifact_id"], PIN)
+                self.assertEqual(mod["artifact_id"], "chriz-bg-rebalance-0.8.12")
                 self.assertEqual(artifact["id"], PIN)
                 self.assertEqual(artifact["version"], TAG.removeprefix("v"))
                 self.assertEqual(artifact["acquisition"], "fetch-only")
@@ -126,37 +127,39 @@ class Nov08RebalanceV0811PinTests(unittest.TestCase):
             self.assertEqual((ROOT / "manifest" / name).read_bytes(),
                              (ROOT / "recipes/curated-full-current" / name).read_bytes())
 
-    def test_components_order_and_recommended_selection_stay_the_same(self):
+    def test_v0811_components_order_and_recommendations_precede_round_clock(self):
         rows = {row.component_id: row for row in load_catalogs(ROOT / "docs/curation/components")
                 if row.catalog == "CHRIZ-BG-REBALANCE"}
-        self.assertEqual(set(rows), set(self.record["native_components"]))
+        self.assertEqual(set(rows), set(self.record["native_components"]) | {361})
         self.assertEqual(rows[420].decision, Decision.DEFAULT)
-        self.assertEqual(NATIVE_RUN_ORDERS[RUN], RUN_COMPONENTS)
+        self.assertEqual(NATIVE_RUN_ORDERS[RUN], [*RUN_COMPONENTS, 361])
         for _, directory in self.directories:
             collection = _load(directory / "collection.toml")
             preset = _load(directory / "presets/chris-recommended.toml")["selections"]
             runs = [run for run in collection["runs"] if run["mod_id"] == MOD]
             self.assertEqual([run["run_id"] for run in runs], [RUN])
-            self.assertEqual(runs[0]["components"], RUN_COMPONENTS)
+            self.assertEqual(runs[0]["components"], [*RUN_COMPONENTS, 361])
             selected = _selected(collection, preset)
-            self.assertEqual({component for run_id, component in selected if run_id == RUN}, RECOMMENDED)
+            self.assertEqual({component for run_id, component in selected if run_id == RUN}, RECOMMENDED | {361})
 
     def test_static_acceptance_records_name_the_pin_commit(self):
-        for relative in (
-            "manifest/releases/v0.1.0-alpha.1/acceptance.toml",
-            "recipes/curated-full-current/releases/v0.1.0-alpha.1/acceptance.toml",
-        ):
-            evidence = _load(ROOT / relative)["evidence"]
-            record = next(item for item in evidence if item["subject_id"] == RUN)
-            self.assertEqual(record["commit"], STATIC_COMMIT)
-            self.assertEqual(record["test_artifact"], "engine/tests/production_recipe_chriz.rs")
-            self.assertEqual(record["date"], "2026-11-08")
-            self.assertEqual(record["scope"],
-                             "Static recipe source, component, and order assertions only; not live game acceptance.")
+        # The November 8 pin (5de5d4b) did not cover Round Clock. Its successor
+        # records the November 18 recipe tests that first assert component 361.
+        self.assertNotIn(361, self.record["native_components"])
+        for _, directory in self.directories:
+            with self.subTest(profile=str(directory)):
+                evidence = _load(directory / "releases/v0.1.0-alpha.1/acceptance.toml")["evidence"]
+                (record,) = [item for item in evidence if item["subject_kind"] == "run" and item["subject_id"] == RUN]
+                self.assertEqual((record["kind"], record["status"]), ("static-test", "accepted"))
+                self.assertEqual(record["test_artifact"], "engine/tests/production_recipe_chriz.rs")
+                self.assertEqual(record["commit"], ROUND_CLOCK_PIN_COMMIT)
+                self.assertEqual(record["date"], "2026-11-18")
+                self.assertEqual(record["scope"], "Static recipe source, component (including Round Clock 361), "
+                                 "and order assertions only; not live game acceptance.")
 
-    def test_catalog_changelog_pin_list_and_source_record_name_v0811(self):
+    def test_catalog_and_changelog_preserve_v0811_as_history(self):
         catalog = (ROOT / "docs/curation/components/CHRIZ-BG-REBALANCE.md").read_text(encoding="utf-8")
-        for phrase in ("The recipe pins **v0.8.11**", "Rebalance PR #27", "exact file names", EVIDENCE):
+        for phrase in ("The previous BG pin was **v0.8.11**", "Rebalance PR #27", "exact file names", EVIDENCE):
             self.assertIn(phrase, catalog)
         changelog = (ROOT / "docs/plans/2026-10-14-next-release-changelogs.md").read_text(encoding="utf-8")
         draft = changelog[changelog.index("## Collection 0.1.2 (draft)"):changelog.index("## Installer changelog")]
@@ -165,13 +168,8 @@ class Nov08RebalanceV0811PinTests(unittest.TestCase):
                        "`artifact:chriz-bg-rebalance-0.8.11`"):
             self.assertIn(phrase, draft)
         pin_list = (ROOT / "docs/pin-list-2.7.md").read_text(encoding="utf-8")
-        self.assertEqual(pin_list.count(
-            f"| CHRIZ-BG-REBALANCE | {TAG.removeprefix('v')} | `{MOD}` | `{SHA256[:12]}…` |"), 2)
+        self.assertNotIn("| CHRIZ-BG-REBALANCE | 0.8.11 |", pin_list)
         self.assertNotIn("| CHRIZ-BG-REBALANCE | 0.8.10 |", pin_list)
-        source = next(line for line in (ROOT / "manifest/mod-sources.tsv").read_text(encoding="utf-8")
-                      .splitlines() if line.startswith("CHRIZ-BG-REBALANCE\t"))
-        for phrase in ("v0.8.11", COMMIT, str(LENGTH), SHA256, "exact file name"):
-            self.assertIn(phrase, source)
 
 
 if __name__ == "__main__":

@@ -248,6 +248,22 @@ fn a_group_without_variants_serializes_and_evaluates_exactly_as_before_variants(
     );
 }
 
+fn recommended_digests(manifest: &Manifest, evaluation: &SelectionEvaluation) -> [String; 3] {
+    // The frozen collection predates the group and the component dependency metadata.
+    let mut collection = manifest.collection.clone();
+    assert_eq!(collection.feature_groups.len(), 1);
+    collection.feature_groups.clear();
+    collection.component_needs.clear();
+    for feature in &mut collection.features {
+        feature.core_components = None;
+    }
+    [
+        sha256_bytes(&serde_json::to_vec(&collection).unwrap()),
+        selection_digest(&evaluation.normalized_selection).unwrap(),
+        plan_digest(&evaluation.plan).unwrap(),
+    ]
+}
+
 #[test]
 fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // (recipe, collection JSON without the group, Recommended selection, plan)
@@ -410,30 +426,75 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // Re-pinned on November 18 for the save/rest fixes in Artisan chriz.7 (both BG
     // recipes) and Bardic Wonders balance.9 (curated only). Restoring just those
     // artifact IDs reproduces the previously frozen plan digests.
-    for (dir, collection_sha, selection_sha, plan_sha, previous_plan_sha) in [
+    // Rebalance v0.8.12 then added Round Clock to both Recommended selections.
+    // Removing 361 and restoring v0.8.11 must reproduce all six PR #151 digests.
+    const ROUND_CLOCK: &str = "feature:chriz-bg-rebalance:component-361";
+    for (dir, combined_digests, save_rest_digests, previous_plan_sha) in [
         (
             "../manifest",
-            "228825ab02bfd91190dc6ce3ae909fd28863a8936d11526ad21dc588390f5479",
-            "637bff40a2fde3a6af3938b2e25eed38bed3357739566a9ea4cca5f507637151",
-            "21679388a966523c853019bcfd652a22f598ce4002c98cb8e317ad19a4739941",
+            [
+                "5d980b9b5ce440a69c0cc8bd55a61cd6a54699a60f21824a5791caf91896c7f6",
+                "a467fe44b7e2773ee29595ce69cc7023de0bb0b8dbd307b45efa0ff906819f29",
+                "bfcaa87e74c0f7941dc78ae5783655025a53cdf20684adec55b8558a9a3e8b88",
+            ],
+            [
+                "228825ab02bfd91190dc6ce3ae909fd28863a8936d11526ad21dc588390f5479",
+                "637bff40a2fde3a6af3938b2e25eed38bed3357739566a9ea4cca5f507637151",
+                "21679388a966523c853019bcfd652a22f598ce4002c98cb8e317ad19a4739941",
+            ],
             "794f3ecfb9b8d399741e8f68c424e133351cc76010dcaa82466c19306e9ea606",
         ),
         (
             "../recipes/curated-full-current",
-            "fab413456c438136699bd56485b8f834e12f3b3c6a1ba340966c3668495ff8a4",
-            "071398d8982d27c0316a63cf7edebecc97a87a2feb4388c44adae46099c04171",
-            "5728d3574cb2656fecd6bdd073948e0ab83642bc312a0b47baab138bf0ebc3a0",
+            [
+                "0fa3abae7fbe94cd5bba2bc84d0074212891f4cd0ce88379989d34e8a66339a5",
+                "227d2834ad89600e48e767c6bfc4ece1a9d59293eabdc1829bb6dc1491cafa36",
+                "d1164d2569cb60d83513e8fea8fda0a1a3e88af506a269788e7a2453e6d2b256",
+            ],
+            [
+                "fab413456c438136699bd56485b8f834e12f3b3c6a1ba340966c3668495ff8a4",
+                "071398d8982d27c0316a63cf7edebecc97a87a2feb4388c44adae46099c04171",
+                "5728d3574cb2656fecd6bdd073948e0ab83642bc312a0b47baab138bf0ebc3a0",
+            ],
             "0c3da570ec67625115f0b28f97e7bb313d10efabc3c408373a6607997287a8ad",
         ),
     ] {
-        let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();
+        let mut manifest = Manifest::load(&engine_dir().join(dir)).unwrap();
         let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
         assert_eq!(
-            selection_digest(&evaluation.normalized_selection).unwrap(),
-            selection_sha,
+            recommended_digests(&manifest, &evaluation),
+            combined_digests,
             "{dir}"
         );
-        assert_eq!(plan_digest(&evaluation.plan).unwrap(), plan_sha, "{dir}");
+
+        let rebalance = manifest.mods.get_mut("chriz-bg-rebalance").unwrap();
+        assert_eq!(rebalance.artifact_id, "chriz-bg-rebalance-0.8.12");
+        rebalance.artifact_id = "chriz-bg-rebalance-0.8.11".to_owned();
+        rebalance.components.retain(|component| component.id != 361);
+        let run = manifest
+            .collection
+            .runs
+            .iter_mut()
+            .find(|run| run.run_id == "chriz-bg-rebalance-bg2")
+            .unwrap();
+        assert_eq!(run.components.pop(), Some(361));
+        manifest
+            .collection
+            .features
+            .retain(|feature| feature.id != ROUND_CLOCK);
+        manifest
+            .presets
+            .get_mut("chris-recommended")
+            .unwrap()
+            .selections
+            .remove(ROUND_CLOCK);
+
+        let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        assert_eq!(
+            recommended_digests(&manifest, &evaluation),
+            save_rest_digests,
+            "{dir}"
+        );
         let mut previous_plan = evaluation.plan;
         for run in &mut previous_plan.runs {
             let (current, previous) = match run.mod_id.as_str() {
@@ -453,20 +514,6 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         assert_eq!(
             plan_digest(&previous_plan).unwrap(),
             previous_plan_sha,
-            "{dir}"
-        );
-        // The group and what says what components need are the only changes to the frozen
-        // collection.
-        let mut without_groups: Collection = manifest.collection.clone();
-        assert_eq!(without_groups.feature_groups.len(), 1, "{dir}");
-        without_groups.feature_groups.clear();
-        without_groups.component_needs.clear();
-        for feature in &mut without_groups.features {
-            feature.core_components = None;
-        }
-        assert_eq!(
-            sha256_bytes(&serde_json::to_vec(&without_groups).unwrap()),
-            collection_sha,
             "{dir}"
         );
     }

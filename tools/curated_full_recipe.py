@@ -82,7 +82,8 @@ NATIVE_RUN_ORDERS = {
     # the Time Stop and Haste effect clocks 360 after 340. v0.8.8 (October 29) declares
     # Druid weapons 410 and Alaghor of Clangeddin weapons 411 between 302 and 420; v0.8.9
     # (November 2) keeps every component and the order, and so does v0.8.10 (November 3).
-    "chriz-bg-rebalance-bg2": [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360],
+    # v0.8.12 adds Round Clock 361 after True Time Stop 360.
+    "chriz-bg-rebalance-bg2": [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360, 361],
     "chriz-bg-modpack-edwin-bg2": [236],
     "chriz-bg-modpack-baeloth-bg2": [235],
     "randomiser-bg2": [500, 510, 530, 540, 560, 570, 1100, 9000, 10200, 10210, 10300],

@@ -144,8 +144,9 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # the main post-EET_end Modpack run.
         # November 4: Tweaks 3000 and 3010 are no longer defaults (Christopher, 2026-11-04).
         # November 16: Chriz Overhead Text adds default component 0 in its own run.
-        self.assertEqual(len(without_controls), 466)
-        self.assertEqual(len(selected), 467)
+        # November 18 adds Round Clock 361 to the existing Rebalance run.
+        self.assertEqual(len(without_controls), 467)
+        self.assertEqual(len(selected), 468)
         self.assertEqual(len({run for run, _ in selected}), 70)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
@@ -250,7 +251,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # (alpha.15 pin) is.
         # November 4: Tweaks 3000 and 3010 are no longer selected by default.
         # November 16: Chriz Overhead Text 0 is selected by default.
-        self.assertEqual(len(baseline), 467)
+        self.assertEqual(len(baseline), 468)
         self.assertEqual(self.selected({feature_id: "off"}), baseline)
         baeloth = "feature:chriz-bg-modpack:component-235"
         self.assertEqual(self.features[baeloth]["decision"], "optional")
@@ -270,7 +271,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
     def test_emotion_run_keeps_source_order_including_default_bard_ceilings(self):
         run_id = "chriz-bg-rebalance-bg2"
         self.assertEqual(self.runs[run_id]["components"],
-                         [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360])
+                         [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360, 361])
         for component in (420, 421):
             self.assertNotIn(f"feature:chriz-bg-rebalance:component-{component}", self.features)
             self.assertIn((run_id, component), self.selected())

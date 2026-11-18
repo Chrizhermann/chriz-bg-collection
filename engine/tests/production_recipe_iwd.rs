@@ -159,6 +159,12 @@ const RUNS: &[(&str, &str, Phase, &[u32])] = &[
         Phase::Main,
         &[0],
     ),
+    (
+        "chriz-bg-rebalance-main",
+        "chriz-bg-rebalance",
+        Phase::Main,
+        &[361],
+    ),
     ("eeexremote-main", "eeexremote", Phase::Main, &[0]),
 ];
 
@@ -195,6 +201,11 @@ const INSTALLERS: &[(&str, &str, &str)] = &[
         "cdtweaks",
         "cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729",
         "cdtweaks/setup-cdtweaks.tp2",
+    ),
+    (
+        "chriz-bg-rebalance",
+        "chriz-bg-rebalance-0.8.12",
+        "setup-chriz-bg-rebalance.tp2",
     ),
     (
         "chriz-iwd-encounters",
@@ -362,6 +373,16 @@ const ARTIFACTS: &[Pin] = &[
         filename: "Tweaks-Anthology-7649ced6cd25865874d787ec1a9abbc67b068729.zip",
         length: 23_871_463,
         sha256: "117cd79cb5187640a5efd6c1d19181b43bcfa7381161df2f88db055d3af075f7",
+    },
+    Pin {
+        id: "chriz-bg-rebalance-0.8.12",
+        version: "0.8.12",
+        kind: SourceKind::GithubRelease,
+        url: "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.12/chriz-bg-rebalance-v0.8.12-windows.zip",
+        reference: "v0.8.12",
+        filename: "chriz-bg-rebalance-v0.8.12-windows.zip",
+        length: 1_825_506,
+        sha256: "f64314ab1462cef661dc4191e37e9d8911e95bd8df13ad44c3a09744b23847a8",
     },
     Pin {
         id: "chriz-iwd-encounters-0.2.2",
@@ -795,6 +816,7 @@ const RECOMMENDED: &[(&str, &[u32])] = &[
     ("buffbot-main", &[1, 0]),
     ("chriz-overhead-text-main", &[0]),
     ("chriz-iwd-party-dialog-main", &[0]),
+    ("chriz-bg-rebalance-main", &[361]),
 ];
 
 #[test]
@@ -814,7 +836,7 @@ fn declares_a_standalone_iwdee_collection_with_its_own_data_folder() {
             .collect::<Vec<_>>(),
         [PRESET]
     );
-    assert_eq!(manifest.collection.features.len(), 325);
+    assert_eq!(manifest.collection.features.len(), 327);
     assert!(
         validate(&manifest).is_empty(),
         "authoring validation findings: {:?}",
@@ -938,6 +960,10 @@ fn pins_the_exact_ordered_runs_and_component_lists() {
     );
     assert_eq!(
         position(&manifest, "chriz-iwd-party-dialog-main") + 1,
+        position(&manifest, "chriz-bg-rebalance-main")
+    );
+    assert_eq!(
+        position(&manifest, "chriz-bg-rebalance-main") + 1,
         position(&manifest, "eeexremote-main")
     );
 }
@@ -1075,7 +1101,7 @@ fn resolves_the_exact_recommended_plan() {
         .iter()
         .map(|run| run.components.len())
         .sum::<usize>();
-    assert_eq!(components, 142);
+    assert_eq!(components, 143);
 }
 
 #[test]
@@ -1684,4 +1710,23 @@ fn chriz_iwd_party_dialog_is_on_by_default_and_needs_eeex() {
         .plan
         .components_for("chriz-iwd-party-dialog-main")
         .is_none());
+}
+
+#[test]
+fn round_clock_is_the_only_rebalance_component_and_needs_eeex() {
+    let manifest = recipe();
+    let run = "chriz-bg-rebalance-main";
+    let evaluation = recommended(&manifest);
+    let parent = evaluation.view.control("mod:chriz-bg-rebalance").unwrap();
+    assert_eq!(parent.decision, Decision::Default);
+    assert_eq!(parent.readiness, Readiness::Ready);
+    assert!(parent.selected);
+    assert_eq!(evaluation.plan.components_for(run), Some(&[361][..]));
+
+    for disabled in ["mod:chriz-bg-rebalance", "mod:eeex"] {
+        let mut selection = Selection::defaults("windows");
+        selection.set_feature(disabled, false);
+        let changed = evaluate(&manifest, &selection).unwrap();
+        assert!(changed.plan.components_for(run).is_none(), "{disabled}");
+    }
 }

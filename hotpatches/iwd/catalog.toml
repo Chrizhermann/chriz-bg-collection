@@ -113,6 +113,12 @@ label = "Chriz Easy IWD 0.1.14"
 recipe_version = "0.1.14"
 content_sha256 = "d0bb83c08061f3b55306a00df14dd3a6950f151b9a83d5f508951c9cc56ab523"
 
+[[bases]]
+id = "iwd-0.1.15"
+label = "Chriz Easy IWD 0.1.15"
+recipe_version = "0.1.15"
+content_sha256 = "518171a581f42c3c82e732ae2d67759ae49668258d8d803f24fc9368245e83fe"
+
 # Christopher's twelve boss fights (Chriz IWD Encounters 0.2.0, 2026-11-04) for installations of
 # the releases before 0.1.6, which install them itself. Each fight takes effect where the party
 # has not been yet; the orog raid's changes also while the raid has not happened.

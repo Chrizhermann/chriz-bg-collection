@@ -365,6 +365,13 @@ phase = "main"
 components = [0]
 args = []
 
+[[runs]]
+run_id = "chriz-bg-rebalance-main"
+mod_id = "chriz-bg-rebalance"
+phase = "main"
+components = [361]
+args = []
+
 # Needs EEex #1 and #8 at install time.
 [[runs]]
 run_id = "eeexremote-main"
@@ -4780,4 +4787,25 @@ decision = "mandatory"
 readiness = "ready"
 parent = "mod:chriz-iwd-party-dialog"
 components = [{ run_id = "chriz-iwd-party-dialog-main", component = 0 }]
+requires = ["feature:eeex:component-1"]
+
+[[features]]
+id = "mod:chriz-bg-rebalance"
+title = "BG Rebalance"
+description = "Applies elapsed world time to personal rounds and cooldowns."
+category = "spells"
+source_label = "BG Rebalance"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-361"
+title = "Round Clock for personal rounds and stealth cooldowns"
+description = "Time spent travelling, resting or advancing the world clock counts toward the wait after casting a spell, using an item or finishing an attack swing. It also counts toward Hide in Shadows and the next contingency check. When Hide is ready, the Stealth button works even while paused. A transition that advances zero ticks grants no recovery."
+category = "spells"
+source_label = "BG Rebalance"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+components = [{ run_id = "chriz-bg-rebalance-main", component = 361 }]
 requires = ["feature:eeex:component-1"]
