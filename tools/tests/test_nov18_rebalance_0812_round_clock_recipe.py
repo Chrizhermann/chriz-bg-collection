@@ -118,7 +118,8 @@ class RoundClockIntakeTests(unittest.TestCase):
 
     def test_iwd_0_1_15_ledger_and_hotpatch_base(self):
         release = json.loads((ROOT / IWD / "release.json").read_text(encoding="utf-8"))
-        self.assertEqual(release["version"], "0.1.15")
+        self.assertTrue((ROOT / IWD / f"releases/v{release['version']}/ledger.toml").is_file(),
+                        release["version"])
         ledger = load(f"{IWD}/releases/v0.1.15/ledger.toml")
         self.assertEqual((ledger["recipe_id"], ledger["version"], ledger["supersedes"]),
                          ("chriz-easy-iwd", "0.1.15", "0.1.14"))

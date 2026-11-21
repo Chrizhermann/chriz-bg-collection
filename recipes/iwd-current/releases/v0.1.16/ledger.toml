@@ -1,0 +1,25 @@
+schema = 1
+recipe_id = "chriz-easy-iwd"
+version = "0.1.16"
+published_at = "2026-11-21T00:00:00Z"
+minimum_app_version = "0.1.1"
+supersedes = "0.1.15"
+
+[[changes]]
+id = "chriz-iwd-encounters-0.3.0"
+title = "Chriz IWD Encounters v0.3.0 brings Baldur's Gate spell rules, Chapter 2-6 overhaul, and boss updates"
+summary = "New installations pin Chriz IWD Encounters v0.3.0 with two new defaults (component 120 for Baldur's Gate caster-level Dispel/Remove Magic, Minor Spell Deflection L1-4, non-stacking Mirror/Reflected/Spirit Armor, AoE Mirror Image bypass, logical status immunities, and Universal utility schools; component 420 for Chapter 2-6 filler thinning, Kresselack crypt wave pacing, Terikan/Tarnsen/Ginafae fixes, upgraded Severed Hand/Giant/Wyrm fights, and five Drasus/Iron-Throne-style squads), updated Belhifet/Yxunomei/Poquelin encounters (300, 310, 360), and optional component 500 for Heart of Winter and Trials of the Luremaster. A game already in progress keeps its existing encounters."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-iwd-encounters-0.2.2",
+  "artifact:chriz-iwd-encounters-0.3.0",
+  "feature:mod:chriz-iwd-encounters",
+  "feature:feature:chriz-iwd-encounters:component-120",
+  "feature:feature:chriz-iwd-encounters:component-300",
+  "feature:feature:chriz-iwd-encounters:component-310",
+  "feature:feature:chriz-iwd-encounters:component-360",
+  "feature:feature:chriz-iwd-encounters:component-420",
+  "feature:feature:chriz-iwd-encounters:component-500",
+  "run:chriz-iwd-encounters-main",
+]
