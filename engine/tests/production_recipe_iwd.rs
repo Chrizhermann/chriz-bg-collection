@@ -127,7 +127,8 @@ const RUNS: &[(&str, &str, Phase, &[u32])] = &[
         "chriz-iwd-encounters",
         Phase::Main,
         &[
-            100, 110, 200, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410,
+            100, 110, 120, 200, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410, 420,
+            500,
         ],
     ),
     (
@@ -209,7 +210,7 @@ const INSTALLERS: &[(&str, &str, &str)] = &[
     ),
     (
         "chriz-iwd-encounters",
-        "chriz-iwd-encounters-0.2.2",
+        "chriz-iwd-encounters-0.3.0",
         "chriz-iwd-encounters/setup-chriz-iwd-encounters.tp2",
     ),
     (
@@ -385,14 +386,14 @@ const ARTIFACTS: &[Pin] = &[
         sha256: "f64314ab1462cef661dc4191e37e9d8911e95bd8df13ad44c3a09744b23847a8",
     },
     Pin {
-        id: "chriz-iwd-encounters-0.2.2",
-        version: "0.2.2",
+        id: "chriz-iwd-encounters-0.3.0",
+        version: "0.3.0",
         kind: SourceKind::GithubRelease,
-        url: "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/download/v0.2.2/chriz-iwd-encounters-v0.2.2.zip",
-        reference: "v0.2.2",
-        filename: "chriz-iwd-encounters-v0.2.2.zip",
-        length: 381_722,
-        sha256: "c9a653aeb61bee0f3b76e230e793b4f835bb2e5ce13de48d5f1dce630a94442c",
+        url: "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/download/v0.3.0/chriz-iwd-encounters-v0.3.0.zip",
+        reference: "v0.3.0",
+        filename: "chriz-iwd-encounters-v0.3.0.zip",
+        length: 678_296,
+        sha256: "856a69b7e22d9a891ec26f7b37a076f659431b9ca698d956f616566ac2a27d90",
     },
     Pin {
         id: "chriz-iwd-party-dialog-0.1.0",
@@ -801,7 +802,7 @@ const RECOMMENDED: &[(&str, &[u32])] = &[
     (
         "chriz-iwd-encounters-main",
         &[
-            100, 110, 200, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410,
+            100, 110, 120, 200, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410, 420,
         ],
     ),
     (
@@ -836,7 +837,7 @@ fn declares_a_standalone_iwdee_collection_with_its_own_data_folder() {
             .collect::<Vec<_>>(),
         [PRESET]
     );
-    assert_eq!(manifest.collection.features.len(), 327);
+    assert_eq!(manifest.collection.features.len(), 330);
     assert!(
         validate(&manifest).is_empty(),
         "authoring validation findings: {:?}",
@@ -1101,7 +1102,7 @@ fn resolves_the_exact_recommended_plan() {
         .iter()
         .map(|run| run.components.len())
         .sum::<usize>();
-    assert_eq!(components, 143);
+    assert_eq!(components, 145);
 }
 
 #[test]
@@ -1388,9 +1389,10 @@ fn chriz_iwd_encounters_is_on_by_default_and_each_part_needs_its_scs_ai() {
         ]
     );
     assert_eq!(priests.requires, ["feature:stratagems:component-6040"]);
-    let all: Vec<u32> = [100, 110, 200]
+    let all: Vec<u32> = [100, 110, 120, 200]
         .into_iter()
         .chain(ENCOUNTERS_FIGHTS)
+        .chain([420])
         .collect();
     assert_eq!(
         evaluation.plan.components_for("chriz-iwd-encounters-main"),
@@ -1400,7 +1402,11 @@ fn chriz_iwd_encounters_is_on_by_default_and_each_part_needs_its_scs_ai() {
     let mut selection = Selection::defaults("windows");
     selection.set_feature("feature:chriz-iwd-encounters:component-200", false);
     let without_priests = evaluate(&manifest, &selection).unwrap();
-    let expected: Vec<u32> = [100, 110].into_iter().chain(ENCOUNTERS_FIGHTS).collect();
+    let expected: Vec<u32> = [100, 110, 120]
+        .into_iter()
+        .chain(ENCOUNTERS_FIGHTS)
+        .chain([420])
+        .collect();
     assert_eq!(
         without_priests
             .plan
@@ -1408,11 +1414,15 @@ fn chriz_iwd_encounters_is_on_by_default_and_each_part_needs_its_scs_ai() {
         Some(&expected[..])
     );
 
-    // Without SCS only its two AI parts go: the banter guard and the fights work without it.
+    // Without SCS only its two AI parts go: the spell rules, banter guard and encounters work without it.
     let mut selection = Selection::defaults("windows");
     selection.set_feature("mod:stratagems", false);
     let without_scs = evaluate(&manifest, &selection).unwrap();
-    let expected: Vec<u32> = [110].into_iter().chain(ENCOUNTERS_FIGHTS).collect();
+    let expected: Vec<u32> = [110, 120]
+        .into_iter()
+        .chain(ENCOUNTERS_FIGHTS)
+        .chain([420])
+        .collect();
     assert_eq!(
         without_scs.plan.components_for("chriz-iwd-encounters-main"),
         Some(&expected[..])
@@ -1508,6 +1518,51 @@ fn chriz_iwd_encounters_fights_are_on_by_default_and_each_can_be_left_out() {
         .components_for("chriz-iwd-encounters-main")
         .unwrap();
     assert!(!plan.contains(&300) && plan.contains(&310) && plan.contains(&410));
+}
+
+#[test]
+fn chriz_iwd_encounters_0_3_0_adds_default_spell_rules_and_main_overhaul_and_optional_expansion() {
+    // Christopher, 2026-11-21: 120 and 420 on by default; 500 optional and off by default.
+    let manifest = recipe();
+    let evaluation = recommended(&manifest);
+    for component in [120, 420] {
+        let id = format!("feature:chriz-iwd-encounters:component-{component}");
+        let control = evaluation.view.control(&id).unwrap();
+        assert_eq!(control.decision, Decision::Default, "{id}");
+        assert!(control.selected, "{id}");
+        assert_eq!(
+            control.parent.as_deref(),
+            Some("mod:chriz-iwd-encounters"),
+            "{id}"
+        );
+        assert!(
+            control.requires.is_empty() && control.requires_any.is_empty(),
+            "{id}"
+        );
+    }
+
+    let expansion = evaluation
+        .view
+        .control("feature:chriz-iwd-encounters:component-500")
+        .unwrap();
+    assert_eq!(expansion.decision, Decision::Optional);
+    assert!(!expansion.selected);
+    assert_eq!(
+        expansion.parent.as_deref(),
+        Some("mod:chriz-iwd-encounters")
+    );
+    assert!(expansion.requires.is_empty() && expansion.requires_any.is_empty());
+
+    let mut selection = Selection::defaults("windows");
+    selection.set_feature("feature:chriz-iwd-encounters:component-120", false);
+    selection.set_feature("feature:chriz-iwd-encounters:component-420", false);
+    selection.set_feature("feature:chriz-iwd-encounters:component-500", true);
+    let toggled = evaluate(&manifest, &selection).unwrap();
+    let plan = toggled
+        .plan
+        .components_for("chriz-iwd-encounters-main")
+        .unwrap();
+    assert!(!plan.contains(&120) && !plan.contains(&420) && plan.contains(&500));
 }
 
 #[test]
