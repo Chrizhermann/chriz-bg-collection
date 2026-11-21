@@ -3,6 +3,8 @@
 The IWD-only pin keeps the selected component list and writes every decided encounter despite
 edited game data. This is static source/package coverage only, not a WeiDU installation or
 gameplay acceptance.
+The November 21 intake (test_nov21_chriz_iwd_encounters_030_recipe) supersedes this pin with
+v0.3.0; the v0.2.2 evidence record and v0.1.9 ledger stay as verified here.
 """
 
 from pathlib import Path
@@ -15,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[2]
 EVIDENCE = "manifest/evidence/release-intake-20261108-chriz-iwd-encounters-chriz-easy-iwd.toml"
 MOD = "chriz-iwd-encounters"
 PIN = "chriz-iwd-encounters-0.2.2"
+SUCCESSOR = "chriz-iwd-encounters-0.3.0"
 TAG = "v0.2.2"
 FILENAME = "chriz-iwd-encounters-v0.2.2.zip"
 SHA256 = "c9a653aeb61bee0f3b76e230e793b4f835bb2e5ce13de48d5f1dce630a94442c"
@@ -47,38 +50,30 @@ class Nov08ChrizIwdEncountersV022PinTests(unittest.TestCase):
                      "native_component_order_verified"):
             self.assertIs(self.record[flag], True, flag)
 
-    def test_iwd_recipe_freezes_the_artifact_components_and_release_ledger(self):
+    def test_iwd_recipe_supersedes_0_2_2_with_0_3_0_and_keeps_v0_1_9_ledger(self):
         mod = load(self.recipe / f"mods/{MOD}.toml")
-        artifact = load(self.recipe / f"artifacts/{PIN}.toml")
-        self.assertEqual(mod["artifact_id"], PIN)
+        self.assertEqual(mod["artifact_id"], SUCCESSOR)
         self.assertFalse((self.recipe / "artifacts/chriz-iwd-encounters-0.2.1.toml").exists())
-        self.assertEqual(artifact["version"], TAG.removeprefix("v"))
-        self.assertEqual(artifact["source"]["reference"], TAG)
-        self.assertEqual(artifact["source"]["expected_filename"], FILENAME)
-        for key, evidence_key in (("url", "immutable_source_url"),
-                                  ("expected_length", "actual_length"),
-                                  ("sha256", "actual_sha256")):
-            self.assertEqual(artifact["source"][key], self.record[evidence_key], key)
+        self.assertFalse((self.recipe / f"artifacts/{PIN}.toml").exists())
         (run,) = [run for run in load(self.recipe / "collection.toml")["runs"] if run["mod_id"] == MOD]
-        self.assertEqual(run["components"], self.record["native_components"])
-        # 0.1.9 brought the pin; later releases keep it and record their own ledger.
+        self.assertEqual(run["components"][:2], self.record["native_components"][:2])
+        self.assertEqual(run["components"][2], 120)
+        self.assertEqual(run["components"][3:-2], self.record["native_components"][2:])
+        self.assertEqual(run["components"][-2:], [420, 500])
+        # 0.1.9 brought the 0.2.2 pin; later releases keep its ledger entry and record their own.
         version = json.loads((self.recipe / "release.json").read_text(encoding="utf-8"))["version"]
         self.assertTrue((self.recipe / f"releases/v{version}/ledger.toml").is_file(), version)
         ledger = load(self.recipe / "releases/v0.1.9/ledger.toml")
         self.assertIn(PIN, {change["id"] for change in ledger["changes"]})
 
-    def test_iwd_catalog_release_text_and_static_record_name_the_pin(self):
+    def test_iwd_catalog_and_historical_release_text_stay_recorded(self):
         inventory = (ROOT / "docs/curation/iwdee/INVENTORY.md").read_text(encoding="utf-8")
         self.assertIn("Chriz IWD Encounters", inventory)
-        self.assertIn(PIN, inventory)
+        self.assertIn(SUCCESSOR, inventory)
         self.assertIn("occupied script slots", inventory)
         notes = (ROOT / "docs/release-notes-iwd-0.1.9.md").read_text(encoding="utf-8")
         self.assertIn("Chriz IWD Encounters 0.2.2", notes)
         self.assertIn("Idol", notes)
-        acceptance = load(self.recipe / "releases/v0.1.0-alpha.1/acceptance.toml")
-        record = next(row for row in acceptance["evidence"]
-                      if row["subject_id"] == "chriz-iwd-encounters-main")
-        self.assertEqual(record["commit"], "7eecd33f992aadfb9bd90d5f20efe1f14c8ae9b9")
 
 
 if __name__ == "__main__":
