@@ -2,6 +2,29 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 21 — Chriz Easy IWD 0.1.15 (collection 0.1.16) released
+
+Published from [main at 2da056b](https://github.com/Chrizhermann/chriz-bg-collection/commit/2da056bf698ae12780cf8c5eb33623e3259caa83)
+after [PR #157](https://github.com/Chrizhermann/chriz-bg-collection/pull/157).
+The IWD release `v0.1.15` went live at `18:50:46 UTC`, the `updates` channel feed
+followed at `18:50:54 UTC` on 2026-11-21, the distribution `README.md` was updated at
+[057155a](https://github.com/Chrizhermann/chriz-easy-iwd/commit/057155a7a18d7f8d2a7953fbcdcc8eafa6b5c6bd),
+and [website PR #107](https://github.com/Chrizhermann/twitch-setup-chriz/pull/107)
+merged at `e75725227aabd56279d772ee0f1e59c3d039168f` (`bg.chrizfader.org` live verified).
+
+- **Chriz Easy IWD 0.1.15** bundles collection **0.1.16** and hotpatch base
+  `iwd-0.1.16` with **145 default components, 34 runs, 33 mods, and 18 companions**.
+  It pins **Chriz IWD Encounters v0.3.0**, adding default BG spell and dispel rules
+  (component `120`) and the Chapter 2–6 main campaign overhaul (component `420`),
+  updating Belhifet/Yxunomei/Poquelin (`300`/`310`/`360`), and offering the optional
+  Heart of Winter & Trials of the Luremaster overhaul (`500`).
+  - `Chriz.Easy.IWD_0.1.15_x64-setup.exe` (7,144,911 bytes), SHA-256
+    `31b7e10aa3aca4a9a5b76713de6f0d05c7d00757b8cf157cf1398aa479920c79`.
+  - `updates/latest.json` (1,024 bytes), SHA-256
+    `93c506d6be037d8c23b6b82a5b05113c4c08d5e813da2dada6abe842922737ec`.
+  - [Package acceptance](package-acceptance-iwd-0.1.15-2026-11-21.md) and
+    [release notes](release-notes-iwd-0.1.15.md).
+
 ## November 18 — Chriz Easy BG 0.1.7 (collection 0.1.4) and Chriz Easy IWD 0.1.14 (collection 0.1.15) released
 
 Published from [main at 62f4ab7](https://github.com/Chrizhermann/chriz-bg-collection/commit/62f4ab7bb3f7e64f86d15d3d3d48b3b699b4622f)
