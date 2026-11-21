@@ -1,0 +1,19 @@
+schema = 1
+recipe_id = "chriz-easy-iwd"
+version = "0.1.17"
+published_at = "2026-11-21T20:00:00Z"
+minimum_app_version = "0.1.1"
+supersedes = "0.1.16"
+
+[[changes]]
+id = "chriz-iwd-encounters-0.3.1"
+title = "Chriz IWD Encounters v0.3.1 restores Belhifet's original Icewind Dale / Siege of Dragonspear sprite"
+summary = "New installations pin Chriz IWD Encounters v0.3.1, restoring Belhifet's original BELHIFET sprite (0xE256, combat/death voices, and footprint) in component 300 instead of Stratagems' Pit Fiend replacement while keeping every v0.3.0 BG spell rule, Chapter 2-6 overhaul, boss update, and optional HoW/TotLM overhaul intact. A game already in progress keeps its existing encounters."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-iwd-encounters-0.3.0",
+  "artifact:chriz-iwd-encounters-0.3.1",
+  "feature:feature:chriz-iwd-encounters:component-300",
+  "run:chriz-iwd-encounters-main",
+]
