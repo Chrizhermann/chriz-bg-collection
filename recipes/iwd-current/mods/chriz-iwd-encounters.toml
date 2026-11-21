@@ -1,5 +1,5 @@
 id = "chriz-iwd-encounters"
-artifact_id = "chriz-iwd-encounters-0.2.2"
+artifact_id = "chriz-iwd-encounters-0.3.0"
 name = "Chriz IWD Encounters"
 tp2 = "chriz-iwd-encounters/setup-chriz-iwd-encounters.tp2"
 language = 0
@@ -13,6 +13,10 @@ name = "Repair Sword Coast Stratagems caster AI that misses some IWD:EE casters"
 [[components]]
 id = 110
 name = "Party banter starts only between living party members in one area (stops a crash with the Crossmod Banter Pack)"
+
+[[components]]
+id = 120
+name = "Baldur's Gate spell rules and fixes (caster-level Dispel/Remove Magic, Minor Spell Deflection L1-4, non-stacking Mirror/Reflected/Spirit Armor, AoE Mirror Image bypass, logical Web/Grease/Stinking Cloud/Spook/Horror immunities, Universal utility schools)"
 
 [[components]]
 id = 200
@@ -65,3 +69,11 @@ name = "Lord Maluradek: his banishment rooms fill with animated plates that figh
 [[components]]
 id = 410
 name = "The Luremaster: he opens with Improved Invisibility, hops away when an enemy reaches him, his Dispel Magic works"
+
+[[components]]
+id = 420
+name = "Main campaign overhaul (Ch. 2-6): curated filler thinning, Drasus/Iron-Throne-style squads, Severed Hand/Terikan/AR3503/Tarnsen/DGINA2 fixes"
+
+[[components]]
+id = 500
+name = "Heart of Winter & Trials of the Luremaster: curated encounters, thinned hordes, and AR9602 repair"
