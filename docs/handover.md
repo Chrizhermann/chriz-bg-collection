@@ -2,6 +2,29 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 21 — Chriz Easy IWD 0.1.16 (collection 0.1.17) released
+
+Published from [main at 6b93be3](https://github.com/Chrizhermann/chriz-bg-collection/commit/6b93be33599a49cf4db166c65d8bce3527c5c481)
+after [PR #159](https://github.com/Chrizhermann/chriz-bg-collection/pull/159).
+The IWD release `v0.1.16` went live at `20:42:02 UTC`, the `updates` channel feed
+was verified at `20:42:48 UTC` on 2026-11-21, the distribution `README.md` was updated
+at [b6665c6](https://github.com/Chrizhermann/chriz-easy-iwd/commit/b6665c6a4ea7ee22e3cf94a23dc4852aa9b65035),
+and [website PR #108](https://github.com/Chrizhermann/twitch-setup-chriz/pull/108)
+merged at `ee81b3d3cb44731e4a93f7040f22bdad73a9fdd4` (`bg.chrizfader.org` live verified).
+
+- **Chriz Easy IWD 0.1.16** bundles collection **0.1.17** and hotpatch base
+  `iwd-0.1.17` (`6aceb183900fb7b3640dbedc8f4dd84e931c7cfe1549aa0c31cf115726d397c1`)
+  with **145 default components, 34 runs, 33 mods, and 18 companions**.
+  It pins **Chriz IWD Encounters v0.3.1**, unconditionally restoring Belhifet's original
+  Icewind Dale / Siege of Dragonspear `BELHIFET` sprite (`0xE256`) in component `300`
+  over Stratagems' Pit Fiend replacement while keeping every **v0.3.0** feature intact.
+  - `Chriz.Easy.IWD_0.1.16_x64-setup.exe` (7,147,481 bytes), SHA-256
+    `e2833ad6625d635e3347f3789d7d7f06545bc5839d99ce76582bcd63c384b3cc`.
+  - `updates/latest.json` (1,021 bytes), SHA-256
+    `b4b450b214713daf8e62fd6137c6ef613b53645d9c3fdd5793c2d1f4f6e73d96`.
+  - [Package acceptance](package-acceptance-iwd-0.1.16-2026-11-21.md) and
+    [release notes](release-notes-iwd-0.1.16.md).
+
 ## November 21 — Chriz Easy IWD 0.1.15 (collection 0.1.16) released
 
 Published from [main at 2da056b](https://github.com/Chrizhermann/chriz-bg-collection/commit/2da056bf698ae12780cf8c5eb33623e3259caa83)
