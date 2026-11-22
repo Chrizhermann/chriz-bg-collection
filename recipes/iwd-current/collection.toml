@@ -1102,8 +1102,8 @@ components = [{ run_id = "chriz-iwd-encounters-main", component = 410 }]
 # Main campaign overhaul of 0.3.0 (Christopher, 2026-11-21): on by default.
 [[features]]
 id = "feature:chriz-iwd-encounters:component-420"
-title = "Main campaign overhaul (Ch. 2-6): curated filler thinning, mixed elite squads, Kaylessa as a weapons master, Severed Hand/Terikan/AR3503/Tarnsen/DGINA2 fixes"
-description = "Curated filler thinning across Chapters 2-6, 3-wave Kresselack crypt pacing, Terikan with level 1-3 spell immunity and immediate minion rally, Tarnsen and Ginafae script fixes, upgraded Severed Hand/Giant/Wyrm encounters, and six mixed elite squads of real multiclasses with caster and combat AI. Kaylessa fights as a level-15 elven weapons master switching between bow and sword, the related quests need fewer kills, and an endless staircase respawn is fixed."
+title = "Main campaign overhaul (Chapters 2-6): fewer filler fights, mixed elite squads, Kaylessa as a weapons master, quest fixes"
+description = "Curated filler thinning across Chapters 2-6, 3-wave Kresselack crypt pacing, Terikan with level 1-3 spell immunity and immediate minion rally, Tarnsen and Ginafae script fixes, upgraded Severed Hand/Giant/Wyrm encounters, and six mixed elite squads with real multiclasses, using caster and combat AI. Kaylessa fights as a level-15 elven weapons master switching between bow and sword, the related quests need fewer kills, and an endless staircase respawn is fixed."
 category = "combat"
 source_label = "Chriz IWD Encounters"
 decision = "default"
@@ -1115,8 +1115,8 @@ components = [{ run_id = "chriz-iwd-encounters-main", component = 420 }]
 # and off by default.
 [[features]]
 id = "feature:chriz-iwd-encounters:component-500"
-title = "Heart of Winter & Trials of the Luremaster: curated encounters, thinned hordes, and AR9602 repair"
-description = "Curated expansion encounters, thinned filler hordes, and AR9602 Xactile repair across Heart of Winter and Trials of the Luremaster while keeping full SCS caster spellbooks. The Polar Bear Spirit's roar works reliably with a milder save penalty and Strength drain, Burial Isle has fewer repeated undead and no endless staircase spawn, and Gloomfrost and the Sea of Moving Ice end in a Frost Giant War-Shaman, remorhaz, yeti and a sahuagin royal guard."
+title = "Heart of Winter & Trials of the Luremaster: curated encounters, thinned hordes, Burial Isle fixes"
+description = "Curated expansion encounters, thinned filler hordes, and a repaired Xactile encounter across Heart of Winter and Trials of the Luremaster while keeping full SCS caster spellbooks. The Polar Bear Spirit's roar works reliably with a milder save penalty and Strength drain, Burial Isle has fewer repeated undead and no endless staircase spawn, and in Gloomfrost and the Sea of Moving Ice a Frost Giant War-Shaman with two Frost Giant Jarls waits on the glacier, while a remorhaz, a yeti elder and a sahuagin royal guard replace out-of-place humans."
 category = "combat"
 source_label = "Chriz IWD Encounters"
 decision = "optional"

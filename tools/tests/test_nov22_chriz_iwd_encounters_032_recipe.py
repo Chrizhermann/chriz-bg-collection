@@ -5,6 +5,7 @@ v0.3.2 keeps the components of v0.3.1 and changes 300 (Poquelin's finale dispel 
 Static source/package and recipe assertions only, not campaign gameplay acceptance.
 """
 
+import re
 import tomllib
 import unittest
 from pathlib import Path
@@ -89,11 +90,31 @@ class Nov22ChrizIwdEncounters032RecipeTests(unittest.TestCase):
         self.assertIn("Poquelin's transformation dispels the party as in the base game", finale)
         self.assertNotIn("no longer dispels", finale)
         campaign = features["feature:chriz-iwd-encounters:component-420"]
-        self.assertIn("six mixed elite squads", campaign["description"])
+        # Not every squad is multiclass (review of 23281e0).
+        self.assertIn("six mixed elite squads with real multiclasses", campaign["description"])
         self.assertIn("Kaylessa", campaign["description"])
         self.assertNotIn("Drasus", campaign["title"] + campaign["description"])
         expansion = features["feature:chriz-iwd-encounters:component-500"]["description"]
         self.assertIn("Polar Bear Spirit", expansion)
+        # The War-Shaman stands on AR9500's glacier plaza (v0.3.2 CHANGELOG), not at the end.
+        self.assertIn("Frost Giant War-Shaman with two Frost Giant Jarls waits on the glacier", expansion)
+        self.assertNotIn("end in", expansion)
+        # Player titles carry no resource codes.
+        for number in (420, 500):
+            title = features[f"feature:chriz-iwd-encounters:component-{number}"]["title"]
+            self.assertIsNone(re.search(r"\bAR\d{4}\b|DGINA", title), title)
+        # The mod's component labels follow v0.3.2's setup.tra.
+        names = {item["id"]: item["name"] for item in mod["components"]}
+        self.assertEqual(
+            names[420],
+            "Main campaign overhaul (Ch. 2-6): curated filler thinning, asymmetric squads, "
+            "Kaylessa/Severed Hand/Terikan/AR3503/AR3301/quest fixes",
+        )
+        self.assertEqual(
+            names[500],
+            "Heart of Winter & Trials of the Luremaster: curated encounters, thinned hordes, "
+            "Burial Isle & AR9602 fixes",
+        )
 
     def test_release_0_1_18_ledger_and_static_evidence(self) -> None:
         ledger = load(f"{RECIPE}/releases/v0.1.18/ledger.toml")

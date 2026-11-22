@@ -152,6 +152,9 @@ The four ✓ marks record the old reference install, not the new default recipe.
   move before it.
   Not yet tested in a game: the two Marek fights and the drop.
 - EET world progression and SoD backtracking fixes `680` (alpha.17). **Christopher's decision, 2026-11-22: on only with Challenge Mode, off by default.** It is an optional, unchecked feature and a member of the [Challenge Mode group](../../plans/2026-10-13-challenge-mode-group.md); Chris's Recommended leaves it off. It implements his 2026-11-01 Challenge Mode idea of no travel back into an earlier campaign (see [FOLLOW_UPS](FOLLOW_UPS.md)). Requires EET (`feature:eet:mandatory-components`) and `mod:eet-end`, and runs in `chriz-bg-modpack-bg2` after `670`. It preserves EET's single install and BG1/SoD/SoA/ToB new-game starts while closing cross-campaign backtracking exploits (`AR0020 <-> BG4800`, `BD1000 <-> BG0900`, `AR3000 -> Amn` on ToB entry, and post-SoD `BD4000.BCS` reopening), keeping the SoD Ch.8-10 road open until the Dragonspear assault, and fixing abandoned SoD camp NPC stranding, chest forwarding, Baeloth's pit cleanup, camp sentries, siege audio and duplicate Jegg. All area rules live in `eet_world_progression.2da`.
+  Its Siege of Dragonspear camp fixes do not depend on the travel lock and are planned as their
+  own default component in the next Modpack release (see [FOLLOW_UPS](FOLLOW_UPS.md)); until then
+  they stay off in Recommended.
   Not yet tested in a game: no full playthrough across the campaign transitions.
 - Kivan quest guard `130` is mandatory with BG1NPC Banters/Quests/Interjections `10`
   and SCS general AI `6000`, after EET import and SCS. It is independent of Kivan's

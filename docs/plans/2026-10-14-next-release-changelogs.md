@@ -105,13 +105,13 @@ candidate on 2026-11-01. The player-facing notes are in
   other mode's save list; the original save stays. The crash fix always comes with the mod, the
   Copy button can be turned off. Games already installed get both through the hotpatch.
   (Chriz Multiplayer Fix v0.1.0, collection 0.1.18)
-- **Chapters 2-6 bring mixed elite squads, and the finale's dispel is back.** Six squads of real
-  multiclasses with SCS caster and combat AI replace the uniform five-man squads, Kaylessa fights
-  as a level-15 elven weapons master, the related quests need fewer kills, and an endless
-  staircase respawn is fixed. Poquelin's transformation in the finale dispels the party again as
+- **Chapters 2-6 bring mixed elite squads, and the finale's dispel is back.** Six mixed
+  squads with real multiclasses, using SCS caster and combat AI, replace the uniform five-man
+  squads, Kaylessa fights as a level-15 elven weapons master, the related quests need fewer
+  kills, and an endless staircase respawn is fixed. Poquelin's transformation in the finale dispels the party again as
   in the base game. The optional Heart of Winter and Trials of the Luremaster overhaul repairs
-  the Polar Bear Spirit's roar, thins Burial Isle's undead and ends Gloomfrost and the Sea of
-  Moving Ice with a Frost Giant War-Shaman. New games only. (Chriz IWD Encounters v0.3.2,
+  the Polar Bear Spirit's roar, thins Burial Isle's undead and puts a Frost Giant War-Shaman
+  on the glacier in Gloomfrost. New games only. (Chriz IWD Encounters v0.3.2,
   collection 0.1.18)
 
 ### Mod versions

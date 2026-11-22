@@ -139,7 +139,7 @@ content_sha256 = "6aceb183900fb7b3640dbedc8f4dd84e931c7cfe1549aa0c31cf115726d397
 id = "iwd-0.1.18"
 label = "Chriz Easy IWD 0.1.17"
 recipe_version = "0.1.18"
-content_sha256 = "7d6f6e6e49d0ce78b090df716477aabdfc84e2fb47a1bc5b2eb994aec46d404f"
+content_sha256 = "bb1b5b7fabc87f7a6ae5c4b96355eab7fae53698cd39a029b0b45852fa13de0d"
 
 # Christopher's twelve boss fights (Chriz IWD Encounters 0.2.0, 2026-11-04) for installations of
 # the releases before 0.1.6, which install them itself. Each fight takes effect where the party

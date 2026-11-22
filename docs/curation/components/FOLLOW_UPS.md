@@ -56,6 +56,13 @@ On `main` for the next Chriz Easy BG version:
   of Dragonspear camp problems. Open: its area list (Modpack `eet_world_progression.2da`)
   is still to be checked with Christopher (see the 2026-11-01 idea under Ideas for later),
   and it was not tested in a game across the campaign transitions.
+  Plan: 680 also carries Siege of Dragonspear camp fixes that do not depend on the travel
+  lock (dismissed companions no longer trapped in an abandoned camp, storage chest
+  forwarding, Flaming Fist sentry cleanup, duplicate Jegg, Ch.10 battle audio; Modpack
+  `lib/cbm_eet_world_progression.tpa` sections D-H at v0.2.0-alpha.17). Split them into
+  their own default Modpack component in the next Modpack release, so Recommended gets the
+  fixes while the travel lock stays in Challenge Mode. Until then they are off in
+  Recommended, as in every release so far.
 - Planned next major milestones (Christopher, 2026-11-13; details under
   [Conditional/future feature gates](#conditionalfuture-feature-gates)):
   (1) integrate the first releases of `chriz-bg-magic`, `chriz-bg-kits` and
