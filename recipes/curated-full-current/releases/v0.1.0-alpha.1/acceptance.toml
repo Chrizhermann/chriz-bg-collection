@@ -647,11 +647,11 @@ subject_kind = "run"
 subject_id = "chriz-multiplayer-fix-bg2"
 kind = "static-test"
 repository = "Chrizhermann/chriz-bg-collection"
-commit = "4b9e5c3a82d5727587dca56cc76ccfc52587824c"
+commit = "06e036b78dc70b2b76619d9b87837dbc10881f8e"
 test_artifact = "tools/tests/test_nov22_multiplayer_fix_recipe.py"
 date = "2026-11-22"
 status = "accepted"
-scope = "Static v0.1.0 pin, chriz_multiplayer_fix folder, components 0 and 1 on by default, EEex core dependency, and post-EET_end order directly after chriz-overhead-text-bg2 in both profiles; artifact checks on a local copy of the release asset and native order are in release-intake-20261122-chriz-multiplayer-fix-chriz-easy-bg-chriz-easy-iwd.toml; not a combined collection install, multiplayer session or gameplay acceptance."
+scope = "Static v0.1.0 pin, chriz_multiplayer_fix folder, components 0 and 1 on by default, EEex core dependency, and post-EET_end order directly after chriz-overhead-text-bg2 in both profiles; fresh-download artifact verification of the published release and native order are in release-intake-20261122-chriz-multiplayer-fix-chriz-easy-bg-chriz-easy-iwd.toml; not a combined collection install, multiplayer session or gameplay acceptance."
 
 # This remains intentionally pending. Static checks do not turn it into live acceptance.
 [[evidence]]
