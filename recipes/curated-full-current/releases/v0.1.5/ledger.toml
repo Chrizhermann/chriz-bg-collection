@@ -1,0 +1,32 @@
+schema = 1
+recipe_id = "chriz-bg-collection"
+version = "0.1.5"
+# The planned publication date (UTC), fixed before packaging because the setup bundles this ledger.
+published_at = "2026-11-22T00:00:00Z"
+minimum_app_version = "0.1.2"
+supersedes = "0.1.4"
+
+[[changes]]
+id = "chriz-multiplayer-fix"
+title = "No more crash after the multiplayer lobby; saves copy between single player and multiplayer"
+summary = "Chriz Multiplayer Fix v0.1.0 (with EEex) stops the random crash right after leaving Beamdog's multiplayer lobby, for example on Multiplayer > Local network game > Load. On the Load screen, a Copy to single player or Copy to multiplayer button copies the selected save into the other mode's save list, so a party created in multiplayer can continue in single player and back; the original save stays. Both are on by default. A game you have already installed gets them only with a new installation, or by hand from the mod's release zip."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-multiplayer-fix-0.1.0",
+  "feature:feature:chriz-multiplayer-fix:component-0",
+  "feature:feature:chriz-multiplayer-fix:component-1",
+  "run:chriz-multiplayer-fix-bg2",
+]
+
+[[changes]]
+id = "modpack-no-travel-back-in-challenge-mode"
+title = "Challenge Mode: no travel back into an earlier campaign"
+summary = "Chriz BG Modpack v0.2.0-alpha.17 adds a new Challenge Mode change: once you move on to the next campaign (Baldur's Gate, then Siege of Dragonspear, Shadows of Amn and Throne of Bhaal), you can no longer travel back to the earlier campaign's areas. Watcher's Keep stays open in Shadows of Amn and Throne of Bhaal. It also fixes several Siege of Dragonspear camp problems. It is off by default and comes on with Challenge Mode. It was not yet tested in a full playthrough."
+save_applicability = "next-playthrough"
+urgency = "informational"
+covers = [
+  "artifact:chriz-bg-modpack-0.2.0-alpha.17",
+  "feature:feature:chriz-bg-modpack:component-680",
+  "run:chriz-bg-modpack-bg2",
+]

@@ -741,12 +741,7 @@ fn release_0_1_4_supersedes_0_1_3_with_save_rest_fixes_round_clock_and_buffbot_f
     assert_eq!(ledger, source);
     assert_eq!(ledger.version, "0.1.4");
     assert_eq!(ledger.published_at, "2026-11-18T00:00:00Z");
-    assert_eq!(
-        bg_engine::cli::recipe_release_version(&curated)
-            .unwrap()
-            .as_deref(),
-        Some("0.1.4")
-    );
+    // The bundled recipe moved on to 0.1.5 (November 22); 0.1.4's ledger stays as published.
     assert_eq!(ledger.supersedes.as_deref(), Some("0.1.3"));
     assert_eq!(ledger.minimum_app_version, "0.1.2");
 
@@ -781,6 +776,91 @@ fn release_0_1_4_supersedes_0_1_3_with_save_rest_fixes_round_clock_and_buffbot_f
         .expect("the 0.1.4 differences are recorded");
     assert_eq!(snapshot["from_commit"], "bc5fc11");
     assert_eq!(snapshot["to_commit"], "d9585d0");
+    let differences = snapshot_differences(&snapshot);
+    assert_eq!(differences.len(), 7);
+    ensure_change_coverage(&differences, &ledger).unwrap();
+    assert_eq!(
+        ledger
+            .changes
+            .iter()
+            .flat_map(|change| change.covers.iter().map(String::as_str))
+            .collect::<BTreeSet<_>>(),
+        differences
+            .iter()
+            .map(|difference| difference.subject.as_str())
+            .collect::<BTreeSet<_>>()
+    );
+}
+
+#[test]
+fn release_0_1_5_supersedes_0_1_4_with_the_multiplayer_fix_and_challenge_mode_travel_lock() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+    let curated = root.join("recipes/curated-full-current");
+    let ledger = load_release(&curated.join("releases/v0.1.5/ledger.toml")).unwrap();
+    let source = load_release(&root.join("manifest/releases/v0.1.5/ledger.toml")).unwrap();
+    assert_eq!(ledger, source);
+    assert_eq!(ledger.version, "0.1.5");
+    assert_eq!(ledger.published_at, "2026-11-22T00:00:00Z");
+    assert_eq!(
+        bg_engine::cli::recipe_release_version(&curated)
+            .unwrap()
+            .as_deref(),
+        Some("0.1.5")
+    );
+    assert_eq!(ledger.supersedes.as_deref(), Some("0.1.4"));
+    assert_eq!(ledger.minimum_app_version, "0.1.2");
+
+    // Chriz Easy BG has no hotpatches yet, so both changes reach a game only with a new
+    // installation: the multiplayer fix is recommended, the Challenge Mode change is off by
+    // default and only informational.
+    assert_eq!(ledger.changes.len(), 2);
+    assert!(ledger
+        .changes
+        .iter()
+        .all(|change| change.save_applicability == SaveApplicability::NextPlaythrough));
+    assert_eq!(
+        ledger
+            .changes
+            .iter()
+            .map(|change| (change.id.as_str(), change.urgency))
+            .collect::<Vec<_>>(),
+        [
+            ("chriz-multiplayer-fix", Urgency::Recommended),
+            (
+                "modpack-no-travel-back-in-challenge-mode",
+                Urgency::Informational
+            ),
+        ]
+    );
+    let current = classify_updates("0.1.4", "0.1.2", std::slice::from_ref(&ledger)).unwrap();
+    assert_eq!(current.latest_version.as_deref(), Some("0.1.5"));
+    assert_eq!(
+        current.disposition,
+        UpdateDisposition::DeferredForNextPlaythrough
+    );
+    assert_eq!(current.changes, ledger.changes);
+
+    let v014 = load_release(&curated.join("releases/v0.1.4/ledger.toml")).unwrap();
+    let skipped = classify_updates("0.1.3", "0.1.2", &[ledger.clone(), v014.clone()]).unwrap();
+    assert_eq!(skipped.latest_version.as_deref(), Some("0.1.5"));
+    assert_eq!(
+        skipped.disposition,
+        UpdateDisposition::DeferredForNextPlaythrough
+    );
+    assert_eq!(
+        skipped.changes,
+        [v014.changes, ledger.changes.clone()].concat()
+    );
+
+    // Taken from payloads that chriz-bg-author package-recipe built from the curated trees of
+    // 62f4ab7 (the 0.1.4 release, whose recipe equals d9585d0 apart from its ledger and
+    // release.json) and b2c248f, using diff_recipe_packages.
+    let snapshot = released_snapshots()
+        .into_iter()
+        .find(|snapshot| snapshot["version"] == "0.1.5")
+        .expect("the 0.1.5 differences are recorded");
+    assert_eq!(snapshot["from_commit"], "d9585d0");
+    assert_eq!(snapshot["to_commit"], "b2c248f");
     let differences = snapshot_differences(&snapshot);
     assert_eq!(differences.len(), 7);
     ensure_change_coverage(&differences, &ledger).unwrap();
@@ -838,9 +918,9 @@ fn ledger_covers_name_only_subject_kinds_the_recipe_diff_emits() {
                 }
             }
         }
-        // alpha.1, alpha.12 to alpha.20 and 0.1.0 through 0.1.4; published ledgers are
+        // alpha.1, alpha.12 to alpha.20 and 0.1.0 through 0.1.5; published ledgers are
         // never removed.
-        assert!(ledgers >= 15, "{profile}: only {ledgers} ledgers found");
+        assert!(ledgers >= 16, "{profile}: only {ledgers} ledgers found");
         assert_eq!(
             dead, shipped,
             "{profile}: covers that no recipe difference can match (kinds: {DIFF_SUBJECT_KINDS:?})"

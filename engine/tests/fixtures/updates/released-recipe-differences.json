@@ -507,5 +507,19 @@
       "feature:feature:chriz-bg-rebalance:component-361",
       "run:chriz-bg-rebalance-bg2"
     ]
+  },
+  {
+    "version": "0.1.5",
+    "from_commit": "d9585d0",
+    "to_commit": "b2c248f",
+    "subjects": [
+      "artifact:chriz-bg-modpack-0.2.0-alpha.17",
+      "artifact:chriz-multiplayer-fix-0.1.0",
+      "feature:feature:chriz-bg-modpack:component-680",
+      "feature:feature:chriz-multiplayer-fix:component-0",
+      "feature:feature:chriz-multiplayer-fix:component-1",
+      "run:chriz-bg-modpack-bg2",
+      "run:chriz-multiplayer-fix-bg2"
+    ]
   }
 ]
