@@ -22,8 +22,8 @@ ARTIFACT_ID = "chriz-bg-modpack-0.2.0-alpha.13"
 PREVIOUS_ARTIFACT_ID = "chriz-bg-modpack-0.2.0-alpha.12"
 # The October 26 alpha.22 pin batch replaced this pin with alpha.14, and the November 3
 # intake (test_nov03_modpack_alpha15_marek_dagger_recipe) with alpha.15, then the November 8
-# alpha.16 pin (test_nov08_modpack_alpha16_pin_recipe), which keeps its declarations.
-SUCCESSOR_ARTIFACT_ID = "chriz-bg-modpack-0.2.0-alpha.16"
+# alpha.16 pin (test_nov08_modpack_alpha16_pin_recipe), and alpha.17 (680).
+SUCCESSOR_ARTIFACT_ID = "chriz-bg-modpack-0.2.0-alpha.17"
 LATE_RUN = "chriz-bg-modpack-late-companions-bg2"
 CAMPAIGN_RUN = "chriz-bg-modpack-campaign-xp-bg2"
 MODPACK = "feature:chriz-bg-modpack:component-{}"
@@ -209,7 +209,7 @@ class Oct20IntakeTests(unittest.TestCase):
                 # Alpha.14 keeps alpha.13's declaration order; alpha.15 adds 670 and alpha.16
                 # keeps it (test_nov08_modpack_alpha16_pin_recipe).
                 for run in runs:
-                    components = [c for c in run["components"] if c != 670]
+                    components = [c for c in run["components"] if c not in (670, 680)]
                     self.assertEqual(components, [c for c in ALPHA13_NATIVE if c in components],
                                      run["run_id"])
         # The checked-in curated artifact is the generator's copy of the authored pin.

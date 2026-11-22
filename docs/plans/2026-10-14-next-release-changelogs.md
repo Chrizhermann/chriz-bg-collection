@@ -25,6 +25,13 @@ candidate on 2026-11-01. The player-facing notes are in
   casting a spell, using an item, swinging a weapon or trying to hide. It also counts
   toward the next contingency check. When Hide in Shadows is ready, you can use Stealth
   while paused. Only elapsed game time counts.
+- **EET world progression and SoD backtracking fixes** (Chriz BG Modpack component 680,
+  Default, requires EET). Keeps EET's unified install and BG1/SoD/SoA/ToB starts while
+  closing cross-campaign backtracking (`SoD -> BG1`, `SoA -> BG1/SoD`, `ToB -> SoA/BG1/SoD`,
+  with Watcher's Keep accessible in both SoA and ToB and severed from Amn on ToB entry),
+  keeping the SoD Ch.8-10 road open until Dragonspear (`BD4000`), and fixing abandoned SoD
+  camp stranding, chest forwarding, Baeloth's pit cleanup, camp sentries, siege audio and
+  duplicate Jegg.
 
 ### Mod versions
 
@@ -32,6 +39,7 @@ candidate on 2026-11-01. The player-facing notes are in
   installers in both Chriz Easy BG recipes.
 - Bardic Wonders v2.9c-balance.9 (was balance.8), curated Chriz Easy BG.
 - BG Rebalance v0.8.12 (was v0.8.11), both Chriz Easy BG recipes (adds component 361; Chriz Easy IWD also adds component 361).
+- Chriz BG Modpack v0.2.0-alpha.17 (was v0.2.0-alpha.16), both Chriz Easy BG recipes (adds component 680).
 
 ### Notes for the release integrator
 
@@ -54,6 +62,14 @@ candidate on 2026-11-01. The player-facing notes are in
   install, EET and IWD campaign gameplay, waylaid travel and multiplayer remain untested.
 - The next BG recipe update ledger must cover `artifact:chriz-bg-rebalance-0.8.12` and
   `feature:feature:chriz-bg-rebalance:component-361`.
+- The Chriz BG Modpack v0.2.0-alpha.17 intake verified the fresh download, archive, TP2
+  declaration order (`680` between `670` and `650`), and default wiring in both Chriz
+  Easy BG recipes (469 components in curated BG, 374 in base Recommended). Real-EET and
+  isolated WeiDU 249 install/uninstall fixture verification passed upstream; live combined
+  collection installation and full campaign playthrough remain untested.
+  [Collection intake](../../manifest/evidence/release-intake-20261122-chriz-bg-modpack-chriz-easy-bg.toml)
+- The next BG recipe update ledger must cover `artifact:chriz-bg-modpack-0.2.0-alpha.17` and
+  `feature:feature:chriz-bg-modpack:component-680`.
 
 ## Collection 0.1.2 (draft)
 
