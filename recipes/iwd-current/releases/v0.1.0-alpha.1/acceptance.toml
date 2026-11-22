@@ -339,11 +339,11 @@ subject_kind = "run"
 subject_id = "chriz-iwd-encounters-main"
 kind = "static-test"
 repository = "Chrizhermann/chriz-bg-collection"
-commit = "21ba55dbe0091c97df77886140b7f1765a0ce37a"
+commit = "10f1bc33f6565b9631206694e5037ff7cb6cf68b"
 test_artifact = "engine/tests/production_recipe_iwd.rs"
 date = "2026-11-22"
 status = "accepted"
-scope = "Static tests cover the v0.3.1 release pin (including Belhifet sprite restoration), native run position, default components (100, 110, 120, 200, 300-420), and optional expansion component 500."
+scope = "Static tests cover the v0.3.2 release pin (mixed Chapter 2-6 squads, Kaylessa, Poquelin's finale dispel restored), native run position, default components (100, 110, 120, 200, 300-420), and optional expansion component 500."
 
 [[evidence]]
 subject_kind = "run"
