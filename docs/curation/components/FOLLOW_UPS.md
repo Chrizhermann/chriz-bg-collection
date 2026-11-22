@@ -38,6 +38,17 @@ On `main` for the next Chriz Easy BG version:
   card in Customize, and "Details" opens that card. Chriz Easy IWD has no feature group and
   shows no card. See `docs/plans/2026-10-13-challenge-mode-group.md`. Open: no packaged app
   was built and no installation was run with it.
+- Saves between single player and multiplayer (Christopher, 2026-11-22): Chriz Multiplayer
+  Fix v0.1.0 is a default in both installers, component `0` (no crash after leaving the
+  multiplayer lobby) and `1` (Load screen button that copies a save between single player
+  and multiplayer, for chatter runs where viewers create the party). Chriz Easy IWD also
+  brings it to existing installations (recipe 0.1.18, hotpatch `chriz-multiplayer-fix-0.1.0`).
+  Open: Chriz Easy BG offers no hotpatches yet (`hotpatches/bg/catalog.toml` only updates
+  installed mods), so an existing BG installation gets the fix only with a new installation
+  or by hand from the release zip. A BG hotpatch for it comes after the next Chriz Easy BG
+  release, as the first BG hotpatch (it needs bases for the released BG recipes). No
+  packaged-app installation with these components was run yet; that is part of each
+  release's acceptance.
 - Planned next major milestones (Christopher, 2026-11-13; details under
   [Conditional/future feature gates](#conditionalfuture-feature-gates)):
   (1) integrate the first releases of `chriz-bg-magic`, `chriz-bg-kits` and
