@@ -51,7 +51,7 @@ DESCRIPTIONS = {
 BG_RUN = "chriz-multiplayer-fix-bg2"
 IWD_RUN = "chriz-multiplayer-fix-main"
 # The take-in commit that the static-test records in the three acceptance files name.
-TAKE_IN_COMMIT = "06e036b78dc70b2b76619d9b87837dbc10881f8e"
+TAKE_IN_COMMIT = "a2b6db5f4aa3f2adba39312fab0ee76174987a18"
 HOTPATCH = "chriz-multiplayer-fix-0.1.0"
 
 
