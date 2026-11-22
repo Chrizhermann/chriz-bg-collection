@@ -1,5 +1,5 @@
 id = "chriz-bg-modpack"
-artifact_id = "chriz-bg-modpack-0.2.0-alpha.16"
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.17"
 name = "chriz-bg-modpack"
 tp2 = "setup-chriz-bg-modpack.tp2"
 language = 0
@@ -185,6 +185,10 @@ name = "Degrodel: hand over the Helm of Balduran or keep it and fight him"
 [[components]]
 id = 670
 name = "Marek: carry the Boomerang Dagger +2 in BG1 (drops it when he dies)"
+
+[[components]]
+id = 680
+name = "EET: story-consistent campaign boundaries and SoD backtracking fixes"
 
 [[components]]
 id = 650

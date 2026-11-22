@@ -69,7 +69,8 @@ NATIVE_RUN_ORDERS = {
     # Alpha.13 declares Dorn's ambush fix 135 after 130 and the party AI fix 460 after
     # 450; the collection offers both from the alpha.14 pin (October 26). Alpha.15
     # (November 3) declares Marek's Boomerang Dagger 670 after 660 and before 650.
-    "chriz-bg-modpack-bg2": [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660, 670],
+    # Alpha.17 adds EET world progression and SoD backtracking 680 after 670.
+    "chriz-bg-modpack-bg2": [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660, 670, 680],
     # Modpack alpha.13 (October 20) declares EET join XP 239 right after 238; it runs
     # after the NPC mods and EET_end and before the campaign XP run, as 650 requires.
     "chriz-bg-modpack-late-companions-bg2": [189, 237, 238, 239, 620],
