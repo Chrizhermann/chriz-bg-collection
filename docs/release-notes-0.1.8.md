@@ -37,8 +37,8 @@ components across 71 install runs and 57 mods**.
   keep working unchanged.
 - The multiplayer fix and the copy button come with a new installation: choose
   **Create updated installation** on the Updates page or **New installation**. Chriz Easy
-  BG cannot add them to a game you already installed yet. To get them there now, install
-  them by hand from the
+  BG cannot add them to a game you already installed yet. To get them there now, close the
+  game, extract the
   [Chriz Multiplayer Fix v0.1.0 release zip](https://github.com/Chrizhermann/chriz-multiplayer-fix/releases/tag/v0.1.0)
-  as its README describes, with the game closed.
+  into the game folder, run `setup-chriz_multiplayer_fix.exe` and install both components.
 - For help, see the [troubleshooting and backup guide](troubleshooting.md).
