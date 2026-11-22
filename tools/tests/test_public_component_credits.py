@@ -95,8 +95,10 @@ class PublicComponentCreditsTests(unittest.TestCase):
         self.assertEqual(actual["chriz-overhead-text-bg2"], [0])
         # Round Clock adds one default to the existing BG Rebalance mod.
         self.assertIn(361, actual["chriz-bg-rebalance-bg2"])
-        self.assertEqual(self.result["componentCount"], 468)
-        self.assertEqual(len(actual), 70)
+        # November 22: Chriz Multiplayer Fix adds components 0 and 1 in its own default run.
+        self.assertEqual(actual["chriz-multiplayer-fix-bg2"], [0, 1])
+        self.assertEqual(self.result["componentCount"], 470)
+        self.assertEqual(len(actual), 71)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:
         # The app and bundled collection are versioned independently; each field must come from its own source.

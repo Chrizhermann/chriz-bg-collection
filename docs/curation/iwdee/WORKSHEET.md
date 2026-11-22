@@ -36,6 +36,11 @@ Added later:
   to `Player1`.
 - BG Rebalance v0.8.12, selected 2026-11-18. Both installers enable Round Clock (361) by default
   with EEex. It is the sole component in the IWD run, immediately after Chriz IWD Party Dialog.
+- Chriz Multiplayer Fix 0.1.0, 2026-11-22: on by default in both installers. Component 0 (the
+  crash fix after leaving the multiplayer lobby) always comes with the mod; component 1 (a Copy
+  button per save on the Load screen, between single player and multiplayer) is on by default
+  and can be turned off. Both need EEex and run directly after Chriz Overhead Text. Existing
+  installations get both through the hotpatch `chriz-multiplayer-fix-0.1.0`.
 
 Notes from the selection:
 - The quest mods' compatibility with each other can be tested later; Christopher said

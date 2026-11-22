@@ -354,6 +354,18 @@ phase = "main"
 components = [0]
 args = []
 
+# Christopher's own EEex multiplayer mod (added 2026-11-22, both parts on by default as in the BG
+# installer): 0 stops the crash after leaving the multiplayer lobby, 1 adds a Load screen button
+# that copies saves between single player and multiplayer. Needs EEex #1 at install time; copies
+# only override/M_CZMP.lua, EEex_scripts/extra_pattern_dbs/CZMP.db, override/M_CZMS.lua and
+# override/CZMS.menu.
+[[runs]]
+run_id = "chriz-multiplayer-fix-main"
+mod_id = "chriz-multiplayer-fix"
+phase = "main"
+components = [0, 1]
+args = []
+
 # Christopher's own IWD:EE quality-of-life mod (added 2026-11-17, on by default): evaluates world
 # and quest dialogue class, kit, and race checks across all living party members in the current
 # area and hands dialogue speaker/tokens to the qualifying party member. Copies only
@@ -4801,6 +4813,42 @@ decision = "mandatory"
 readiness = "ready"
 parent = "mod:chriz-overhead-text"
 components = [{ run_id = "chriz-overhead-text-main", component = 0 }]
+requires = ["feature:eeex:component-1"]
+
+# No more crash after the multiplayer lobby, and saves copy between single player and multiplayer
+# on the Load screen (Christopher, 2026-11-22): the crash fix comes with the mod, the copy button is
+# on by default and can be turned off.
+[[features]]
+id = "mod:chriz-multiplayer-fix"
+title = "Chriz Multiplayer Fix"
+description = "Fixes the crash after leaving the multiplayer lobby and adds a Load screen button that copies saves between single player and multiplayer."
+category = "fixes"
+source_label = "Chriz Multiplayer Fix"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:chriz-multiplayer-fix:component-0"
+title = "Multiplayer lobby crash fix (EEex)"
+description = "Stops the random crash right after leaving Beamdog's multiplayer lobby, for example on Multiplayer > Local network game > Load."
+category = "fixes"
+source_label = "Chriz Multiplayer Fix"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:chriz-multiplayer-fix"
+components = [{ run_id = "chriz-multiplayer-fix-main", component = 0 }]
+requires = ["feature:eeex:component-1"]
+
+[[features]]
+id = "feature:chriz-multiplayer-fix:component-1"
+title = "Copy saves between single player and multiplayer on the Load screen (EEex)"
+description = "Adds a button to the Load screen that copies a save into the other mode's save list, so a party created in multiplayer can continue in single player and back. The original save stays."
+category = "interface"
+source_label = "Chriz Multiplayer Fix"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-multiplayer-fix"
+components = [{ run_id = "chriz-multiplayer-fix-main", component = 1 }]
 requires = ["feature:eeex:component-1"]
 
 # World and quest dialogue class, kit, and race checks evaluate across all living party members in

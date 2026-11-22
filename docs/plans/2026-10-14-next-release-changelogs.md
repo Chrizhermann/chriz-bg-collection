@@ -1,6 +1,6 @@
 # Next release — changelog drafts
 
-The current Chriz Easy BG draft is followed by the historical 0.1.2 and 0.1.0 drafts.
+The current Chriz Easy BG and Chriz Easy IWD drafts are followed by the historical 0.1.2 and 0.1.0 drafts.
 The original drafts started on 14 October 2026, after app alpha.21 / collection alpha.20.
 Labels: **Mandatory** = always installed with its mod; **Default** = selected in
 Chris's Recommended; **Optional** = offered, unchecked; **Pending** = waiting for
@@ -25,6 +25,12 @@ candidate on 2026-11-01. The player-facing notes are in
   casting a spell, using an item, swinging a weapon or trying to hide. It also counts
   toward the next contingency check. When Hide in Shadows is ready, you can use Stealth
   while paused. Only elapsed game time counts.
+- **No more crash after the multiplayer lobby, and saves copy between single player and
+  multiplayer** (Default, each part separately, requires EEex). Leaving Beamdog's multiplayer
+  lobby, for example on Multiplayer > Local network game > Load, no longer crashes the game at
+  random. A new button at the bottom of the Load screen copies the selected save into the other
+  mode's save list, so a party created in multiplayer can continue in single player and back; the
+  original save stays. (Chriz Multiplayer Fix v0.1.0)
 
 ### Mod versions
 
@@ -32,6 +38,7 @@ candidate on 2026-11-01. The player-facing notes are in
   installers in both Chriz Easy BG recipes.
 - Bardic Wonders v2.9c-balance.9 (was balance.8), curated Chriz Easy BG.
 - BG Rebalance v0.8.12 (was v0.8.11), both Chriz Easy BG recipes (adds component 361; Chriz Easy IWD also adds component 361).
+- Chriz Multiplayer Fix v0.1.0 (new), both Chriz Easy BG recipes and Chriz Easy IWD.
 
 ### Notes for the release integrator
 
@@ -54,6 +61,32 @@ candidate on 2026-11-01. The player-facing notes are in
   install, EET and IWD campaign gameplay, waylaid travel and multiplayer remain untested.
 - The next BG recipe update ledger must cover `artifact:chriz-bg-rebalance-0.8.12` and
   `feature:feature:chriz-bg-rebalance:component-361`.
+- **Chriz Multiplayer Fix v0.1.0** (taken in 2026-11-22, Christopher's decision of that day)
+  adds components `0` and `1` as defaults in both Chriz Easy BG recipes
+  (`chriz-multiplayer-fix-bg2`, in `post-eet-end` directly after `chriz-overhead-text-bg2` and
+  before `eeexremote-bg2`) and in Chriz Easy IWD (`chriz-multiplayer-fix-main`, directly after
+  `chriz-overhead-text-main`; `0` always comes with the mod, `1` is a default). Both need EEex's
+  core. The BG Recommended plans grow by two components in one new run, IWD's by two. The IWD
+  collection is numbered 0.1.18 with a ledger entry, and existing IWD installations get both
+  components through the hotpatch `chriz-multiplayer-fix-0.1.0`. The release was not yet
+  published at intake, so its record
+  (`manifest/evidence/release-intake-20261122-chriz-multiplayer-fix-chriz-easy-bg-chriz-easy-iwd.toml`)
+  covers a local copy of the asset: length, SHA-256, layout and native order. The fresh
+  download and `artifact verify` follow once it is published. Combined full-collection installs
+  and multiplayer sessions remain untested. The next BG recipe update ledger must cover
+  `artifact:chriz-multiplayer-fix-0.1.0`, `feature:feature:chriz-multiplayer-fix:component-0`
+  and `feature:feature:chriz-multiplayer-fix:component-1`.
+
+## Next Chriz Easy IWD release (draft)
+
+### Changed behavior
+
+- **No more crash after the multiplayer lobby, and saves copy between single player and
+  multiplayer** (requires EEex). Leaving Beamdog's multiplayer lobby no longer crashes the game
+  at random, and a small Copy button on each save of the Load screen copies the save into the
+  other mode's save list; the original save stays. The crash fix always comes with the mod, the
+  Copy button can be turned off. Games already installed get both through the hotpatch.
+  (Chriz Multiplayer Fix v0.1.0, collection 0.1.18)
 
 ## Collection 0.1.2 (draft)
 

@@ -155,6 +155,12 @@ const RUNS: &[(&str, &str, Phase, &[u32])] = &[
         &[0],
     ),
     (
+        "chriz-multiplayer-fix-main",
+        "chriz-multiplayer-fix",
+        Phase::Main,
+        &[0, 1],
+    ),
+    (
         "chriz-iwd-party-dialog-main",
         "chriz-iwd-party-dialog",
         Phase::Main,
@@ -217,6 +223,11 @@ const INSTALLERS: &[(&str, &str, &str)] = &[
         "chriz-iwd-party-dialog",
         "chriz-iwd-party-dialog-0.1.0",
         "chriz-iwd-party-dialog/setup-chriz-iwd-party-dialog.tp2",
+    ),
+    (
+        "chriz-multiplayer-fix",
+        "chriz-multiplayer-fix-0.1.0",
+        "chriz_multiplayer_fix/setup-chriz_multiplayer_fix.tp2",
     ),
     (
         "chriz-overhead-text",
@@ -404,6 +415,16 @@ const ARTIFACTS: &[Pin] = &[
         filename: "chriz-iwd-party-dialog-v0.1.0.zip",
         length: 1_282_596,
         sha256: "d801101ca396b88b39995185bf4d784777a8f24a23bdb7e4746cda08a3bbe8e2",
+    },
+    Pin {
+        id: "chriz-multiplayer-fix-0.1.0",
+        version: "0.1.0",
+        kind: SourceKind::GithubRelease,
+        url: "https://github.com/Chrizhermann/chriz-multiplayer-fix/releases/download/v0.1.0/chriz-multiplayer-fix-v0.1.0.zip",
+        reference: "v0.1.0",
+        filename: "chriz-multiplayer-fix-v0.1.0.zip",
+        length: 1_280_778,
+        sha256: "d948dd3276b781d776229e35a08f8edcf3504dfde3a5b8b1c60024d8434bc73b",
     },
     Pin {
         id: "chriz-overhead-text-0.1.0",
@@ -816,6 +837,7 @@ const RECOMMENDED: &[(&str, &[u32])] = &[
     ("klatu-armor-thieving-main", &[2150]),
     ("buffbot-main", &[1, 0]),
     ("chriz-overhead-text-main", &[0]),
+    ("chriz-multiplayer-fix-main", &[0, 1]),
     ("chriz-iwd-party-dialog-main", &[0]),
     ("chriz-bg-rebalance-main", &[361]),
 ];
@@ -837,7 +859,7 @@ fn declares_a_standalone_iwdee_collection_with_its_own_data_folder() {
             .collect::<Vec<_>>(),
         [PRESET]
     );
-    assert_eq!(manifest.collection.features.len(), 330);
+    assert_eq!(manifest.collection.features.len(), 333);
     assert!(
         validate(&manifest).is_empty(),
         "authoring validation findings: {:?}",
@@ -949,7 +971,8 @@ fn pins_the_exact_ordered_runs_and_component_lists() {
         position(&manifest, "klatu-armor-thieving-main") + 1,
         position(&manifest, "buffbot-main")
     );
-    // BuffBot, Chriz Overhead Text, and Chriz IWD Party Dialog run after EEex, late.
+    // BuffBot, Chriz Overhead Text, Chriz Multiplayer Fix and Chriz IWD Party Dialog run after
+    // EEex, late.
     assert!(position(&manifest, "eeex-main") < position(&manifest, "buffbot-main"));
     assert_eq!(
         position(&manifest, "buffbot-main") + 1,
@@ -957,6 +980,10 @@ fn pins_the_exact_ordered_runs_and_component_lists() {
     );
     assert_eq!(
         position(&manifest, "chriz-overhead-text-main") + 1,
+        position(&manifest, "chriz-multiplayer-fix-main")
+    );
+    assert_eq!(
+        position(&manifest, "chriz-multiplayer-fix-main") + 1,
         position(&manifest, "chriz-iwd-party-dialog-main")
     );
     assert_eq!(
@@ -1102,7 +1129,7 @@ fn resolves_the_exact_recommended_plan() {
         .iter()
         .map(|run| run.components.len())
         .sum::<usize>();
-    assert_eq!(components, 145);
+    assert_eq!(components, 147);
 }
 
 #[test]
@@ -1784,4 +1811,54 @@ fn round_clock_is_the_only_rebalance_component_and_needs_eeex() {
         let changed = evaluate(&manifest, &selection).unwrap();
         assert!(changed.plan.components_for(run).is_none(), "{disabled}");
     }
+}
+
+#[test]
+fn chriz_multiplayer_fix_installs_the_crash_fix_always_and_the_copy_button_by_default() {
+    let manifest = recipe();
+    let evaluation = recommended(&manifest);
+    let mod_control = evaluation
+        .view
+        .control("mod:chriz-multiplayer-fix")
+        .unwrap();
+    assert_eq!(mod_control.decision, Decision::Default);
+    assert_eq!(mod_control.readiness, Readiness::Ready);
+    assert!(mod_control.selected);
+    let copy = evaluation
+        .view
+        .control("feature:chriz-multiplayer-fix:component-1")
+        .unwrap();
+    assert_eq!(copy.decision, Decision::Default);
+    assert!(copy.selected);
+    assert_eq!(
+        evaluation.plan.components_for("chriz-multiplayer-fix-main"),
+        Some(&[0, 1][..])
+    );
+
+    // The save copy button can be turned off; the crash fix stays with the mod.
+    let mut without_copy = Selection::defaults("windows");
+    without_copy.set_feature("feature:chriz-multiplayer-fix:component-1", false);
+    let without_copy = evaluate(&manifest, &without_copy).unwrap();
+    assert_eq!(
+        without_copy
+            .plan
+            .components_for("chriz-multiplayer-fix-main"),
+        Some(&[0][..])
+    );
+
+    let mut without_mod = Selection::defaults("windows");
+    without_mod.set_feature("mod:chriz-multiplayer-fix", false);
+    let without_mod = evaluate(&manifest, &without_mod).unwrap();
+    assert!(without_mod
+        .plan
+        .components_for("chriz-multiplayer-fix-main")
+        .is_none());
+
+    let mut without_eeex = Selection::defaults("windows");
+    without_eeex.set_feature("mod:eeex", false);
+    let without_eeex = evaluate(&manifest, &without_eeex).unwrap();
+    assert!(without_eeex
+        .plan
+        .components_for("chriz-multiplayer-fix-main")
+        .is_none());
 }

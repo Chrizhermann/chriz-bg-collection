@@ -106,3 +106,4 @@ or a file-specific UI/dependency note, not in the `Decision` value.
 | PPE | 21 | 0 | [PPE.md](PPE.md) |
 | SIRENE_BG1 | 10 | 0 | [SIRENE_BG1.md](SIRENE_BG1.md) |
 | CHRIZ_OVERHEAD_TEXT | 1 | 0 | [CHRIZ_OVERHEAD_TEXT.md](CHRIZ_OVERHEAD_TEXT.md) |
+| CHRIZ_MULTIPLAYER_FIX | 2 | 0 | [CHRIZ_MULTIPLAYER_FIX.md](CHRIZ_MULTIPLAYER_FIX.md) |

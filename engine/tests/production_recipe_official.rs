@@ -475,6 +475,7 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
             "hiddengameplayoptions-bg2",
             "chriz-bg-rebalance-bg2",
             "chriz-overhead-text-bg2",
+            "chriz-multiplayer-fix-bg2",
             "eeexremote-bg2",
             "chriz-bg-modpack-bg2",
             "safana-bg2",

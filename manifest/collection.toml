@@ -392,6 +392,13 @@ components = [0]
 args = []
 
 [[runs]]
+run_id = "chriz-multiplayer-fix-bg2"
+mod_id = "chriz-multiplayer-fix"
+phase = "post-eet-end"
+components = [0, 1]
+args = []
+
+[[runs]]
 run_id = "eeexremote-bg2"
 mod_id = "eeexremote"
 phase = "post-eet-end"
@@ -1024,6 +1031,30 @@ decision = "default"
 readiness = "ready"
 requires = ["feature:eeex:mandatory-components"]
 components = [{ run_id = "chriz-overhead-text-bg2", component = 0 }]
+
+[[features]]
+id = "feature:chriz-multiplayer-fix:component-0"
+title = "Multiplayer lobby crash fix (EEex)"
+description = "Stops the random crash right after leaving Beamdog's multiplayer lobby, for example on Multiplayer > Local network game > Load."
+category = "fixes"
+source_label = "Chriz Multiplayer Fix"
+group_label = "Fixes"
+decision = "default"
+readiness = "ready"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-multiplayer-fix-bg2", component = 0 }]
+
+[[features]]
+id = "feature:chriz-multiplayer-fix:component-1"
+title = "Copy saves between single player and multiplayer on the Load screen (EEex)"
+description = "Adds a button to the Load screen that copies a save into the other mode's save list, so a party created in multiplayer can continue in single player and back. The original save stays."
+category = "interface"
+source_label = "Chriz Multiplayer Fix"
+group_label = "Interface"
+decision = "default"
+readiness = "ready"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-multiplayer-fix-bg2", component = 1 }]
 
 [[features]]
 id = "feature:bggo:component-0"

@@ -44,7 +44,8 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
     // BG1 NPC Project became optional and unselected on November 3, so the bg1npc-bg1
     // run no longer runs by default.
     // The November 16 intake adds the default Chriz Overhead Text run.
-    assert_eq!(result.plan.runs.len(), 70);
+    // The November 22 intake adds the default Chriz Multiplayer Fix run.
+    assert_eq!(result.plan.runs.len(), 71);
     assert_eq!(
         result
             .plan
@@ -80,7 +81,8 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         // become unchecked options.
         // November 16: Chriz Overhead Text adds default component 0.
         // November 18: BG Rebalance adds Round Clock 361.
-        468
+        // November 22: Chriz Multiplayer Fix adds default components 0 and 1.
+        470
     );
     // Scroll policy 430 hashes the final scrolls and spells, so it follows BuffBot.
     let (tail, rest) = result.plan.runs.split_last().unwrap();

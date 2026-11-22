@@ -79,8 +79,9 @@ class Nov17ChrizIwdPartyDialogIntakeTests(unittest.TestCase):
         self.assertEqual(run["run_id"], "chriz-iwd-party-dialog-main")
         self.assertEqual(run["phase"], "main")
         self.assertEqual(run["components"], COMPONENTS)
+        # November 22: Chriz Multiplayer Fix runs between Chriz Overhead Text and this mod.
         self.assertEqual(
-            run_ids.index("chriz-overhead-text-main") + 1,
+            run_ids.index("chriz-multiplayer-fix-main") + 1,
             run_ids.index("chriz-iwd-party-dialog-main"),
         )
         self.assertEqual(

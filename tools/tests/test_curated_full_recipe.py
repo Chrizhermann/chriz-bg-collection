@@ -474,7 +474,11 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # 452ae6d86c228f1ca830c9f5c1462a7a7643f3316a9d877ca8e0b73f6b5acde6 returns.
                 # November 18 adds 361 to the Rebalance run, features and preset.
                 # Removing the addition restores the November 16 digest 962d203f….
-                "500c85f81fb179c00b9ae87b1f3f1188bf918b6cd9dd63a2e32767bdea47d937",
+                # November 22: Chriz Multiplayer Fix v0.1.0 adds default components 0 and 1
+                # in their own post-EET_end run after Chriz Overhead Text, each requiring
+                # EEex's core (Christopher, 2026-11-22); without its run, features and preset
+                # entries the November 18 digest 500c85f8… returns.
+                "2638c41fdc1d4e924afc7b4722a1174f1601bb50141bd8460400b73bc83e52e9",
             )
 
             legacy_bg1npc_groups = {

@@ -428,10 +428,24 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // artifact IDs reproduces the previously frozen plan digests.
     // Rebalance v0.8.12 then added Round Clock to both Recommended selections.
     // Removing 361 and restoring v0.8.11 must reproduce all six PR #151 digests.
+    // Re-pinned on November 22 for Chriz Multiplayer Fix v0.1.0 (Christopher, 2026-11-22):
+    // its components 0 and 1 are on by default in both recipes, adding two features to the
+    // collection digests, their preset entries to the selection digests, and
+    // chriz-multiplayer-fix-bg2 [0, 1] after chriz-overhead-text-bg2 in both plans. Without
+    // its run, features, preset entries, mod and artifact, the November 18 digests return.
     const ROUND_CLOCK: &str = "feature:chriz-bg-rebalance:component-361";
-    for (dir, combined_digests, save_rest_digests, previous_plan_sha) in [
+    const MULTIPLAYER_FIX: [&str; 2] = [
+        "feature:chriz-multiplayer-fix:component-0",
+        "feature:chriz-multiplayer-fix:component-1",
+    ];
+    for (dir, multiplayer_digests, combined_digests, save_rest_digests, previous_plan_sha) in [
         (
             "../manifest",
+            [
+                "bb05ea995aaf35d029ad16f98017da31c89933d1bb7e97348ed7f819e4ec54c5",
+                "058d24b6cc094f321e4cb0f8cc9a422df111287f78021db83cb673a7646e0612",
+                "c4c9f81d82d43e417fd3a0def8ad85c3e7b35001a53db072d1f02ecd9dd4ebec",
+            ],
             [
                 "5d980b9b5ce440a69c0cc8bd55a61cd6a54699a60f21824a5791caf91896c7f6",
                 "a467fe44b7e2773ee29595ce69cc7023de0bb0b8dbd307b45efa0ff906819f29",
@@ -447,6 +461,11 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         (
             "../recipes/curated-full-current",
             [
+                "0bbf892c67b0a5a7eaff5d826dd7bae337453cfdeef4d721d2b981d2cca3bd78",
+                "387ef305f51e50058643cec08ca046ef7ebfea233c5554f35f6c41bc995cc970",
+                "763b038d11d134b792c751df4e1975e351fb382ccfbe3bb7db7ac107c1df2386",
+            ],
+            [
                 "0fa3abae7fbe94cd5bba2bc84d0074212891f4cd0ce88379989d34e8a66339a5",
                 "227d2834ad89600e48e767c6bfc4ece1a9d59293eabdc1829bb6dc1491cafa36",
                 "d1164d2569cb60d83513e8fea8fda0a1a3e88af506a269788e7a2453e6d2b256",
@@ -460,6 +479,38 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         ),
     ] {
         let mut manifest = Manifest::load(&engine_dir().join(dir)).unwrap();
+        let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        assert_eq!(
+            recommended_digests(&manifest, &evaluation),
+            multiplayer_digests,
+            "{dir}"
+        );
+
+        assert!(manifest.mods.remove("chriz-multiplayer-fix").is_some());
+        assert!(manifest
+            .artifacts
+            .remove("chriz-multiplayer-fix-0.1.0")
+            .is_some());
+        let runs = manifest.collection.runs.len();
+        manifest
+            .collection
+            .runs
+            .retain(|run| run.run_id != "chriz-multiplayer-fix-bg2");
+        assert_eq!(manifest.collection.runs.len() + 1, runs);
+        let features = manifest.collection.features.len();
+        manifest
+            .collection
+            .features
+            .retain(|feature| !MULTIPLAYER_FIX.contains(&feature.id.as_str()));
+        assert_eq!(manifest.collection.features.len() + 2, features);
+        let selections = &mut manifest
+            .presets
+            .get_mut("chris-recommended")
+            .unwrap()
+            .selections;
+        for feature in MULTIPLAYER_FIX {
+            assert!(selections.remove(feature).is_some());
+        }
         let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
         assert_eq!(
             recommended_digests(&manifest, &evaluation),

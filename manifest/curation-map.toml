@@ -1,7 +1,7 @@
 # Authored bridge from Christopher's component catalogs to Task 18 recipe targets.
 # Decisions stay authoritative in docs/curation/components; this file never infers them.
 schema = 1
-expected_rows = 1354
+expected_rows = 1356
 expected_choice_groups = 88
 expected_optional_none_groups = 33
 expected_fixed_groups = 12
@@ -204,6 +204,10 @@ excluded = [402, 403, 406, 409]
 [[catalogs]]
 id = "CHRIZ-SOD-REMIX"
 excluded = [291, 901]
+
+[[catalogs]]
+id = "CHRIZ_MULTIPLAYER_FIX"
+excluded = []
 
 [[catalogs]]
 id = "CHRIZ_OVERHEAD_TEXT"
@@ -4534,6 +4538,16 @@ rows = ["PPE:40"]
 id = "feature:chriz-overhead-text:component-0"
 kind = "feature"
 rows = ["CHRIZ_OVERHEAD_TEXT:0"]
+
+[[targets]]
+id = "feature:chriz-multiplayer-fix:component-0"
+kind = "feature"
+rows = ["CHRIZ_MULTIPLAYER_FIX:0"]
+
+[[targets]]
+id = "feature:chriz-multiplayer-fix:component-1"
+kind = "feature"
+rows = ["CHRIZ_MULTIPLAYER_FIX:1"]
 
 [[choice_groups]]
 id = "choice:ntotsc:reduce-number-of-shaman-cloaks"

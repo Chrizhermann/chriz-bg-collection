@@ -346,6 +346,8 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // Its Modpack alpha.15 pin adds default Marek's Boomerang Dagger 670, retained by alpha.16.
     // November 16: Chriz Overhead Text adds default component 0 to both plans.
     // November 18 adds Round Clock 361 to both plans, bringing the base to 373 and curated to 468.
+    // November 22: Chriz Multiplayer Fix adds default components 0 and 1 to both plans,
+    // bringing the base to 375 and curated to 470.
     assert_eq!(
         evaluation
             .plan
@@ -353,7 +355,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        373
+        375
     );
 }
 

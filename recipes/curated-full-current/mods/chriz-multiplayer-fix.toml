@@ -1,0 +1,15 @@
+id = "chriz-multiplayer-fix"
+artifact_id = "chriz-multiplayer-fix-0.1.0"
+name = "Chriz Multiplayer Fix"
+tp2 = "chriz_multiplayer_fix/setup-chriz_multiplayer_fix.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Multiplayer lobby crash fix (EEex)"
+
+[[components]]
+id = 1
+name = "Copy saves between single player and multiplayer on the Load screen (EEex)"
