@@ -49,6 +49,13 @@ On `main` for the next Chriz Easy BG version:
   release, as the first BG hotpatch (it needs bases for the released BG recipes). No
   packaged-app installation with these components was run yet; that is part of each
   release's acceptance.
+- No travel back into an earlier campaign, only with Challenge Mode (Christopher,
+  2026-11-22: "Wahrscheinlich besser nur für Challenge Mode"): Chriz BG Modpack
+  v0.2.0-alpha.17 component `680` is pinned, optional and off by default, and a member of
+  the Challenge Mode group; Chris's Recommended leaves it off. It also fixes several Siege
+  of Dragonspear camp problems. Open: its area list (Modpack `eet_world_progression.2da`)
+  is still to be checked with Christopher (see the 2026-11-01 idea under Ideas for later),
+  and it was not tested in a game across the campaign transitions.
 - Planned next major milestones (Christopher, 2026-11-13; details under
   [Conditional/future feature gates](#conditionalfuture-feature-gates)):
   (1) integrate the first releases of `chriz-bg-magic`, `chriz-bg-kits` and
@@ -797,6 +804,11 @@ On `main` for the next Chriz Easy BG version:
   is fine. Optional quest mods that need such travel must say that they don't work with
   Challenge Mode. Reasons: fewer bugs, and no exploits through shops or stashed items. The
   exact area list is defined together with Christopher later.
+  Since 2026-11-22 this is Chriz BG Modpack component `680` (v0.2.0-alpha.17), on only with
+  Challenge Mode (see [CHRIZ-BG-MODPACK](CHRIZ-BG-MODPACK.md)). Its area list is the
+  Modpack's `eet_world_progression.2da` at alpha.17; still to be checked with Christopher.
+  Open: quest mods that need travel back into an earlier campaign must be named, so they
+  can say that they don't work with Challenge Mode; none is named yet.
 - Low priority: make cloud creatures able to squeeze through doors. (Christopher told a
   Codex chat on 2026-11-01; it was only written into a stale copy of this list and moved
   here on 2026-11-04.)

@@ -13,6 +13,8 @@ members = [
   # Christopher, 2026-11-10: Challenge Mode includes campaign XP caps with chapter caps (Modpack 650 + 652).
   "feature:chriz-bg-modpack:component-650",
   "feature:chriz-bg-modpack:component-652",
+  # Christopher, 2026-11-22: no travel back into an earlier campaign only with Challenge Mode (Modpack 680).
+  "feature:chriz-bg-modpack:component-680",
 ]
 # Christopher, 2026-10-14: Challenge Mode picks strict potion uniqueness (Rebalance 330);
 # switching the group off restores the recommended 331.
@@ -5216,9 +5218,9 @@ components = [{ run_id = "chriz-bg-modpack-bg2", component = 670 }]
 [[features]]
 id = "feature:chriz-bg-modpack:component-680"
 title = "Story-consistent EET campaign boundaries and SoD backtracking"
-description = "Closes cross-campaign backtracking exploits between BG1, Siege of Dragonspear, Shadows of Amn and Throne of Bhaal (including returning from Watcher's Keep to Amn once ToB begins and post-SoD travel reopening) while keeping BG1, SoD, SoA and ToB new-game starts intact. Keeps the SoD Ch.8-10 road open until the Dragonspear assault and fixes abandoned camp companion stranding, player storage chest forwarding, Baeloth's pit cleanup, camp sentries, siege audio and duplicate Jegg."
+description = "Once you move on to the next campaign (Baldur's Gate, then Siege of Dragonspear, Shadows of Amn and Throne of Bhaal), you can no longer travel back to the earlier campaign's areas. Watcher's Keep stays open in Shadows of Amn and Throne of Bhaal. Also fixes several Siege of Dragonspear camp problems (companions stranded in an abandoned camp, the storage chest, leftover sentries, a duplicate Jegg). Not yet tested in a full playthrough."
 category = "rules"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
 requires = ["feature:eet:mandatory-components", "mod:eet-end"]

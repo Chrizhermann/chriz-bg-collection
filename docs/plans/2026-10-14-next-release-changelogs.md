@@ -31,13 +31,13 @@ candidate on 2026-11-01. The player-facing notes are in
   random. A new button at the bottom of the Load screen copies the selected save into the other
   mode's save list, so a party created in multiplayer can continue in single player and back; the
   original save stays. (Chriz Multiplayer Fix v0.1.0)
-- **EET world progression and SoD backtracking fixes** (Chriz BG Modpack component 680,
-  Default, requires EET). Keeps EET's unified install and BG1/SoD/SoA/ToB starts while
-  closing cross-campaign backtracking (`SoD -> BG1`, `SoA -> BG1/SoD`, `ToB -> SoA/BG1/SoD`,
-  with Watcher's Keep accessible in both SoA and ToB and severed from Amn on ToB entry),
-  keeping the SoD Ch.8-10 road open until Dragonspear (`BD4000`), and fixing abandoned SoD
-  camp stranding, chest forwarding, Baeloth's pit cleanup, camp sentries, siege audio and
-  duplicate Jegg.
+- **No travel back into an earlier campaign** (part of Challenge Mode, Optional; Chriz BG
+  Modpack component 680). Once you move on to the next campaign (Baldur's Gate, then Siege
+  of Dragonspear, Shadows of Amn and Throne of Bhaal), you can no longer travel back to the
+  earlier campaign's areas. Watcher's Keep stays open in Shadows of Amn and Throne of Bhaal.
+  It also fixes several Siege of Dragonspear camp problems: companions stranded in an
+  abandoned camp, the storage chest, leftover sentries and a duplicate Jegg. Switching
+  Challenge Mode on turns it on. Not yet tested in a full playthrough.
 
 ### Mod versions
 
@@ -85,8 +85,10 @@ candidate on 2026-11-01. The player-facing notes are in
   `artifact:chriz-multiplayer-fix-0.1.0`, `feature:feature:chriz-multiplayer-fix:component-0`
   and `feature:feature:chriz-multiplayer-fix:component-1`.
 - The Chriz BG Modpack v0.2.0-alpha.17 intake verified the fresh download, archive, TP2
-  declaration order (`680` between `670` and `650`), and default wiring in both Chriz
-  Easy BG recipes (469 components in curated BG, 374 in base Recommended). Real-EET and
+  declaration order (`680` between `670` and `650`), and the wiring in both Chriz Easy BG
+  recipes. Christopher decided on 2026-11-22 that `680` is on only with Challenge Mode: it
+  is optional, a member of the Challenge Mode group and off in Chris's Recommended, so the
+  Recommended plans do not grow with this pin. Real-EET and
   isolated WeiDU 249 install/uninstall fixture verification passed upstream; live combined
   collection installation and full campaign playthrough remain untested.
   [Collection intake](../../manifest/evidence/release-intake-20261122-chriz-bg-modpack-chriz-easy-bg.toml)

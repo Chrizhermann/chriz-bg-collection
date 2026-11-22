@@ -478,8 +478,10 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # backtracking after 670; removing it restores the November 18 digest 500c85f8….
                 # November 22: Chriz Multiplayer Fix v0.1.0 adds default components 0 and 1
                 # in their own post-EET_end run after Chriz Overhead Text, each requiring
-                # EEex's core (Christopher, 2026-11-22).
-                "dfce2c4d0482ca93351c5075379f82e6b7adaccb56efec8366b94d181b44d48b",
+                # EEex's core (Christopher, 2026-11-22); that merge state was dfce2c4d….
+                # November 22: Modpack 680 is on only with Challenge Mode (Christopher,
+                # 2026-11-22): optional, a group member, off in Recommended, plain description.
+                "8b8b8b65f2286b2252fccbec961ac6ad19c331b15324251a215dfae9821974d1",
             )
 
             legacy_bg1npc_groups = {
@@ -1266,6 +1268,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
             # Christopher, 2026-11-10: campaign XP caps with chapter caps (Modpack 650 + 652).
             "feature:chriz-bg-modpack:component-650",
             "feature:chriz-bg-modpack:component-652",
+            # Christopher, 2026-11-22: no travel back into an earlier campaign (Modpack 680).
+            "feature:chriz-bg-modpack:component-680",
         ]
         [authored] = base["feature_groups"]
         self.assertEqual(authored["members"], fallback_members)
