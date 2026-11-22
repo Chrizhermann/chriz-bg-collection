@@ -31,7 +31,7 @@ MODPACK_ALPHA11_ORDER = [
 ]
 # Rows alpha.13 declared after alpha.11: 239 (October 20) and 135/460/652 (offered October 26);
 # alpha.15 declares 670 (offered November 3, test_nov03_modpack_alpha15_marek_dagger_recipe).
-LATER_ROWS = {135, 239, 460, 652, 670}
+LATER_ROWS = {135, 239, 460, 652, 670, 680}
 SOD_V0613_RUN = [
     100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 177, 185, 190,
     195, 210, 197, 198, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257,
@@ -84,7 +84,7 @@ class Oct13IntakeTests(unittest.TestCase):
             # (test_oct26_alpha22_pins_recipe), and alpha.15's 670
             # (test_nov03_modpack_alpha15_marek_dagger_recipe) join this run in TP2 order.
             self.assertEqual(runs["chriz-bg-modpack-bg2"]["components"],
-                             [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660, 670])
+                             [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660, 670, 680])
             # Modpack alpha.13 (test_oct20_intake_recipe) adds EET join XP 239 after 238.
             self.assertEqual(runs[LATE_RUN]["components"], [189, 237, 238, 239, 620])
             # Alpha.13's chapter caps 652 follow 651 (alpha.14 pin).
@@ -263,7 +263,7 @@ class Oct13IntakeTests(unittest.TestCase):
         # (test_oct14_intake_recipe), alpha.13 (test_oct20_intake_recipe), alpha.14
         # (test_oct26_alpha22_pins_recipe) and alpha.15
         # (test_nov03_modpack_alpha15_marek_dagger_recipe) supersede alpha.11 and keep these rows.
-        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.16")
+        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.17")
         sod = tomllib.loads((self.output / "mods/chriz-sod-remix.toml").read_text(encoding="utf-8"))
         # SoD Remix v0.6.15 (test_oct23_sod_remix_recipe), v0.6.16
         # (test_oct29_sod_remix_pin_recipe) and v0.6.17 (test_nov08_sod_remix_pin_recipe)

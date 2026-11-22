@@ -315,8 +315,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.1.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
             modpack = tomllib.loads((output / "mods/chriz-bg-modpack.toml").read_text(encoding="utf-8"))
-            # November 8: alpha.16 keeps alpha.15's Marek's Boomerang Dagger 670.
-            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.16")
+            # November 22: alpha.17 adds EET world progression and SoD backtracking 680.
+            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.17")
             collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
             preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))
             mods = {path.stem for path in (output / "mods").glob("*.toml")}
@@ -474,7 +474,9 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # 452ae6d86c228f1ca830c9f5c1462a7a7643f3316a9d877ca8e0b73f6b5acde6 returns.
                 # November 18 adds 361 to the Rebalance run, features and preset.
                 # Removing the addition restores the November 16 digest 962d203f….
-                "500c85f81fb179c00b9ae87b1f3f1188bf918b6cd9dd63a2e32767bdea47d937",
+                # Modpack 680 adds EET story-consistent campaign boundaries and SoD
+                # backtracking after 670; removing it restores the November 18 digest 500c85f8….
+                "e6a274c01fdc6b71295323c9e0e8440bb81c2f366127f878871e270dd85157ab",
             )
 
             legacy_bg1npc_groups = {

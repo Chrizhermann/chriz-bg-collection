@@ -428,10 +428,19 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // artifact IDs reproduces the previously frozen plan digests.
     // Rebalance v0.8.12 then added Round Clock to both Recommended selections.
     // Removing 361 and restoring v0.8.11 must reproduce all six PR #151 digests.
+    // Re-pinned on November 22 for Modpack alpha.17 (component 680 added after 670 as
+    // a default in chriz-bg-modpack-bg2). Removing 680 and restoring alpha.16 must reproduce
+    // all six November 18 Round Clock digests before reverting Round Clock.
     const ROUND_CLOCK: &str = "feature:chriz-bg-rebalance:component-361";
-    for (dir, combined_digests, save_rest_digests, previous_plan_sha) in [
+    const EET_WORLD_PROGRESSION: &str = "feature:chriz-bg-modpack:component-680";
+    for (dir, alpha17_digests, combined_digests, save_rest_digests, previous_plan_sha) in [
         (
             "../manifest",
+            [
+                "e365e33ed0508e8fcac5a9f6316df82240e8553d403c3b5db9fe03f20ddb9ac7",
+                "2bf1a5290d4b18ee42938068fb7a36f2c5865213720929deffeca75b36af9b31",
+                "c7f615a0ca7e06f8f7acd55410732535069bec28c16a85de2afb678b82c51b95",
+            ],
             [
                 "5d980b9b5ce440a69c0cc8bd55a61cd6a54699a60f21824a5791caf91896c7f6",
                 "a467fe44b7e2773ee29595ce69cc7023de0bb0b8dbd307b45efa0ff906819f29",
@@ -447,6 +456,11 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         (
             "../recipes/curated-full-current",
             [
+                "6393e51ddc023070c11eecf062e0271904e193fa9d78f4041d0eb758ff531d55",
+                "5c0a62bad494e7f643d0e94790aeb1c156cf42cb8a73372fb655d84889627d57",
+                "96b35d4be83ef5ce3fab21e3ba787a6cca6b0b35cb1562bd66ffdc45432aa282",
+            ],
+            [
                 "0fa3abae7fbe94cd5bba2bc84d0074212891f4cd0ce88379989d34e8a66339a5",
                 "227d2834ad89600e48e767c6bfc4ece1a9d59293eabdc1829bb6dc1491cafa36",
                 "d1164d2569cb60d83513e8fea8fda0a1a3e88af506a269788e7a2453e6d2b256",
@@ -460,6 +474,35 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         ),
     ] {
         let mut manifest = Manifest::load(&engine_dir().join(dir)).unwrap();
+        let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        assert_eq!(
+            recommended_digests(&manifest, &evaluation),
+            alpha17_digests,
+            "{dir}"
+        );
+
+        let modpack = manifest.mods.get_mut("chriz-bg-modpack").unwrap();
+        assert_eq!(modpack.artifact_id, "chriz-bg-modpack-0.2.0-alpha.17");
+        modpack.artifact_id = "chriz-bg-modpack-0.2.0-alpha.16".to_owned();
+        modpack.components.retain(|component| component.id != 680);
+        let modpack_run = manifest
+            .collection
+            .runs
+            .iter_mut()
+            .find(|run| run.run_id == "chriz-bg-modpack-bg2")
+            .unwrap();
+        assert_eq!(modpack_run.components.pop(), Some(680));
+        manifest
+            .collection
+            .features
+            .retain(|feature| feature.id != EET_WORLD_PROGRESSION);
+        manifest
+            .presets
+            .get_mut("chris-recommended")
+            .unwrap()
+            .selections
+            .remove(EET_WORLD_PROGRESSION);
+
         let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
         assert_eq!(
             recommended_digests(&manifest, &evaluation),

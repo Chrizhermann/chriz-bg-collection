@@ -21,7 +21,13 @@ table is copied by its tracked name `xplevel.2da`, so a case-sensitive WeiDU fin
 source/package evidence is
 `manifest/evidence/release-intake-20261108-chriz-bg-modpack-chriz-easy-bg.toml`, not a WeiDU
 installation or gameplay acceptance.
-65 current or historical entries; the collection exposes 48. Component `195` already includes the work from standalone component
+The recipe now pins **v0.2.0-alpha.17** (published 2026-11-22, annotated tag on public-main
+commit `5d93338` of Modpack PRs #20 and #21, built by the tagged release workflow). It adds
+default component `680` (EET story-consistent campaign boundaries and SoD backtracking fixes)
+after `670` and before `650` while keeping every earlier component and choice. Fresh source/package
+evidence is `manifest/evidence/release-intake-20261122-chriz-bg-modpack-chriz-easy-bg.toml`,
+not a full collection WeiDU installation or gameplay acceptance.
+66 current or historical entries; the collection exposes 49. Component `195` already includes the work from standalone component
 `160`; Hexxat's three class routes are one at-most-one choice.
 The four ✓ marks record the old reference install, not the new default recipe.
 
@@ -50,7 +56,7 @@ The four ✓ marks record the old reference install, not the new default recipe.
   `188`, `189`, `199`, `220`–`225`, `400`, `410`, `430`, `440`, `450`, `610`, `611`, `620`, `630`, and `640`. It contains no advertised
   FAIL placeholders. Alpha.11 added `237`, `238`, `650`, `651` and `660`; alpha.12 added
   `230`–`234`; alpha.13 added `135`, `239`, `460` and `652`; alpha.14 added none;
-  alpha.15 adds `670`.
+  alpha.15 adds `670`; alpha.16 added none; alpha.17 adds `680`.
 - Dorn's ambush fix `135` (alpha.13) is **default (Christopher's decision,
   2026-10-25)**. When Dorn catches up with Senjak and Dorotea in BG1, the cutscene no
   longer locks the camera on Senjak, and Senjak's script releases a lock once he turns
@@ -144,6 +150,7 @@ The four ✓ marks record the old reference install, not the new default recipe.
   the dagger joins the Randomiser's BG1 pool (see [FOLLOW_UPS](FOLLOW_UPS.md)), `670` has to
   move before it.
   Not yet tested in a game: the two Marek fights and the drop.
+- EET world progression and SoD backtracking fixes `680` (alpha.17, Christopher's decision, 2026-11-22) is **default**. Requires EET (`feature:eet:mandatory-components`) and `mod:eet-end`, and runs in `chriz-bg-modpack-bg2` after `670`. It preserves EET's single install and BG1/SoD/SoA/ToB new-game starts while closing cross-campaign backtracking exploits (`AR0020 <-> BG4800`, `BD1000 <-> BG0900`, `AR3000 -> Amn` on ToB entry, and post-SoD `BD4000.BCS` reopening), keeping the SoD Ch.8-10 road open until the Dragonspear assault, and fixing abandoned SoD camp NPC stranding, chest forwarding, Baeloth's pit cleanup, camp sentries, siege audio and duplicate Jegg. All area rules live in `eet_world_progression.2da`.
 - Kivan quest guard `130` is mandatory with BG1NPC Banters/Quests/Interjections `10`
   and SCS general AI `6000`, after EET import and SCS. It is independent of Kivan's
   Archer choice `198`; never add standalone `KIVAN_QUEST_FIX` alongside it. Its
@@ -245,5 +252,6 @@ The four ✓ marks record the old reference install, not the new default recipe.
 | 652 | Campaign XP caps - chapter-by-chapter XP caps across BG1, SoD, SoA, and ToB (requires 650; experimental) | chriz-bg-modpack: Gameplay tweaks | | | optional |
 | 660 | Degrodel: hand over the Helm of Balduran or keep it and fight him | chriz-bg-modpack: Gameplay tweaks | | | default |
 | 670 | Marek: carry the Boomerang Dagger +2 in BG1 (drops it when he dies) | chriz-bg-modpack: Gameplay tweaks | | | default |
+| 680 | EET: story-consistent campaign boundaries and SoD backtracking fixes | chriz-bg-modpack: Gameplay tweaks | | | default |
 | 640 | Legacy UI translation helper compatibility | chriz-bg-modpack: Compatibility | | | mandatory |
 | 460 | Party AI Defensive Stance: obey the "Use special abilities" option | chriz-bg-modpack: Compatibility | | | default |

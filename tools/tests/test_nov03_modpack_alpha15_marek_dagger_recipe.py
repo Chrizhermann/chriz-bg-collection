@@ -28,7 +28,7 @@ PROFILES = ["manifest", "recipes/curated-full-current"]
 MOD = "chriz-bg-modpack"
 PIN = "chriz-bg-modpack-0.2.0-alpha.15"
 PREVIOUS = "chriz-bg-modpack-0.2.0-alpha.14"
-SUCCESSOR = "chriz-bg-modpack-0.2.0-alpha.16"
+SUCCESSOR = "chriz-bg-modpack-0.2.0-alpha.17"
 TAG = "v0.2.0-alpha.15"
 COMMIT = "0920504b954ff8d7e8a3640f58acbe4b33242b85"
 URL = ("https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.15/"
@@ -151,7 +151,7 @@ class Nov03ModpackAlpha15Tests(unittest.TestCase):
                 self.assertNotIn("conflicts", feature)
                 self.assertIn("Boomerang Dagger +2", feature["title"])
                 self.assertEqual(preset[FEATURE], "on")
-                self.assertEqual(run["components"][-2:], [660, 670])
+                self.assertEqual(run["components"][-3:-1], [660, 670])
                 self.assertEqual(run["phase"], "post-eet-end")
                 # After SCS, which changes Marek's creature files.
                 self.assertLess(runs.index("stratagems-bg2"), runs.index(RUN))
@@ -186,7 +186,7 @@ class Nov03ModpackAlpha15Tests(unittest.TestCase):
     def test_catalog_pin_list_and_follow_ups_name_the_pin(self):
         catalog = (ROOT / "docs/curation/components/CHRIZ-BG-MODPACK.md").read_text(encoding="utf-8")
         self.assertIn(f"| 670 | {LABEL} | chriz-bg-modpack: Gameplay tweaks | | | default |", catalog)
-        self.assertIn("65 current or historical entries; the collection exposes 48.", catalog)
+        self.assertIn("66 current or historical entries; the collection exposes 49.", catalog)
         folded = " ".join(catalog.split())
         for phrase in ("**v0.2.0-alpha.15** (published 2026-11-03)",
                        "Marek's Boomerang Dagger `670` (alpha.15) is **default (Christopher, 2026-11-03)**",
