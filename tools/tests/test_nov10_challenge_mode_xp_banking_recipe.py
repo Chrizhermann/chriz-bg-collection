@@ -28,7 +28,8 @@ WORLD_PROGRESSION_RUN = "chriz-bg-modpack-bg2"
 # Recommended component counts (curated: 466 in the 0.1.2 lab + Chriz Overhead Text 0 on Nov 16).
 # November 18 adds Round Clock 361. Modpack 680 is a Challenge Mode member and off, so it adds none.
 # November 22 adds the independent Chriz Multiplayer Fix defaults 0 and 1 to both profiles.
-PROFILES = {"manifest": 375, "recipes/curated-full-current": 470}
+# November 23 adds Modpack alpha.18 default 470 to both profiles.
+PROFILES = {"manifest": 376, "recipes/curated-full-current": 471}
 
 
 def _load(path: Path) -> dict:

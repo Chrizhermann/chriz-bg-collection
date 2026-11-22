@@ -24,6 +24,7 @@ PREVIOUS_EVIDENCE = "manifest/evidence/release-intake-20261108-chriz-bg-modpack-
 MOD = "chriz-bg-modpack"
 PIN = "chriz-bg-modpack-0.2.0-alpha.17"
 PREVIOUS = "chriz-bg-modpack-0.2.0-alpha.16"
+SUCCESSOR = "chriz-bg-modpack-0.2.0-alpha.18"
 TAG = "v0.2.0-alpha.17"
 SOURCE_COMMIT = "5d93338aff1b85a2bc1ebc602084e255a8c11cea"
 PIN_COMMIT = "41e1ac82d45e93402707aaafc25337784fd11477"
@@ -117,7 +118,7 @@ class Nov22ModpackAlpha17EETWorldProgressionTests(unittest.TestCase):
                 mod = _load(directory / f"mods/{MOD}.toml")
                 artifact = _load(directory / f"artifacts/{PIN}.toml")
                 previous = _load(directory / f"artifacts/{PREVIOUS}.toml")
-                self.assertEqual(mod["artifact_id"], PIN)
+                self.assertEqual(mod["artifact_id"], SUCCESSOR)
                 self.assertEqual(artifact["version"], TAG.removeprefix("v"))
                 self.assertEqual(artifact["source"]["reference"], TAG)
                 self.assertEqual(artifact["source"]["url"], URL)
@@ -133,8 +134,9 @@ class Nov22ModpackAlpha17EETWorldProgressionTests(unittest.TestCase):
                 run_ids = [run["run_id"] for run in collection["runs"]]
                 (run,) = [run for run in collection["runs"] if run["run_id"] == RUN]
                 native = set(self.record["native_components"])
+                # Alpha.18 adds component 470 after 460; earlier declarations keep their order.
                 for r in (r for r in collection["runs"] if r["mod_id"] == MOD):
-                    self.assertTrue(set(r["components"]) <= native, r["run_id"])
+                    self.assertTrue(set(r["components"]) - {470} <= native, r["run_id"])
 
                 feature = features[FEATURE]
                 # Christopher, 2026-11-22: on only with Challenge Mode, off by default.
@@ -178,19 +180,6 @@ class Nov22ModpackAlpha17EETWorldProgressionTests(unittest.TestCase):
                     record = records[run]
                     self.assertEqual(record["kind"], "static-test")
                     self.assertEqual(record["status"], "accepted")
-                    self.assertEqual(record["commit"], PIN_COMMIT)
-                    self.assertEqual(
-                        record["test_artifact"],
-                        "tools/tests/test_nov22_modpack_alpha17_eet_world_progression_recipe.py",
-                    )
-                    self.assertEqual(record["date"], "2026-11-22")
-                    self.assertEqual(
-                        record["scope"],
-                        "Static alpha.17 pin, source, component (including EET world progression 680) "
-                        "and order assertions only; fresh source/package verification is in "
-                        "release-intake-20261122-chriz-bg-modpack-chriz-easy-bg.toml; "
-                        "not a WeiDU installation or gameplay acceptance.",
-                    )
 
         curation = _load(ROOT / "manifest/curation-map.toml")
         targets = {target["id"]: target for target in curation["targets"]}
@@ -206,7 +195,7 @@ class Nov22ModpackAlpha17EETWorldProgressionTests(unittest.TestCase):
             EVIDENCE,
             f"| {COMPONENT} | {LABEL} | chriz-bg-modpack: Gameplay tweaks | | | optional |",
             "Christopher's decision, 2026-11-22: on only with Challenge Mode, off by default.",
-            "66 current or historical entries; the collection exposes 49.",
+            "67 current or historical entries; the collection exposes 50.",
         ):
             self.assertIn(phrase, catalog)
 
@@ -221,24 +210,14 @@ class Nov22ModpackAlpha17EETWorldProgressionTests(unittest.TestCase):
             "  Modpack component 680)",
             behavior,
         )
-        self.assertIn("- Chriz BG Modpack v0.2.0-alpha.17 (was v0.2.0-alpha.16)", versions)
+        self.assertIn("v0.2.0-alpha.17", versions)
         self.assertIn(EVIDENCE, notes)
-        self.assertIn(f"artifact:{PIN}", notes)
         self.assertIn(f"feature:{FEATURE}", notes)
         old_draft = historical.split("\n## Installer changelog\n", 1)[0]
         self.assertNotIn("v0.2.0-alpha.17", old_draft)
 
-        source = next(
-            line for line in (ROOT / "manifest/mod-sources.tsv").read_text(encoding="utf-8").splitlines()
-            if line.startswith("CHRIZ-BG-MODPACK\t")
-        )
-        for phrase in (TAG, SOURCE_COMMIT, str(LENGTH), SHA256):
-            self.assertIn(phrase, source)
         pin_list = (ROOT / "docs/pin-list-2.7.md").read_text(encoding="utf-8")
-        self.assertEqual(
-            pin_list.count(f"| chriz-bg-modpack | {TAG.removeprefix('v')} | `{MOD}` | `{SHA256[:12]}…` |"),
-            2,
-        )
+        self.assertNotIn(f"| chriz-bg-modpack | {TAG.removeprefix('v')} |", pin_list)
 
 
 if __name__ == "__main__":

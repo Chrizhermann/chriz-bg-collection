@@ -172,6 +172,12 @@ const RUNS: &[(&str, &str, Phase, &[u32])] = &[
         Phase::Main,
         &[361],
     ),
+    (
+        "chriz-bg-modpack-main",
+        "chriz-bg-modpack",
+        Phase::Main,
+        &[470],
+    ),
     ("eeexremote-main", "eeexremote", Phase::Main, &[0]),
 ];
 
@@ -208,6 +214,11 @@ const INSTALLERS: &[(&str, &str, &str)] = &[
         "cdtweaks",
         "cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729",
         "cdtweaks/setup-cdtweaks.tp2",
+    ),
+    (
+        "chriz-bg-modpack",
+        "chriz-bg-modpack-0.2.0-alpha.18",
+        "setup-chriz-bg-modpack.tp2",
     ),
     (
         "chriz-bg-rebalance",
@@ -385,6 +396,16 @@ const ARTIFACTS: &[Pin] = &[
         filename: "Tweaks-Anthology-7649ced6cd25865874d787ec1a9abbc67b068729.zip",
         length: 23_871_463,
         sha256: "117cd79cb5187640a5efd6c1d19181b43bcfa7381161df2f88db055d3af075f7",
+    },
+    Pin {
+        id: "chriz-bg-modpack-0.2.0-alpha.18",
+        version: "0.2.0-alpha.18",
+        kind: SourceKind::GithubRelease,
+        url: "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.18/chriz-bg-modpack-v0.2.0-alpha.18.zip",
+        reference: "v0.2.0-alpha.18",
+        filename: "chriz-bg-modpack-v0.2.0-alpha.18.zip",
+        length: 9_554_843,
+        sha256: "ea7fd706d2e7eded3af29853874603e4fc7963fa18193d0c5df1757dbc3bcb6a",
     },
     Pin {
         id: "chriz-bg-rebalance-0.8.12",
@@ -840,6 +861,7 @@ const RECOMMENDED: &[(&str, &[u32])] = &[
     ("chriz-multiplayer-fix-main", &[0, 1]),
     ("chriz-iwd-party-dialog-main", &[0]),
     ("chriz-bg-rebalance-main", &[361]),
+    ("chriz-bg-modpack-main", &[470]),
 ];
 
 #[test]
@@ -859,7 +881,7 @@ fn declares_a_standalone_iwdee_collection_with_its_own_data_folder() {
             .collect::<Vec<_>>(),
         [PRESET]
     );
-    assert_eq!(manifest.collection.features.len(), 333);
+    assert_eq!(manifest.collection.features.len(), 335);
     assert!(
         validate(&manifest).is_empty(),
         "authoring validation findings: {:?}",
@@ -992,6 +1014,10 @@ fn pins_the_exact_ordered_runs_and_component_lists() {
     );
     assert_eq!(
         position(&manifest, "chriz-bg-rebalance-main") + 1,
+        position(&manifest, "chriz-bg-modpack-main")
+    );
+    assert_eq!(
+        position(&manifest, "chriz-bg-modpack-main") + 1,
         position(&manifest, "eeexremote-main")
     );
 }
@@ -1129,7 +1155,7 @@ fn resolves_the_exact_recommended_plan() {
         .iter()
         .map(|run| run.components.len())
         .sum::<usize>();
-    assert_eq!(components, 147);
+    assert_eq!(components, 148);
 }
 
 #[test]
@@ -1861,4 +1887,56 @@ fn chriz_multiplayer_fix_installs_the_crash_fix_always_and_the_copy_button_by_de
         .plan
         .components_for("chriz-multiplayer-fix-main")
         .is_none());
+}
+
+#[test]
+fn chriz_bg_modpack_scroll_learning_fix_470_runs_by_default_with_eeex_and_omits_690() {
+    let manifest = recipe();
+    let evaluation = recommended(&manifest);
+    let mod_control = evaluation.view.control("mod:chriz-bg-modpack").unwrap();
+    assert_eq!(mod_control.decision, Decision::Default);
+    assert_eq!(mod_control.readiness, Readiness::Ready);
+    assert!(mod_control.selected);
+
+    let scroll_fix = evaluation
+        .view
+        .control("feature:chriz-bg-modpack:component-470")
+        .unwrap();
+    assert_eq!(scroll_fix.decision, Decision::Mandatory);
+    assert_eq!(scroll_fix.readiness, Readiness::Ready);
+    assert!(scroll_fix.selected);
+    assert_eq!(
+        evaluation.plan.components_for("chriz-bg-modpack-main"),
+        Some(&[470][..])
+    );
+
+    let scroll_feature = manifest
+        .collection
+        .features
+        .iter()
+        .find(|feature| feature.id == "feature:chriz-bg-modpack:component-470")
+        .unwrap();
+    assert_eq!(scroll_feature.requires, ["feature:eeex:component-1"]);
+    assert!(!manifest
+        .collection
+        .features
+        .iter()
+        .any(|feature| feature.id == "feature:chriz-bg-modpack:component-690"));
+    assert!(!manifest.mods["chriz-bg-modpack"]
+        .components
+        .iter()
+        .any(|component| component.id == 690));
+
+    for disabled in ["mod:chriz-bg-modpack", "mod:eeex"] {
+        let mut selection = Selection::defaults("windows");
+        selection.set_feature(disabled, false);
+        let changed = evaluate(&manifest, &selection).unwrap();
+        assert!(
+            changed
+                .plan
+                .components_for("chriz-bg-modpack-main")
+                .is_none(),
+            "{disabled}"
+        );
+    }
 }

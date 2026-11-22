@@ -38,6 +38,13 @@ candidate on 2026-11-01. The player-facing notes are in
   It also fixes several Siege of Dragonspear camp problems: companions stranded in an
   abandoned camp, the storage chest, leftover sentries and a duplicate Jegg. Switching
   Challenge Mode on turns it on. Not yet tested in a full playthrough.
+- **Spell scroll learning matches Rules as Written** (Chriz BG Modpack component 470, Default
+  in BG and IWD, requires EEex). Fixes the vanilla Enhanced Edition engine bug where kitted
+  bards (Blade, Jester, Skald, mod kits), Wild Mages, kitted dual-class mages, and custom
+  multi-bit specialists took the -15% spell-scribing penalty on regular scrolls. Only
+  Mage-class characters carrying one or more of the 8 wizard specialist bits receive +15% on
+  their own school and -15% on opposing/other schools; all other kits use the pure INTMOD
+  chance.
 
 ### Mod versions
 
@@ -46,7 +53,7 @@ candidate on 2026-11-01. The player-facing notes are in
 - Bardic Wonders v2.9c-balance.9 (was balance.8), curated Chriz Easy BG.
 - BG Rebalance v0.8.12 (was v0.8.11), both Chriz Easy BG recipes (adds component 361; Chriz Easy IWD also adds component 361).
 - Chriz Multiplayer Fix v0.1.0 (new), both Chriz Easy BG recipes and Chriz Easy IWD.
-- Chriz BG Modpack v0.2.0-alpha.17 (was v0.2.0-alpha.16), both Chriz Easy BG recipes (adds component 680).
+- Chriz BG Modpack v0.2.0-alpha.18 (was v0.2.0-alpha.17), both Chriz Easy BG recipes (keeps component 680 in Challenge Mode and adds default component 470 after 460) and first pin in Chriz Easy IWD (adds component 470).
 
 ### Notes for the release integrator
 
@@ -92,8 +99,17 @@ candidate on 2026-11-01. The player-facing notes are in
   isolated WeiDU 249 install/uninstall fixture verification passed upstream; live combined
   collection installation and full campaign playthrough remain untested.
   [Collection intake](../../manifest/evidence/release-intake-20261122-chriz-bg-modpack-chriz-easy-bg.toml)
-- The next BG recipe update ledger must cover `artifact:chriz-bg-modpack-0.2.0-alpha.17` and
-  `feature:feature:chriz-bg-modpack:component-680`.
+- The Chriz BG Modpack v0.2.0-alpha.18 intake verified the fresh download, archive, TP2
+  declaration order (`470` between `460` and `610`; `690` stays unoffered/off), and default
+  wiring in both Chriz Easy BG recipes and Chriz Easy IWD (collection 0.1.19, where `470` is
+  the sole Modpack component). Standalone live quiet-lab `op147` checks passed on BG2:EE
+  `2.7.3.0` (`BuffBot-Dev`) and IWD:EE `2.7.3.0` (`IWD-MP-Lab-20261122`) with EEex `v1.3.1`,
+  alongside synthetic/extracted WeiDU 249 and x64 emulation checks; `BG:EE / SoD` live lab,
+  combined collection installation, and full campaign playthrough remain untested.
+  [Collection intake](../../manifest/evidence/release-intake-20261123-chriz-bg-modpack-chriz-easy-bg-chriz-easy-iwd.toml)
+- The next BG recipe update ledger must cover `artifact:chriz-bg-modpack-0.2.0-alpha.18`,
+  `feature:feature:chriz-bg-modpack:component-680`, and
+  `feature:feature:chriz-bg-modpack:component-470`.
 
 ## Next Chriz Easy IWD release (draft)
 
@@ -113,11 +129,16 @@ candidate on 2026-11-01. The player-facing notes are in
   the Polar Bear Spirit's roar, thins Burial Isle's undead and puts a Frost Giant War-Shaman
   on the glacier in Gloomfrost. New games only. (Chriz IWD Encounters v0.3.2,
   collection 0.1.18)
+- **Spell scroll learning matches Rules as Written** (requires EEex). Bards (such as Blades),
+  Wild Mages, kitted dual-class mages, and non-mages no longer take a -15% penalty on spell
+  scrolls; only specialist mages apply +/-15% school modifiers. New games only. (Chriz BG
+  Modpack v0.2.0-alpha.18 component 470, collection 0.1.19)
 
 ### Mod versions
 
 - Chriz IWD Encounters v0.3.2 (was v0.3.1), same components and defaults.
 - Chriz Multiplayer Fix v0.1.0 (new).
+- Chriz BG Modpack v0.2.0-alpha.18 (new, component 470 default with EEex).
 
 ## Collection 0.1.2 (draft)
 

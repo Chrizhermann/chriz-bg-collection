@@ -84,7 +84,8 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         // November 22: Chriz BG Modpack alpha.17 adds EET world progression 680, on only
         // with Challenge Mode (Christopher, 2026-11-22), so it adds none.
         // November 22: Chriz Multiplayer Fix adds default components 0 and 1.
-        470
+        // November 23: Chriz BG Modpack alpha.18 adds default RAW spell-scroll learning fix 470.
+        471
     );
     // Scroll policy 430 hashes the final scrolls and spells, so it follows BuffBot.
     let (tail, rest) = result.plan.runs.split_last().unwrap();

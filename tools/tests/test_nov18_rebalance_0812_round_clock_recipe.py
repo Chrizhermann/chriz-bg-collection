@@ -87,7 +87,7 @@ class RoundClockIntakeTests(unittest.TestCase):
                     order = [r["run_id"] for r in collection["runs"]]
                     index = order.index(run["run_id"])
                     self.assertEqual(order[index - 1:index + 2],
-                                     ["chriz-iwd-party-dialog-main", run["run_id"], "eeexremote-main"])
+                                     ["chriz-iwd-party-dialog-main", run["run_id"], "chriz-bg-modpack-main"])
                     self.assertEqual(feature["decision"], "mandatory")
                     self.assertEqual(feature["requires"], ["feature:eeex:component-1"])
                     self.assertEqual(feature["source_label"], "BG Rebalance")

@@ -97,8 +97,10 @@ class PublicComponentCreditsTests(unittest.TestCase):
         # Round Clock adds one default to the existing BG Rebalance mod.
         self.assertIn(361, actual["chriz-bg-rebalance-bg2"])
         # November 22: Chriz Multiplayer Fix adds components 0 and 1 in its own default run.
+        # November 23: Modpack alpha.18 adds component 470 in the main post-EET_end run.
         self.assertEqual(actual["chriz-multiplayer-fix-bg2"], [0, 1])
-        self.assertEqual(self.result["componentCount"], 470)
+        self.assertIn(470, actual["chriz-bg-modpack-bg2"])
+        self.assertEqual(self.result["componentCount"], 471)
         self.assertEqual(len(actual), 71)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:

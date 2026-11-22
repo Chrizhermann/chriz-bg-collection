@@ -1,0 +1,23 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-11-23"
+generator = "tools/prepare_own_mod_pin.py + chriz-bg-author + check_native_component_order.py"
+command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 <TP2 path>; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python -I tools/check_native_component_order.py --recipe-root <recipe> --mod-id <mod> --archive <fresh downloaded ZIP>"
+scope = "Chriz BG Modpack v0.2.0-alpha.18 (published 2026-11-22 21:13 UTC, annotated tag at public-main commit 533913c of Modpack PRs #24 and #25, plus PR #23 fast-traps 690) replaces chriz-bg-modpack-0.2.0-alpha.17 in manifest and recipes/curated-full-current and is the first Chriz BG Modpack pin in recipes/iwd-current. Component 470 (RAW specialist spell-scroll learning fix, requiring EEex) is enabled by default after 460 in Chriz Easy BG and as the sole Chriz BG Modpack component in Chriz Easy IWD; component 690 (Fast Traps) stays unoffered and off in all profiles. Fresh anonymous downloads passed artifact inspection and the acquisition and extraction contract for each recipe, and native component order was verified for every modpack run across all three recipes. This record covers source/package verification, not a combined collection WeiDU installation or full campaign gameplay."
+
+# 190 entries, 11,570,703 bytes uncompressed, largest entry 7,197,358 bytes, depth 5, compression ratio at most 10.4.
+[[artifacts]]
+mod_id = "chriz-bg-modpack"
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.18"
+recipe_profiles = ["manifest", "recipes/curated-full-current", "recipes/iwd-current"]
+source_reference = "v0.2.0-alpha.18"
+source_commit = "533913c1d4874d34aceb800c54305c779e3c0748"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.18/chriz-bg-modpack-v0.2.0-alpha.18.zip"
+actual_length = 9554843
+actual_sha256 = "ea7fd706d2e7eded3af29853874603e4fc7963fa18193d0c5df1757dbc3bcb6a"
+tp2_sha256 = "400dc518c3db8fde508e1c20acb615a74676d8f8f8d2a17469ceddc0bd53a18a"
+native_components = [110, 130, 135, 140, 160, 170, 188, 189, 190, 192, 193, 194, 195, 196, 197, 198, 199, 220, 221, 222, 223, 224, 225, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 400, 410, 430, 440, 450, 460, 470, 610, 611, 620, 630, 640, 660, 670, 680, 690, 650, 651, 652]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true

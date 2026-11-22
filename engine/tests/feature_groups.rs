@@ -441,7 +441,11 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // title and description. The group is not part of these digests; the collection and selection
     // digests change, and the plans lose chriz-bg-modpack-bg2's 680. Undoing the decision
     // reproduces the digests of the PR #161 merge (manifest 23437d33…, curated e682d3e4…).
+    // Pinned on November 23 to Modpack v0.2.0-alpha.18 (PR #24/#25): adds default component 470
+    // (RAW specialist spell-scroll learning fix, requiring EEex) after 460; undoing 470 and
+    // restoring the alpha.17 artifact reproduces PR #163's digests (`challenge_680_digests`).
     const ROUND_CLOCK: &str = "feature:chriz-bg-rebalance:component-361";
+    const SCROLL_LEARN_FIX: &str = "feature:chriz-bg-modpack:component-470";
     const EET_WORLD_PROGRESSION: &str = "feature:chriz-bg-modpack:component-680";
     const EET_WORLD_PROGRESSION_DEFAULT_TITLE: &str =
         "Story-consistent EET campaign boundaries and SoD backtracking";
@@ -459,6 +463,7 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     for (
         dir,
         current_digests,
+        challenge_680_digests,
         default_680_digests,
         alpha17_digests,
         combined_digests,
@@ -467,6 +472,11 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     ) in [
         (
             "../manifest",
+            [
+                "80881462bdf7ee08758adadef2d4605977b3cfd6b261c6b9f7325e9f49e584eb",
+                "e0f0d3c1562194c3dd3194f059d2c21dfea44d69d1696a7e14c3ab9ba27c188a",
+                "95764a05a21987ec9e0698da176339f4df76f14571390c38bb027e19719ef9db",
+            ],
             [
                 "71d08c0bbd6f74843319914bb07b31ded5fcd5b3476e59e182e26b40b82c2e61",
                 "6114ffd05035f4f683cfead67e2b59db4b27b2035630664bb422701c6324639a",
@@ -496,6 +506,11 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         ),
         (
             "../recipes/curated-full-current",
+            [
+                "22ad1ba80c8dbd413f9f8432267d5fb22c5989631ba894a5aff30fab6ec10f60",
+                "bf21a58279bd24249560b828142a4941a087c701e3f7f8dbaa53bf2fa2dba569",
+                "e0568f4eacfe9210616df3b2fca7a6023c483a015cc81b2388df5afa4b5671ab",
+            ],
             [
                 "7df5adb11a5c19240275cfa17615c311200914e800e16ee49aa4752986cfb9f1",
                 "58b7e3f1cacf98619e6edbdd56b83bbf183dccba8070c454e82e335067ccf948",
@@ -529,6 +544,43 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         assert_eq!(
             recommended_digests(&manifest, &evaluation),
             current_digests,
+            "{dir}"
+        );
+
+        // Undoing Modpack alpha.18 (removing 470 and restoring alpha.17) must reproduce
+        // PR #163's digests (`challenge_680_digests`).
+        let modpack = manifest.mods.get_mut("chriz-bg-modpack").unwrap();
+        assert_eq!(modpack.artifact_id, "chriz-bg-modpack-0.2.0-alpha.18");
+        modpack.artifact_id = "chriz-bg-modpack-0.2.0-alpha.17".to_owned();
+        let components_before = modpack.components.len();
+        modpack.components.retain(|component| component.id != 470);
+        assert_eq!(modpack.components.len() + 1, components_before);
+        let modpack_run = manifest
+            .collection
+            .runs
+            .iter_mut()
+            .find(|run| run.run_id == "chriz-bg-modpack-bg2")
+            .unwrap();
+        let run_components_before = modpack_run.components.len();
+        modpack_run.components.retain(|&id| id != 470);
+        assert_eq!(modpack_run.components.len() + 1, run_components_before);
+        let features_before = manifest.collection.features.len();
+        manifest
+            .collection
+            .features
+            .retain(|feature| feature.id != SCROLL_LEARN_FIX);
+        assert_eq!(manifest.collection.features.len() + 1, features_before);
+        assert!(manifest
+            .presets
+            .get_mut("chris-recommended")
+            .unwrap()
+            .selections
+            .remove(SCROLL_LEARN_FIX)
+            .is_some());
+        let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        assert_eq!(
+            recommended_digests(&manifest, &evaluation),
+            challenge_680_digests,
             "{dir}"
         );
 
