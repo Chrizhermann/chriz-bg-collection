@@ -316,8 +316,8 @@ class Nov22ChrizMultiplayerFixIntakeTests(unittest.TestCase):
             (ledger["recipe_id"], ledger["version"], ledger["supersedes"]),
             ("chriz-easy-iwd", "0.1.18", "0.1.17"),
         )
-        (change,) = ledger["changes"]
-        self.assertEqual(change["id"], MOD)
+        # Collection 0.1.18 also carries other changes (Chriz IWD Encounters v0.3.2).
+        (change,) = [change for change in ledger["changes"] if change["id"] == MOD]
         self.assertEqual(
             change["title"],
             "No more crash after the multiplayer lobby; saves copy between single player and"
