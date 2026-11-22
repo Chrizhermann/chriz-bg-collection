@@ -97,7 +97,8 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
 
     def test_reviewed_modpack_compatibility_release_preserves_selection(self):
         mod = tomllib.loads((self.output / "mods/chriz-bg-modpack.toml").read_text())
-        # November 22: alpha.17 adds EET world progression and SoD backtracking 680.
+        # November 22: alpha.17 adds EET world progression and SoD backtracking 680, on only
+        # with Challenge Mode (Christopher, 2026-11-22).
         self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.17")
         artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.17.toml").read_text())
         self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.17")
@@ -146,10 +147,12 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # November 4: Tweaks 3000 and 3010 are no longer defaults (Christopher, 2026-11-04).
         # November 16: Chriz Overhead Text adds default component 0 in its own run.
         # November 18 adds Round Clock 361 to the existing Rebalance run.
-        # Modpack 680 adds EET story-consistent campaign boundaries and SoD backtracking.
-        self.assertEqual(len(without_controls), 468)
-        self.assertEqual(len(selected), 469)
-        self.assertEqual(len({run for run, _ in selected}), 70)
+        # Modpack 680 is on only with Challenge Mode (Christopher, 2026-11-22) and adds none.
+        # November 22: Chriz Multiplayer Fix adds default components 0 and 1 in their own run.
+        self.assertEqual(len(without_controls), 469)
+        self.assertEqual(len(selected), 470)
+        self.assertNotIn(("chriz-bg-modpack-bg2", 680), selected)
+        self.assertEqual(len({run for run, _ in selected}), 71)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
         controls_change = next(change for change in controls_ledger["changes"]
@@ -253,8 +256,10 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # (alpha.15 pin) is.
         # November 4: Tweaks 3000 and 3010 are no longer selected by default.
         # November 16: Chriz Overhead Text 0 is selected by default.
-        # Modpack 680 (EET world progression and SoD backtracking) is selected by default.
-        self.assertEqual(len(baseline), 469)
+        # November 18: Rebalance 361 is selected by default.
+        # November 22: Modpack 680 is not (on only with Challenge Mode, Christopher,
+        # 2026-11-22); Chriz Multiplayer Fix 0 and 1 are selected by default.
+        self.assertEqual(len(baseline), 470)
         self.assertEqual(self.selected({feature_id: "off"}), baseline)
         baeloth = "feature:chriz-bg-modpack:component-235"
         self.assertEqual(self.features[baeloth]["decision"], "optional")

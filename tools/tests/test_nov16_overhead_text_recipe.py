@@ -118,8 +118,13 @@ class Nov16ChrizOverheadTextIntakeTests(unittest.TestCase):
                         run_ids.index("chriz-bg-rebalance-bg2"),
                         run_ids.index(expected_run_id),
                     )
+                    # November 22: Chriz Multiplayer Fix runs between it and the Remote Console.
                     self.assertEqual(
                         run_ids.index(expected_run_id) + 1,
+                        run_ids.index("chriz-multiplayer-fix-bg2"),
+                    )
+                    self.assertLess(
+                        run_ids.index(expected_run_id),
                         run_ids.index("eeexremote-bg2"),
                     )
                     preset = load(directory / "presets/chris-recommended.toml")["selections"]

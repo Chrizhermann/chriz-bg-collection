@@ -661,6 +661,69 @@ fn files_the_game_writes_neither_block_undo_nor_are_put_back() {
     );
 }
 
+/// An installation with EEex: its pattern database folder, with EEex's version database in it.
+fn eeex_fixture() -> Fixture {
+    Fixture::build(
+        BASE_LOG,
+        vec![LogComponentReceipt {
+            tp2: "stratagems/setup-stratagems.tp2".into(),
+            language: 0,
+            component: 1000,
+        }],
+        &|game| {
+            write(
+                &game.join("EEex_scripts/extra_pattern_dbs/v2.7.3.0.db"),
+                b"[Section]\r\nPattern=synthetic\r\n",
+            )
+        },
+    )
+}
+
+/// EEex mods install their own pattern databases beside EEex's; a hotpatch may write one, and
+/// Undo removes it again, since the loader refuses to start the game when one of its patterns
+/// finds nothing.
+#[test]
+fn a_hotpatch_may_write_a_pattern_database_and_undo_removes_it() {
+    let f = eeex_fixture();
+    let (dir, prepared) = f.prepare();
+    f.weidu(&dir, &prepared);
+    let database = f.game().join("EEex_scripts/extra_pattern_dbs/CZEN.db");
+    write(&database, b"[CZEN-Label]\r\nNoCache=1\r\n");
+    transaction::record_applied(&f.ctx(), &f.catalog, &dir, &prepared).unwrap();
+    assert_eq!(f.history().applied_ids(), ["belhifet-1"]);
+    launch_guard(f.root()).unwrap();
+
+    restore(&f.ctx(), &f.catalog, true).unwrap();
+    assert!(!database.exists());
+    f.assert_original();
+}
+
+/// Only database files directly in the folder belong to a hotpatch: the loader reads no
+/// subfolder, and nothing else under EEex_scripts.
+#[test]
+fn pattern_databases_in_subfolders_or_elsewhere_under_eeex_scripts_are_outside_the_area() {
+    for (written, named) in [
+        (
+            "EEex_scripts/extra_pattern_dbs/sub/x.db",
+            "eeex_scripts/extra_pattern_dbs/sub/x.db",
+        ),
+        ("EEex_scripts/other.db", "eeex_scripts/other.db"),
+        (
+            "EEex_scripts/extra_pattern_dbs/notes.txt",
+            "eeex_scripts/extra_pattern_dbs/notes.txt",
+        ),
+    ] {
+        let f = eeex_fixture();
+        let (dir, prepared) = f.prepare();
+        f.weidu(&dir, &prepared);
+        write(&f.game().join(written), b"[Label]\r\nNoCache=1\r\n");
+        let error = transaction::record_applied(&f.ctx(), &f.catalog, &dir, &prepared).unwrap_err();
+        assert!(error.contains("outside its area"), "{written}: {error}");
+        assert!(error.contains(named), "{written}: {error}");
+        f.assert_untouched();
+    }
+}
+
 #[test]
 fn a_change_after_the_hotpatch_blocks_undo_without_writing_anything() {
     let f = Fixture::new();
@@ -1107,6 +1170,10 @@ fn buffbot_files(game: &Path) {
         &game.join("setup-eeexremote.tp2"),
         b"BACKUP ~weidu_external/backup/eeexremote~\r\nBEGIN ~Remote~ DESIGNATED 0\r\n",
     );
+    write(
+        &game.join("EEex_scripts/extra_pattern_dbs/v2.7.3.0.db"),
+        b"[Section]\r\nPattern=synthetic\r\n",
+    );
     write(&game.join("eeexremote/M_EEexRC.lua"), REMOTE);
     write(&game.join("override/M_EEexRC.lua"), REMOTE);
     write(
@@ -1453,6 +1520,36 @@ fn changes_outside_the_update_area_fail_and_are_left_for_a_closer_look() {
     let error = restore(&f.ctx(), &f.catalog, false).unwrap_err();
     assert!(error.contains("closer look"), "{error}");
     assert!(launch_guard(f.root()).is_err());
+}
+
+/// An update may install its mod's pattern database like a hotpatch, directly in the folder
+/// the loader reads, and nowhere else under EEex_scripts.
+#[test]
+fn an_update_may_write_a_pattern_database_but_no_subfolder_of_it() {
+    let f = Fixture::buffbot();
+    let (dir, prepared) = f.update_prepare();
+    f.update_weidu(&dir, &prepared);
+    update::put_later_rows_back(&f.ctx(), &dir, &prepared).unwrap();
+    let database = f.game().join("EEex_scripts/extra_pattern_dbs/BFBOT.db");
+    write(&database, b"[BFBOT-Label]\r\nNoCache=1\r\n");
+    update::record_applied(&f.ctx(), &f.catalog, &dir, &prepared).unwrap();
+    restore(&f.ctx(), &f.catalog, true).unwrap();
+    assert!(!database.exists());
+
+    let f = Fixture::buffbot();
+    let (dir, prepared) = f.update_prepare();
+    f.update_weidu(&dir, &prepared);
+    update::put_later_rows_back(&f.ctx(), &dir, &prepared).unwrap();
+    write(
+        &f.game().join("EEex_scripts/extra_pattern_dbs/sub/x.db"),
+        b"[Label]\r\nNoCache=1\r\n",
+    );
+    let error = update::record_applied(&f.ctx(), &f.catalog, &dir, &prepared).unwrap_err();
+    assert!(error.contains("outside its area"), "{error}");
+    assert!(
+        error.contains("eeex_scripts/extra_pattern_dbs/sub/x.db"),
+        "{error}"
+    );
 }
 
 #[test]

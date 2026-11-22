@@ -1,0 +1,38 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-11-22"
+generator = "curl + sha256sum + chriz-bg-author + check_native_component_order.py"
+command = "curl -L <release asset URL> into an empty folder; sha256sum and byte length; chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 <TP2 path>; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache> for manifest, recipes/curated-full-current, recipes/iwd-current and hotpatches/iwd; python -I tools/check_native_component_order.py --recipe-root <recipe> --mod-id chriz-multiplayer-fix --archive <fresh downloaded ZIP>"
+scope = "Chriz Multiplayer Fix v0.1.0 (a normal GitHub release, annotated tag v0.1.0 on commit 6efc2101a8321dcfd7bb381ece012ada49384494) is added as chriz-multiplayer-fix-0.1.0 in manifest, recipes/curated-full-current, recipes/iwd-current and the Chriz Easy IWD hotpatch catalog. On 2026-11-22 the published asset chriz-multiplayer-fix-v0.1.0.zip was downloaded anonymously into an empty folder (1,824,127 bytes, SHA-256 as recorded below) and again into a fresh cache for the inspection and for each of the four artifact TOMLs, and passed the production acquisition and extraction contracts: direct-root layout with the chriz_multiplayer_fix folder and its TP2, archive limits (13 entries, 1,959,470 bytes uncompressed, largest entry 1,364,992 bytes, depth 4, compression ratio at most 3.92) and native WeiDU component order in all three recipes. The TP2 SHA-256 matches the TP2 at the tag. This intake record is source/package verification, not a combined full-collection WeiDU install, multiplayer session or campaign gameplay acceptance."
+
+[[artifacts]]
+mod_id = "chriz-multiplayer-fix"
+artifact_id = "chriz-multiplayer-fix-0.1.0"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v0.1.0"
+source_commit = "6efc2101a8321dcfd7bb381ece012ada49384494"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-multiplayer-fix/releases/download/v0.1.0/chriz-multiplayer-fix-v0.1.0.zip"
+actual_length = 1824127
+actual_sha256 = "5b85b267d33a7bc596bef54c38b3e6b7b57aa5b2239f6d5a337f744e4a42906a"
+tp2_sha256 = "c5c93377cd803e6b8afc79b67aeb3c3a40125fbe2c17870cc157f69ee9d81774"
+native_components = [0, 1]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "chriz-multiplayer-fix"
+artifact_id = "chriz-multiplayer-fix-0.1.0"
+recipe_profiles = ["recipes/iwd-current"]
+source_reference = "v0.1.0"
+source_commit = "6efc2101a8321dcfd7bb381ece012ada49384494"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-multiplayer-fix/releases/download/v0.1.0/chriz-multiplayer-fix-v0.1.0.zip"
+actual_length = 1824127
+actual_sha256 = "5b85b267d33a7bc596bef54c38b3e6b7b57aa5b2239f6d5a337f744e4a42906a"
+tp2_sha256 = "c5c93377cd803e6b8afc79b67aeb3c3a40125fbe2c17870cc157f69ee9d81774"
+native_components = [0, 1]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true

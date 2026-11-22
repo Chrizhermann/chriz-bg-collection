@@ -85,8 +85,9 @@ class PublicComponentCreditsTests(unittest.TestCase):
         self.assertNotIn("bg1npc-bg1", actual)
         self.assertNotIn(130, actual["chriz-bg-modpack-bg2"])
         # November 3: the Modpack alpha.15 pin adds default Marek's Boomerang Dagger 670 after
-        # Degrodel 660; Modpack 680 follows after 670.
-        self.assertEqual(actual["chriz-bg-modpack-bg2"][-3:], [660, 670, 680])
+        # Degrodel 660. Modpack 680 is on only with Challenge Mode (Christopher, 2026-11-22).
+        self.assertEqual(actual["chriz-bg-modpack-bg2"][-3:], [611, 660, 670])
+        self.assertNotIn(680, actual["chriz-bg-modpack-bg2"])
         # November 4: Tweaks 3000 (maximum HP on level-up) and 3010 (Maximum HP Creatures)
         # leave the defaults; 2999 (Max HP at Level One) stays.
         self.assertTrue({3000, 3010}.isdisjoint(actual["cdtweaks-bg2"]))
@@ -95,8 +96,10 @@ class PublicComponentCreditsTests(unittest.TestCase):
         self.assertEqual(actual["chriz-overhead-text-bg2"], [0])
         # Round Clock adds one default to the existing BG Rebalance mod.
         self.assertIn(361, actual["chriz-bg-rebalance-bg2"])
-        self.assertEqual(self.result["componentCount"], 469)
-        self.assertEqual(len(actual), 70)
+        # November 22: Chriz Multiplayer Fix adds components 0 and 1 in its own default run.
+        self.assertEqual(actual["chriz-multiplayer-fix-bg2"], [0, 1])
+        self.assertEqual(self.result["componentCount"], 470)
+        self.assertEqual(len(actual), 71)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:
         # The app and bundled collection are versioned independently; each field must come from its own source.

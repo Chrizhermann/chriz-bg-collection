@@ -354,6 +354,18 @@ phase = "main"
 components = [0]
 args = []
 
+# Christopher's own EEex multiplayer mod (added 2026-11-22, both parts on by default as in the BG
+# installer): 0 stops the crash after leaving the multiplayer lobby, 1 adds a Load screen button
+# that copies saves between single player and multiplayer. Needs EEex #1 at install time; copies
+# only override/M_CZMP.lua, EEex_scripts/extra_pattern_dbs/CZMP.db, override/M_CZMS.lua and
+# override/CZMS.menu.
+[[runs]]
+run_id = "chriz-multiplayer-fix-main"
+mod_id = "chriz-multiplayer-fix"
+phase = "main"
+components = [0, 1]
+args = []
+
 # Christopher's own IWD:EE quality-of-life mod (added 2026-11-17, on by default): evaluates world
 # and quest dialogue class, kit, and race checks across all living party members in the current
 # area and hands dialogue speaker/tokens to the qualifying party member. Copies only
@@ -958,7 +970,7 @@ requires = ["feature:stratagems:component-6040"]
 [[features]]
 id = "feature:chriz-iwd-encounters:component-300"
 title = "Belhifet's final fight: no blanket spell immunity, more hit points by difficulty, his cornugons as a second wave"
-description = "Belhifet keeps his original Belhifet sprite and voice lines instead of Sword Coast Stratagems' Pit Fiend sprite, is immune to spell levels 1-3 only, +2 weapons hit him, he is fire immune as in the base game, has more hit points from Core Rules up, appears under Improved Invisibility and is hasted for 30 seconds out of every 42. His cornugons come as a second wave (a third on Insane), Poquelin's transformation no longer dispels the party, and Belhifet casts level-26 Abjuration Dispel Magic."
+description = "Belhifet keeps his original Belhifet sprite and voice lines instead of Sword Coast Stratagems' Pit Fiend sprite, is immune to spell levels 1-3 only, +2 weapons hit him, he is fire immune as in the base game, has more hit points from Core Rules up, appears under Improved Invisibility and is hasted for 30 seconds out of every 42. His cornugons come as a second wave (a third on Insane), Poquelin's transformation dispels the party as in the base game, and Belhifet casts level-26 Abjuration Dispel Magic."
 category = "combat"
 source_label = "Chriz IWD Encounters"
 decision = "default"
@@ -1090,8 +1102,8 @@ components = [{ run_id = "chriz-iwd-encounters-main", component = 410 }]
 # Main campaign overhaul of 0.3.0 (Christopher, 2026-11-21): on by default.
 [[features]]
 id = "feature:chriz-iwd-encounters:component-420"
-title = "Main campaign overhaul (Ch. 2-6): curated filler thinning, Drasus/Iron-Throne-style squads, Severed Hand/Terikan/AR3503/Tarnsen/DGINA2 fixes"
-description = "Curated filler thinning across Chapters 2-6, 3-wave Kresselack crypt pacing, Terikan with level 1-3 spell immunity and immediate minion rally, Tarnsen and Ginafae script fixes, upgraded Severed Hand/Giant/Wyrm encounters, and five Drasus/Iron-Throne-style elite squads."
+title = "Main campaign overhaul (Chapters 2-6): fewer filler fights, mixed elite squads, Kaylessa as a weapons master, quest fixes"
+description = "Curated filler thinning across Chapters 2-6, 3-wave Kresselack crypt pacing, Terikan with level 1-3 spell immunity and immediate minion rally, Tarnsen and Ginafae script fixes, upgraded Severed Hand/Giant/Wyrm encounters, and six mixed elite squads with real multiclasses, using caster and combat AI. Kaylessa fights as a level-15 elven weapons master switching between bow and sword, the related quests need fewer kills, and an endless staircase respawn is fixed."
 category = "combat"
 source_label = "Chriz IWD Encounters"
 decision = "default"
@@ -1103,8 +1115,8 @@ components = [{ run_id = "chriz-iwd-encounters-main", component = 420 }]
 # and off by default.
 [[features]]
 id = "feature:chriz-iwd-encounters:component-500"
-title = "Heart of Winter & Trials of the Luremaster: curated encounters, thinned hordes, and AR9602 repair"
-description = "Curated expansion encounters, thinned filler hordes, and AR9602 Xactile repair across Heart of Winter and Trials of the Luremaster while keeping full SCS caster spellbooks."
+title = "Heart of Winter & Trials of the Luremaster: curated encounters, thinned hordes, Burial Isle fixes"
+description = "Curated expansion encounters, thinned filler hordes, and a repaired Xactile encounter across Heart of Winter and Trials of the Luremaster while keeping full SCS caster spellbooks. The Polar Bear Spirit's roar works reliably with a milder save penalty and Strength drain, Burial Isle has fewer repeated undead and no endless staircase spawn, and in Gloomfrost and the Sea of Moving Ice a Frost Giant War-Shaman with two Frost Giant Jarls waits on the glacier, while a remorhaz, a yeti elder and a sahuagin royal guard replace out-of-place humans."
 category = "combat"
 source_label = "Chriz IWD Encounters"
 decision = "optional"
@@ -4801,6 +4813,42 @@ decision = "mandatory"
 readiness = "ready"
 parent = "mod:chriz-overhead-text"
 components = [{ run_id = "chriz-overhead-text-main", component = 0 }]
+requires = ["feature:eeex:component-1"]
+
+# No more crash after the multiplayer lobby, and saves copy between single player and multiplayer
+# on the Load screen (Christopher, 2026-11-22): the crash fix comes with the mod, the copy button is
+# on by default and can be turned off.
+[[features]]
+id = "mod:chriz-multiplayer-fix"
+title = "Chriz Multiplayer Fix"
+description = "Fixes the crash after leaving the multiplayer lobby and adds a Load screen button that copies saves between single player and multiplayer."
+category = "fixes"
+source_label = "Chriz Multiplayer Fix"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:chriz-multiplayer-fix:component-0"
+title = "Multiplayer lobby crash fix (EEex)"
+description = "Stops the random crash right after leaving Beamdog's multiplayer lobby, for example on Multiplayer > Local network game > Load."
+category = "fixes"
+source_label = "Chriz Multiplayer Fix"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:chriz-multiplayer-fix"
+components = [{ run_id = "chriz-multiplayer-fix-main", component = 0 }]
+requires = ["feature:eeex:component-1"]
+
+[[features]]
+id = "feature:chriz-multiplayer-fix:component-1"
+title = "Copy saves between single player and multiplayer on the Load screen (EEex)"
+description = "Adds a button to the Load screen that copies a save into the other mode's save list, so a party created in multiplayer can continue in single player and back. The original save stays."
+category = "interface"
+source_label = "Chriz Multiplayer Fix"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-multiplayer-fix"
+components = [{ run_id = "chriz-multiplayer-fix-main", component = 1 }]
 requires = ["feature:eeex:component-1"]
 
 # World and quest dialogue class, kit, and race checks evaluate across all living party members in

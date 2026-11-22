@@ -142,8 +142,10 @@ class CatalogParserTests(unittest.TestCase):
         # November 3: Modpack alpha.15 adds Marek's Boomerang Dagger 670.
         # November 16: the CHRIZ_OVERHEAD_TEXT catalog adds component 0.
         # November 18 adds the default Round Clock row for BG Rebalance 361.
-        # Modpack 680 (EET world progression and SoD backtracking) adds one default row.
-        self.assertEqual(len(rows), 1_355)
+        # November 22: Modpack 680 (no travel back into an earlier campaign) adds one
+        # optional row.
+        # November 22: the CHRIZ_MULTIPLAYER_FIX catalog adds components 0 and 1.
+        self.assertEqual(len(rows), 1_357)
         self.assertEqual(
             decision_totals(rows),
             {
@@ -171,7 +173,9 @@ class CatalogParserTests(unittest.TestCase):
                 # October 27: Tweaks 2292 (druids level on the cleric XP table) is optional.
                 # October 29: Sirene BG1's alternate classes 7, 8 and 9 are optional.
                 # November 4: Tweaks 3000 and 3010 are optional (Christopher, 2026-11-04).
-                Decision.OPTIONAL: 337,
+                # November 22: Modpack 680 is optional, on only with Challenge Mode
+                # (Christopher, 2026-11-22).
+                Decision.OPTIONAL: 338,
                 # Approved Rebalance 111/302 defaults; Artisan 51010 is optional.
                 # October 13: bard ceilings Rebalance 420/421 and Bardic 3010 are defaults;
                 # EET 100 (desktop shortcut) leaves the defaults.
@@ -198,8 +202,9 @@ class CatalogParserTests(unittest.TestCase):
                 # (Christopher, 2026-11-03).
                 # November 4: Tweaks 3000 and 3010 leave the defaults (Christopher, 2026-11-04).
                 # November 16: Chriz Overhead Text 0 is a default (Christopher, 2026-11-16).
-                # Modpack 680 (EET world progression & SoD backtracking) is a default.
-                Decision.DEFAULT: 337,
+                # November 22: Chriz Multiplayer Fix 0 and 1 are defaults (Christopher,
+                # 2026-11-22).
+                Decision.DEFAULT: 338,
                 # October 13 intake: SoD 177/198/285 join the mandatory bundle (430 left it).
                 Decision.MANDATORY: 154,
             },
@@ -438,18 +443,24 @@ default = "none"
         # November 3: Modpack 670 maps to one feature (alpha.15 pin).
         # November 16: Chriz Overhead Text 0 maps to one feature.
         # November 18 adds the default Round Clock row for BG Rebalance 361.
-        # Modpack 680 maps to one feature.
-        self.assertEqual(result.mapped_rows, 1_355)
+        # Modpack 680 maps to one feature; Chriz Multiplayer Fix 0 and 1 map to one each.
+        self.assertEqual(result.mapped_rows, 1_357)
         self.assertEqual(result.excluded_rows, 527)
-        self.assertEqual(result.feature_rows + result.omission_rows, 828)
+        self.assertEqual(result.feature_rows + result.omission_rows, 830)
         # October 14: Rebalance potion uniqueness and SCS fine weapons choices.
-        # October 14..November 4 optional/fixed choice groups:
+        # October 23: the SoD Remix Imoen in Shadows of Amn choice.
+        # October 23: ten quest-mod choices (Ascalon's three with their first variant as
+        # default; NTotSC's two and PPE's five with none preselected) and PPE's
+        # single Jaheira portrait option as a fixed group.
+        # October 27: the Tweaks Anthology druid level choice (2292) has none preselected.
+        # October 29: Sirene BG1's class choice (True Paladin preselected) and its
+        # single portrait option as a fixed group.
         # November 4: the Tweaks Anthology Higher HP on Level Up and Maximum HP Creatures
         # choices have none preselected.
         self.assertEqual(result.choice_groups, 88)
         self.assertEqual(result.optional_none_groups, 33)
         self.assertEqual(result.fixed_groups, 12)
-        self.assertIn("rows=1355", coverage_report(rows, result))
+        self.assertIn("rows=1357", coverage_report(rows, result))
 
     def test_september16_intake_rows_match_the_approved_recipe_features(self) -> None:
         root = Path(__file__).resolve().parents[2]

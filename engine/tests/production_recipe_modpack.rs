@@ -42,8 +42,9 @@ const RECOMMENDED_PRE_CONTINUITY_COMPONENTS: &[u32] = &[
 // November 3: BG1 NPC Project left the defaults (Christopher, 2026-11-03), so the Kivan
 // quest guard 130 installs only when it is ticked. Marek's Boomerang Dagger 670
 // (alpha.15) is a default for 0.1.1; alpha.16 keeps it.
-// November 22: EET world progression and SoD backtracking 680 (alpha.17) is a default.
-const RECOMMENDED_COMPONENTS: &[u32] = &[135, 410, 440, 450, 460, 611, 660, 670, 680];
+// November 22: EET world progression and SoD backtracking 680 (alpha.17) is on only with
+// Challenge Mode (Christopher, 2026-11-22), so Recommended leaves it out.
+const RECOMMENDED_COMPONENTS: &[u32] = &[135, 410, 440, 450, 460, 611, 660, 670];
 
 fn recipe_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../manifest")
@@ -222,10 +223,9 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // October 20: so is EET join XP 239 (Modpack alpha.13).
     // October 26: and alpha.13's Dorn ambush fix 135 and party AI fix 460 (alpha.14 pin).
     // November 3: Marek's Boomerang Dagger 670 (alpha.15 pin), retained by alpha.16.
-    // November 22: EET world progression and SoD backtracking 680 (alpha.17 pin).
     for component in [
         110, 135, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 230, 231, 232, 233, 234, 236,
-        237, 239, 430, 460, 611, 660, 670, 680,
+        237, 239, 430, 460, 611, 660, 670,
     ] {
         let id = format!("feature:chriz-bg-modpack:component-{component}");
         let control = evaluation
@@ -296,6 +296,24 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
         assert_eq!(control.readiness, Readiness::Experimental, "{id}");
         assert!(!control.selected, "{id}");
     }
+
+    // November 22: EET world progression and SoD backtracking 680 (alpha.17 pin) is on only
+    // with Challenge Mode (Christopher, 2026-11-22): optional, unchecked, a group member.
+    let world_progression = "feature:chriz-bg-modpack:component-680";
+    let control = evaluation.view.control(world_progression).unwrap();
+    assert_eq!(control.decision, Decision::Optional);
+    assert_eq!(control.readiness, Readiness::Ready);
+    assert!(!control.selected);
+    let challenge_mode = manifest
+        .collection
+        .feature_groups
+        .iter()
+        .find(|group| group.id == "challenge-mode")
+        .unwrap();
+    assert!(challenge_mode
+        .members
+        .iter()
+        .any(|member| member == world_progression));
     assert_eq!(
         evaluation
             .plan
@@ -353,7 +371,9 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // Its Modpack alpha.15 pin adds default Marek's Boomerang Dagger 670, retained by alpha.16.
     // November 16: Chriz Overhead Text adds default component 0 to both plans.
     // November 18 adds Round Clock 361 to both plans, bringing the base to 373 and curated to 468.
-    // November 22 adds Modpack 680 to both plans, bringing the base to 374 and curated to 469.
+    // November 22: Modpack 680 is on only with Challenge Mode (Christopher, 2026-11-22) and
+    // adds none; Chriz Multiplayer Fix adds default components 0 and 1, bringing the base to
+    // 375 and curated to 470.
     assert_eq!(
         evaluation
             .plan
@@ -361,7 +381,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        374
+        375
     );
 }
 

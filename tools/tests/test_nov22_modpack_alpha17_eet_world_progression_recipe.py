@@ -1,7 +1,9 @@
 """November 22 intake: Chriz BG Modpack v0.2.0-alpha.17 (component 680).
 
-Modpack PRs #20 and #21 add default component 680 (cbm_eet_world_progression) after
-670 and before 650 in TP2 declaration order.
+Modpack PRs #20 and #21 add component 680 (cbm_eet_world_progression) after
+670 and before 650 in TP2 declaration order. Christopher, 2026-11-22: no travel back into an
+earlier campaign only with Challenge Mode, so 680 is optional, a member of the Challenge Mode
+group, and off in Chris's Recommended.
 This is static pin, evidence, selection, and order coverage, not a WeiDU install
 or live campaign gameplay acceptance.
 """
@@ -33,6 +35,7 @@ TP2_SHA256 = "a9ddca687c604bd5e463c099dd683ee32bf9042382e087bd7f6b82ca284a88ae"
 COMPONENT = 680
 RUN = "chriz-bg-modpack-bg2"
 FEATURE = f"feature:{MOD}:component-{COMPONENT}"
+GROUP = "challenge-mode"
 LABEL = "EET: story-consistent campaign boundaries and SoD backtracking fixes"
 STATIC_RUNS = {
     "chriz-bg-modpack-bg2",
@@ -108,7 +111,7 @@ class Nov22ModpackAlpha17EETWorldProgressionTests(unittest.TestCase):
         native.insert(native.index(670) + 1, COMPONENT)
         self.assertEqual(self.record["native_components"], native)
 
-    def test_profiles_pin_alpha17_keep_alpha16_and_enable_680_by_default(self) -> None:
+    def test_profiles_pin_alpha17_keep_alpha16_and_put_680_into_challenge_mode(self) -> None:
         for directory in self.directories:
             with self.subTest(profile=str(directory)):
                 mod = _load(directory / f"mods/{MOD}.toml")
@@ -134,13 +137,17 @@ class Nov22ModpackAlpha17EETWorldProgressionTests(unittest.TestCase):
                     self.assertTrue(set(r["components"]) <= native, r["run_id"])
 
                 feature = features[FEATURE]
-                self.assertEqual(feature["decision"], "default")
+                # Christopher, 2026-11-22: on only with Challenge Mode, off by default.
+                self.assertEqual(feature["decision"], "optional")
                 self.assertEqual(feature["readiness"], "ready")
                 self.assertEqual(feature["category"], "rules")
                 self.assertEqual(feature["parent"], f"mod:{MOD}")
                 self.assertEqual(feature["requires"], ["feature:eet:mandatory-components", "mod:eet-end"])
                 self.assertEqual(feature["components"], [{"run_id": RUN, "component": COMPONENT}])
-                self.assertEqual(preset[FEATURE], "on")
+                self.assertNotIn(FEATURE, preset)
+                (group,) = [group for group in collection["feature_groups"] if group["id"] == GROUP]
+                self.assertIn(FEATURE, group["members"])
+                self.assertNotIn(GROUP, preset)
                 self.assertEqual(run["phase"], "post-eet-end")
                 self.assertEqual(run["components"][-2:], [670, COMPONENT])
                 for earlier in ("eet-end-bg2", "stratagems-bg2", "chriz-sod-remix-bg2"):
@@ -150,11 +157,15 @@ class Nov22ModpackAlpha17EETWorldProgressionTests(unittest.TestCase):
                 self.assertEqual(list(names).index(COMPONENT), list(names).index(670) + 1)
 
                 baseline = _selected(collection, preset)
-                self.assertIn((RUN, COMPONENT), baseline)
-                self.assertNotIn((RUN, COMPONENT), _selected(collection, {**preset, FEATURE: "off"}))
-                self.assertNotIn((RUN, COMPONENT), _selected(collection, {**preset, f"mod:{MOD}": "off"}))
+                self.assertNotIn((RUN, COMPONENT), baseline)
+                challenge = {**preset, **{member: "on" for member in group["members"]}}
+                self.assertIn((RUN, COMPONENT), _selected(collection, challenge))
+                self.assertIn((RUN, COMPONENT), _selected(collection, {**preset, FEATURE: "on"}))
+                self.assertNotIn((RUN, COMPONENT), _selected(collection, {**challenge, f"mod:{MOD}": "off"}))
                 for optional_mod in ("mod:eeex", "mod:spell-rev", "mod:stratagems"):
-                    self.assertIn((RUN, COMPONENT), _selected(collection, {**preset, optional_mod: "off"}), optional_mod)
+                    self.assertIn(
+                        (RUN, COMPONENT), _selected(collection, {**challenge, optional_mod: "off"}), optional_mod
+                    )
 
     def test_static_records_and_docs_name_alpha17(self) -> None:
         for relative in (
@@ -193,7 +204,8 @@ class Nov22ModpackAlpha17EETWorldProgressionTests(unittest.TestCase):
             "5d93338",
             "Modpack PRs #20 and #21",
             EVIDENCE,
-            f"| {COMPONENT} | {LABEL} | chriz-bg-modpack: Gameplay tweaks | | | default |",
+            f"| {COMPONENT} | {LABEL} | chriz-bg-modpack: Gameplay tweaks | | | optional |",
+            "Christopher's decision, 2026-11-22: on only with Challenge Mode, off by default.",
             "66 current or historical entries; the collection exposes 49.",
         ):
             self.assertIn(phrase, catalog)
@@ -204,7 +216,11 @@ class Nov22ModpackAlpha17EETWorldProgressionTests(unittest.TestCase):
         )
         behavior, rest = current.split("### Changed behavior\n", 1)[1].split("### Mod versions\n", 1)
         versions, notes = rest.split("### Notes for the release integrator\n", 1)
-        self.assertIn("**EET world progression and SoD backtracking fixes** (Chriz BG Modpack component 680", behavior)
+        self.assertIn(
+            "**No travel back into an earlier campaign** (part of Challenge Mode, Optional; Chriz BG\n"
+            "  Modpack component 680)",
+            behavior,
+        )
         self.assertIn("- Chriz BG Modpack v0.2.0-alpha.17 (was v0.2.0-alpha.16)", versions)
         self.assertIn(EVIDENCE, notes)
         self.assertIn(f"artifact:{PIN}", notes)

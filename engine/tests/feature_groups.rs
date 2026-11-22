@@ -431,11 +431,52 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // Re-pinned on November 22 for Modpack alpha.17 (component 680 added after 670 as
     // a default in chriz-bg-modpack-bg2). Removing 680 and restoring alpha.16 must reproduce
     // all six November 18 Round Clock digests before reverting Round Clock.
+    // Re-pinned on November 22 for Chriz Multiplayer Fix v0.1.0 (Christopher, 2026-11-22):
+    // its components 0 and 1 are on by default in both recipes, adding two features to the
+    // collection digests, their preset entries to the selection digests, and
+    // chriz-multiplayer-fix-bg2 [0, 1] after chriz-overhead-text-bg2 in both plans. Without
+    // its run, features, preset entries, mod and artifact, the alpha.17 digests return.
+    // Re-pinned on November 22 for Christopher's decision that Modpack 680 is on only with
+    // Challenge Mode: it is optional, a group member, off in Recommended and has a player
+    // title and description. The group is not part of these digests; the collection and selection
+    // digests change, and the plans lose chriz-bg-modpack-bg2's 680. Undoing the decision
+    // reproduces the digests of the PR #161 merge (manifest 23437d33…, curated e682d3e4…).
     const ROUND_CLOCK: &str = "feature:chriz-bg-rebalance:component-361";
     const EET_WORLD_PROGRESSION: &str = "feature:chriz-bg-modpack:component-680";
-    for (dir, alpha17_digests, combined_digests, save_rest_digests, previous_plan_sha) in [
+    const EET_WORLD_PROGRESSION_DEFAULT_TITLE: &str =
+        "Story-consistent EET campaign boundaries and SoD backtracking";
+    const EET_WORLD_PROGRESSION_DEFAULT_DESCRIPTION: &str = "Closes cross-campaign backtracking \
+        exploits between BG1, Siege of Dragonspear, Shadows of Amn and Throne of Bhaal (including \
+        returning from Watcher's Keep to Amn once ToB begins and post-SoD travel reopening) while \
+        keeping BG1, SoD, SoA and ToB new-game starts intact. Keeps the SoD Ch.8-10 road open \
+        until the Dragonspear assault and fixes abandoned camp companion stranding, player \
+        storage chest forwarding, Baeloth's pit cleanup, camp sentries, siege audio and duplicate \
+        Jegg.";
+    const MULTIPLAYER_FIX: [&str; 2] = [
+        "feature:chriz-multiplayer-fix:component-0",
+        "feature:chriz-multiplayer-fix:component-1",
+    ];
+    for (
+        dir,
+        current_digests,
+        default_680_digests,
+        alpha17_digests,
+        combined_digests,
+        save_rest_digests,
+        previous_plan_sha,
+    ) in [
         (
             "../manifest",
+            [
+                "71d08c0bbd6f74843319914bb07b31ded5fcd5b3476e59e182e26b40b82c2e61",
+                "6114ffd05035f4f683cfead67e2b59db4b27b2035630664bb422701c6324639a",
+                "ce64b750dbf1f418cd1b317a98add694e0781fe5c1b6f62608eb584f49b6f140",
+            ],
+            [
+                "23437d33a7bb60528a677629dd7475c4fbf8b1e9afa464d2d65ead62d54346ef",
+                "d67a959c418cef23b60fbc3302207fb5c538758e605c8d7b1a3a04f67edc4729",
+                "d708db23e832fadd29b17b0a787bea90582376df632c388c64e75c4b426add5c",
+            ],
             [
                 "e365e33ed0508e8fcac5a9f6316df82240e8553d403c3b5db9fe03f20ddb9ac7",
                 "2bf1a5290d4b18ee42938068fb7a36f2c5865213720929deffeca75b36af9b31",
@@ -455,6 +496,16 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         ),
         (
             "../recipes/curated-full-current",
+            [
+                "7df5adb11a5c19240275cfa17615c311200914e800e16ee49aa4752986cfb9f1",
+                "58b7e3f1cacf98619e6edbdd56b83bbf183dccba8070c454e82e335067ccf948",
+                "6c6a6b75d59fa86ae8c0e195d8155ad7758fe947d6a62dd7db57590a8eda3871",
+            ],
+            [
+                "e682d3e4a81c00798bd231d2ed53d75db4ffde625975c456e3d42d71e98e5b5d",
+                "dd00a7fd4946b5a781bd4a71541808e48ca41e781aa52fd60142dc1a129f9e83",
+                "6d6628bd564fe9e1f42ad77ebe1ef6609cc191ea9a652a66fa3c06c0e2f0ed2b",
+            ],
             [
                 "6393e51ddc023070c11eecf062e0271904e193fa9d78f4041d0eb758ff531d55",
                 "5c0a62bad494e7f643d0e94790aeb1c156cf42cb8a73372fb655d84889627d57",
@@ -477,6 +528,70 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
         assert_eq!(
             recommended_digests(&manifest, &evaluation),
+            current_digests,
+            "{dir}"
+        );
+
+        // Christopher, 2026-11-22: Modpack 680 is on only with Challenge Mode. Undoing that
+        // decision (default again, PR #161's title and description, on in Recommended) must reproduce
+        // the digests of the merge of PR #161 into this branch.
+        let world_progression = manifest
+            .collection
+            .features
+            .iter_mut()
+            .find(|feature| feature.id == EET_WORLD_PROGRESSION)
+            .unwrap();
+        assert_eq!(world_progression.decision, Decision::Optional);
+        world_progression.decision = Decision::Default;
+        world_progression.title = EET_WORLD_PROGRESSION_DEFAULT_TITLE.to_owned();
+        world_progression.description = EET_WORLD_PROGRESSION_DEFAULT_DESCRIPTION.to_owned();
+        // Group members must be optional; the group is not part of these digests.
+        let members = &mut manifest.collection.feature_groups[0].members;
+        let count = members.len();
+        members.retain(|id| id != EET_WORLD_PROGRESSION);
+        assert_eq!(members.len() + 1, count);
+        assert!(manifest
+            .presets
+            .get_mut("chris-recommended")
+            .unwrap()
+            .selections
+            .insert(EET_WORLD_PROGRESSION.to_owned(), "on".to_owned())
+            .is_none());
+        let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        assert_eq!(
+            recommended_digests(&manifest, &evaluation),
+            default_680_digests,
+            "{dir}"
+        );
+
+        assert!(manifest.mods.remove("chriz-multiplayer-fix").is_some());
+        assert!(manifest
+            .artifacts
+            .remove("chriz-multiplayer-fix-0.1.0")
+            .is_some());
+        let runs = manifest.collection.runs.len();
+        manifest
+            .collection
+            .runs
+            .retain(|run| run.run_id != "chriz-multiplayer-fix-bg2");
+        assert_eq!(manifest.collection.runs.len() + 1, runs);
+        let features = manifest.collection.features.len();
+        manifest
+            .collection
+            .features
+            .retain(|feature| !MULTIPLAYER_FIX.contains(&feature.id.as_str()));
+        assert_eq!(manifest.collection.features.len() + 2, features);
+        let selections = &mut manifest
+            .presets
+            .get_mut("chris-recommended")
+            .unwrap()
+            .selections;
+        for feature in MULTIPLAYER_FIX {
+            assert!(selections.remove(feature).is_some());
+        }
+        let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        assert_eq!(
+            recommended_digests(&manifest, &evaluation),
             alpha17_digests,
             "{dir}"
         );
@@ -496,12 +611,13 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
             .collection
             .features
             .retain(|feature| feature.id != EET_WORLD_PROGRESSION);
-        manifest
+        assert!(manifest
             .presets
             .get_mut("chris-recommended")
             .unwrap()
             .selections
-            .remove(EET_WORLD_PROGRESSION);
+            .remove(EET_WORLD_PROGRESSION)
+            .is_some());
 
         let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
         assert_eq!(

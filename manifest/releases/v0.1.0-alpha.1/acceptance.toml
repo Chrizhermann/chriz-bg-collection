@@ -708,6 +708,17 @@ date = "2026-11-16"
 status = "accepted"
 scope = "Static v0.1.0 pin, published chriz_overhead_text folder, component-0 default selection, EEex core dependency, and post-EET_end order immediately before eeexremote-bg2 in both profiles; fresh-download/artifact verification and owner fixture/lab scope are in release-intake-20261116-chriz-overhead-text-chriz-easy-bg-chriz-easy-iwd.toml; not a combined collection install or campaign gameplay acceptance."
 
+[[evidence]]
+subject_kind = "run"
+subject_id = "chriz-multiplayer-fix-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "a2b6db5f4aa3f2adba39312fab0ee76174987a18"
+test_artifact = "tools/tests/test_nov22_multiplayer_fix_recipe.py"
+date = "2026-11-22"
+status = "accepted"
+scope = "Static v0.1.0 pin, chriz_multiplayer_fix folder, components 0 and 1 on by default, EEex core dependency, and post-EET_end order directly after chriz-overhead-text-bg2 in both profiles; fresh-download artifact verification of the published release and native order are in release-intake-20261122-chriz-multiplayer-fix-chriz-easy-bg-chriz-easy-iwd.toml; not a combined collection install, multiplayer session or gameplay acceptance."
+
 # This remains intentionally pending. Static checks do not turn it into live acceptance.
 [[evidence]]
 subject_kind = "release"

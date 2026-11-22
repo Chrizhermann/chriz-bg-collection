@@ -23,7 +23,8 @@ source/package evidence is
 installation or gameplay acceptance.
 The recipe now pins **v0.2.0-alpha.17** (published 2026-11-22, annotated tag on public-main
 commit `5d93338` of Modpack PRs #20 and #21, built by the tagged release workflow). It adds
-default component `680` (EET story-consistent campaign boundaries and SoD backtracking fixes)
+component `680` (EET story-consistent campaign boundaries and SoD backtracking fixes; optional,
+on only with Challenge Mode)
 after `670` and before `650` while keeping every earlier component and choice. Fresh source/package
 evidence is `manifest/evidence/release-intake-20261122-chriz-bg-modpack-chriz-easy-bg.toml`,
 not a full collection WeiDU installation or gameplay acceptance.
@@ -150,7 +151,11 @@ The four ✓ marks record the old reference install, not the new default recipe.
   the dagger joins the Randomiser's BG1 pool (see [FOLLOW_UPS](FOLLOW_UPS.md)), `670` has to
   move before it.
   Not yet tested in a game: the two Marek fights and the drop.
-- EET world progression and SoD backtracking fixes `680` (alpha.17, Christopher's decision, 2026-11-22) is **default**. Requires EET (`feature:eet:mandatory-components`) and `mod:eet-end`, and runs in `chriz-bg-modpack-bg2` after `670`. It preserves EET's single install and BG1/SoD/SoA/ToB new-game starts while closing cross-campaign backtracking exploits (`AR0020 <-> BG4800`, `BD1000 <-> BG0900`, `AR3000 -> Amn` on ToB entry, and post-SoD `BD4000.BCS` reopening), keeping the SoD Ch.8-10 road open until the Dragonspear assault, and fixing abandoned SoD camp NPC stranding, chest forwarding, Baeloth's pit cleanup, camp sentries, siege audio and duplicate Jegg. All area rules live in `eet_world_progression.2da`.
+- EET world progression and SoD backtracking fixes `680` (alpha.17). **Christopher's decision, 2026-11-22: on only with Challenge Mode, off by default.** It is an optional, unchecked feature and a member of the [Challenge Mode group](../../plans/2026-10-13-challenge-mode-group.md); Chris's Recommended leaves it off. It implements his 2026-11-01 Challenge Mode idea of no travel back into an earlier campaign (see [FOLLOW_UPS](FOLLOW_UPS.md)). Requires EET (`feature:eet:mandatory-components`) and `mod:eet-end`, and runs in `chriz-bg-modpack-bg2` after `670`. It preserves EET's single install and BG1/SoD/SoA/ToB new-game starts while closing cross-campaign backtracking exploits (`AR0020 <-> BG4800`, `BD1000 <-> BG0900`, `AR3000 -> Amn` on ToB entry, and post-SoD `BD4000.BCS` reopening), keeping the SoD Ch.8-10 road open until the Dragonspear assault, and fixing abandoned SoD camp NPC stranding, chest forwarding, Baeloth's pit cleanup, camp sentries, siege audio and duplicate Jegg. All area rules live in `eet_world_progression.2da`.
+  Its Siege of Dragonspear camp fixes do not depend on the travel lock and are planned as their
+  own default component in the next Modpack release (see [FOLLOW_UPS](FOLLOW_UPS.md)); until then
+  they stay off in Recommended.
+  Not yet tested in a game: no full playthrough across the campaign transitions.
 - Kivan quest guard `130` is mandatory with BG1NPC Banters/Quests/Interjections `10`
   and SCS general AI `6000`, after EET import and SCS. It is independent of Kivan's
   Archer choice `198`; never add standalone `KIVAN_QUEST_FIX` alongside it. Its
@@ -252,6 +257,6 @@ The four ✓ marks record the old reference install, not the new default recipe.
 | 652 | Campaign XP caps - chapter-by-chapter XP caps across BG1, SoD, SoA, and ToB (requires 650; experimental) | chriz-bg-modpack: Gameplay tweaks | | | optional |
 | 660 | Degrodel: hand over the Helm of Balduran or keep it and fight him | chriz-bg-modpack: Gameplay tweaks | | | default |
 | 670 | Marek: carry the Boomerang Dagger +2 in BG1 (drops it when he dies) | chriz-bg-modpack: Gameplay tweaks | | | default |
-| 680 | EET: story-consistent campaign boundaries and SoD backtracking fixes | chriz-bg-modpack: Gameplay tweaks | | | default |
+| 680 | EET: story-consistent campaign boundaries and SoD backtracking fixes | chriz-bg-modpack: Gameplay tweaks | | | optional |
 | 640 | Legacy UI translation helper compatibility | chriz-bg-modpack: Compatibility | | | mandatory |
 | 460 | Party AI Defensive Stance: obey the "Use special abilities" option | chriz-bg-modpack: Compatibility | | | default |

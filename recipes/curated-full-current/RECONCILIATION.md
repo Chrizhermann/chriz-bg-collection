@@ -3,7 +3,7 @@
 Generated from `docs/curation/components/` plus `manifest/curation-map.toml`; no WeiDU log is used as an inclusion source.
 The source column records the pinned installer identity, while the status is the engine-equivalent resolved-selection outcome for the recommended preset.
 
-Engine-equivalent resolved-selection summary: 491 default/mandatory rows — conditional inactive: 20, deferred: 4, selected for installation: 467.
+Engine-equivalent resolved-selection summary: 492 default/mandatory rows — conditional inactive: 20, deferred: 4, selected for installation: 468.
 
 | Curated row | Decision | Semantic target | Status | Current source/component identity | Reason |
 |---|---|---|---|---|---|
@@ -244,7 +244,6 @@ Engine-equivalent resolved-selection summary: 491 default/mandatory rows — con
 | `CHRIZ-BG-MODPACK:239` | default | `feature:chriz-bg-modpack:component-239` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.17 0.2.0-alpha.17 (v0.2.0-alpha.17), component 239 |  |
 | `CHRIZ-BG-MODPACK:660` | default | `feature:chriz-bg-modpack:component-660` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.17 0.2.0-alpha.17 (v0.2.0-alpha.17), component 660 |  |
 | `CHRIZ-BG-MODPACK:670` | default | `feature:chriz-bg-modpack:component-670` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.17 0.2.0-alpha.17 (v0.2.0-alpha.17), component 670 |  |
-| `CHRIZ-BG-MODPACK:680` | default | `feature:chriz-bg-modpack:component-680` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.17 0.2.0-alpha.17 (v0.2.0-alpha.17), component 680 |  |
 | `CHRIZ-BG-MODPACK:640` | mandatory | `feature:chriz-bg-modpack:component-640` | conditional inactive | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.17 0.2.0-alpha.17 (v0.2.0-alpha.17), component 640 | Inactive under the recommended selection. |
 | `CHRIZ-BG-MODPACK:460` | default | `feature:chriz-bg-modpack:component-460` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.17 0.2.0-alpha.17 (v0.2.0-alpha.17), component 460 |  |
 | `CHRIZ-BG-REBALANCE:130` | default | `feature:chriz-bg-rebalance:component-130` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.12 0.8.12 (v0.8.12), component 130 |  |
@@ -316,6 +315,8 @@ Engine-equivalent resolved-selection summary: 491 default/mandatory rows — con
 | `CHRIZ-SOD-REMIX:900` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.17 0.6.17 (v0.6.17), component 900 |  |
 | `CHRIZ-SOD-REMIX:910` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.17 0.6.17 (v0.6.17), component 910 |  |
 | `CHRIZ-SOD-REMIX:292` | default | `feature:chriz-sod-remix:component-292` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.17 0.6.17 (v0.6.17), component 292 |  |
+| `CHRIZ_MULTIPLAYER_FIX:0` | default | `feature:chriz-multiplayer-fix:component-0` | selected for installation | chriz-multiplayer-fix → chriz-multiplayer-fix-0.1.0 0.1.0 (v0.1.0), component 0 |  |
+| `CHRIZ_MULTIPLAYER_FIX:1` | default | `feature:chriz-multiplayer-fix:component-1` | selected for installation | chriz-multiplayer-fix → chriz-multiplayer-fix-0.1.0 0.1.0 (v0.1.0), component 1 |  |
 | `CHRIZ_OVERHEAD_TEXT:0` | default | `feature:chriz-overhead-text:component-0` | selected for installation | chriz-overhead-text → chriz-overhead-text-0.1.0 0.1.0 (v0.1.0), component 0 |  |
 | `CROSSMODBG2:0` | default | `feature:crossmodbg2:component-0` | selected for installation | crossmodbg2 → crossmodbg2-30 30 (v30), component 0 |  |
 | `CROSSMODBG2:1` | default | `feature:crossmodbg2:component-1` | selected for installation | crossmodbg2 → crossmodbg2-30 30 (v30), component 1 |  |
