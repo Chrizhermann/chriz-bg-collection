@@ -306,7 +306,11 @@ fn latest_release_with_notes_extracts_and_sanitizes_body_without_altering_releas
         latest.notes.as_deref(),
         Some("- Native rendering\n- Floating combat text")
     );
-    assert!(is_native_autostart_link_path("bgradar/bg radar overlay.exe"));
-    assert!(is_native_autostart_link_path("bg2radar/bg radar overlay.exe"));
+    assert!(is_native_autostart_link_path(
+        "bgradar/bg radar overlay.exe"
+    ));
+    assert!(is_native_autostart_link_path(
+        "bg2radar/bg radar overlay.exe"
+    ));
     assert!(!is_native_autostart_link_path("override/evil.exe"));
 }

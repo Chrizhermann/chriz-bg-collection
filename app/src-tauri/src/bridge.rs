@@ -1855,8 +1855,9 @@ impl NativeBridge {
                     .to_owned(),
                     current_version,
                     available_version: Some(release.tag),
-                    detail: "Optional overlay. Updated separately without changing your mods or saves."
-                        .to_owned(),
+                    detail:
+                        "Optional overlay. Updated separately without changing your mods or saves."
+                            .to_owned(),
                     release_notes: Some(release_notes),
                 }
             }

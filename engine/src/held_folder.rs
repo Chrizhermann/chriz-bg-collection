@@ -1229,7 +1229,10 @@ impl HeldFolder {
             if entry.reparse_point {
                 let metadata = fs::symlink_metadata(&child)
                     .map_err(|error| EntryError::io(child.clone(), error))?;
-                if metadata.file_type().is_symlink() && !metadata.is_dir() && allow_file_link(&child) {
+                if metadata.file_type().is_symlink()
+                    && !metadata.is_dir()
+                    && allow_file_link(&child)
+                {
                     before_remove(&child).map_err(|error| EntryError::io(child.clone(), error))?;
                     fs::remove_file(&child).map_err(|error| EntryError::io(child, error))?;
                     continue;
