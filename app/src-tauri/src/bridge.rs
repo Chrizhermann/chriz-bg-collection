@@ -1820,7 +1820,7 @@ impl NativeBridge {
     }
 
     pub fn radar_update(&self) -> crate::updates::RadarUpdateResponse {
-        let latest = bg_engine::radar::check_latest();
+        let latest = bg_engine::radar::check_latest_with_notes();
         let current_version = self.list_managed_installations().ok().and_then(|copies| {
             copies
                 .into_iter()
@@ -1829,25 +1829,37 @@ impl NativeBridge {
                 .and_then(|copy| copy.radar_version)
         });
         match latest {
-            Ok(release) => crate::updates::RadarUpdateResponse {
-                state: if current_version.as_deref() == Some(release.tag.as_str()) {
-                    "up-to-date"
-                } else {
-                    "available"
-                }
-                .to_owned(),
-                current_version,
-                available_version: Some(release.tag.clone()),
-                detail: "Optional overlay. Updated separately without changing your mods or saves."
-                    .to_owned(),
-                release_notes: Some(format!(
-                    "BG Radar Overlay {}\nPublished {}\nhttps://github.com/{}/releases/tag/{}",
-                    release.tag,
-                    release.published_at,
+            Ok(latest) => {
+                let release = latest.release;
+                let release_url = format!(
+                    "https://github.com/{}/releases/tag/{}",
                     bg_engine::radar::RADAR_REPOSITORY,
                     release.tag
-                )),
-            },
+                );
+                let release_notes = match latest.notes {
+                    Some(notes) => format!(
+                        "BG Radar Overlay {} (published {})\n\n{}\n\n{}",
+                        release.tag, release.published_at, notes, release_url
+                    ),
+                    None => format!(
+                        "BG Radar Overlay {}\nPublished {}\n{}",
+                        release.tag, release.published_at, release_url
+                    ),
+                };
+                crate::updates::RadarUpdateResponse {
+                    state: if current_version.as_deref() == Some(release.tag.as_str()) {
+                        "up-to-date"
+                    } else {
+                        "available"
+                    }
+                    .to_owned(),
+                    current_version,
+                    available_version: Some(release.tag),
+                    detail: "Optional overlay. Updated separately without changing your mods or saves."
+                        .to_owned(),
+                    release_notes: Some(release_notes),
+                }
+            }
             Err(error) => crate::updates::RadarUpdateResponse {
                 state: "offline".to_owned(),
                 current_version,

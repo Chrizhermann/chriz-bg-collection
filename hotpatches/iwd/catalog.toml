@@ -35,6 +35,11 @@ runtime_files = [
     "override/eeex_remote_*",
     # BG Radar Overlay, which the app installs and updates itself.
     "bg radar overlay/**",
+    # BG Radar Overlay 3.0 native injection (Ultimate ASI Loader, BG2Radar.asi, autostart symlink).
+    "bg2radar.asi",
+    "winmm.dll",
+    "bgradar/**",
+    "bg2radar/**",
 ]
 
 # Christopher's rule (2026-10-28): hotpatches only for installations close to the recommended

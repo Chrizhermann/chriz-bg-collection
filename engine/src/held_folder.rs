@@ -388,18 +388,45 @@ impl HeldFolder {
     /// in `last` are removed after their siblings, in every folder. `before_remove` is called with
     /// the path of each file just before it is removed and of each folder once it is empty; an
     /// error from it stops the removal.
+    #[cfg(test)]
     pub(crate) fn remove_contents(
         &self,
         last: &[&str],
         before_remove: &mut dyn FnMut(&Path) -> io::Result<()>,
     ) -> Result<(), EntryError> {
-        remove_contents_of(self.folder(), &self.path, last, before_remove)
+        self.remove_contents_allowing_file_links(last, &|_| false, before_remove)
+    }
+
+    /// Like [`Self::remove_contents`], except a non-directory symbolic link matched by
+    /// `allow_file_link` is unlinked via its non-following handle without touching its target.
+    pub(crate) fn remove_contents_allowing_file_links(
+        &self,
+        last: &[&str],
+        allow_file_link: &dyn Fn(&Path) -> bool,
+        before_remove: &mut dyn FnMut(&Path) -> io::Result<()>,
+    ) -> Result<(), EntryError> {
+        remove_contents_of(
+            self.folder(),
+            &self.path,
+            last,
+            allow_file_link,
+            before_remove,
+        )
     }
 
     /// The first link or other reparse point anywhere below this folder, found through the held
     /// handles without following one.
+    #[cfg(test)]
     pub(crate) fn find_link_below(&self) -> Result<Option<PathBuf>, EntryError> {
-        find_link_below_of(self.folder(), &self.path)
+        self.find_link_below_except(&|_| false)
+    }
+
+    /// Like [`Self::find_link_below`], ignoring non-directory links matched by `allow_file_link`.
+    pub(crate) fn find_link_below_except(
+        &self,
+        allow_file_link: &dyn Fn(&Path) -> bool,
+    ) -> Result<Option<PathBuf>, EntryError> {
+        find_link_below_of(self.folder(), &self.path, allow_file_link)
     }
 
     /// The file identity of this folder, read from its own handle.
@@ -550,6 +577,7 @@ fn remove_contents_of(
     folder: &fs::File,
     path: &Path,
     last: &[&str],
+    allow_file_link: &dyn Fn(&Path) -> bool,
     before_remove: &mut dyn FnMut(&Path) -> io::Result<()>,
 ) -> Result<(), EntryError> {
     let mut entries =
@@ -557,15 +585,30 @@ fn remove_contents_of(
     removal_order(&mut entries, last);
     for entry in entries {
         let child = path.join(&entry.name);
-        if entry.reparse_point {
-            return Err(EntryError::not_direct(child));
-        }
         let name = handles::wide(&entry.name);
+        if entry.reparse_point {
+            if entry.directory || !allow_file_link(&child) {
+                return Err(EntryError::not_direct(child));
+            }
+            let file = handles::open_removable_entry(folder, &name, false)
+                .map_err(|error| EntryError::io(child.clone(), error))?;
+            let metadata = file
+                .metadata()
+                .map_err(|error| EntryError::io(child.clone(), error))?;
+            if metadata.is_dir()
+                || (!metadata.is_file() && !crate::reparse::handle_is_link(&file, &metadata))
+            {
+                return Err(EntryError::not_direct(child));
+            }
+            before_remove(&child).map_err(|error| EntryError::io(child.clone(), error))?;
+            handles::delete(&file, true).map_err(|error| EntryError::io(child, error))?;
+            continue;
+        }
         if entry.directory {
             let inner = handles::open_removable_folder(folder, &name)
                 .map_err(|error| EntryError::folder_io(child.clone(), error))?;
             require_direct_directory(&inner, &child)?;
-            remove_contents_of(&inner, &child, last, before_remove)?;
+            remove_contents_of(&inner, &child, last, allow_file_link, before_remove)?;
             before_remove(&child).map_err(|error| EntryError::io(child.clone(), error))?;
             handles::delete(&inner, false).map_err(|error| EntryError::io(child, error))?;
         } else {
@@ -585,13 +628,20 @@ fn remove_contents_of(
 }
 
 #[cfg(windows)]
-fn find_link_below_of(folder: &fs::File, path: &Path) -> Result<Option<PathBuf>, EntryError> {
+fn find_link_below_of(
+    folder: &fs::File,
+    path: &Path,
+    allow_file_link: &dyn Fn(&Path) -> bool,
+) -> Result<Option<PathBuf>, EntryError> {
     let mut entries =
         handles::list(folder).map_err(|error| EntryError::io(path.to_path_buf(), error))?;
     removal_order(&mut entries, &[]);
     for entry in entries {
         let child = path.join(&entry.name);
         if entry.reparse_point {
+            if !entry.directory && allow_file_link(&child) {
+                continue;
+            }
             return Ok(Some(child));
         }
         if !entry.directory {
@@ -607,7 +657,7 @@ fn find_link_below_of(folder: &fs::File, path: &Path) -> Result<Option<PathBuf>,
             return Ok(Some(child));
         }
         if metadata.is_dir() {
-            if let Some(found) = find_link_below_of(&inner, &child)? {
+            if let Some(found) = find_link_below_of(&inner, &child, allow_file_link)? {
                 return Ok(Some(found));
             }
         }
@@ -1155,9 +1205,19 @@ impl HeldFolder {
         self.remove()
     }
 
+    #[cfg(test)]
     pub(crate) fn remove_contents(
         &self,
         last: &[&str],
+        before_remove: &mut dyn FnMut(&Path) -> io::Result<()>,
+    ) -> Result<(), EntryError> {
+        self.remove_contents_allowing_file_links(last, &|_| false, before_remove)
+    }
+
+    pub(crate) fn remove_contents_allowing_file_links(
+        &self,
+        last: &[&str],
+        allow_file_link: &dyn Fn(&Path) -> bool,
         before_remove: &mut dyn FnMut(&Path) -> io::Result<()>,
     ) -> Result<(), EntryError> {
         let mut entries = self
@@ -1167,6 +1227,13 @@ impl HeldFolder {
         for entry in entries {
             let child = self.path.join(&entry.name);
             if entry.reparse_point {
+                let metadata = fs::symlink_metadata(&child)
+                    .map_err(|error| EntryError::io(child.clone(), error))?;
+                if metadata.file_type().is_symlink() && !metadata.is_dir() && allow_file_link(&child) {
+                    before_remove(&child).map_err(|error| EntryError::io(child.clone(), error))?;
+                    fs::remove_file(&child).map_err(|error| EntryError::io(child, error))?;
+                    continue;
+                }
                 return Err(EntryError::not_direct(child));
             }
             if entry.directory {
@@ -1175,7 +1242,7 @@ impl HeldFolder {
                     path: child.clone(),
                     removable: false,
                 };
-                inner.remove_contents(last, before_remove)?;
+                inner.remove_contents_allowing_file_links(last, allow_file_link, before_remove)?;
                 before_remove(&child).map_err(|error| EntryError::io(child.clone(), error))?;
                 fs::remove_dir(&child).map_err(|error| EntryError::io(child, error))?;
             } else {
@@ -1186,7 +1253,15 @@ impl HeldFolder {
         Ok(())
     }
 
+    #[cfg(test)]
     pub(crate) fn find_link_below(&self) -> Result<Option<PathBuf>, EntryError> {
+        self.find_link_below_except(&|_| false)
+    }
+
+    pub(crate) fn find_link_below_except(
+        &self,
+        allow_file_link: &dyn Fn(&Path) -> bool,
+    ) -> Result<Option<PathBuf>, EntryError> {
         let mut entries = self
             .entries()
             .map_err(|error| EntryError::io(self.path.clone(), error))?;
@@ -1194,6 +1269,13 @@ impl HeldFolder {
         for entry in entries {
             let child = self.path.join(&entry.name);
             if entry.reparse_point {
+                let is_allowed_file_link = fs::symlink_metadata(&child)
+                    .map(|metadata| metadata.file_type().is_symlink() && !metadata.is_dir())
+                    .unwrap_or(false)
+                    && allow_file_link(&child);
+                if is_allowed_file_link {
+                    continue;
+                }
                 return Ok(Some(child));
             }
             if entry.directory {
@@ -1201,7 +1283,7 @@ impl HeldFolder {
                     path: child,
                     removable: false,
                 };
-                if let Some(found) = inner.find_link_below()? {
+                if let Some(found) = inner.find_link_below_except(allow_file_link)? {
                     return Ok(Some(found));
                 }
             }

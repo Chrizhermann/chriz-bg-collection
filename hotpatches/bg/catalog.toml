@@ -31,6 +31,11 @@ runtime_files = [
     "override/eeex_remote_*",
     # BG Radar Overlay, which the app installs and updates itself.
     "bg radar overlay/**",
+    # BG Radar Overlay 3.0 native injection (Ultimate ASI Loader, BG2Radar.asi, autostart symlink).
+    "bg2radar.asi",
+    "winmm.dll",
+    "bgradar/**",
+    "bg2radar/**",
 ]
 
 # The format asks for the rule hotpatches follow. Chriz Easy BG offers no hotpatches, so nothing
