@@ -627,6 +627,7 @@ mod tests {
                 "bgradar/bg radar overlay.exe",
                 "bg2radar",
                 "bg2radar/bg radar overlay.exe",
+                "override/m_rdrcrt.lua",
             ] {
                 assert!(catalog.runtime_files.matches(name), "{name}");
             }
