@@ -27,6 +27,7 @@ PIN = "chriz-bg-modpack-0.2.0-alpha.18"
 PREVIOUS = "chriz-bg-modpack-0.2.0-alpha.17"
 TAG = "v0.2.0-alpha.18"
 SOURCE_COMMIT = "533913c1d4874d34aceb800c54305c779e3c0748"
+PIN_COMMIT = "eddb2b9650373e4d9d9cebf140db8c5adbb03414"
 FILENAME = "chriz-bg-modpack-v0.2.0-alpha.18.zip"
 URL = f"https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/{TAG}/{FILENAME}"
 LENGTH = 9_554_843
@@ -237,6 +238,38 @@ class Nov23ModpackAlpha18ScrollLearnFixTests(unittest.TestCase):
         self.assertIn(EVIDENCE, current)
         self.assertIn(f"artifact:{PIN}", current)
         self.assertIn(f"feature:{FEATURE}", current)
+
+    def test_static_acceptance_records_cite_alpha18_pin_commit(self) -> None:
+        bg_runs = (
+            "chriz-bg-modpack-bg2",
+            "chriz-bg-modpack-edwin-bg2",
+            "chriz-bg-modpack-baeloth-bg2",
+            "chriz-bg-modpack-scrolls-bg2",
+            "chriz-bg-modpack-pre-continuity-bg2",
+            "chriz-bg-modpack-continuity-bg2",
+            "chriz-bg-modpack-late-companions-bg2",
+        )
+        for profile, expected_runs in (
+            ("manifest", bg_runs),
+            ("recipes/curated-full-current", bg_runs),
+            (IWD_PROFILE, (IWD_RUN,)),
+        ):
+            evidence = _load(ROOT / f"{profile}/releases/v0.1.0-alpha.1/acceptance.toml")["evidence"]
+            by_run = {
+                row["subject_id"]: row
+                for row in evidence
+                if row["subject_kind"] == "run"
+            }
+            for run_id in expected_runs:
+                with self.subTest(profile=profile, run_id=run_id):
+                    record = by_run[run_id]
+                    self.assertEqual((record["kind"], record["status"]), ("static-test", "accepted"))
+                    self.assertEqual(record["commit"], PIN_COMMIT)
+                    self.assertEqual(record["date"], "2026-11-23")
+                    self.assertEqual(
+                        record["test_artifact"],
+                        "tools/tests/test_nov23_modpack_alpha18_scroll_learn_fix_recipe.py",
+                    )
 
 
 if __name__ == "__main__":

@@ -390,6 +390,17 @@ status = "accepted"
 scope = "Static recipe source, component, order and recommended-plan assertions only; not live game acceptance."
 
 [[evidence]]
+subject_kind = "run"
+subject_id = "chriz-bg-modpack-main"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "eddb2b9650373e4d9d9cebf140db8c5adbb03414"
+test_artifact = "tools/tests/test_nov23_modpack_alpha18_scroll_learn_fix_recipe.py"
+date = "2026-11-23"
+status = "accepted"
+scope = "Static alpha.18 pin, source, component (RAW spell-scroll learning fix 470, omitting 690), EEex dependency and order assertions only; fresh source/package verification is in release-intake-20261123-chriz-bg-modpack-chriz-easy-bg-chriz-easy-iwd.toml; not a combined collection WeiDU installation or campaign gameplay acceptance."
+
+[[evidence]]
 subject_kind = "release"
 subject_id = "v0.1.0-alpha.1"
 kind = "runtime-test"

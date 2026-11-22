@@ -771,16 +771,16 @@ _EXPANDED_RELEASE_EVIDENCE = {
     "date": "2026-09-16",
     "scope": "Passed focused selection, dependencies, native component ordering and source intake checks; Christopher performs the installation and gameplay acceptance separately.",
 }
-_MODPACK_ALPHA17_EVIDENCE = {
-    "commit": "41e1ac82d45e93402707aaafc25337784fd11477",
-    "test_artifact": "tools/tests/test_nov22_modpack_alpha17_eet_world_progression_recipe.py",
-    "date": "2026-11-22",
-    "scope": "Static alpha.17 pin, source, component (including EET world progression 680) and order assertions only; fresh source/package verification is in release-intake-20261122-chriz-bg-modpack-chriz-easy-bg.toml; not a WeiDU installation or gameplay acceptance.",
+_MODPACK_ALPHA18_EVIDENCE = {
+    "commit": "eddb2b9650373e4d9d9cebf140db8c5adbb03414",
+    "test_artifact": "tools/tests/test_nov23_modpack_alpha18_scroll_learn_fix_recipe.py",
+    "date": "2026-11-23",
+    "scope": "Static alpha.18 pin, source, component (including RAW spell-scroll learning fix 470, omitting 690) and order assertions only; fresh source/package verification is in release-intake-20261123-chriz-bg-modpack-chriz-easy-bg-chriz-easy-iwd.toml; not a WeiDU installation or gameplay acceptance.",
 }
 CURATED_SCOPED_RUN_EVIDENCE = {
-    "chriz-bg-modpack-pre-continuity-bg2": _MODPACK_ALPHA17_EVIDENCE,
-    "chriz-bg-modpack-continuity-bg2": _MODPACK_ALPHA17_EVIDENCE,
-    "chriz-bg-modpack-late-companions-bg2": _MODPACK_ALPHA17_EVIDENCE,
+    "chriz-bg-modpack-pre-continuity-bg2": _MODPACK_ALPHA18_EVIDENCE,
+    "chriz-bg-modpack-continuity-bg2": _MODPACK_ALPHA18_EVIDENCE,
+    "chriz-bg-modpack-late-companions-bg2": _MODPACK_ALPHA18_EVIDENCE,
 }
 
 

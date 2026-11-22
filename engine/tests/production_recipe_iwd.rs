@@ -1932,7 +1932,10 @@ fn chriz_bg_modpack_scroll_learning_fix_470_runs_by_default_with_eeex_and_omits_
         selection.set_feature(disabled, false);
         let changed = evaluate(&manifest, &selection).unwrap();
         assert!(
-            changed.plan.components_for("chriz-bg-modpack-main").is_none(),
+            changed
+                .plan
+                .components_for("chriz-bg-modpack-main")
+                .is_none(),
             "{disabled}"
         );
     }
