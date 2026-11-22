@@ -1,0 +1,20 @@
+schema = 1
+recipe_id = "chriz-easy-iwd"
+version = "0.1.18"
+published_at = "2026-11-22T00:00:00Z"
+minimum_app_version = "0.1.1"
+supersedes = "0.1.17"
+
+[[changes]]
+id = "chriz-multiplayer-fix"
+title = "No more crash after the multiplayer lobby; saves copy between single player and multiplayer"
+summary = "Chriz Multiplayer Fix v0.1.0 (with EEex) stops the random crash right after leaving Beamdog's multiplayer lobby, for example on Multiplayer > Local network game > Load. It also adds a small Copy button to each save on the Load screen that copies the save into the other mode's save list, so a party created in multiplayer can continue in single player and back; the original save stays. Both work in a game in progress, and a game already installed gets them through the hotpatch."
+save_applicability = "current-save"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-multiplayer-fix-0.1.0",
+  "feature:mod:chriz-multiplayer-fix",
+  "feature:feature:chriz-multiplayer-fix:component-0",
+  "feature:feature:chriz-multiplayer-fix:component-1",
+  "run:chriz-multiplayer-fix-main",
+]

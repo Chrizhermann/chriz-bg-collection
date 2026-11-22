@@ -1,0 +1,32 @@
+id = "chriz-multiplayer-fix-0.1.0"
+name = "Chriz Multiplayer Fix"
+version = "0.1.0"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/chriz-multiplayer-fix/releases/download/v0.1.0/chriz-multiplayer-fix-v0.1.0.zip"
+reference = "v0.1.0"
+expected_filename = "chriz-multiplayer-fix-v0.1.0.zip"
+expected_length = 1280778
+sha256 = "d948dd3276b781d776229e35a08f8edcf3504dfde3a5b8b1c60024d8434bc73b"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["chriz_multiplayer_fix"]
+tp2_paths = ["chriz_multiplayer_fix/setup-chriz_multiplayer_fix.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 64
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 8388608
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-multiplayer-fix"
+license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/chriz-multiplayer-fix/releases/tag/v0.1.0"
+reviewed_on = "2026-11-22"

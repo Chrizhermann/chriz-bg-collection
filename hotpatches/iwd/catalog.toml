@@ -131,6 +131,12 @@ label = "Chriz Easy IWD 0.1.16"
 recipe_version = "0.1.17"
 content_sha256 = "6aceb183900fb7b3640dbedc8f4dd84e931c7cfe1549aa0c31cf115726d397c1"
 
+[[bases]]
+id = "iwd-0.1.18"
+label = "Chriz Easy IWD 0.1.17"
+recipe_version = "0.1.18"
+content_sha256 = "c068424ecc861305a04cf4169cf05254ffdd79baeb0a7c0dbab4502fd08c3911"
+
 # Christopher's twelve boss fights (Chriz IWD Encounters 0.2.0, 2026-11-04) for installations of
 # the releases before 0.1.6, which install them itself. Each fight takes effect where the party
 # has not been yet; the orog raid's changes also while the raid has not happened.
@@ -244,4 +250,28 @@ components = [110]
 [[hotpatches.changes]]
 title = "Banter only between living party members"
 summary = "Banter starts only when both partners live and are in the same area."
+save_applicability = "current-save"
+
+# Stops the crash after leaving the multiplayer lobby and adds the Load screen button that copies
+# saves between single player and multiplayer (Chriz Multiplayer Fix 0.1.0, Christopher,
+# 2026-11-22) for installations of the releases before collection 0.1.18, which installs it
+# itself. Both components only add runtime files and need EEex's core at install time.
+[[hotpatches]]
+id = "chriz-multiplayer-fix-0.1.0"
+title = "No more crash after the multiplayer lobby"
+summary = "Stops the random crash right after leaving the multiplayer lobby and adds a Copy button to each save on the Load screen that copies it between single player and multiplayer."
+bases = ["iwd-0.1.1", "iwd-0.1.2", "iwd-0.1.3", "iwd-0.1.4", "iwd-0.1.5", "iwd-0.1.6", "iwd-0.1.8", "iwd-0.1.9", "iwd-0.1.10", "iwd-0.1.13", "iwd-0.1.14", "iwd-0.1.15", "iwd-0.1.16", "iwd-0.1.17"]
+artifact = "chriz-multiplayer-fix-0.1.0"
+mod = "chriz-multiplayer-fix"
+components = [0, 1]
+requires_components = [{ mod = "eeex", any_of = [1] }]
+
+[[hotpatches.changes]]
+title = "No more crash after the multiplayer lobby"
+summary = "Leaving Beamdog's multiplayer lobby, for example on Multiplayer > Local network game > Load, no longer crashes the game at random."
+save_applicability = "current-save"
+
+[[hotpatches.changes]]
+title = "Copy saves between single player and multiplayer"
+summary = "A small Copy button on each save of the Load screen copies the save into the other mode's save list, so a party created in multiplayer can continue in single player and back. The original save stays."
 save_applicability = "current-save"
