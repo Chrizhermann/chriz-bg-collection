@@ -619,10 +619,11 @@ mod tests {
                 .bases
                 .iter()
                 .map(|base| base.id.clone())
-                .filter(|id| id != "iwd-0.1.18")
+                .filter(|id| !matches!(id.as_str(), "iwd-0.1.18" | "iwd-0.1.19"))
                 .collect::<Vec<_>>()
         );
         assert!(catalog.base("iwd-0.1.18").is_some());
+        assert!(catalog.base("iwd-0.1.19").is_some());
         assert!(hotpatch.requires.is_empty());
         assert_eq!(hotpatch.components, [0, 1]);
         assert_eq!(

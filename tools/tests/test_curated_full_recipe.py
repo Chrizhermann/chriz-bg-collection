@@ -316,7 +316,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
             modpack = tomllib.loads((output / "mods/chriz-bg-modpack.toml").read_text(encoding="utf-8"))
             # November 22: alpha.17 adds EET world progression and SoD backtracking 680.
-            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.17")
+            # November 23: alpha.18 adds RAW specialist spell-scroll learning fix 470.
+            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.18")
             collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
             preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))
             mods = {path.stem for path in (output / "mods").glob("*.toml")}
@@ -481,8 +482,11 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # EEex's core (Christopher, 2026-11-22), giving dfce2c4d…; without its run,
                 # features and preset entries main's alpha.17 digest e6a274c0… returns.
                 # November 22: Modpack 680 is on only with Challenge Mode (Christopher,
-                # 2026-11-22): optional, a group member, off in Recommended, plain description.
-                "8b8b8b65f2286b2252fccbec961ac6ad19c331b15324251a215dfae9821974d1",
+                # 2026-11-22): optional, a group member, off in Recommended, plain description,
+                # giving 8b8b8b65….
+                # November 23: Modpack alpha.18 (PR #24/#25) adds default component 470
+                # (RAW specialist spell-scroll learning fix, requiring EEex) after 460.
+                "db2eb13410e5d2a7a347925bb05cf81e587d99d31fcecd5b6316c345de43439c",
             )
 
             legacy_bg1npc_groups = {

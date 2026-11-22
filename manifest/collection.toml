@@ -411,7 +411,7 @@ args = []
 run_id = "chriz-bg-modpack-bg2"
 mod_id = "chriz-bg-modpack"
 phase = "post-eet-end"
-components = [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660, 670, 680]
+components = [130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680]
 args = []
 
 [[runs]]
@@ -5155,6 +5155,17 @@ decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
 components = [{ run_id = "chriz-bg-modpack-bg2", component = 460 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-470"
+title = "Spell learning: restrict ±15% specialist modifier to specialist mages"
+description = "Fixes the Enhanced Edition opcode 147 bug where kitted Bards (Blade, Jester, Skald, mod kits), Wild Mages, kitted dual-class Mages, and multi-bit custom specialists took an unintended -15% scroll-learning penalty. Only Mage-class characters carrying a wizard specialist school bit receive +15% on own-school scrolls and -15% on other schools; all other kits use the pure INTMOD chance. Requires EEex."
+category = "rules"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 470 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-610"

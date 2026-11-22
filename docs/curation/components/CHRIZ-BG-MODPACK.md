@@ -28,7 +28,16 @@ on only with Challenge Mode)
 after `670` and before `650` while keeping every earlier component and choice. Fresh source/package
 evidence is `manifest/evidence/release-intake-20261122-chriz-bg-modpack-chriz-easy-bg.toml`,
 not a full collection WeiDU installation or gameplay acceptance.
-66 current or historical entries; the collection exposes 49. Component `195` already includes the work from standalone component
+The recipe now pins **v0.2.0-alpha.18** (published 2026-11-22 21:13 UTC, annotated tag on public-main
+commit `533913c` of Modpack PRs #24 and #25, built by the tagged release workflow). It adds
+default component `470` (RAW specialist spell-scroll learning fix, requiring EEex) after `460`
+in both Chriz Easy BG and Chriz Easy IWD (`470` is the sole Modpack component in IWD). Modpack
+alpha.18 also ships component `690` (`cbm_fast_traps`, integrated in Modpack PR #23 with its
+typed-write fix in PR #25), which remains unoffered and off in both installers until explicitly
+approved. Fresh source/package evidence is
+`manifest/evidence/release-intake-20261123-chriz-bg-modpack-chriz-easy-bg-chriz-easy-iwd.toml`,
+not a combined collection WeiDU installation or full campaign gameplay.
+67 current or historical entries; the collection exposes 50. Component `195` already includes the work from standalone component
 `160`; Hexxat's three class routes are one at-most-one choice.
 The four ✓ marks record the old reference install, not the new default recipe.
 
@@ -57,7 +66,8 @@ The four ✓ marks record the old reference install, not the new default recipe.
   `188`, `189`, `199`, `220`–`225`, `400`, `410`, `430`, `440`, `450`, `610`, `611`, `620`, `630`, and `640`. It contains no advertised
   FAIL placeholders. Alpha.11 added `237`, `238`, `650`, `651` and `660`; alpha.12 added
   `230`–`234`; alpha.13 added `135`, `239`, `460` and `652`; alpha.14 added none;
-  alpha.15 adds `670`; alpha.16 added none; alpha.17 adds `680`.
+  alpha.15 adds `670`; alpha.16 added none; alpha.17 adds `680`; alpha.18 adds offered default `470` (while `690` remains unoffered/off).
+- Spell scroll learning RAW fix `470` (alpha.18) is **default (Christopher's decision, 2026-11-23)** in both Chriz Easy BG and Chriz Easy IWD and requires EEex. Restricts the ±15% specialist scribing modifier (`opcode 147`) to Mage-class characters carrying one or more of the 8 wizard specialist bits (`0x0040`–`0x2000`, including custom multi-bit specialists); all Bards (Blade, Jester, Skald, mod kits), Wild Mages, kitted dual-class Mages, and non-Mages stay at 0%. Verified live in quiet labs (`2026-11-23`) on BG2:EE `2.7.3.0` and IWD:EE `2.7.3.0` with EEex `v1.3.1` (`BG:EE / SoD` live lab pass pending).
 - Dorn's ambush fix `135` (alpha.13) is **default (Christopher's decision,
   2026-10-25)**. When Dorn catches up with Senjak and Dorotea in BG1, the cutscene no
   longer locks the camera on Senjak, and Senjak's script releases a lock once he turns
@@ -260,3 +270,4 @@ The four ✓ marks record the old reference install, not the new default recipe.
 | 680 | EET: story-consistent campaign boundaries and SoD backtracking fixes | chriz-bg-modpack: Gameplay tweaks | | | optional |
 | 640 | Legacy UI translation helper compatibility | chriz-bg-modpack: Compatibility | | | mandatory |
 | 460 | Party AI Defensive Stance: obey the "Use special abilities" option | chriz-bg-modpack: Compatibility | | | default |
+| 470 | Spell Learning: restrict +/-15% specialist modifier to specialist mages (BG:EE, SoD, BG2:EE, EET, IWD:EE; Windows EEex) | chriz-bg-modpack: Spell and compatibility fixes | | | default |

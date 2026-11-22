@@ -145,7 +145,8 @@ class CatalogParserTests(unittest.TestCase):
         # November 22: Modpack 680 (no travel back into an earlier campaign) adds one
         # optional row.
         # November 22: the CHRIZ_MULTIPLAYER_FIX catalog adds components 0 and 1.
-        self.assertEqual(len(rows), 1_357)
+        # November 23: Modpack alpha.18 adds RAW specialist spell-scroll learning fix 470.
+        self.assertEqual(len(rows), 1_358)
         self.assertEqual(
             decision_totals(rows),
             {
@@ -204,7 +205,9 @@ class CatalogParserTests(unittest.TestCase):
                 # November 16: Chriz Overhead Text 0 is a default (Christopher, 2026-11-16).
                 # November 22: Chriz Multiplayer Fix 0 and 1 are defaults (Christopher,
                 # 2026-11-22).
-                Decision.DEFAULT: 338,
+                # November 23: Modpack 470 (RAW spell-scroll learning fix) is a default
+                # (Christopher, 2026-11-22).
+                Decision.DEFAULT: 339,
                 # October 13 intake: SoD 177/198/285 join the mandatory bundle (430 left it).
                 Decision.MANDATORY: 154,
             },
@@ -444,9 +447,10 @@ default = "none"
         # November 16: Chriz Overhead Text 0 maps to one feature.
         # November 18 adds the default Round Clock row for BG Rebalance 361.
         # Modpack 680 maps to one feature; Chriz Multiplayer Fix 0 and 1 map to one each.
-        self.assertEqual(result.mapped_rows, 1_357)
+        # November 23: Modpack 470 maps to one feature.
+        self.assertEqual(result.mapped_rows, 1_358)
         self.assertEqual(result.excluded_rows, 527)
-        self.assertEqual(result.feature_rows + result.omission_rows, 830)
+        self.assertEqual(result.feature_rows + result.omission_rows, 831)
         # October 14: Rebalance potion uniqueness and SCS fine weapons choices.
         # October 23: the SoD Remix Imoen in Shadows of Amn choice.
         # October 23: ten quest-mod choices (Ascalon's three with their first variant as
@@ -460,7 +464,7 @@ default = "none"
         self.assertEqual(result.choice_groups, 88)
         self.assertEqual(result.optional_none_groups, 33)
         self.assertEqual(result.fixed_groups, 12)
-        self.assertIn("rows=1357", coverage_report(rows, result))
+        self.assertIn("rows=1358", coverage_report(rows, result))
 
     def test_september16_intake_rows_match_the_approved_recipe_features(self) -> None:
         root = Path(__file__).resolve().parents[2]

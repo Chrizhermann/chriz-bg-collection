@@ -41,6 +41,10 @@ Added later:
   button per save on the Load screen, between single player and multiplayer) is on by default
   and can be turned off. Both need EEex and run directly after Chriz Overhead Text. Existing
   installations get both through the hotpatch `chriz-multiplayer-fix-0.1.0`.
+- Chriz BG Modpack v0.2.0-alpha.18, 2026-11-23 (Christopher's decision): enables the RAW
+  spell-scroll learning fix (470) by default with EEex (restricting ±15% specialist modifiers to
+  specialist mages; bards, Wild Mages, kitted dual-class mages, and non-mages stay at 0%) in
+  the IWD run, immediately after BG Rebalance (690 Fast Traps stays unoffered).
 
 Notes from the selection:
 - The quest mods' compatibility with each other can be tested later; Christopher said

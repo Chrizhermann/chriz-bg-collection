@@ -1,0 +1,19 @@
+schema = 1
+recipe_id = "chriz-easy-iwd"
+version = "0.1.19"
+published_at = "2026-11-23T00:00:00Z"
+minimum_app_version = "0.1.1"
+supersedes = "0.1.18"
+
+[[changes]]
+id = "chriz-bg-modpack"
+title = "Chriz BG Modpack v0.2.0-alpha.18 restricts +/-15% spell-scroll learning bonuses and penalties to specialist mages"
+summary = "New installations with EEex enable Chriz BG Modpack v0.2.0-alpha.18 component 470 by default. Specialist Bards (such as Blades), Wild Mages, kitted dual-class Mages, and non-Mages stay at a 0% specialist modifier when scribing scrolls (opcode 147), while specialist Mages with a wizard specialist bit keep +15% on their own school and -15% on other schools."
+save_applicability = "new-game-only"
+urgency = "informational"
+covers = [
+  "artifact:chriz-bg-modpack-0.2.0-alpha.18",
+  "feature:mod:chriz-bg-modpack",
+  "feature:feature:chriz-bg-modpack:component-470",
+  "run:chriz-bg-modpack-main",
+]

@@ -1,5 +1,5 @@
 id = "chriz-bg-modpack"
-artifact_id = "chriz-bg-modpack-0.2.0-alpha.17"
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.18"
 name = "chriz-bg-modpack"
 tp2 = "setup-chriz-bg-modpack.tp2"
 language = 0
@@ -137,6 +137,10 @@ name = "SCS shapechange spells: repair the EE Fixpack interaction"
 [[components]]
 id = 460
 name = "Party AI Defensive Stance: obey the \"Use special abilities\" option"
+
+[[components]]
+id = 470
+name = "Spell Learning: restrict +/-15% specialist modifier to specialist mages (BG:EE, SoD, BG2:EE, EET, IWD:EE; Windows EEex)"
 
 [[components]]
 id = 610

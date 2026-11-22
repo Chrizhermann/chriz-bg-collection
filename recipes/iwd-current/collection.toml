@@ -384,6 +384,16 @@ phase = "main"
 components = [361]
 args = []
 
+# Chriz BG Modpack v0.2.0-alpha.18, component 470 (Christopher, 2026-11-23): restricts the +/-15%
+# opcode 147 specialist spell-scroll learning bonus/penalty to specialist mages only; bards,
+# Wild Mages, kitted dual-class mages, and non-mages stay at 0%. Requires EEex (#1) at install time.
+[[runs]]
+run_id = "chriz-bg-modpack-main"
+mod_id = "chriz-bg-modpack"
+phase = "main"
+components = [470]
+args = []
+
 # Needs EEex #1 and #8 at install time.
 [[runs]]
 run_id = "eeexremote-main"
@@ -4894,4 +4904,25 @@ decision = "mandatory"
 readiness = "ready"
 parent = "mod:chriz-bg-rebalance"
 components = [{ run_id = "chriz-bg-rebalance-main", component = 361 }]
+requires = ["feature:eeex:component-1"]
+
+[[features]]
+id = "mod:chriz-bg-modpack"
+title = "Chriz BG Modpack"
+description = "Fixes Enhanced Edition spell-scroll learning so only Mage specialist kits apply the +/-15% school modifier."
+category = "rules"
+source_label = "Chriz BG Modpack"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-470"
+title = "Spell learning: restrict ±15% specialist modifier to specialist mages"
+description = "Restricts the +/-15% opcode 147 specialist scroll-learning modifier to Mage-class characters carrying a wizard specialist school bit; Bards (Blade, Jester, Skald, mod kits), Wild Mages, kitted dual-class Mages, and non-Mages stay at 0%. Requires EEex."
+category = "rules"
+source_label = "Chriz BG Modpack"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-main", component = 470 }]
 requires = ["feature:eeex:component-1"]
