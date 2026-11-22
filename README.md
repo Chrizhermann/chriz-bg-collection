@@ -1,109 +1,122 @@
-# Chriz Easy BG and Chriz Easy IWD
+# Chriz Easy BG & Chriz Easy IWD
 
-Both Windows installers share this repository's `main` branch and the same engine and app.
-Chriz Easy IWD installs a curated **Icewind Dale: Enhanced Edition** collection from one game
-source. Product identity, recipes and updater feeds are selected by the existing build flavor.
-The products ship separately: [Chriz Easy BG releases](https://github.com/Chrizhermann/chriz-easy-bg/releases/latest)
-and [Chriz Easy IWD releases](https://github.com/Chrizhermann/chriz-easy-iwd/releases/latest).
-See [BUILDING.md](docs/BUILDING.md) for both builds and release procedures.
+Shared desktop installer, Rust orchestration engine, and curated recipes for both Infinity Engine
+collections built from this repository's `main` branch:
 
-Chriz Easy BG is a one-click Windows installer and launcher for a curated, heavily modded
-**Baldur's Gate: Enhanced Edition + Siege of Dragonspear + Baldur's Gate II: Enhanced
-Edition** playthrough using EET.
+- **Chriz Easy BG** — One-click Windows installer for **Baldur's Gate: Enhanced Edition + Siege
+  of Dragonspear + Baldur's Gate II: Enhanced Edition** joined via **EET** (app `v0.1.7`,
+  collection `0.1.4`: 468 default components across 70 install runs and 56 mods).
+  - Player Guide & Downloads: **[bg.chrizfader.org/collection](https://bg.chrizfader.org/collection)** · **[Latest Release](https://github.com/Chrizhermann/chriz-easy-bg/releases/latest)**
+- **Chriz Easy IWD** — One-click Windows installer for **Icewind Dale: Enhanced Edition** (app
+  `v0.1.16`, collection `0.1.17`: 145 default components across 34 install runs and 33 mods, with
+  18 recruitable companions).
+  - Player Guide & Downloads: **[bg.chrizfader.org/iwd](https://bg.chrizfader.org/iwd)** · **[Latest Release](https://github.com/Chrizhermann/chriz-easy-iwd/releases/latest)**
 
-The goal is a polished experience for players, not another expert-only mod manager. CEBG
-finds supported clean games, starts with the recommended collection choices, builds a
-separate installation, verifies the result, and reopens later as a simple launcher.
+> **Looking to play?** Download signed Windows installers from the player pages above or from the
+> distribution repositories ([`chriz-easy-bg`](https://github.com/Chrizhermann/chriz-easy-bg) ·
+> [`chriz-easy-iwd`](https://github.com/Chrizhermann/chriz-easy-iwd)). This repository hosts the
+> source code and recipes, not installer binaries or third-party mod archives.
 
-## Current development status (2026-11-03)
+---
 
-App and collection **0.1.1** are published (2026-11-03): the installer asks instead of
-stopping when a download changed or cannot be used or the game looks modded, leaves out
-optional mods that fail, installs from GOG, Beamdog and other Windows copies with a
-warning, and opens the saves and portraits folder. Marek carries the Boomerang Dagger +2,
-and BG1 NPC Project is optional. See the [changelog](docs/release-notes-0.1.1.md) and the
-[package verification](docs/package-acceptance-0.1.1-2026-11-03.md). 0.1.0 (2026-11-02):
-[changelog](docs/release-notes-0.1.0.md).
+## Part 1: For Players
 
-Get the installer and guide from [the collection page](https://bg.chrizfader.org/collection),
-or [public releases](https://github.com/Chrizhermann/chriz-easy-bg/releases).
-Each release records its package, tested scope and known limitations; source changes
-do not by themselves establish that a new binary has been published.
-The tested source games are clean English Steam BG:EE + SoD and BGII:EE 2.7.3
-installations; other versions, languages and GOG, Beamdog or other Windows copies install
-as "Less tested", with a warning.
+<p align="center">
+  <img src="docs/images/cebg-install.png" alt="Chriz Easy BG Candlekeep theme install screen" width="49%" />
+  <img src="docs/images/ceiwd-install.png" alt="Chriz Easy IWD Kuldahar theme install screen" width="49%" />
+</p>
 
-CEBG currently provides:
+Both installers turn a multi-hour manual mod order into a guided setup while keeping your
+original games safe:
 
-- automatic game discovery plus clear clean-source checks for the verified Steam 2.7.3
-  builds, and a warning that names the difference for every other copy;
-- an install-first UI with recommended choices already selected;
-- verified downloads and guided handling of the few manually supplied archives;
-- a separate, resumable game installation with an immutable receipt and diagnostics;
-- a returning-player launcher with **Play**, **Open game folder**, and multiple-install
-  switching;
-- an optional verified desktop shortcut, enabled by default; and
-- separate application, recipe, and installation update guidance without unsafe in-place
-  WeiDU surgery.
+- **One-click clean copy:** Automatically detects your clean `2.7.3.0` game folder(s) (English
+  Steam is tested; GOG, Beamdog, and other Windows copies install as *Less tested*), copies them
+  into a new destination folder on NTFS, exFAT, or FAT32 drives, and keeps an isolated Documents
+  profile so your original games and saves stay untouched.
+- **Recommended or Customize:** Start straight away with **Chris's Recommended** choices, or open
+  **Customize** to pick a UI theme, add optional quests or companions, toggle **Challenge Mode**
+  (Chriz Easy BG), or insert advanced manual-mod pauses.
+- **Pause, resume & safe recovery:** Every mod download is verified by exact SHA-256 checksum. You
+  can **Pause after current mod** at any time and continue later from **My installs**, while guided
+  prompts handle changed downloads or single component errors without wiping finished work.
+- **Hotpatches & BuffBot updates:** Update **BuffBot** in place with a full backup and **Undo** in
+  both apps, apply save-compatible **Hotpatches** in **Chriz Easy IWD**, update the installer app
+  itself from **Updates**, and optionally launch with **BG Radar Overlay**.
+- **Built-in diagnostics & support:** Use **Export diagnostics** (with Windows user and computer
+  names redacted) or **Feedback** / **Report this problem** to prepare a clean report for GitHub
+  or [ChrizFader's Discord](https://discord.gg/RtXjRzy68k). See
+  [docs/troubleshooting.md](docs/troubleshooting.md) for backup and recovery help.
 
-The public updater channel (named `alpha`) serves 0.1.1. Packages carry Tauri updater signatures;
-the current signing setup does **not provide Windows Authenticode**, so Windows may show
-an unknown publisher. Follow the
-[alpha.19 acceptance note](docs/package-acceptance-alpha19-2026-09-22.md) for the local
-BuffBot Apply, user gameplay and Undo evidence. General mod upgrades remain deferred;
-a newer collection is not automatically applied to an existing game.
-See [docs/handover.md](docs/handover.md) for the maintained development status.
+---
 
-## Source and downloads
+## Part 2: Architecture, Layout & For Developers
 
-This repository contains both products' installer/engine source and recipe authoring data.
-The separate [chriz-easy-bg](https://github.com/Chrizhermann/chriz-easy-bg) and
-[chriz-easy-iwd](https://github.com/Chrizhermann/chriz-easy-iwd) repositories host their public
-binary releases and updater feeds; their release downloads are not source checkouts.
-CEBG's own source and recipe tooling are available under MIT. Third-party dependencies
-retain their terms, collected in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-The source and binary distribution repositories have separate roles; existing release
-downloads and updater URLs remain the supported player entry points.
+### Bundle the recipe, not the mods
 
-For historical provenance, the alpha.15 package was built from commit
-`255be75aa232f3af5ad1e1969ccba313fffcccce`, including its versioned notices.
-The preceding alpha.14 source is `5610783590ad49b24101d5d3a6a85b018abadb7e`.
-The earlier alpha.13 implementation is `9f89830be760338c74a2f0839a25e2cd1980faad`.
-[BUILDING.md](docs/BUILDING.md) explains local Windows builds, hosted CI evidence,
-and release signing.
+Third-party mods are **never** redistributed in this repository or in release packages. Instead,
+each product bundles versioned recipes that pin upstream download URLs, byte sizes, SHA-256
+hashes, install order, and curated component selections. Every mod retains its original author's
+rights and license.
 
-## Repository principle
+Both products build from the same `main` branch and Rust/Tauri codebase, selecting product
+identity, UI themes (`bg.css` Candlekeep / `iwd.css` Kuldahar), recipes, and updater feeds
+through the build configuration:
 
-**Bundle the recipe, not the mods.** Third-party mods are not redistributed here. The
-collection pins their versions, sources, hashes, install order, and curated component
-choices; every mod retains its own license.
+| Product | Tauri configuration | Frontend mode | Bundled recipe | Distribution repo | Update feed |
+| --- | --- | --- | --- | --- | --- |
+| **Chriz Easy BG** | `app/src-tauri/tauri.conf.json` | default | `recipes/curated-full-current/` | [`chriz-easy-bg`](https://github.com/Chrizhermann/chriz-easy-bg) | `alpha/latest.json` |
+| **Chriz Easy IWD** | `app/src-tauri/tauri.iwd.conf.json` | `iwd` | `recipes/iwd-current/` | [`chriz-easy-iwd`](https://github.com/Chrizhermann/chriz-easy-iwd) | `updates/latest.json` |
 
-## Layout
+### Repository layout
 
 ```text
-app/                    Tauri desktop installer and launcher
-engine/                 Rust discovery, planning, acquisition, install, and verification
-manifest/               Versioned recipe, sources, order, profiles, and release evidence
-recipes/iwd-current/    Icewind Dale recipe and release history
-hotpatches/             Separate BG and IWD update catalogs
-docs/curation/components/
-                        Human curation decisions and follow-ups per mod
-docs/handover.md         Live agent/developer entry point
-docs/BUILDING.md         Windows build and release-provenance guide
-docs/mod-link-check.md   Nightly check that pinned mod downloads still serve the reviewed file
+app/                          Tauri v2 desktop frontend, Candlekeep/Kuldahar themes, native shell
+engine/                       Rust workspace crate: discovery, preflight, acquisition, WeiDU runner, receipts
+manifest/                     BG collection metadata, artifact pins, own-mods.toml, ground-truth install-order.tsv
+recipes/curated-full-current/ Active Chriz Easy BG (EET) curated recipe and preset
+recipes/iwd-current/          Active Chriz Easy IWD recipe, preset, and release ledgers
+hotpatches/                   Separate BG (BuffBot updates) and IWD (hotpatches + BuffBot updates) catalogs
+docs/                         Build/release guides, live handover, per-mod curation catalogs, acceptance records
 ```
 
-## Development guardrails
+### Developer guides & quick checks
 
-- Read applicable `AGENTS.md` (or legacy `CLAUDE.md`) and `docs/handover.md` before changing
-  the project.
-- Work in an isolated Git worktree.
-- Treat the documented reference game and archive directories as read-only.
-- Run Cargo from PowerShell on Windows.
-- Never hand-edit `manifest/install-order.tsv`; it is captured ground truth.
+- **[Windows Build & Check Guide](docs/BUILDING.md)** — Prerequisites (Rust `1.97.1`, Node.js
+  `22.12+`, Python `3.11+`, MSVC Build Tools), IWD flavor build commands, and CI packaging details.
+- **[Live Handover & Status](docs/handover.md)** — Maintained release ledger, recent merges, and
+  current development queue.
+- **[Own-Mod Pin Policy](docs/own-mod-pins.md)** — Rules and CI checks (`tools/own_mod_pins.py`)
+  keeping first-party mods synchronized across both installers.
+- **[Mod Link Check](docs/mod-link-check.md)** & **[Component Curation](docs/curation/components/README.md)**
+  — Automated upstream link verification and per-mod curation choices.
 
-## License
+Run local checks without signing keys from PowerShell on Windows:
 
-MIT for CEBG's own recipe and tooling; see [LICENSE](LICENSE). Dependencies retain their
-licenses, including the UnRAR extraction restriction in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-Third-party mods keep their own licenses and are not included in the installer bundle.
+```powershell
+Set-Location app; npm.cmd ci; npm.cmd run check; Set-Location ..
+cargo fmt --all -- --check
+cargo test --locked --workspace --no-fail-fast
+cargo clippy --locked --workspace --all-targets -- -D warnings
+python -m unittest discover -s tools/tests
+```
+
+### Development guardrails
+
+- Read `AGENTS.md` (or `CLAUDE.md`) and [docs/handover.md](docs/handover.md) before making changes,
+  and work in an isolated Git worktree.
+- Treat local reference game installs and mod archive directories as strictly **read-only**.
+- Run Cargo from **PowerShell on Windows** (avoiding Git Bash `link.exe` shadowing MSVC).
+- Never hand-edit `manifest/install-order.tsv`; regenerate it only from a verified live `WeiDU.log`.
+- Follow the **We Overwrite** policy across first-party mods and tooling: write the decided
+  outcome cleanly rather than gating behavior on pre-existing game data.
+
+### License
+
+Chriz Easy BG and Chriz Easy IWD's own source code, recipes, and tooling are licensed under the
+**MIT License** — see [LICENSE](LICENSE).
+
+Third-party Rust/npm dependencies and bundled open-source assets (including **UnRAR** extraction
+terms via `unrar_sys`, the short **EET** compatibility excerpt under GNU GPLv3, and **SIL OFL 1.1**
+theme fonts `Alegreya`, `Alegreya Sans`, and `Spectral`) retain their respective licenses; see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Third-party mods retain their original authors'
+rights and are never included in the installer bundle.
