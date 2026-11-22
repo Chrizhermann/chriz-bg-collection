@@ -15,10 +15,14 @@ runtime_files = [
     "infinityloader-previous.log",
     "infinityloader_crash/**",
     # The pattern databases: on the first start, and whenever the game changes, the loader writes
-    # the addresses it found into them. The same first start creates the empty folder
-    # EEex_scripts/override; a file put into it still counts as a change.
+    # the addresses it found into its own database and into EEex's version database
+    # (v2.7.3.0.db and so on, copied from EEex/loader). Mods' own databases in
+    # extra_pattern_dbs use NoCache=1 and stay byte-identical, so they stay checked and Undo
+    # removes them: the loader refuses to start the game when one of their patterns finds
+    # nothing. The same first start creates the empty folder EEex_scripts/override; a file put
+    # into it still counts as a change. Mod databases checked 2026-11-22.
     "infinityloader.db",
-    "eeex_scripts/extra_pattern_dbs/*.db",
+    "eeex_scripts/extra_pattern_dbs/v*.db",
     "eeex_scripts/override",
     # BuffBot: logs, the generated panel backgrounds, its innate helpers, exported presets.
     "buffbot_*.log",

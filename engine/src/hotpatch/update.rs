@@ -120,6 +120,12 @@ pub(super) fn writable(name: &str, p: &Prepared, update: &UpdateRecord) -> bool 
         || name == format!("lang/{language}/dialogf.tlk")
         // A WeiDU log such as `setup-buffbot.debug` beside the game.
         || (!name.contains('/') && name.ends_with(".debug"))
+        // EEex mods install their own pattern databases here by design (the loader reads every
+        // `.db` in this folder), so a hotpatch may write them like override files. One level
+        // only: the loader does not look into subfolders.
+        || name
+            .strip_prefix("eeex_scripts/extra_pattern_dbs/")
+            .is_some_and(|file| !file.contains('/') && file.ends_with(".db"))
 }
 
 /// The installed rows of one mod, from the current mod list.

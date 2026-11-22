@@ -649,19 +649,18 @@ mod tests {
                 |change| change.save_applicability == SaveApplicability::CurrentSave
                     && change.condition_note.is_none()
             ));
-        // What the components install stays outside the runtime files, except the pattern
-        // database: the loader may rewrite any `.db` there, so it never counts as a change.
+        // What the components install stays outside the runtime files, the pattern database
+        // included: it uses NoCache=1, so the loader never rewrites it, and Undo must remove it
+        // because the loader refuses to start the game when one of its patterns finds nothing.
         for name in [
             "override/m_czmp.lua",
             "override/m_czms.lua",
             "override/czms.menu",
+            "eeex_scripts/extra_pattern_dbs/czmp.db",
             "chriz_multiplayer_fix/setup-chriz_multiplayer_fix.tp2",
         ] {
             assert!(!catalog.runtime_files.matches(name), "{name}");
         }
-        assert!(catalog
-            .runtime_files
-            .matches("eeex_scripts/extra_pattern_dbs/czmp.db"));
     }
 
     /// What played IWD installations wrote into the game folder (Christopher's own one, and the
@@ -695,6 +694,8 @@ mod tests {
                 "override/m_eeexrc.lua",
                 "eeex_scripts/extra_pattern_dbs",
                 "eeex_scripts/extra_pattern_dbs/readme.txt",
+                "eeex_scripts/extra_pattern_dbs/czmp.db",
+                "eeex_scripts/extra_pattern_dbs/cbkcmb.db",
                 "eeex_scripts/override/eeex_main.lua",
                 "eeex_scripts/eeex_main.lua",
                 "eeex/loader/v2.7.3.0/pattern_dbs/v2.7.3.0.db",
