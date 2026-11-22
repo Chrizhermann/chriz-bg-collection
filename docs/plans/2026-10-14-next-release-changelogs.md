@@ -31,6 +31,13 @@ candidate on 2026-11-01. The player-facing notes are in
   random. A new button at the bottom of the Load screen copies the selected save into the other
   mode's save list, so a party created in multiplayer can continue in single player and back; the
   original save stays. (Chriz Multiplayer Fix v0.1.0)
+- **EET world progression and SoD backtracking fixes** (Chriz BG Modpack component 680,
+  Default, requires EET). Keeps EET's unified install and BG1/SoD/SoA/ToB starts while
+  closing cross-campaign backtracking (`SoD -> BG1`, `SoA -> BG1/SoD`, `ToB -> SoA/BG1/SoD`,
+  with Watcher's Keep accessible in both SoA and ToB and severed from Amn on ToB entry),
+  keeping the SoD Ch.8-10 road open until Dragonspear (`BD4000`), and fixing abandoned SoD
+  camp stranding, chest forwarding, Baeloth's pit cleanup, camp sentries, siege audio and
+  duplicate Jegg.
 
 ### Mod versions
 
@@ -39,6 +46,7 @@ candidate on 2026-11-01. The player-facing notes are in
 - Bardic Wonders v2.9c-balance.9 (was balance.8), curated Chriz Easy BG.
 - BG Rebalance v0.8.12 (was v0.8.11), both Chriz Easy BG recipes (adds component 361; Chriz Easy IWD also adds component 361).
 - Chriz Multiplayer Fix v0.1.0 (new), both Chriz Easy BG recipes and Chriz Easy IWD.
+- Chriz BG Modpack v0.2.0-alpha.17 (was v0.2.0-alpha.16), both Chriz Easy BG recipes (adds component 680).
 
 ### Notes for the release integrator
 
@@ -76,6 +84,14 @@ candidate on 2026-11-01. The player-facing notes are in
   and multiplayer sessions remain untested. The next BG recipe update ledger must cover
   `artifact:chriz-multiplayer-fix-0.1.0`, `feature:feature:chriz-multiplayer-fix:component-0`
   and `feature:feature:chriz-multiplayer-fix:component-1`.
+- The Chriz BG Modpack v0.2.0-alpha.17 intake verified the fresh download, archive, TP2
+  declaration order (`680` between `670` and `650`), and default wiring in both Chriz
+  Easy BG recipes (469 components in curated BG, 374 in base Recommended). Real-EET and
+  isolated WeiDU 249 install/uninstall fixture verification passed upstream; live combined
+  collection installation and full campaign playthrough remain untested.
+  [Collection intake](../../manifest/evidence/release-intake-20261122-chriz-bg-modpack-chriz-easy-bg.toml)
+- The next BG recipe update ledger must cover `artifact:chriz-bg-modpack-0.2.0-alpha.17` and
+  `feature:feature:chriz-bg-modpack:component-680`.
 
 ## Next Chriz Easy IWD release (draft)
 

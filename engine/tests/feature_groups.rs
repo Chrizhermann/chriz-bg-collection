@@ -428,23 +428,39 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // artifact IDs reproduces the previously frozen plan digests.
     // Rebalance v0.8.12 then added Round Clock to both Recommended selections.
     // Removing 361 and restoring v0.8.11 must reproduce all six PR #151 digests.
+    // Re-pinned on November 22 for Modpack alpha.17 (component 680 added after 670 as
+    // a default in chriz-bg-modpack-bg2). Removing 680 and restoring alpha.16 must reproduce
+    // all six November 18 Round Clock digests before reverting Round Clock.
     // Re-pinned on November 22 for Chriz Multiplayer Fix v0.1.0 (Christopher, 2026-11-22):
     // its components 0 and 1 are on by default in both recipes, adding two features to the
     // collection digests, their preset entries to the selection digests, and
     // chriz-multiplayer-fix-bg2 [0, 1] after chriz-overhead-text-bg2 in both plans. Without
-    // its run, features, preset entries, mod and artifact, the November 18 digests return.
+    // its run, features, preset entries, mod and artifact, the alpha.17 digests return.
     const ROUND_CLOCK: &str = "feature:chriz-bg-rebalance:component-361";
+    const EET_WORLD_PROGRESSION: &str = "feature:chriz-bg-modpack:component-680";
     const MULTIPLAYER_FIX: [&str; 2] = [
         "feature:chriz-multiplayer-fix:component-0",
         "feature:chriz-multiplayer-fix:component-1",
     ];
-    for (dir, multiplayer_digests, combined_digests, save_rest_digests, previous_plan_sha) in [
+    for (
+        dir,
+        current_digests,
+        alpha17_digests,
+        combined_digests,
+        save_rest_digests,
+        previous_plan_sha,
+    ) in [
         (
             "../manifest",
             [
-                "bb05ea995aaf35d029ad16f98017da31c89933d1bb7e97348ed7f819e4ec54c5",
-                "058d24b6cc094f321e4cb0f8cc9a422df111287f78021db83cb673a7646e0612",
-                "c4c9f81d82d43e417fd3a0def8ad85c3e7b35001a53db072d1f02ecd9dd4ebec",
+                "23437d33a7bb60528a677629dd7475c4fbf8b1e9afa464d2d65ead62d54346ef",
+                "d67a959c418cef23b60fbc3302207fb5c538758e605c8d7b1a3a04f67edc4729",
+                "d708db23e832fadd29b17b0a787bea90582376df632c388c64e75c4b426add5c",
+            ],
+            [
+                "e365e33ed0508e8fcac5a9f6316df82240e8553d403c3b5db9fe03f20ddb9ac7",
+                "2bf1a5290d4b18ee42938068fb7a36f2c5865213720929deffeca75b36af9b31",
+                "c7f615a0ca7e06f8f7acd55410732535069bec28c16a85de2afb678b82c51b95",
             ],
             [
                 "5d980b9b5ce440a69c0cc8bd55a61cd6a54699a60f21824a5791caf91896c7f6",
@@ -461,9 +477,14 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         (
             "../recipes/curated-full-current",
             [
-                "0bbf892c67b0a5a7eaff5d826dd7bae337453cfdeef4d721d2b981d2cca3bd78",
-                "387ef305f51e50058643cec08ca046ef7ebfea233c5554f35f6c41bc995cc970",
-                "763b038d11d134b792c751df4e1975e351fb382ccfbe3bb7db7ac107c1df2386",
+                "e682d3e4a81c00798bd231d2ed53d75db4ffde625975c456e3d42d71e98e5b5d",
+                "dd00a7fd4946b5a781bd4a71541808e48ca41e781aa52fd60142dc1a129f9e83",
+                "6d6628bd564fe9e1f42ad77ebe1ef6609cc191ea9a652a66fa3c06c0e2f0ed2b",
+            ],
+            [
+                "6393e51ddc023070c11eecf062e0271904e193fa9d78f4041d0eb758ff531d55",
+                "5c0a62bad494e7f643d0e94790aeb1c156cf42cb8a73372fb655d84889627d57",
+                "96b35d4be83ef5ce3fab21e3ba787a6cca6b0b35cb1562bd66ffdc45432aa282",
             ],
             [
                 "0fa3abae7fbe94cd5bba2bc84d0074212891f4cd0ce88379989d34e8a66339a5",
@@ -482,7 +503,7 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
         assert_eq!(
             recommended_digests(&manifest, &evaluation),
-            multiplayer_digests,
+            current_digests,
             "{dir}"
         );
 
@@ -511,6 +532,35 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         for feature in MULTIPLAYER_FIX {
             assert!(selections.remove(feature).is_some());
         }
+        let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        assert_eq!(
+            recommended_digests(&manifest, &evaluation),
+            alpha17_digests,
+            "{dir}"
+        );
+
+        let modpack = manifest.mods.get_mut("chriz-bg-modpack").unwrap();
+        assert_eq!(modpack.artifact_id, "chriz-bg-modpack-0.2.0-alpha.17");
+        modpack.artifact_id = "chriz-bg-modpack-0.2.0-alpha.16".to_owned();
+        modpack.components.retain(|component| component.id != 680);
+        let modpack_run = manifest
+            .collection
+            .runs
+            .iter_mut()
+            .find(|run| run.run_id == "chriz-bg-modpack-bg2")
+            .unwrap();
+        assert_eq!(modpack_run.components.pop(), Some(680));
+        manifest
+            .collection
+            .features
+            .retain(|feature| feature.id != EET_WORLD_PROGRESSION);
+        manifest
+            .presets
+            .get_mut("chris-recommended")
+            .unwrap()
+            .selections
+            .remove(EET_WORLD_PROGRESSION);
+
         let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
         assert_eq!(
             recommended_digests(&manifest, &evaluation),

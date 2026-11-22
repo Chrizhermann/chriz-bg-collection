@@ -409,7 +409,7 @@ args = []
 run_id = "chriz-bg-modpack-bg2"
 mod_id = "chriz-bg-modpack"
 phase = "post-eet-end"
-components = [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660, 670]
+components = [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660, 670, 680]
 args = []
 
 [[runs]]
@@ -5212,6 +5212,17 @@ readiness = "ready"
 parent = "mod:chriz-bg-modpack"
 requires = ["feature:eet:mandatory-components"]
 components = [{ run_id = "chriz-bg-modpack-bg2", component = 670 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-680"
+title = "Story-consistent EET campaign boundaries and SoD backtracking"
+description = "Closes cross-campaign backtracking exploits between BG1, Siege of Dragonspear, Shadows of Amn and Throne of Bhaal (including returning from Watcher's Keep to Amn once ToB begins and post-SoD travel reopening) while keeping BG1, SoD, SoA and ToB new-game starts intact. Keeps the SoD Ch.8-10 road open until the Dragonspear assault and fixes abandoned camp companion stranding, player storage chest forwarding, Baeloth's pit cleanup, camp sentries, siege audio and duplicate Jegg."
+category = "rules"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:eet:mandatory-components", "mod:eet-end"]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 680 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-640"

@@ -315,8 +315,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.1.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
             modpack = tomllib.loads((output / "mods/chriz-bg-modpack.toml").read_text(encoding="utf-8"))
-            # November 8: alpha.16 keeps alpha.15's Marek's Boomerang Dagger 670.
-            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.16")
+            # November 22: alpha.17 adds EET world progression and SoD backtracking 680.
+            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.17")
             collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
             preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))
             mods = {path.stem for path in (output / "mods").glob("*.toml")}
@@ -474,11 +474,12 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # 452ae6d86c228f1ca830c9f5c1462a7a7643f3316a9d877ca8e0b73f6b5acde6 returns.
                 # November 18 adds 361 to the Rebalance run, features and preset.
                 # Removing the addition restores the November 16 digest 962d203f….
+                # Modpack 680 adds EET story-consistent campaign boundaries and SoD
+                # backtracking after 670; removing it restores the November 18 digest 500c85f8….
                 # November 22: Chriz Multiplayer Fix v0.1.0 adds default components 0 and 1
                 # in their own post-EET_end run after Chriz Overhead Text, each requiring
-                # EEex's core (Christopher, 2026-11-22); without its run, features and preset
-                # entries the November 18 digest 500c85f8… returns.
-                "2638c41fdc1d4e924afc7b4722a1174f1601bb50141bd8460400b73bc83e52e9",
+                # EEex's core (Christopher, 2026-11-22).
+                "dfce2c4d0482ca93351c5075379f82e6b7adaccb56efec8366b94d181b44d48b",
             )
 
             legacy_bg1npc_groups = {
