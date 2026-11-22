@@ -5217,7 +5217,7 @@ components = [{ run_id = "chriz-bg-modpack-bg2", component = 670 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-680"
-title = "Story-consistent EET campaign boundaries and SoD backtracking"
+title = "No travel back into an earlier campaign"
 description = "Once you move on to the next campaign (Baldur's Gate, then Siege of Dragonspear, Shadows of Amn and Throne of Bhaal), you can no longer travel back to the earlier campaign's areas. Watcher's Keep stays open in Shadows of Amn and Throne of Bhaal. Also fixes several Siege of Dragonspear camp problems (companions stranded in an abandoned camp, the storage chest, leftover sentries, a duplicate Jegg). Not yet tested in a full playthrough."
 category = "rules"
 decision = "optional"

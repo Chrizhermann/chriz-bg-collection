@@ -438,11 +438,13 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // its run, features, preset entries, mod and artifact, the alpha.17 digests return.
     // Re-pinned on November 22 for Christopher's decision that Modpack 680 is on only with
     // Challenge Mode: it is optional, a group member, off in Recommended and has a player
-    // description. The group is not part of these digests; the collection and selection
+    // title and description. The group is not part of these digests; the collection and selection
     // digests change, and the plans lose chriz-bg-modpack-bg2's 680. Undoing the decision
     // reproduces the digests of the PR #161 merge (manifest 23437d33…, curated e682d3e4…).
     const ROUND_CLOCK: &str = "feature:chriz-bg-rebalance:component-361";
     const EET_WORLD_PROGRESSION: &str = "feature:chriz-bg-modpack:component-680";
+    const EET_WORLD_PROGRESSION_DEFAULT_TITLE: &str =
+        "Story-consistent EET campaign boundaries and SoD backtracking";
     const EET_WORLD_PROGRESSION_DEFAULT_DESCRIPTION: &str = "Closes cross-campaign backtracking \
         exploits between BG1, Siege of Dragonspear, Shadows of Amn and Throne of Bhaal (including \
         returning from Watcher's Keep to Amn once ToB begins and post-SoD travel reopening) while \
@@ -466,7 +468,7 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         (
             "../manifest",
             [
-                "97352806e7e023ffd6c591954bfe60d15def55beca127875420bbd60eb6d6149",
+                "71d08c0bbd6f74843319914bb07b31ded5fcd5b3476e59e182e26b40b82c2e61",
                 "6114ffd05035f4f683cfead67e2b59db4b27b2035630664bb422701c6324639a",
                 "ce64b750dbf1f418cd1b317a98add694e0781fe5c1b6f62608eb584f49b6f140",
             ],
@@ -495,7 +497,7 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         (
             "../recipes/curated-full-current",
             [
-                "a946e1cddccd29937be8711b896afb91b8b959427fb8b6853f1560c3d7f3442a",
+                "7df5adb11a5c19240275cfa17615c311200914e800e16ee49aa4752986cfb9f1",
                 "58b7e3f1cacf98619e6edbdd56b83bbf183dccba8070c454e82e335067ccf948",
                 "6c6a6b75d59fa86ae8c0e195d8155ad7758fe947d6a62dd7db57590a8eda3871",
             ],
@@ -531,7 +533,7 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         );
 
         // Christopher, 2026-11-22: Modpack 680 is on only with Challenge Mode. Undoing that
-        // decision (default again, PR #161's description, on in Recommended) must reproduce
+        // decision (default again, PR #161's title and description, on in Recommended) must reproduce
         // the digests of the merge of PR #161 into this branch.
         let world_progression = manifest
             .collection
@@ -541,6 +543,7 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
             .unwrap();
         assert_eq!(world_progression.decision, Decision::Optional);
         world_progression.decision = Decision::Default;
+        world_progression.title = EET_WORLD_PROGRESSION_DEFAULT_TITLE.to_owned();
         world_progression.description = EET_WORLD_PROGRESSION_DEFAULT_DESCRIPTION.to_owned();
         // Group members must be optional; the group is not part of these digests.
         let members = &mut manifest.collection.feature_groups[0].members;
