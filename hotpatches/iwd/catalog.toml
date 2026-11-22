@@ -25,7 +25,7 @@ runtime_files = [
     # into it still counts as a change. Seen 2026-10-29 in Christopher's played installation and
     # in the 0.1.1 release lab; mod databases checked 2026-11-22.
     "infinityloader.db",
-    "eeex_scripts/extra_pattern_dbs/v*.db",
+    "eeex_scripts/extra_pattern_dbs/v2.*.db",
     "eeex_scripts/override",
     # BuffBot 1.12: logs, the generated panel backgrounds, its innate helpers, exported presets.
     "buffbot_*.log",
@@ -139,7 +139,7 @@ content_sha256 = "6aceb183900fb7b3640dbedc8f4dd84e931c7cfe1549aa0c31cf115726d397
 id = "iwd-0.1.18"
 label = "Chriz Easy IWD 0.1.17"
 recipe_version = "0.1.18"
-content_sha256 = "c068424ecc861305a04cf4169cf05254ffdd79baeb0a7c0dbab4502fd08c3911"
+content_sha256 = "b67622b96d4a376be29ea394529495be8acf2320ab042202536da83202311acf"
 
 # Christopher's twelve boss fights (Chriz IWD Encounters 0.2.0, 2026-11-04) for installations of
 # the releases before 0.1.6, which install them itself. Each fight takes effect where the party

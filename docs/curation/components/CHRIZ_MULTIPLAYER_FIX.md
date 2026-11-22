@@ -1,6 +1,6 @@
 # CHRIZ_MULTIPLAYER_FIX — components
 
-Listed at **v0.1.0** (tag commit `025fb26`, reviewed 2026-11-22). Not installed in the August 2026
+Listed at **v0.1.0** (tag commit `6efc210`, reviewed 2026-11-22). Not installed in the August 2026
 reference snapshot; added with both components on by default in both Chriz Easy BG and Chriz Easy
 IWD (Christopher, 2026-11-22).
 2 entries, 0 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
@@ -15,11 +15,15 @@ IWD (Christopher, 2026-11-22).
 - Component `0` stops the random crash right after leaving Beamdog's multiplayer lobby (for
   example Multiplayer > Local network game > Load): two threads tore down the same lobby
   connection. Two EEex hooks keep every lobby task on the lobby's own network thread. It copies
-  `override/M_CZMP.lua` and its patterns `EEex_scripts/extra_pattern_dbs/CZMP.db`.
+  `override/M_CZMP.lua` and its patterns `EEex_scripts/extra_pattern_dbs/CZMP.db`, but only when
+  every pattern occurs exactly once in the game executable InfinityLoader starts: a pattern that
+  finds nothing stops the game before its window opens. Otherwise it removes both files and
+  installs as a logged no-op, and the game plays as before.
 - Component `1` adds a button to the Load screen that copies the save into the other mode's save
   folder (`save` and `mpsave`) as a new save; the original stays. On BG:EE, SoD, BG2:EE and EET
   it is one button at the bottom that acts on the selected save; on IWD:EE it is a small "Copy"
-  button on each save row. It copies `override/M_CZMS.lua` and `override/CZMS.menu`.
+  button on each save row. It copies `override/M_CZMS.lua` and `override/CZMS.menu`; the button
+  appears once EEex's LuaJIT component is installed.
 - The two components are independent of each other. Both need EEex (`override/M___EEex.lua`,
   component `1`) at install time; without it a component installs as a logged no-op. Neither
   patches a game resource or a save. In Chriz Easy BG they run in `post-eet-end` directly after
@@ -31,9 +35,8 @@ IWD (Christopher, 2026-11-22).
 
 ## Release and acceptance follow-up
 
-- Collection intake on 2026-11-22 checked the release ZIP's length, SHA-256, layout and native
-  component order from a local copy of the release asset; the fresh anonymous download and
-  `artifact verify` wait for the published GitHub release
+- Collection intake on 2026-11-22 downloaded the published release afresh and checked its length,
+  SHA-256, layout, artifact contracts and native component order in every recipe
   (`manifest/evidence/release-intake-20261122-chriz-multiplayer-fix-chriz-easy-bg-chriz-easy-iwd.toml`).
 - Combined full-collection EET and IWD:EE installs and multiplayer sessions with these components
   remain tracked under collection acceptance.

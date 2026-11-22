@@ -26,11 +26,11 @@ PIN = "chriz-multiplayer-fix-0.1.0"
 TAG = "v0.1.0"
 FILENAME = "chriz-multiplayer-fix-v0.1.0.zip"
 URL = f"https://github.com/Chrizhermann/chriz-multiplayer-fix/releases/download/{TAG}/{FILENAME}"
-SHA256 = "d948dd3276b781d776229e35a08f8edcf3504dfde3a5b8b1c60024d8434bc73b"
+SHA256 = "5b85b267d33a7bc596bef54c38b3e6b7b57aa5b2239f6d5a337f744e4a42906a"
 TP2 = "chriz_multiplayer_fix/setup-chriz_multiplayer_fix.tp2"
-TP2_SHA256 = "9a739babb86919f12585e009beb42ff0960a2b718d0560630e08e59b716fb09c"
-LENGTH = 1_280_778
-TAG_COMMIT = "025fb264335348edbd1d2ba65b5bb843da1ceea3"
+TP2_SHA256 = "c5c93377cd803e6b8afc79b67aeb3c3a40125fbe2c17870cc157f69ee9d81774"
+LENGTH = 1_824_127
+TAG_COMMIT = "6efc2101a8321dcfd7bb381ece012ada49384494"
 COMPONENTS = [0, 1]
 COMPONENT_NAMES = {
     0: "Multiplayer lobby crash fix (EEex)",
@@ -85,6 +85,11 @@ class Nov22ChrizMultiplayerFixIntakeTests(unittest.TestCase):
         self.assertIn("Chriz Multiplayer Fix v0.1.0", self.evidence["scope"])
         self.assertIn("not a combined full-collection WeiDU install", self.evidence["scope"])
         self.assertEqual(
+            self.evidence["evidence_kind"],
+            "published-release-download-and-native-order-verification",
+        )
+        self.assertIn("downloaded anonymously into an empty folder", self.evidence["scope"])
+        self.assertEqual(
             set(self.records),
             {"manifest", "recipes/curated-full-current", "recipes/iwd-current"},
         )
@@ -100,11 +105,9 @@ class Nov22ChrizMultiplayerFixIntakeTests(unittest.TestCase):
             self.assertEqual(record["native_components"], COMPONENTS)
             self.assertIs(record["native_component_order_verified"], True)
             self.assertIs(record["fresh_extraction"], True)
-            # The scope says what the two download flags stand for; both stay honest booleans.
-            for flag in ("fresh_download", "published_release_verified"):
-                self.assertIsInstance(record[flag], bool, flag)
-            if not record["published_release_verified"]:
-                self.assertIn("must be run once the release is published", self.evidence["scope"])
+            # The published release was downloaded afresh and verified for every recipe.
+            self.assertIs(record["fresh_download"], True)
+            self.assertIs(record["published_release_verified"], True)
 
     def test_every_recipe_and_the_hotpatch_freeze_the_same_artifact(self) -> None:
         directories = [

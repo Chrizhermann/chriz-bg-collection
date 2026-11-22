@@ -423,8 +423,8 @@ const ARTIFACTS: &[Pin] = &[
         url: "https://github.com/Chrizhermann/chriz-multiplayer-fix/releases/download/v0.1.0/chriz-multiplayer-fix-v0.1.0.zip",
         reference: "v0.1.0",
         filename: "chriz-multiplayer-fix-v0.1.0.zip",
-        length: 1_280_778,
-        sha256: "d948dd3276b781d776229e35a08f8edcf3504dfde3a5b8b1c60024d8434bc73b",
+        length: 1_824_127,
+        sha256: "5b85b267d33a7bc596bef54c38b3e6b7b57aa5b2239f6d5a337f744e4a42906a",
     },
     Pin {
         id: "chriz-overhead-text-0.1.0",

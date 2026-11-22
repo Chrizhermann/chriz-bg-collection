@@ -22,7 +22,7 @@ runtime_files = [
     # nothing. The same first start creates the empty folder EEex_scripts/override; a file put
     # into it still counts as a change. Mod databases checked 2026-11-22.
     "infinityloader.db",
-    "eeex_scripts/extra_pattern_dbs/v*.db",
+    "eeex_scripts/extra_pattern_dbs/v2.*.db",
     "eeex_scripts/override",
     # BuffBot: logs, the generated panel backgrounds, its innate helpers, exported presets.
     "buffbot_*.log",

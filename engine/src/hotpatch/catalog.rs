@@ -675,6 +675,7 @@ mod tests {
                 "infinityloader.db",
                 "infinityloader.log",
                 "eeex_scripts/extra_pattern_dbs/v2.7.3.0.db",
+                "eeex_scripts/extra_pattern_dbs/v2.6.6.0.db",
                 "eeex_scripts/override",
                 "buffbot_exec.log",
                 "override/bfbtch.spl",
@@ -696,6 +697,10 @@ mod tests {
                 "eeex_scripts/extra_pattern_dbs/readme.txt",
                 "eeex_scripts/extra_pattern_dbs/czmp.db",
                 "eeex_scripts/extra_pattern_dbs/cbkcmb.db",
+                // A mod's database whose name merely starts with "v" stays checked: only EEex's
+                // version databases (v2.<build>.db) are rewritten by the loader.
+                "eeex_scripts/extra_pattern_dbs/voice.db",
+                "eeex_scripts/extra_pattern_dbs/v1.db",
                 "eeex_scripts/override/eeex_main.lua",
                 "eeex_scripts/eeex_main.lua",
                 "eeex/loader/v2.7.3.0/pattern_dbs/v2.7.3.0.db",
