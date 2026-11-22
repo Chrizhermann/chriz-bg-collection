@@ -216,7 +216,7 @@ const INSTALLERS: &[(&str, &str, &str)] = &[
     ),
     (
         "chriz-iwd-encounters",
-        "chriz-iwd-encounters-0.3.1",
+        "chriz-iwd-encounters-0.3.2",
         "chriz-iwd-encounters/setup-chriz-iwd-encounters.tp2",
     ),
     (
@@ -397,14 +397,14 @@ const ARTIFACTS: &[Pin] = &[
         sha256: "f64314ab1462cef661dc4191e37e9d8911e95bd8df13ad44c3a09744b23847a8",
     },
     Pin {
-        id: "chriz-iwd-encounters-0.3.1",
-        version: "0.3.1",
+        id: "chriz-iwd-encounters-0.3.2",
+        version: "0.3.2",
         kind: SourceKind::GithubRelease,
-        url: "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/download/v0.3.1/chriz-iwd-encounters-v0.3.1.zip",
-        reference: "v0.3.1",
-        filename: "chriz-iwd-encounters-v0.3.1.zip",
-        length: 680_143,
-        sha256: "63b69f39c8f06f7ce1dac151e418f1e17ca84d095cbd11bb6f35045c0a008eef",
+        url: "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/download/v0.3.2/chriz-iwd-encounters-v0.3.2.zip",
+        reference: "v0.3.2",
+        filename: "chriz-iwd-encounters-v0.3.2.zip",
+        length: 706_913,
+        sha256: "077040e15da1bc7fc0e468e9258c97d920aeea3b817f4de9792ffc5e0198023d",
     },
     Pin {
         id: "chriz-iwd-party-dialog-0.1.0",

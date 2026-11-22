@@ -68,11 +68,11 @@ candidate on 2026-11-01. The player-facing notes are in
   `chriz-overhead-text-main`; `0` always comes with the mod, `1` is a default). Both need EEex's
   core. The BG Recommended plans grow by two components in one new run, IWD's by two. The IWD
   collection is numbered 0.1.18 with a ledger entry, and existing IWD installations get both
-  components through the hotpatch `chriz-multiplayer-fix-0.1.0`. The release was not yet
-  published at intake, so its record
+  components through the hotpatch `chriz-multiplayer-fix-0.1.0`. Its record
   (`manifest/evidence/release-intake-20261122-chriz-multiplayer-fix-chriz-easy-bg-chriz-easy-iwd.toml`)
-  covers a local copy of the asset: length, SHA-256, layout and native order. The fresh
-  download and `artifact verify` follow once it is published. Combined full-collection installs
+  covers the published release: a fresh download, length, SHA-256, `artifact verify` for every
+  artifact TOML and native order (`fresh_download` and `published_release_verified` are true).
+  Combined full-collection installs
   and multiplayer sessions remain untested. The next BG recipe update ledger must cover
   `artifact:chriz-multiplayer-fix-0.1.0`, `feature:feature:chriz-multiplayer-fix:component-0`
   and `feature:feature:chriz-multiplayer-fix:component-1`.
@@ -87,6 +87,19 @@ candidate on 2026-11-01. The player-facing notes are in
   other mode's save list; the original save stays. The crash fix always comes with the mod, the
   Copy button can be turned off. Games already installed get both through the hotpatch.
   (Chriz Multiplayer Fix v0.1.0, collection 0.1.18)
+- **Chapters 2-6 bring mixed elite squads, and the finale's dispel is back.** Six squads of real
+  multiclasses with SCS caster and combat AI replace the uniform five-man squads, Kaylessa fights
+  as a level-15 elven weapons master, the related quests need fewer kills, and an endless
+  staircase respawn is fixed. Poquelin's transformation in the finale dispels the party again as
+  in the base game. The optional Heart of Winter and Trials of the Luremaster overhaul repairs
+  the Polar Bear Spirit's roar, thins Burial Isle's undead and ends Gloomfrost and the Sea of
+  Moving Ice with a Frost Giant War-Shaman. New games only. (Chriz IWD Encounters v0.3.2,
+  collection 0.1.18)
+
+### Mod versions
+
+- Chriz IWD Encounters v0.3.2 (was v0.3.1), same components and defaults.
+- Chriz Multiplayer Fix v0.1.0 (new).
 
 ## Collection 0.1.2 (draft)
 

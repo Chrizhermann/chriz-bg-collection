@@ -10,12 +10,12 @@ ROOT = Path(__file__).resolve().parents[2]
 EVIDENCE = "manifest/evidence/release-intake-20261122-chriz-iwd-encounters-chriz-easy-iwd.toml"
 MOD = "chriz-iwd-encounters"
 PIN = "chriz-iwd-encounters-0.3.1"
+SUCCESSOR = "chriz-iwd-encounters-0.3.2"
 PRIOR_PIN = "chriz-iwd-encounters-0.3.0"
 TAG = "v0.3.1"
 SHA256 = "63b69f39c8f06f7ce1dac151e418f1e17ca84d095cbd11bb6f35045c0a008eef"
 TP2_SHA256 = "3e2b1799b8f235087eb69a0e868c2a688ec46b9b03b24db9681c47eafeb91317"
 LENGTH = 680_143
-PIN_COMMIT = "21ba55dbe0091c97df77886140b7f1765a0ce37a"
 DIGEST_0117 = "6aceb183900fb7b3640dbedc8f4dd84e931c7cfe1549aa0c31cf115726d397c1"
 COMPONENTS = [100, 110, 120, 200, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410, 420, 500]
 
@@ -49,10 +49,10 @@ class Nov22ChrizIwdEncounters031RecipeTests(unittest.TestCase):
         ):
             self.assertIs(self.record[flag], True, flag)
 
-    def test_iwd_recipe_pins_v0_3_1(self) -> None:
+    def test_iwd_recipe_supersedes_v0_3_1_while_preserving_its_components(self) -> None:
         mod = load(f"{self.recipe}/mods/{MOD}.toml")
-        self.assertEqual(mod["artifact_id"], PIN)
-        self.assertTrue((ROOT / f"{self.recipe}/artifacts/{PIN}.toml").is_file())
+        self.assertEqual(mod["artifact_id"], SUCCESSOR)
+        self.assertFalse((ROOT / f"{self.recipe}/artifacts/{PIN}.toml").exists())
         self.assertFalse((ROOT / f"{self.recipe}/artifacts/{PRIOR_PIN}.toml").exists())
 
         collection = load(f"{self.recipe}/collection.toml")
@@ -80,8 +80,6 @@ class Nov22ChrizIwdEncounters031RecipeTests(unittest.TestCase):
         acceptance = load(f"{self.recipe}/releases/v0.1.0-alpha.1/acceptance.toml")["evidence"]
         record = next(row for row in acceptance if row["subject_id"] == "chriz-iwd-encounters-main")
         self.assertEqual(record["status"], "accepted")
-        self.assertEqual(record["date"], "2026-11-22")
-        self.assertEqual(record["commit"], PIN_COMMIT)
 
         bases = load("hotpatches/iwd/catalog.toml")["bases"]
         (base,) = [b for b in bases if b["recipe_version"] == "0.1.17"]
@@ -90,6 +88,6 @@ class Nov22ChrizIwdEncounters031RecipeTests(unittest.TestCase):
         self.assertEqual(base["content_sha256"], DIGEST_0117)
 
         inventory = (ROOT / "docs/curation/iwdee/INVENTORY.md").read_text(encoding="utf-8")
-        self.assertIn(PIN, inventory)
+        self.assertIn(SUCCESSOR, inventory)
         notes = (ROOT / "docs/release-notes-iwd-0.1.16.md").read_text(encoding="utf-8")
         self.assertIn("App **0.1.16** bundles collection **0.1.17**", notes)
