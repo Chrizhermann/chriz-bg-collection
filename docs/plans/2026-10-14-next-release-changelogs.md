@@ -121,8 +121,7 @@ candidate on 2026-11-01. The player-facing notes are in
   both Chriz Easy BG recipes (`chriz-bg-modpack-bg2` + `chris-recommended.toml`), and exclusion from
   Chriz Easy IWD (collection `0.1.20`, where `470` stays sole Modpack component). Offline real
   `EEex_PreprocessAssembly` + Keystone/Unicorn emulation and synthetic WeiDU 249 install/uninstall
-  passed upstream; live quiet-lab launch was skipped because OBS streaming software was active, so
-  combined collection installation and in-game verification remain untested.
+  passed upstream, and standalone live quiet-lab verification (`2026-11-27`) passed `27/27` checks across `BG:EE 2.7.3.0` (`6/6`) and `EET 2.7.3.0` (`21/21`: `N = 2..6`, dead intermediate slot exclusion, dual-class `XPLEVEL.2DA` thresholds, SoD/`CHAPTER` gating, and Challenge Mode `650`/`652` coexistence) with `EEex v1.3.1`; combined collection installation and full campaign playthrough remain untested.
   [Collection intake](../../manifest/evidence/release-intake-20261127-chriz-bg-modpack-chriz-easy-bg-chriz-easy-iwd.toml)
 - The next BG recipe update ledger must also cover `artifact:chriz-bg-modpack-0.2.0-alpha.19` and
   `feature:feature:chriz-bg-modpack:component-695`.
