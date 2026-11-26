@@ -447,9 +447,14 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // Pinned on November 27 to Modpack v0.2.0-alpha.19 (PR #26): adds default BG1 early-party XP
     // boost 695 (requiring EEex and EET) after 680; undoing 695 and restoring alpha.18 reproduces
     // PR #164's digests (`alpha18_digests`).
+    // Pinned on November 27 to Modpack v0.2.0-alpha.20 (PR #28): adds default Watcher's Keep
+    // teleporters 697 and lingering room-effects cleanup 698 (requiring EEex) after 695; undoing
+    // 697 and 698 and restoring alpha.19 reproduces PR #165's digests (`alpha19_digests`).
     const ROUND_CLOCK: &str = "feature:chriz-bg-rebalance:component-361";
     const SCROLL_LEARN_FIX: &str = "feature:chriz-bg-modpack:component-470";
     const BG1_EARLY_PARTY_XP: &str = "feature:chriz-bg-modpack:component-695";
+    const WK_INSTANT_TELEPORTERS: &str = "feature:chriz-bg-modpack:component-697";
+    const AREA_EFFECTS_CLEAR: &str = "feature:chriz-bg-modpack:component-698";
     const EET_WORLD_PROGRESSION: &str = "feature:chriz-bg-modpack:component-680";
     const EET_WORLD_PROGRESSION_DEFAULT_TITLE: &str =
         "Story-consistent EET campaign boundaries and SoD backtracking";
@@ -467,6 +472,7 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     for (
         dir,
         current_digests,
+        alpha19_digests,
         alpha18_digests,
         challenge_680_digests,
         default_680_digests,
@@ -477,6 +483,11 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     ) in [
         (
             "../manifest",
+            [
+                "41f31769dab2ddcd1d1ef21b6c71e3b8e3343dd89237fa4e138485da36f501c4",
+                "37114c01f40eb14dec3b3d2b508fbce6276a0bb307afe954c4a6db9376a9a9cb",
+                "bc405030d36ab0dacdc10e467707d5ed2871faed17999961bf5bd2b4c66f784d",
+            ],
             [
                 "3964ac1c075bab2ca1a26ea55fadf9731ccbf4b7eda288a78df50b0dfb10a202",
                 "881475e4cd9e2ac28248c2506ba5601e567e0c57d736edc70da1e4ee294f1ad2",
@@ -516,6 +527,11 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         ),
         (
             "../recipes/curated-full-current",
+            [
+                "522606393675e1a209848bf8bf5d3e7c88d0cfa0615fe1f92c86117d0f3b5d61",
+                "32f218d0591e669f6d26404260fc5ce5e3379273be29298b389c6dcf64fda830",
+                "5c992067a94fa8a7bbe7339444b23074649759c066c813a2cdf0a82713690fd6",
+            ],
             [
                 "3dddff853ced98bc99588291e35e708bb5f81c2d45d25bc49e0cc857e5689dd4",
                 "fef2de60f7ae3d3b9e3e060a1de2dc717d210de32c6dee529e861ff3b83102b1",
@@ -559,6 +575,45 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         assert_eq!(
             recommended_digests(&manifest, &evaluation),
             current_digests,
+            "{dir}"
+        );
+
+        // Undoing Modpack alpha.20 (removing 697 and 698 and restoring alpha.19) must reproduce
+        // PR #165's digests (`alpha19_digests`).
+        let modpack = manifest.mods.get_mut("chriz-bg-modpack").unwrap();
+        assert_eq!(modpack.artifact_id, "chriz-bg-modpack-0.2.0-alpha.20");
+        modpack.artifact_id = "chriz-bg-modpack-0.2.0-alpha.19".to_owned();
+        let components_before = modpack.components.len();
+        modpack
+            .components
+            .retain(|component| !matches!(component.id, 697 | 698));
+        assert_eq!(modpack.components.len() + 2, components_before);
+        let modpack_run = manifest
+            .collection
+            .runs
+            .iter_mut()
+            .find(|run| run.run_id == "chriz-bg-modpack-bg2")
+            .unwrap();
+        let run_components_before = modpack_run.components.len();
+        modpack_run
+            .components
+            .retain(|&id| !matches!(id, 697 | 698));
+        assert_eq!(modpack_run.components.len() + 2, run_components_before);
+        let features_before = manifest.collection.features.len();
+        manifest.collection.features.retain(|feature| {
+            feature.id != WK_INSTANT_TELEPORTERS && feature.id != AREA_EFFECTS_CLEAR
+        });
+        assert_eq!(manifest.collection.features.len() + 2, features_before);
+        let recommended = manifest.presets.get_mut("chris-recommended").unwrap();
+        assert!(recommended
+            .selections
+            .remove(WK_INSTANT_TELEPORTERS)
+            .is_some());
+        assert!(recommended.selections.remove(AREA_EFFECTS_CLEAR).is_some());
+        let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        assert_eq!(
+            recommended_digests(&manifest, &evaluation),
+            alpha19_digests,
             "{dir}"
         );
 

@@ -25,7 +25,7 @@ PREVIOUS_EVIDENCE = "manifest/evidence/release-intake-20261122-chriz-bg-modpack-
 MOD = "chriz-bg-modpack"
 PIN = "chriz-bg-modpack-0.2.0-alpha.18"
 PREVIOUS = "chriz-bg-modpack-0.2.0-alpha.17"
-SUCCESSOR = "chriz-bg-modpack-0.2.0-alpha.19"
+SUCCESSOR = "chriz-bg-modpack-0.2.0-alpha.20"
 TAG = "v0.2.0-alpha.18"
 SOURCE_COMMIT = "533913c1d4874d34aceb800c54305c779e3c0748"
 PIN_COMMIT = "eddb2b9650373e4d9d9cebf140db8c5adbb03414"
@@ -147,9 +147,10 @@ class Nov23ModpackAlpha18ScrollLearnFixTests(unittest.TestCase):
                 self.assertEqual(feature["readiness"], "ready")
                 self.assertEqual(feature["parent"], f"mod:{MOD}")
                 native = set(self.record["native_components"])
-                # Alpha.19 adds component 695 after 680 in BG; earlier declarations keep their order.
+                # Alpha.19 adds component 695 after 680 and alpha.20 adds 697 and 698 after 695 in BG;
+                # earlier declarations keep their order.
                 for r in (r for r in collection["runs"] if r["mod_id"] == MOD):
-                    self.assertTrue(set(r["components"]) - {695} <= native, r["run_id"])
+                    self.assertTrue(set(r["components"]) - {695, 697, 698} <= native, r["run_id"])
                     self.assertNotIn(UNOFFERED, r["components"], r["run_id"])
 
                 if is_iwd:
@@ -187,7 +188,7 @@ class Nov23ModpackAlpha18ScrollLearnFixTests(unittest.TestCase):
 
     def test_iwd_0_1_19_release_ledger_hotpatch_and_docs(self) -> None:
         release = json.loads((ROOT / IWD_PROFILE / "release.json").read_text(encoding="utf-8"))
-        self.assertEqual(release["version"], "0.1.20")
+        self.assertEqual(release["version"], "0.1.21")
         ledger = _load(ROOT / f"{IWD_PROFILE}/releases/v0.1.19/ledger.toml")
         self.assertEqual((ledger["recipe_id"], ledger["version"], ledger["supersedes"]), ("chriz-easy-iwd", "0.1.19", "0.1.18"))
         (change,) = ledger["changes"]
@@ -215,7 +216,7 @@ class Nov23ModpackAlpha18ScrollLearnFixTests(unittest.TestCase):
             "Modpack PRs #24 and #25",
             EVIDENCE,
             f"| {COMPONENT} | {LABEL} | chriz-bg-modpack: Spell and compatibility fixes | | | default |",
-            "68 current or historical entries; the collection exposes 51.",
+            "70 current or historical entries; the collection exposes 53.",
         ):
             self.assertIn(phrase, catalog)
 

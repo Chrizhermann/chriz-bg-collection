@@ -147,7 +147,8 @@ class CatalogParserTests(unittest.TestCase):
         # November 22: the CHRIZ_MULTIPLAYER_FIX catalog adds components 0 and 1.
         # November 23: Modpack alpha.18 adds RAW specialist spell-scroll learning fix 470.
         # November 27: Modpack alpha.19 adds BG1 early-party XP boost 695.
-        self.assertEqual(len(rows), 1_359)
+        # November 27: Modpack alpha.20 adds Watcher's Keep teleporters 697 and room-effects cleanup 698.
+        self.assertEqual(len(rows), 1_361)
         self.assertEqual(
             decision_totals(rows),
             {
@@ -210,7 +211,9 @@ class CatalogParserTests(unittest.TestCase):
                 # (Christopher, 2026-11-22).
                 # November 27: Modpack 695 (BG1 early-party XP boost) is a default
                 # (Christopher, 2026-11-26).
-                Decision.DEFAULT: 340,
+                # November 27: Modpack 697 (Watcher's Keep instant teleporters) and 698
+                # (clear lingering room effects) are defaults (Christopher, 2026-11-27).
+                Decision.DEFAULT: 342,
                 # October 13 intake: SoD 177/198/285 join the mandatory bundle (430 left it).
                 Decision.MANDATORY: 154,
             },
@@ -452,9 +455,10 @@ default = "none"
         # Modpack 680 maps to one feature; Chriz Multiplayer Fix 0 and 1 map to one each.
         # November 23: Modpack 470 maps to one feature.
         # November 27: Modpack 695 maps to one feature.
-        self.assertEqual(result.mapped_rows, 1_359)
+        # November 27: Modpack 697 and 698 map to one feature each.
+        self.assertEqual(result.mapped_rows, 1_361)
         self.assertEqual(result.excluded_rows, 527)
-        self.assertEqual(result.feature_rows + result.omission_rows, 832)
+        self.assertEqual(result.feature_rows + result.omission_rows, 834)
         # October 14: Rebalance potion uniqueness and SCS fine weapons choices.
         # October 23: the SoD Remix Imoen in Shadows of Amn choice.
         # October 23: ten quest-mod choices (Ascalon's three with their first variant as
@@ -468,7 +472,7 @@ default = "none"
         self.assertEqual(result.choice_groups, 88)
         self.assertEqual(result.optional_none_groups, 33)
         self.assertEqual(result.fixed_groups, 12)
-        self.assertIn("rows=1359", coverage_report(rows, result))
+        self.assertIn("rows=1361", coverage_report(rows, result))
 
     def test_september16_intake_rows_match_the_approved_recipe_features(self) -> None:
         root = Path(__file__).resolve().parents[2]

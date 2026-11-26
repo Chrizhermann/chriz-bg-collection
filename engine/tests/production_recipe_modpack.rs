@@ -10,7 +10,7 @@ use bg_engine::Manifest;
 const MODPACK_COMPONENTS: &[u32] = &[
     110, 130, 135, 140, 170, 188, 189, 190, 192, 193, 194, 195, 196, 197, 198, 199, 220, 221, 222,
     223, 224, 225, 230, 231, 232, 233, 234, 400, 410, 430, 440, 450, 460, 470, 610, 611, 620, 630,
-    640, 235, 236, 237, 238, 239, 660, 670, 680, 695, 650, 651, 652,
+    640, 235, 236, 237, 238, 239, 660, 670, 680, 695, 697, 698, 650, 651, 652,
 ];
 
 /// The September 16 intake split the single post-EET modpack run into the
@@ -32,9 +32,10 @@ const CONTINUITY_COMPONENTS: &[u32] = &[199];
 /// Dagger 670 after 660; alpha.16 keeps that declaration order. Alpha.17 adds EET world
 /// progression and SoD backtracking 680 after 670. Alpha.18 adds the RAW specialist
 /// spell-scroll learning fix 470 after 460 (omitting 690). Alpha.19 adds BG1 early-party
-/// XP boost 695 after 680.
+/// XP boost 695 after 680. Alpha.20 adds Watcher's Keep instant teleporters 697 and clear
+/// lingering room effects 698 after 695.
 const POST_EET_END_COMPONENTS: &[u32] = &[
-    130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680, 695,
+    130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680, 695, 697, 698,
 ];
 
 const RECOMMENDED_PRE_CONTINUITY_COMPONENTS: &[u32] = &[
@@ -48,7 +49,10 @@ const RECOMMENDED_PRE_CONTINUITY_COMPONENTS: &[u32] = &[
 // Challenge Mode (Christopher, 2026-11-22), so Recommended leaves it out.
 // November 23: RAW spell-scroll learning fix 470 (alpha.18) is a default with EEex.
 // November 27: BG1 early-party XP boost 695 (alpha.19) is a default with EEex + EET.
-const RECOMMENDED_COMPONENTS: &[u32] = &[135, 410, 440, 450, 460, 470, 611, 660, 670, 695];
+// November 27: Watcher's Keep instant teleporters 697 and lingering room-effects cleanup 698
+// (alpha.20) are defaults (698 requires EEex).
+const RECOMMENDED_COMPONENTS: &[u32] =
+    &[135, 410, 440, 450, 460, 470, 611, 660, 670, 695, 697, 698];
 
 fn recipe_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../manifest")
@@ -62,9 +66,13 @@ fn recipe() -> Manifest {
 fn freezes_the_public_modpack_alpha_without_publishing_its_bundled_weidu() {
     let manifest = recipe();
     let artifact_id = &manifest.mods["chriz-bg-modpack"].artifact_id;
-    // November 27: alpha.19 adds BG1 early-party XP boost 695; alpha.18 and earlier stay as history.
-    assert_eq!(artifact_id, "chriz-bg-modpack-0.2.0-alpha.19");
+    // November 27: alpha.20 adds Watcher's Keep teleporters 697 and room-effect cleanup 698;
+    // alpha.19 and earlier stay as history.
+    assert_eq!(artifact_id, "chriz-bg-modpack-0.2.0-alpha.20");
     let artifact = &manifest.artifacts[artifact_id];
+    assert!(manifest
+        .artifacts
+        .contains_key("chriz-bg-modpack-0.2.0-alpha.19"));
     assert!(manifest
         .artifacts
         .contains_key("chriz-bg-modpack-0.2.0-alpha.18"));
@@ -80,22 +88,22 @@ fn freezes_the_public_modpack_alpha_without_publishing_its_bundled_weidu() {
     assert!(!manifest
         .artifacts
         .contains_key("chriz-bg-modpack-0.2.0-alpha.5"));
-    assert_eq!(artifact.version, "0.2.0-alpha.19");
+    assert_eq!(artifact.version, "0.2.0-alpha.20");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
-    assert_eq!(artifact.source.reference, "v0.2.0-alpha.19");
+    assert_eq!(artifact.source.reference, "v0.2.0-alpha.20");
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.19/chriz-bg-modpack-v0.2.0-alpha.19.zip"
+        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.20/chriz-bg-modpack-v0.2.0-alpha.20.zip"
     );
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-bg-modpack-v0.2.0-alpha.19.zip")
+        Some("chriz-bg-modpack-v0.2.0-alpha.20.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(9_564_616));
+    assert_eq!(artifact.source.expected_length, Some(9_590_173));
     assert_eq!(
         artifact.source.sha256,
-        "c2f1fc147f7f426ae6d1a36d2348e959f6313e009d96593afca02106cb1154d5"
+        "6108ad40ca751226457386b6774e61c41722b0cd998725e762c4502bf461dc89"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -172,7 +180,7 @@ fn authors_all_approved_components_between_remote_console_and_buffbot() {
     assert_eq!(runs[baeloth].components, [235]);
 
     let installer = &manifest.mods["chriz-bg-modpack"];
-    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.19");
+    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.20");
     assert_eq!(installer.tp2, "setup-chriz-bg-modpack.tp2");
     assert_eq!(installer.language, 0);
     assert_eq!(installer.weidu_artifact_id, "weidu-249-amd64");
@@ -408,6 +416,8 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // and curated to 471.
     // November 27: Modpack alpha.19 adds default BG1 early-party XP boost 695, bringing the
     // base to 377 and curated to 472.
+    // November 27: Modpack alpha.20 adds default Watcher's Keep teleporters 697 and lingering
+    // room-effect cleanup 698, bringing the base to 379 and curated to 474.
     assert_eq!(
         evaluation
             .plan
@@ -415,7 +425,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        377
+        379
     );
 }
 
