@@ -1917,14 +1917,10 @@ fn chriz_bg_modpack_scroll_learning_fix_470_runs_by_default_with_eeex_and_omits_
         .find(|feature| feature.id == "feature:chriz-bg-modpack:component-470")
         .unwrap();
     assert_eq!(scroll_feature.requires, ["feature:eeex:component-1"]);
-    assert!(!manifest
-        .collection
-        .features
-        .iter()
-        .any(|feature| matches!(
-            feature.id.as_str(),
-            "feature:chriz-bg-modpack:component-690" | "feature:chriz-bg-modpack:component-695"
-        )));
+    assert!(!manifest.collection.features.iter().any(|feature| matches!(
+        feature.id.as_str(),
+        "feature:chriz-bg-modpack:component-690" | "feature:chriz-bg-modpack:component-695"
+    )));
     assert!(!manifest.mods["chriz-bg-modpack"]
         .components
         .iter()
