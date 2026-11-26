@@ -597,9 +597,7 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
             .find(|run| run.run_id == "chriz-bg-modpack-bg2")
             .unwrap();
         let run_components_before = modpack_run.components.len();
-        modpack_run
-            .components
-            .retain(|id| !matches!(id, 696..=698));
+        modpack_run.components.retain(|id| !matches!(id, 696..=698));
         assert_eq!(modpack_run.components.len() + 3, run_components_before);
         let challenge_mode = manifest
             .collection

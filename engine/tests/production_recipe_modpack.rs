@@ -52,9 +52,8 @@ const RECOMMENDED_PRE_CONTINUITY_COMPONENTS: &[u32] = &[
 // November 27: Watcher's Keep instant teleporters 697 and lingering room-effects cleanup 698
 // (alpha.20) are defaults (698 requires EEex); Challenge Mode combat Quick Loot disable 696
 // (alpha.21) is optional in Challenge Mode so Recommended leaves it off.
-const RECOMMENDED_COMPONENTS: &[u32] = &[
-    135, 410, 440, 450, 460, 470, 611, 660, 670, 695, 697, 698,
-];
+const RECOMMENDED_COMPONENTS: &[u32] =
+    &[135, 410, 440, 450, 460, 470, 611, 660, 670, 695, 697, 698];
 
 fn recipe_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../manifest")
