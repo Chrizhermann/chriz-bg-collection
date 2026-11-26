@@ -51,6 +51,17 @@ candidate on 2026-11-01. The player-facing notes are in
   75% in a full party of six) until each living protagonist or companion reaches 16,000 total XP
   (counting retired dual-class XP as well as active XP). Inactive in solo play, Siege of
   Dragonspear, Shadows of Amn, and Throne of Bhaal; works standalone and with Challenge Mode.
+- **No Quick Loot during combat** (Chriz BG Modpack component 696, Optional, off by default;
+  turning Challenge Mode on turns it on; requires EEex). Disables the Quick Loot bar while you
+  are in combat so items must be looted from bodies, ground piles, or containers directly, and
+  restores Quick Loot once combat clears if it was open beforehand.
+- **Watcher's Keep instant teleporters and instant room-hazard cleanup** (Chriz BG Modpack
+  components 697 and 698, Default in BG only; 698 requires EEex). Watcher's Keep teleporters
+  move the party immediately with crisp portal visuals and sound instead of multi-second black-screen
+  fade stalls, while keeping quest/statue/item gates and autosaves intact. Room-pulsed hazard debuffs
+  (Dead Magic, Wild Magic, Vicross's magic-null field, and Watcher's Keep Ice Library slow/freeze)
+  clear immediately upon teleporting, travelling, or stepping outside the hazard room, including while
+  paused, so spellcasting recovers immediately without waiting for the round timer.
 
 ### Mod versions
 
@@ -59,7 +70,7 @@ candidate on 2026-11-01. The player-facing notes are in
 - Bardic Wonders v2.9c-balance.9 (was balance.8), curated Chriz Easy BG.
 - BG Rebalance v0.8.12 (was v0.8.11), both Chriz Easy BG recipes (adds component 361; Chriz Easy IWD also adds component 361).
 - Chriz Multiplayer Fix v0.1.0 (new), both Chriz Easy BG recipes and Chriz Easy IWD.
-- Chriz BG Modpack v0.2.0-alpha.19 (was v0.2.0-alpha.18), both Chriz Easy BG recipes (keeps component 680 in Challenge Mode, keeps default 470, and adds default BG1 component 695 after 680) and Chriz Easy IWD (artifact bump only, keeping component 470 sole and leaving 695 omitted). (Previously pinned v0.2.0-alpha.18 was v0.2.0-alpha.17.)
+- Chriz BG Modpack v0.2.0-alpha.21 (was v0.2.0-alpha.19; v0.2.0-alpha.20 added 697/698 in between), both Chriz Easy BG recipes (keeps component 680 and adds component 696 in Challenge Mode, keeps defaults 470 and 695, and adds defaults 697 and 698 after 695) and Chriz Easy IWD (artifact bump only, keeping component 470 sole and leaving 695, 696, 697, and 698 omitted). (Previously pinned v0.2.0-alpha.19 was v0.2.0-alpha.18, after v0.2.0-alpha.17.)
 
 ### Notes for the release integrator
 
@@ -125,6 +136,20 @@ candidate on 2026-11-01. The player-facing notes are in
   [Collection intake](../../manifest/evidence/release-intake-20261127-chriz-bg-modpack-chriz-easy-bg-chriz-easy-iwd.toml)
 - The next BG recipe update ledger must also cover `artifact:chriz-bg-modpack-0.2.0-alpha.19` and
   `feature:feature:chriz-bg-modpack:component-695`.
+- The Chriz BG Modpack v0.2.0-alpha.20 / v0.2.0-alpha.21 intake verified the fresh download, archive, TP2
+  declaration order (`696`, `697`, and `698` after `695` and before `650`; `690` stays unoffered/off),
+  optional Challenge Mode wiring of `696` (off in Chris's Recommended) and default wiring of `697`/`698`
+  in both Chriz Easy BG recipes (`chriz-bg-modpack-bg2` + `chris-recommended.toml`),
+  and exclusion from Chriz Easy IWD (collection `0.1.21`, where `470` stays sole Modpack
+  component). Upstream verified `696` live on BG2:EE `2.7.3.0` + EEex `v1.3.1` (`BuffBot-Dev`, `5/5`
+  checks passing) plus Lua 5.1/5.2/LuaJIT and WeiDU 249 checks, and verified `697`/`698` live in
+  `Magic-Lab-20261104` (`6/6` checks passing) plus 89 offline/WeiDU/archive checks;
+  combined full-collection installation and campaign playthrough remain untested.
+  [Collection intake](../../manifest/evidence/release-intake-20261127-chriz-bg-modpack-v0.2.0-alpha.21-chriz-easy-bg-chriz-easy-iwd.toml)
+- The next BG recipe update ledger must also cover `artifact:chriz-bg-modpack-0.2.0-alpha.21`,
+  `feature:feature:chriz-bg-modpack:component-696`,
+  `feature:feature:chriz-bg-modpack:component-697`, and
+  `feature:feature:chriz-bg-modpack:component-698`.
 
 ## Next Chriz Easy IWD release (draft)
 
@@ -148,13 +173,14 @@ candidate on 2026-11-01. The player-facing notes are in
   Wild Mages, kitted dual-class mages, and non-mages no longer take a -15% penalty on spell
   scrolls; only specialist mages apply +/-15% school modifiers. New games only. (Chriz BG
   Modpack v0.2.0-alpha.18 component 470, collection 0.1.19; package updated to v0.2.0-alpha.19 in
-  collection 0.1.20 with BG1-only 695 omitted from IWD)
+  collection 0.1.20 with BG1-only 695 omitted from IWD, and to v0.2.0-alpha.21 in collection 0.1.21
+  with BG-only/Challenge Mode 696, 697, and 698 omitted from IWD)
 
 ### Mod versions
 
 - Chriz IWD Encounters v0.3.2 (was v0.3.1), same components and defaults.
 - Chriz Multiplayer Fix v0.1.0 (new).
-- Chriz BG Modpack v0.2.0-alpha.19 (was v0.2.0-alpha.18; component 470 default with EEex, 695 omitted in IWD).
+- Chriz BG Modpack v0.2.0-alpha.21 (was v0.2.0-alpha.19; component 470 default with EEex, 695/696/697/698 omitted in IWD).
 
 ## Collection 0.1.2 (draft)
 

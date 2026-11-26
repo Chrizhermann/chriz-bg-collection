@@ -17,7 +17,7 @@ user's decisions. Started 2026-09-10.
 - [ ] The recipe generator does not know what was added to `collection.toml` by hand: Chriz IWD
   Encounters' fights 300-410, its banter guard 110, Arszyk's Wonderful Decay, Klatu's
   thievery in armor (2150), Chriz Overhead Text (0), Chriz IWD Party Dialog (0), BG Rebalance v0.8.12
-  Round Clock (361, on by default with EEex), Chriz Multiplayer Fix (0, 1) and Chriz BG Modpack v0.2.0-alpha.18 Spell Learning RAW fix (470, on by default with EEex; package updated to v0.2.0-alpha.19 with BG1-only 695 omitted from IWD). Add them before it
+  Round Clock (361, on by default with EEex), Chriz Multiplayer Fix (0, 1) and Chriz BG Modpack v0.2.0-alpha.18 Spell Learning RAW fix (470, on by default with EEex; package updated to v0.2.0-alpha.21 with BG-only/Challenge Mode 695, 696, 697, and 698 omitted from IWD). Add them before it
   regenerates the recipe.
 - [ ] Create the explicit IWD curation map and reconcile every catalog row to an outcome.
 

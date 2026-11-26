@@ -45,7 +45,7 @@ Added later:
   spell-scroll learning fix (470) by default with EEex (restricting ±15% specialist modifiers to
   specialist mages; bards, Wild Mages, kitted dual-class mages, and non-mages stay at 0%) in
   the IWD run, immediately after BG Rebalance (690 Fast Traps stays unoffered). Pinned release
-  updated to v0.2.0-alpha.19 on 2026-11-27 (`0.1.20`); BG1-only component 695 is excluded from IWD.
+  updated to v0.2.0-alpha.19 on 2026-11-27 (`0.1.20`) and v0.2.0-alpha.21 on 2026-11-27 (`0.1.21`); components 695, 696, 697, and 698 are excluded from IWD.
 
 Notes from the selection:
 - The quest mods' compatibility with each other can be tested later; Christopher said

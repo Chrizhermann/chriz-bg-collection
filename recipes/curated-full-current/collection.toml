@@ -15,6 +15,8 @@ members = [
   "feature:chriz-bg-modpack:component-652",
   # Christopher, 2026-11-22: no travel back into an earlier campaign only with Challenge Mode (Modpack 680).
   "feature:chriz-bg-modpack:component-680",
+  # Christopher, 2026-11-27: Challenge Mode disables Quick Loot during combat so loot must be picked up on the ground (Modpack 696).
+  "feature:chriz-bg-modpack:component-696",
   "feature:cdtweaks:component-2760",
 ]
 # Christopher, 2026-10-14: Challenge Mode picks strict potion uniqueness (Rebalance 330);
@@ -475,7 +477,7 @@ args = []
 run_id = "chriz-bg-modpack-bg2"
 mod_id = "chriz-bg-modpack"
 phase = "post-eet-end"
-components = [130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680, 695]
+components = [130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680, 695, 696, 697, 698]
 args = []
 
 [[runs]]
@@ -6199,6 +6201,44 @@ readiness = "ready"
 parent = "mod:chriz-bg-modpack"
 requires = ["feature:eeex:mandatory-components", "feature:eet:mandatory-components"]
 components = [{ run_id = "chriz-bg-modpack-bg2", component = 695 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-696"
+title = "Disable Quick Loot during combat"
+description = "Closes and blocks the Quick Loot bar while in combat so items must be looted directly from bodies, ground piles, or containers during fights, and automatically restores Quick Loot once combat ends if it was open beforehand. Requires EEex."
+category = "rules"
+source_label = "Collection fixes and NPC defaults"
+group_label = "chriz-bg-modpack: Gameplay tweaks"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 696 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-697"
+title = "Watcher's Keep: instant teleporters"
+description = "Removes the multi-second black-screen fade-out and fade-in stalls on Watcher's Keep teleporters across every level and the Carston handoff while keeping portal animations, sound cues, statue/item/key gates, autosaves, and exact destinations intact."
+category = "convenience"
+source_label = "Collection fixes and NPC defaults"
+group_label = "chriz-bg-modpack: Gameplay tweaks"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 697 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-698"
+title = "Clear lingering room effects when leaving a room or area"
+description = "Immediately removes lingering room-pulsed hazard debuffs (Dead Magic, Wild Magic, Vicross magic-null field, and Watcher's Keep Ice Library slow/freeze) the instant you teleport, travel, or step outside the hazard room, including while paused, so spellcasting recovers without waiting up to a full round. Requires EEex."
+category = "fixes"
+source_label = "Collection fixes and NPC defaults"
+group_label = "chriz-bg-modpack: Gameplay tweaks"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 698 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-640"

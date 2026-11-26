@@ -447,9 +447,16 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // Pinned on November 27 to Modpack v0.2.0-alpha.19 (PR #26): adds default BG1 early-party XP
     // boost 695 (requiring EEex and EET) after 680; undoing 695 and restoring alpha.18 reproduces
     // PR #164's digests (`alpha18_digests`).
+    // Pinned on November 27 to Modpack v0.2.0-alpha.21 (PR #29, superseding alpha.20 PR #28):
+    // adds optional Challenge Mode Quick Loot suppression 696 (requiring EEex) plus defaults
+    // BG2 spells in SoD 697 and non-party creature resilience 698 (requiring EEex); undoing
+    // 696/697/698 and restoring alpha.19 reproduces `alpha19_digests`.
     const ROUND_CLOCK: &str = "feature:chriz-bg-rebalance:component-361";
     const SCROLL_LEARN_FIX: &str = "feature:chriz-bg-modpack:component-470";
     const BG1_EARLY_PARTY_XP: &str = "feature:chriz-bg-modpack:component-695";
+    const NO_COMBAT_QUICKLOOT: &str = "feature:chriz-bg-modpack:component-696";
+    const BG2_SPELLS_IN_SOD: &str = "feature:chriz-bg-modpack:component-697";
+    const NON_PARTY_CREATURE_RESILIENCE: &str = "feature:chriz-bg-modpack:component-698";
     const EET_WORLD_PROGRESSION: &str = "feature:chriz-bg-modpack:component-680";
     const EET_WORLD_PROGRESSION_DEFAULT_TITLE: &str =
         "Story-consistent EET campaign boundaries and SoD backtracking";
@@ -467,6 +474,7 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     for (
         dir,
         current_digests,
+        alpha19_digests,
         alpha18_digests,
         challenge_680_digests,
         default_680_digests,
@@ -477,6 +485,11 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     ) in [
         (
             "../manifest",
+            [
+                "5e324aabd6bc28042f03cd5dab0402a7886f455941803e12be90c28f5e5a0780",
+                "6d3aacb32f3e90cb2c975fc1b7ce35b5dbe392b4e57b0d12f15711ef145bb3f3",
+                "43eb15329529e1174fafb4e3560ce4a345c25c68b9049836d6fc2acf42f95191",
+            ],
             [
                 "3964ac1c075bab2ca1a26ea55fadf9731ccbf4b7eda288a78df50b0dfb10a202",
                 "881475e4cd9e2ac28248c2506ba5601e567e0c57d736edc70da1e4ee294f1ad2",
@@ -516,6 +529,11 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         ),
         (
             "../recipes/curated-full-current",
+            [
+                "2b4e78d121a65d8793a32e838263547664d9a335da12a1ca116496491d0f2b0d",
+                "bb446834b8d67e17aa207c3c1d3ce3941fe77f024d5d8050d426d8b198147256",
+                "a6d07630768b1f5591d177ae429ba69a3285e418a8a1a8221a4ca6e490c670e8",
+            ],
             [
                 "3dddff853ced98bc99588291e35e708bb5f81c2d45d25bc49e0cc857e5689dd4",
                 "fef2de60f7ae3d3b9e3e060a1de2dc717d210de32c6dee529e861ff3b83102b1",
@@ -559,6 +577,58 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         assert_eq!(
             recommended_digests(&manifest, &evaluation),
             current_digests,
+            "{dir}"
+        );
+
+        // Undoing Modpack alpha.21 (removing 696/697/698 and restoring alpha.19) must reproduce
+        // `alpha19_digests`.
+        let modpack = manifest.mods.get_mut("chriz-bg-modpack").unwrap();
+        assert_eq!(modpack.artifact_id, "chriz-bg-modpack-0.2.0-alpha.21");
+        modpack.artifact_id = "chriz-bg-modpack-0.2.0-alpha.19".to_owned();
+        let components_before = modpack.components.len();
+        modpack
+            .components
+            .retain(|component| !matches!(component.id, 696..=698));
+        assert_eq!(modpack.components.len() + 3, components_before);
+        let modpack_run = manifest
+            .collection
+            .runs
+            .iter_mut()
+            .find(|run| run.run_id == "chriz-bg-modpack-bg2")
+            .unwrap();
+        let run_components_before = modpack_run.components.len();
+        modpack_run
+            .components
+            .retain(|id| !matches!(id, 696..=698));
+        assert_eq!(modpack_run.components.len() + 3, run_components_before);
+        let challenge_mode = manifest
+            .collection
+            .feature_groups
+            .iter_mut()
+            .find(|group| group.id == "challenge-mode")
+            .unwrap();
+        let members_before = challenge_mode.members.len();
+        challenge_mode
+            .members
+            .retain(|member| member != NO_COMBAT_QUICKLOOT);
+        assert_eq!(challenge_mode.members.len() + 1, members_before);
+        let features_before = manifest.collection.features.len();
+        manifest.collection.features.retain(|feature| {
+            feature.id != NO_COMBAT_QUICKLOOT
+                && feature.id != BG2_SPELLS_IN_SOD
+                && feature.id != NON_PARTY_CREATURE_RESILIENCE
+        });
+        assert_eq!(manifest.collection.features.len() + 3, features_before);
+        let recommended = manifest.presets.get_mut("chris-recommended").unwrap();
+        assert!(recommended.selections.remove(BG2_SPELLS_IN_SOD).is_some());
+        assert!(recommended
+            .selections
+            .remove(NON_PARTY_CREATURE_RESILIENCE)
+            .is_some());
+        let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        assert_eq!(
+            recommended_digests(&manifest, &evaluation),
+            alpha19_digests,
             "{dir}"
         );
 
