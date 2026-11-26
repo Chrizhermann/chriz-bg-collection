@@ -685,6 +685,14 @@ mod tests {
                 "override/eeex_remote_ready.json",
                 "override/eeex_remote_result.json.tmp",
                 "override/eeex_remote_cmd.lua.run",
+                "bg radar overlay/bg radar overlay.exe",
+                "bg2radar.asi",
+                "winmm.dll",
+                "bgradar",
+                "bgradar/bg radar overlay.exe",
+                "bg2radar",
+                "bg2radar/bg radar overlay.exe",
+                "override/m_rdrcrt.lua",
             ] {
                 assert!(catalog.runtime_files.matches(name), "{name}");
             }

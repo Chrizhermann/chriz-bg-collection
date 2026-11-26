@@ -660,8 +660,25 @@ fn overlap(a: &Path, b: &Path) -> bool {
     crate::reparse::windows_path_starts_with(a, b) || crate::reparse::windows_path_starts_with(b, a)
 }
 
+fn is_allowed_managed_radar_link(managed_root: &Path, child: &Path) -> bool {
+    let Ok(relative) = child.strip_prefix(managed_root) else {
+        return false;
+    };
+    let Some(relative_str) = relative.to_str() else {
+        return false;
+    };
+    let normalized = relative_str.replace('\\', "/").to_ascii_lowercase();
+    normalized
+        .strip_prefix("game/")
+        .is_some_and(crate::radar::is_native_autostart_link_path)
+}
+
 fn validate_tree(root: &HeldFolder) -> Result<(), RemovalError> {
-    if let Some(path) = root.find_link_below().map_err(entry_failure)? {
+    let managed_root = root.path().to_path_buf();
+    if let Some(path) = root
+        .find_link_below_except(&|child| is_allowed_managed_radar_link(&managed_root, child))
+        .map_err(entry_failure)?
+    {
         return Err(failure(format!(
             "Refusing linked or special file {}",
             path.display()
@@ -671,14 +688,20 @@ fn validate_tree(root: &HeldFolder) -> Result<(), RemovalError> {
 }
 
 /// Removes everything in the held `root` through its handles, depth first, and then `root`
-/// itself. A link found on the way is refused, never followed.
+/// itself. Links found on the way are refused and never followed, except known BG Radar Overlay
+/// autostart file symlinks which are unlinked directly without touching their target.
 fn remove_tree(
     root: HeldFolder,
     before_remove: &mut dyn FnMut(&Path) -> io::Result<()>,
 ) -> Result<(), RemovalError> {
+    let managed_root = root.path().to_path_buf();
     // Keep normal ownership evidence until game payload deletion has succeeded.
-    root.remove_contents(&[".chriz"], before_remove)
-        .map_err(entry_failure)?;
+    root.remove_contents_allowing_file_links(
+        &[".chriz"],
+        &|child| is_allowed_managed_radar_link(&managed_root, child),
+        before_remove,
+    )
+    .map_err(entry_failure)?;
     let path = root.path().to_path_buf();
     before_remove(&path).map_err(|e| io_at(&path, e))?;
     root.remove().map_err(|e| io_at(&path, e))
@@ -1848,5 +1871,74 @@ mod tests {
         let plan = preview(&f.app, "fixture-removal").unwrap();
         assert!(run(&f, &plan).is_err());
         assert!(f.source.join("original.txt").exists());
+    }
+    #[cfg(windows)]
+    #[test]
+    fn radar_native_autostart_file_symlink_is_unlinked_without_touching_target() {
+        let f = fixture();
+        let outside = f._temp.path().join("outside-radar");
+        fs::create_dir_all(&outside).unwrap();
+        let external_exe = outside.join("BG Radar Overlay.exe");
+        fs::write(&external_exe, b"keep my radar exe").unwrap();
+
+        for folder in ["BGRadar", "BG2Radar"] {
+            let dir = f.root.join("game").join(folder);
+            fs::create_dir_all(&dir).unwrap();
+            let link = dir.join("BG Radar Overlay.exe");
+            match std::os::windows::fs::symlink_file(&external_exe, &link) {
+                Ok(()) => {}
+                Err(error)
+                    if matches!(
+                        error.kind(),
+                        io::ErrorKind::PermissionDenied | io::ErrorKind::Unsupported
+                    ) =>
+                {
+                    return;
+                }
+                Err(error) => panic!("create radar symlink: {error}"),
+            }
+        }
+
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert_eq!(plan.action, RemovalAction::Delete);
+        run(&f, &plan).unwrap();
+
+        assert!(!f.root.exists());
+        assert_eq!(fs::read(&external_exe).unwrap(), b"keep my radar exe");
+        assert_eq!(registered_campaigns(&f), 0);
+    }
+    #[cfg(windows)]
+    #[test]
+    fn radar_directory_junction_or_other_file_symlink_stays_refused_during_removal() {
+        let f = fixture();
+        let outside = f._temp.path().join("outside-radar");
+        fs::create_dir_all(&outside).unwrap();
+        let external = outside.join("keep.txt");
+        fs::write(&external, b"do not touch").unwrap();
+
+        // Directory junction at game/BGRadar must still be refused.
+        link_directory(&f.root.join("game/BGRadar"), &outside);
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert!(run(&f, &plan).is_err());
+        assert_eq!(fs::read(&external).unwrap(), b"do not touch");
+
+        // Any other file symlink inside game/ must also stay refused.
+        let f2 = fixture();
+        let other = f2.root.join("game/other.exe");
+        match std::os::windows::fs::symlink_file(&external, &other) {
+            Ok(()) => {}
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    io::ErrorKind::PermissionDenied | io::ErrorKind::Unsupported
+                ) =>
+            {
+                return;
+            }
+            Err(error) => panic!("create file symlink: {error}"),
+        }
+        let plan2 = preview(&f2.app, "fixture-removal").unwrap();
+        assert!(run(&f2, &plan2).is_err());
+        assert_eq!(fs::read(&external).unwrap(), b"do not touch");
     }
 }

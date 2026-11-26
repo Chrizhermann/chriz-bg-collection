@@ -28,9 +28,19 @@ pub const RADAR_INSTALL_DIRECTORY: &str = "BG Radar Overlay";
 /// Executable supplied by every supported Radar Overlay release.
 pub const RADAR_EXECUTABLE: &str = "BG Radar Overlay.exe";
 
+/// Known file-symlink relative paths (lowercase, `/` separated, below `game/`) that
+/// BG Radar Overlay 3.0 creates for native autostart.
+pub fn is_native_autostart_link_path(relative_game_path: &str) -> bool {
+    matches!(
+        relative_game_path,
+        "bgradar/bg radar overlay.exe" | "bg2radar/bg radar overlay.exe"
+    )
+}
+
 const LATEST_RELEASE_API: &str =
     "https://api.github.com/repos/tapahob/BG2RadarOverlay/releases/latest";
 const MAX_RELEASE_JSON_BYTES: u64 = 1024 * 1024;
+const MAX_RELEASE_NOTES_CHARS: usize = 4000;
 const MAX_ASSET_BYTES: u64 = 512 * 1024 * 1024;
 const MAX_ARCHIVE_ENTRIES: usize = 256;
 const MAX_ENTRY_BYTES: u64 = 256 * 1024 * 1024;
@@ -60,6 +70,14 @@ pub struct RadarRelease {
     pub asset_length: u64,
     /// GitHub-advertised lowercase SHA-256.
     pub sha256: String,
+}
+
+/// Checked Latest release paired with sanitized player-facing release notes (kept outside
+/// [`RadarRelease`] so existing add-on receipts keep their exact schema).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RadarLatestRelease {
+    pub release: RadarRelease,
+    pub notes: Option<String>,
 }
 
 /// Player-facing integrity/update state for the managed add-on.
@@ -139,6 +157,7 @@ struct GitHubRelease {
     id: u64,
     tag_name: String,
     published_at: Option<String>,
+    body: Option<String>,
     draft: bool,
     prerelease: bool,
     assets: Vec<GitHubAsset>,
@@ -179,7 +198,12 @@ struct ValidatedRoots {
 
 /// Query the official GitHub Latest-release endpoint.
 pub fn check_latest() -> Result<RadarRelease, RadarError> {
-    check_latest_from(LATEST_RELEASE_API)
+    check_latest_with_notes().map(|latest| latest.release)
+}
+
+/// Query the official GitHub Latest-release endpoint and return sanitized release notes too.
+pub fn check_latest_with_notes() -> Result<RadarLatestRelease, RadarError> {
+    check_latest_with_notes_from(LATEST_RELEASE_API)
 }
 
 /// Query a GitHub-compatible Latest-release endpoint.
@@ -187,6 +211,11 @@ pub fn check_latest() -> Result<RadarRelease, RadarError> {
 /// The override exists for hermetic verification. Production callers should use
 /// [`check_latest`]; only HTTPS or loopback HTTP endpoints are accepted.
 pub fn check_latest_from(api_url: &str) -> Result<RadarRelease, RadarError> {
+    check_latest_with_notes_from(api_url).map(|latest| latest.release)
+}
+
+/// Query a GitHub-compatible Latest-release endpoint and return sanitized release notes too.
+pub fn check_latest_with_notes_from(api_url: &str) -> Result<RadarLatestRelease, RadarError> {
     let endpoint = validate_api_url(api_url)?;
     let agent = release_agent(is_loopback_http(&endpoint));
     let response = agent
@@ -223,7 +252,7 @@ pub fn check_latest_from(api_url: &str) -> Result<RadarRelease, RadarError> {
     }
     let payload: GitHubRelease = serde_json::from_slice(&body)
         .map_err(|source| RadarError::InvalidRelease(source.to_string()))?;
-    release_from_github(payload)
+    release_with_notes_from_github(payload)
 }
 
 fn validate_api_url(value: &str) -> Result<Url, RadarError> {
@@ -260,6 +289,32 @@ pub(crate) fn release_agent(loopback: bool) -> Agent {
         )
         .build()
         .new_agent()
+}
+
+fn release_with_notes_from_github(
+    mut payload: GitHubRelease,
+) -> Result<RadarLatestRelease, RadarError> {
+    let notes = sanitize_release_notes(payload.body.take());
+    let release = release_from_github(payload)?;
+    Ok(RadarLatestRelease { release, notes })
+}
+
+fn sanitize_release_notes(body: Option<String>) -> Option<String> {
+    let raw = body?;
+    let normalized = raw.replace("\r\n", "\n").replace('\r', "\n");
+    let cleaned: String = normalized
+        .chars()
+        .filter(|character| !character.is_control() || matches!(character, '\n' | '\t'))
+        .collect();
+    let trimmed = cleaned.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    if trimmed.chars().count() <= MAX_RELEASE_NOTES_CHARS {
+        return Some(trimmed.to_owned());
+    }
+    let truncated: String = trimmed.chars().take(MAX_RELEASE_NOTES_CHARS).collect();
+    Some(format!("{}\n…", truncated.trim_end()))
 }
 
 fn release_from_github(payload: GitHubRelease) -> Result<RadarRelease, RadarError> {

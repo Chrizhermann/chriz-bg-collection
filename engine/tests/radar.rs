@@ -4,8 +4,8 @@ use std::time::Duration;
 
 use bg_engine::events::ChannelSink;
 use bg_engine::radar::{
-    check_latest_from, install, status, RadarError, RadarRelease, RadarState, RADAR_EXECUTABLE,
-    RADAR_INSTALL_DIRECTORY,
+    check_latest_from, check_latest_with_notes_from, install, is_native_autostart_link_path,
+    status, RadarError, RadarRelease, RadarState, RADAR_EXECUTABLE, RADAR_INSTALL_DIRECTORY,
 };
 use sevenz_rust2::compress_to_path;
 use sha2::{Digest, Sha256};
@@ -277,4 +277,40 @@ fn same_tag_with_replaced_release_asset_is_an_update() {
         status(&managed, &game, Some(&latest)).unwrap().state,
         RadarState::UpdateAvailable
     );
+}
+
+#[test]
+fn latest_release_with_notes_extracts_and_sanitizes_body_without_altering_release_identity() {
+    let body = br#"{
+      "id": 454234262,
+      "tag_name": "3.0.0.0",
+      "published_at": "2026-11-22T06:14:27Z",
+      "body": "- Native rendering\r\n- Floating combat text\u0007\r\n  \r\n",
+      "draft": false,
+      "prerelease": false,
+      "assets": [{
+        "id": 778036287,
+        "name": "BG.Radar.Overlay.3.0.0.0.7z",
+        "size": 79570019,
+        "browser_download_url": "https://github.com/tapahob/BG2RadarOverlay/releases/download/3.0.0.0/BG.Radar.Overlay.3.0.0.0.7z",
+        "digest": "sha256:69a7285f9decf9695400b74a6725c99880433a2081a9e9dbf9f13fcf2bdc4267"
+      }]
+    }"#;
+    let (url, server) = one_shot_server(body.to_vec(), "application/json");
+
+    let latest = check_latest_with_notes_from(&url).unwrap();
+    server.join().unwrap();
+
+    assert_eq!(latest.release.tag, "3.0.0.0");
+    assert_eq!(
+        latest.notes.as_deref(),
+        Some("- Native rendering\n- Floating combat text")
+    );
+    assert!(is_native_autostart_link_path(
+        "bgradar/bg radar overlay.exe"
+    ));
+    assert!(is_native_autostart_link_path(
+        "bg2radar/bg radar overlay.exe"
+    ));
+    assert!(!is_native_autostart_link_path("override/evil.exe"));
 }

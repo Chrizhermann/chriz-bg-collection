@@ -144,9 +144,6 @@ pub fn capture(root: &Path) -> Result<GameFiles, String> {
             continue;
         }
         let metadata = fs::symlink_metadata(path).map_err(files::err)?;
-        if crate::reparse::metadata_is_link(path, &metadata) {
-            return Err(format!("Linked path is not supported: {}", path.display()));
-        }
         let name = path
             .strip_prefix(root)
             .map_err(files::err)?
@@ -154,6 +151,12 @@ pub fn capture(root: &Path) -> Result<GameFiles, String> {
             .replace('\\', "/");
         files::safe_relative(&name)?;
         let name = name.to_ascii_lowercase();
+        if crate::reparse::metadata_is_link(path, &metadata) {
+            if !metadata.is_dir() && crate::radar::is_native_autostart_link_path(&name) {
+                continue;
+            }
+            return Err(format!("Linked path is not supported: {}", path.display()));
+        }
         if !seen.insert(name.clone()) {
             return Err(format!(
                 "Names that differ only in case are not supported: {name}"
@@ -360,6 +363,54 @@ mod tests {
         let outside = temp.path().join("outside");
         fs::create_dir_all(&outside).unwrap();
         crate::held_folder::tests::junction(&game.join("linked"), &outside);
+        assert!(capture(&game).unwrap_err().contains("Linked path"));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn radar_native_autostart_file_symlinks_are_skipped_while_other_links_stay_refused() {
+        let temp = tempfile::tempdir().unwrap();
+        let game = temp.path().join("game");
+        write(&game.join("WeiDU.log"), b"log");
+        let outside_dir = temp.path().join("outside");
+        fs::create_dir_all(&outside_dir).unwrap();
+        let outside_exe = outside_dir.join("BG Radar Overlay.exe");
+        fs::write(&outside_exe, b"external radar binary").unwrap();
+
+        for folder in ["BGRadar", "BG2Radar"] {
+            let link_parent = game.join(folder);
+            fs::create_dir_all(&link_parent).unwrap();
+            let link = link_parent.join("BG Radar Overlay.exe");
+            match std::os::windows::fs::symlink_file(&outside_exe, &link) {
+                Ok(()) => {}
+                Err(error)
+                    if matches!(
+                        error.kind(),
+                        std::io::ErrorKind::PermissionDenied | std::io::ErrorKind::Unsupported
+                    ) =>
+                {
+                    return;
+                }
+                Err(error) => panic!("create radar file symlink: {error}"),
+            }
+        }
+
+        let captured = capture(&game).unwrap();
+        assert!(captured.files.contains_key("weidu.log"));
+        assert!(!captured.files.contains_key("bgradar/bg radar overlay.exe"));
+        assert!(!captured.files.contains_key("bg2radar/bg radar overlay.exe"));
+        assert!(captured.folders.contains("bgradar"));
+        assert!(captured.folders.contains("bg2radar"));
+
+        // Any other file symlink or any directory junction (even at BGRadar itself) stays refused.
+        let other_link = game.join("override/evil.spl");
+        fs::create_dir_all(other_link.parent().unwrap()).unwrap();
+        std::os::windows::fs::symlink_file(&outside_exe, &other_link).unwrap();
+        assert!(capture(&game).unwrap_err().contains("Linked path"));
+        fs::remove_file(&other_link).unwrap();
+
+        fs::remove_dir_all(game.join("BGRadar")).unwrap();
+        crate::held_folder::tests::junction(&game.join("BGRadar"), &outside_dir);
         assert!(capture(&game).unwrap_err().contains("Linked path"));
     }
 }
