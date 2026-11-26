@@ -169,6 +169,17 @@ candidate on 2026-11-01. The player-facing notes are in
   the Polar Bear Spirit's roar, thins Burial Isle's undead and puts a Frost Giant War-Shaman
   on the glacier in Gloomfrost. New games only. (Chriz IWD Encounters v0.3.2,
   collection 0.1.18)
+- **Dragon's Eye, Severed Hand, and Dorn's Deep quest kill counters fixed, plus elite stats,
+  loot economy, and dungeon pacing overhaul.** Preserves quest death variables on custom squad
+  placements in Dragon's Eye Level 2 and the Severed Hand and aligns thinned-area quest kill
+  thresholds across Dragon's Eye (`> 5 / < 6`), the Severed Hand (`> 11`), and Lower Dorn's Deep
+  (`> 8` and `> 4`). Also fixes triple-stacked AC/THAC0/APR mastery bonuses on custom elites,
+  marks bespoke elite equipment and AI buff potions undroppable, recalibrates the Talonite Coven
+  (`Priestess + Champion + Venom-Troll`), stretches Kresselack's antechamber wave timers (`48 s` /
+  `+54 s`), removes the remaining Bombardier Beetles, adds six apex guardians, and trims additional
+  late-chapter and Watchknight hordes. Existing `0.1.15`–`0.1.16` games get the quest-counter
+  repair on saves in progress through the hotpatch (component `425`). (Chriz IWD Encounters v0.3.4,
+  collection 0.1.22)
 - **Spell scroll learning matches Rules as Written** (requires EEex). Bards (such as Blades),
   Wild Mages, kitted dual-class mages, and non-mages no longer take a -15% penalty on spell
   scrolls; only specialist mages apply +/-15% school modifiers. New games only. (Chriz BG
@@ -178,7 +189,7 @@ candidate on 2026-11-01. The player-facing notes are in
 
 ### Mod versions
 
-- Chriz IWD Encounters v0.3.2 (was v0.3.1), same components and defaults.
+- Chriz IWD Encounters v0.3.4 (was v0.3.2; same recipe components 100..420 and optional 500, plus hotpatch-only 425).
 - Chriz Multiplayer Fix v0.1.0 (new).
 - Chriz BG Modpack v0.2.0-alpha.21 (was v0.2.0-alpha.19; component 470 default with EEex, 695/696/697/698 omitted in IWD).
 

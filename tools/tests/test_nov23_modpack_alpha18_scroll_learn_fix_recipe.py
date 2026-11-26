@@ -187,7 +187,7 @@ class Nov23ModpackAlpha18ScrollLearnFixTests(unittest.TestCase):
 
     def test_iwd_0_1_19_release_ledger_hotpatch_and_docs(self) -> None:
         release = json.loads((ROOT / IWD_PROFILE / "release.json").read_text(encoding="utf-8"))
-        self.assertEqual(release["version"], "0.1.21")
+        self.assertEqual(release["version"], "0.1.22")
         ledger = _load(ROOT / f"{IWD_PROFILE}/releases/v0.1.19/ledger.toml")
         self.assertEqual((ledger["recipe_id"], ledger["version"], ledger["supersedes"]), ("chriz-easy-iwd", "0.1.19", "0.1.18"))
         (change,) = ledger["changes"]

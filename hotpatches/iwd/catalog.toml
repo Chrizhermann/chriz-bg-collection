@@ -159,6 +159,12 @@ label = "Chriz Easy IWD 0.1.17"
 recipe_version = "0.1.21"
 content_sha256 = "adba2f20b157ebb8d97c0103518c7b78c5efe23e053983a32607851b9280cd9a"
 
+[[bases]]
+id = "iwd-0.1.22"
+label = "Chriz Easy IWD 0.1.17"
+recipe_version = "0.1.22"
+content_sha256 = "31c158ea070afe5cd516d42593b9f133f58842ae4e4ecd56b033e4069fbb8e1e"
+
 # Christopher's twelve boss fights (Chriz IWD Encounters 0.2.0, 2026-11-04) for installations of
 # the releases before 0.1.6, which install them itself. Each fight takes effect where the party
 # has not been yet; the orog raid's changes also while the raid has not happened.
@@ -272,6 +278,34 @@ components = [110]
 [[hotpatches.changes]]
 title = "Banter only between living party members"
 summary = "Banter starts only when both partners live and are in the same area."
+save_applicability = "current-save"
+
+# Repairs Dragon's Eye Level 2, Severed Hand, and Lower Dorn's Deep quest kill counters (Chriz IWD
+# Encounters 0.3.4, Christopher, 2026-11-27) for installations of 0.1.15-0.1.16 (recipes 0.1.16-
+# 0.1.21) before collection 0.1.22, which pins 0.3.4 directly. Works on saves already in progress.
+[[hotpatches]]
+id = "chriz-iwd-encounters-0.3.4-quest-counters"
+title = "Dragon's Eye, Severed Hand, and Dorn's Deep quest fix"
+summary = "Repairs the quest kill counters for Mother Egenia and the Dragon's Eye captives (Level 2), Kaylessa in the Severed Hand, and the Lower Dorn's Deep salamander quests, and preserves quest death counts on the custom squads in unvisited areas."
+bases = ["iwd-0.1.16", "iwd-0.1.17", "iwd-0.1.18", "iwd-0.1.19", "iwd-0.1.20", "iwd-0.1.21"]
+artifact = "chriz-iwd-encounters-0.3.4"
+mod = "chriz-iwd-encounters-0.3.4"
+components = [425]
+requires_components = [{ mod = "chriz-iwd-encounters", any_of = [420] }]
+
+[[hotpatches.changes]]
+title = "Mother Egenia and the Dragon's Eye captives"
+summary = "Mother Egenia and the captives on Dragon's Eye Level 2 recognize when the Talonite guards are defeated (> 5 / < 6), including in saves already on that floor."
+save_applicability = "current-save"
+
+[[hotpatches.changes]]
+title = "Kaylessa's quest in the Severed Hand"
+summary = "Kaylessa counts defeated shadowed elven soldiers accurately (> 11) with the thinned Severed Hand encounters, including in saves already in the tower."
+save_applicability = "current-save"
+
+[[hotpatches.changes]]
+title = "Lower Dorn's Deep salamander quests"
+summary = "Guello and the deep gnomes recognize thinned salamander counts (8001_Salamanders > 8 and 8008_Salamanders > 4), including in saves already in Dorn's Deep."
 save_applicability = "current-save"
 
 # Stops the crash after leaving the multiplayer lobby and adds the Load screen button that copies

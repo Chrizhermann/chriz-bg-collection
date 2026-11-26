@@ -262,7 +262,7 @@ class Nov27ModpackAlpha21CombatQuickLootTests(unittest.TestCase):
 
     def test_iwd_0_1_21_release_ledger_hotpatch_and_docs(self) -> None:
         release = json.loads((ROOT / IWD_PROFILE / "release.json").read_text(encoding="utf-8"))
-        self.assertEqual(release["version"], "0.1.21")
+        self.assertIn(release["version"], ("0.1.21", "0.1.22"))
         ledger = _load(ROOT / f"{IWD_PROFILE}/releases/v0.1.21/ledger.toml")
         self.assertEqual(
             (ledger["recipe_id"], ledger["version"], ledger["supersedes"]),
