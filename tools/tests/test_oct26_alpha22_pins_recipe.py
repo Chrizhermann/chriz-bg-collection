@@ -86,10 +86,10 @@ LATER_COMPONENTS["chriz-bg-rebalance"].add(361)
 LATER_ROWS["CHRIZ-BG-REBALANCE"].add(361)
 # The November 3 intake (test_nov03_modpack_alpha15_marek_dagger_recipe) replaces Modpack
 # alpha.14 with alpha.15, which declares Marek's Boomerang Dagger 670 between 660 and 650;
-# alpha.16 keeps that declaration; alpha.17 adds 680 after 670; alpha.18 adds 470 after 460.
-SUCCESSORS["chriz-bg-modpack"] = "chriz-bg-modpack-0.2.0-alpha.18"
-LATER_COMPONENTS["chriz-bg-modpack"] = {470, 670, 680}
-LATER_ROWS["CHRIZ-BG-MODPACK"] = {470, 670, 680}
+# alpha.16 keeps that declaration; alpha.17 adds 680 after 670; alpha.18 adds 470 after 460; alpha.19 adds 695 after 680.
+SUCCESSORS["chriz-bg-modpack"] = "chriz-bg-modpack-0.2.0-alpha.19"
+LATER_COMPONENTS["chriz-bg-modpack"] = {470, 670, 680, 695}
+LATER_ROWS["CHRIZ-BG-MODPACK"] = {470, 670, 680, 695}
 # Per mod: the new pin, the superseded pin (kept as history), its tag, the archive name and
 # the catalog that lists the mod's components.
 PINS = {
@@ -376,7 +376,7 @@ class Oct26Alpha22PinBatchTests(unittest.TestCase):
             # Alpha.13's TP2 declares 135 after 130 and 460 after 450; alpha.15's 670 follows
             # 660 (test_nov03_modpack_alpha15_marek_dagger_recipe).
             self.assertEqual(runs[MODPACK_MAIN_RUN]["components"],
-                             [130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680])
+                             [130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680, 695])
             self.assertEqual(runs[MODPACK_MAIN_RUN]["phase"], "post-eet-end")
             # 135 installs after the mods that change Dorn's ambush scripts, such as EET,
             # and 460 after EET and the party AI writers; SCS changes neither.
@@ -445,7 +445,7 @@ class Oct26Alpha22PinBatchTests(unittest.TestCase):
             self.assertNotIn(SOA_CAP, group["members"])
         self.assertEqual(NATIVE_RUN_ORDERS[CAMPAIGN_RUN], [650, 651, 652])
         self.assertEqual(NATIVE_RUN_ORDERS[MODPACK_MAIN_RUN],
-                         [130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680])
+                         [130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680, 695])
 
     def test_superseded_records_still_match_their_kept_artifacts(self):
         superseded = {

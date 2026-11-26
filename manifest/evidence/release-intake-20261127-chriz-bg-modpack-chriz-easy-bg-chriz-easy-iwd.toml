@@ -1,0 +1,23 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-11-27"
+generator = "tools/prepare_own_mod_pin.py + chriz-bg-author + check_native_component_order.py"
+command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 <TP2 path>; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python -I tools/check_native_component_order.py --recipe-root <recipe> --mod-id <mod> --archive <fresh downloaded ZIP>"
+scope = "Chriz BG Modpack v0.2.0-alpha.19 (published 2026-11-26 15:26 UTC, annotated tag at public-main commit 6e6b364 of Modpack PR #26) replaces chriz-bg-modpack-0.2.0-alpha.18 in manifest, recipes/curated-full-current, and recipes/iwd-current. Component 695 (BG1 early-party XP boost, requiring EEex) is enabled by default after 680 in Chriz Easy BG only and omitted from Chriz Easy IWD (which keeps component 470 as its sole Modpack component); component 690 (Fast Traps) stays unoffered and off in all profiles. Each archive was downloaded anonymously into a fresh cache for the inspection and for each recipe's artifact TOML, and passed the production acquisition and extraction contracts, with native component order verified across all three recipes. The superseded evidence records and artifact TOMLs stay as history in manifest and recipes/curated-full-current; in recipes/iwd-current the new artifact TOML replaces the superseded one. This is automated source/package verification, not a combined collection WeiDU installation or full campaign gameplay."
+
+# 193 entries, 11,597,238 bytes uncompressed, largest entry 7,197,358 bytes, depth 5, compression ratio at most 10.4.
+[[artifacts]]
+mod_id = "chriz-bg-modpack"
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.19"
+recipe_profiles = ["manifest", "recipes/curated-full-current", "recipes/iwd-current"]
+source_reference = "v0.2.0-alpha.19"
+source_commit = "6e6b3643682d50a63abcfe99a958afeb0ae3a108"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.19/chriz-bg-modpack-v0.2.0-alpha.19.zip"
+actual_length = 9564616
+actual_sha256 = "c2f1fc147f7f426ae6d1a36d2348e959f6313e009d96593afca02106cb1154d5"
+tp2_sha256 = "0d017622b51fad4e3e8eb931a9200d97d190a5a8568c9c5e44167a333569ba25"
+native_components = [110, 130, 135, 140, 160, 170, 188, 189, 190, 192, 193, 194, 195, 196, 197, 198, 199, 220, 221, 222, 223, 224, 225, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 400, 410, 430, 440, 450, 460, 470, 610, 611, 620, 630, 640, 660, 670, 680, 690, 695, 650, 651, 652]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true

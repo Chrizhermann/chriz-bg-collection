@@ -183,7 +183,7 @@ Expansion-area data, for verification only: the Artisan NPC repos contain area s
 | Item | Facts |
 |---|---|
 | BG Rebalance v0.8.12 | Chriz Easy IWD selects only Round Clock (361), on by default with EEex. Travel, rest and scripted time jumps count toward personal rounds and cooldowns. |
-| Chriz BG Modpack v0.2.0-alpha.18 | Chriz Easy IWD selects only component 470 (RAW specialist spell-scroll learning fix), on by default with EEex. Restricts the ±15% specialist scribing modifier (`opcode 147`) to specialist mages; bards (including Blade/Jester/Skald/mod kits), Wild Mages, kitted dual-class mages, and non-mages stay at 0%. |
+| Chriz BG Modpack v0.2.0-alpha.18 | Chriz Easy IWD selects only component 470 (RAW specialist spell-scroll learning fix), on by default with EEex. Restricts the ±15% specialist scribing modifier (`opcode 147`) to specialist mages; bards (including Blade/Jester/Skald/mod kits), Wild Mages, kitted dual-class mages, and non-mages stay at 0%. (Pinned package bumped to v0.2.0-alpha.19 in 0.1.20; BG1-only 695 is not offered or installed in IWD.) |
 | No reload / ironman | Owner update: this is a stream rule only, and the installer needs no mechanism. No existing IWD:EE ironman mod was found earlier; this was not researched further. |
 | Stat-roll limit (max 10 rerolls, 2 stored rolls) | **No existing mod found** that limits rerolls or stored rolls. |
 | Native behaviour | IWD:EE character creation has one Store/Recall slot. The reroll/store/recall logic lives in the UI.MENU Lua (CHARGEN_ABILITIES). |

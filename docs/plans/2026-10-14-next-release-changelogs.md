@@ -45,6 +45,12 @@ candidate on 2026-11-01. The player-facing notes are in
   Mage-class characters carrying one or more of the 8 wizard specialist bits receive +15% on
   their own school and -15% on opposing/other schools; all other kits use the pure INTMOD
   chance.
+- **BG1 early-party XP boost** (Chriz BG Modpack component 695, Default in BG only, requires
+  EEex). Encourages gathering a full party early in Baldur's Gate 1 instead of solo-farming:
+  party-divided XP scales by +70% per additional living companion (100% solo, 85% duo, down to
+  75% in a full party of six) until each living protagonist or companion reaches 16,000 total XP
+  (counting retired dual-class XP as well as active XP). Inactive in solo play, Siege of
+  Dragonspear, Shadows of Amn, and Throne of Bhaal; works standalone and with Challenge Mode.
 
 ### Mod versions
 
@@ -53,7 +59,7 @@ candidate on 2026-11-01. The player-facing notes are in
 - Bardic Wonders v2.9c-balance.9 (was balance.8), curated Chriz Easy BG.
 - BG Rebalance v0.8.12 (was v0.8.11), both Chriz Easy BG recipes (adds component 361; Chriz Easy IWD also adds component 361).
 - Chriz Multiplayer Fix v0.1.0 (new), both Chriz Easy BG recipes and Chriz Easy IWD.
-- Chriz BG Modpack v0.2.0-alpha.18 (was v0.2.0-alpha.17), both Chriz Easy BG recipes (keeps component 680 in Challenge Mode and adds default component 470 after 460) and first pin in Chriz Easy IWD (adds component 470).
+- Chriz BG Modpack v0.2.0-alpha.19 (was v0.2.0-alpha.18), both Chriz Easy BG recipes (keeps component 680 in Challenge Mode, keeps default 470, and adds default BG1 component 695 after 680) and Chriz Easy IWD (artifact bump only, keeping component 470 sole and leaving 695 omitted). (Previously pinned v0.2.0-alpha.18 was v0.2.0-alpha.17.)
 
 ### Notes for the release integrator
 
@@ -110,6 +116,16 @@ candidate on 2026-11-01. The player-facing notes are in
 - The next BG recipe update ledger must cover `artifact:chriz-bg-modpack-0.2.0-alpha.18`,
   `feature:feature:chriz-bg-modpack:component-680`, and
   `feature:feature:chriz-bg-modpack:component-470`.
+- The Chriz BG Modpack v0.2.0-alpha.19 intake verified the fresh download, archive, TP2
+  declaration order (`695` between `680` and `650`; `690` stays unoffered/off), default wiring in
+  both Chriz Easy BG recipes (`chriz-bg-modpack-bg2` + `chris-recommended.toml`), and exclusion from
+  Chriz Easy IWD (collection `0.1.20`, where `470` stays sole Modpack component). Offline real
+  `EEex_PreprocessAssembly` + Keystone/Unicorn emulation and synthetic WeiDU 249 install/uninstall
+  passed upstream; live quiet-lab launch was skipped because OBS streaming software was active, so
+  combined collection installation and in-game verification remain untested.
+  [Collection intake](../../manifest/evidence/release-intake-20261127-chriz-bg-modpack-chriz-easy-bg-chriz-easy-iwd.toml)
+- The next BG recipe update ledger must also cover `artifact:chriz-bg-modpack-0.2.0-alpha.19` and
+  `feature:feature:chriz-bg-modpack:component-695`.
 
 ## Next Chriz Easy IWD release (draft)
 
@@ -132,13 +148,14 @@ candidate on 2026-11-01. The player-facing notes are in
 - **Spell scroll learning matches Rules as Written** (requires EEex). Bards (such as Blades),
   Wild Mages, kitted dual-class mages, and non-mages no longer take a -15% penalty on spell
   scrolls; only specialist mages apply +/-15% school modifiers. New games only. (Chriz BG
-  Modpack v0.2.0-alpha.18 component 470, collection 0.1.19)
+  Modpack v0.2.0-alpha.18 component 470, collection 0.1.19; package updated to v0.2.0-alpha.19 in
+  collection 0.1.20 with BG1-only 695 omitted from IWD)
 
 ### Mod versions
 
 - Chriz IWD Encounters v0.3.2 (was v0.3.1), same components and defaults.
 - Chriz Multiplayer Fix v0.1.0 (new).
-- Chriz BG Modpack v0.2.0-alpha.18 (new, component 470 default with EEex).
+- Chriz BG Modpack v0.2.0-alpha.19 (was v0.2.0-alpha.18; component 470 default with EEex, 695 omitted in IWD).
 
 ## Collection 0.1.2 (draft)
 
