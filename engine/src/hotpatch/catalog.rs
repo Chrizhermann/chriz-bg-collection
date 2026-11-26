@@ -619,12 +619,40 @@ mod tests {
                 .bases
                 .iter()
                 .map(|base| base.id.clone())
-                .filter(|id| !matches!(id.as_str(), "iwd-0.1.18" | "iwd-0.1.19" | "iwd-0.1.20"))
+                .filter(|id| {
+                    !matches!(
+                        id.as_str(),
+                        "iwd-0.1.18" | "iwd-0.1.19" | "iwd-0.1.20" | "iwd-0.1.21" | "iwd-0.1.22"
+                    )
+                })
                 .collect::<Vec<_>>()
         );
         assert!(catalog.base("iwd-0.1.18").is_some());
         assert!(catalog.base("iwd-0.1.19").is_some());
         assert!(catalog.base("iwd-0.1.20").is_some());
+        assert!(catalog.base("iwd-0.1.21").is_some());
+        assert!(catalog.base("iwd-0.1.22").is_some());
+
+        let quest_fix = catalog
+            .hotpatch("chriz-iwd-encounters-0.3.4-quest-counters")
+            .unwrap();
+        assert_eq!(quest_fix.components, [425]);
+        assert_eq!(
+            quest_fix.bases,
+            [
+                "iwd-0.1.16",
+                "iwd-0.1.17",
+                "iwd-0.1.18",
+                "iwd-0.1.19",
+                "iwd-0.1.20",
+                "iwd-0.1.21",
+            ]
+        );
+        assert_eq!(quest_fix.changes.len(), 3);
+        assert!(quest_fix
+            .changes
+            .iter()
+            .all(|change| change.save_applicability == SaveApplicability::CurrentSave));
         assert!(hotpatch.requires.is_empty());
         assert_eq!(hotpatch.components, [0, 1]);
         assert_eq!(

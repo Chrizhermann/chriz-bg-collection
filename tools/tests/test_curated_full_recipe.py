@@ -318,7 +318,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
             # November 22: alpha.17 adds EET world progression and SoD backtracking 680.
             # November 23: alpha.18 adds RAW specialist spell-scroll learning fix 470.
             # November 27: alpha.19 adds BG1 early-party XP boost 695.
-            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.19")
+            # November 27: alpha.21 adds 696 (Challenge Mode Quick Loot), 697, and 698.
+            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.21")
             collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
             preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))
             mods = {path.stem for path in (output / "mods").glob("*.toml")}
@@ -489,7 +490,11 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # (RAW specialist spell-scroll learning fix, requiring EEex) after 460.
                 # November 27: Modpack alpha.19 (PR #26) adds default BG1 early-party XP boost 695
                 # (requiring EEex and EET) after 680.
-                "0ce7032b160eb58ef49c119de37bb53cb32b1902194b3b5c0e017c46f3cbdfdc",
+                # November 27: Modpack alpha.21 (PR #29, following alpha.20 PR #28) adds optional
+                # Challenge Mode 696 (Quick Loot during combat, requiring EEex) plus defaults 697
+                # (Watcher's Keep instant teleporters) and 698 (clear lingering room effects on leave,
+                # requiring EEex) after 695.
+                "a7ed57aaf167d3881ea1fe65c31e08a29651983c79e8191ec97dedca1d6b1f3d",
             )
 
             legacy_bg1npc_groups = {
@@ -1278,6 +1283,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
             "feature:chriz-bg-modpack:component-652",
             # Christopher, 2026-11-22: no travel back into an earlier campaign (Modpack 680).
             "feature:chriz-bg-modpack:component-680",
+            # Christopher, 2026-11-27: disable Quick Loot during combat (Modpack 696).
+            "feature:chriz-bg-modpack:component-696",
         ]
         [authored] = base["feature_groups"]
         self.assertEqual(authored["members"], fallback_members)

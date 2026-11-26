@@ -1,0 +1,20 @@
+schema = 1
+recipe_id = "chriz-easy-iwd"
+version = "0.1.22"
+published_at = "2026-11-27T00:00:00Z"
+minimum_app_version = "0.1.1"
+supersedes = "0.1.21"
+
+[[changes]]
+id = "chriz-iwd-encounters-0.3.4"
+title = "Dragon's Eye, Severed Hand, and Dorn's Deep quest kill counters fixed; elite stats, loot economy, Kresselack waves, and beetle removals overhauled"
+summary = "Pins Chriz IWD Encounters v0.3.4 (was v0.3.2), aligning all thinned-area quest kill counters (Dragon's Eye Level 2 Talonite >5/<6, Severed Hand ELVEN_SOLDIER >11, Dorn's Deep 8001_Salamanders >8 and 8008_Salamanders >4), preserving quest death variables on AR4002/AR5403 squad actors, fixing triple-stacked AC/THAC0/APR mastery stats on CIE4xx/CIE5xx elites, marking bespoke elite gear and AI buff potions undroppable, stretching Kresselack's antechamber wave timers to 48s/+54s, removing the remaining Bombardier Beetles in Dragon's Eye and Burial Isle, adding six apex encounters in Chapters 2-5, and thinning additional late-chapter and Watchknight hordes. Existing 0.1.15-0.1.16 installs receive the quest-counter repair as a current-save hotpatch (component 425)."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-iwd-encounters-0.3.2",
+  "artifact:chriz-iwd-encounters-0.3.4",
+  "feature:feature:chriz-iwd-encounters:component-420",
+  "feature:feature:chriz-iwd-encounters:component-500",
+  "run:chriz-iwd-encounters-main",
+]

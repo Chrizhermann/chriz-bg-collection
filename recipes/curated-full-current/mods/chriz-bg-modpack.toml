@@ -1,5 +1,5 @@
 id = "chriz-bg-modpack"
-artifact_id = "chriz-bg-modpack-0.2.0-alpha.19"
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.21"
 name = "chriz-bg-modpack"
 tp2 = "setup-chriz-bg-modpack.tp2"
 language = 0
@@ -197,6 +197,18 @@ name = "EET: story-consistent campaign boundaries and SoD backtracking fixes"
 [[components]]
 id = 695
 name = "BG1 early-party XP boost: +70% party XP pool per extra companion up to 16,000 XP (BG:EE and EET; Windows EEex)"
+
+[[components]]
+id = 696
+name = "Challenge Mode: disable Quick Loot during combat (BG:EE, SoD, BG2:EE, EET, IWD:EE; EEex)"
+
+[[components]]
+id = 697
+name = "Watcher's Keep: instant teleporters"
+
+[[components]]
+id = 698
+name = "Clear lingering room effects when leaving an area or hazard room (BG:EE, SoD, BG2:EE, EET; Windows EEex)"
 
 [[components]]
 id = 650

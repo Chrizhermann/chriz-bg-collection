@@ -30,7 +30,8 @@ WORLD_PROGRESSION_RUN = "chriz-bg-modpack-bg2"
 # November 22 adds the independent Chriz Multiplayer Fix defaults 0 and 1 to both profiles.
 # November 23 adds Modpack alpha.18 default 470 to both profiles.
 # November 27 adds Modpack alpha.19 default 695 to both profiles.
-PROFILES = {"manifest": 377, "recipes/curated-full-current": 472}
+# November 27 adds Modpack alpha.21 Challenge Mode 696 (off here) and defaults 697, 698.
+PROFILES = {"manifest": 379, "recipes/curated-full-current": 474}
 
 
 def _load(path: Path) -> dict:

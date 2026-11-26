@@ -1,15 +1,15 @@
-id = "chriz-iwd-encounters-0.3.2"
+id = "chriz-iwd-encounters-0.3.4"
 name = "Chriz IWD Encounters"
-version = "0.3.2"
+version = "0.3.4"
 acquisition = "fetch-only"
 
 [source]
 kind = "github-release"
-url = "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/download/v0.3.2/chriz-iwd-encounters-v0.3.2.zip"
-reference = "v0.3.2"
-expected_filename = "chriz-iwd-encounters-v0.3.2.zip"
-expected_length = 706913
-sha256 = "077040e15da1bc7fc0e468e9258c97d920aeea3b817f4de9792ffc5e0198023d"
+url = "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/download/v0.3.4/chriz-iwd-encounters-v0.3.4.zip"
+reference = "v0.3.4"
+expected_filename = "chriz-iwd-encounters-v0.3.4.zip"
+expected_length = 756790
+sha256 = "8f6b5abf7f8a5af6ce22d99cabd0c4e5c188c09872d676f8542cf8456b5f83c6"
 redirect_hosts = ["release-assets.githubusercontent.com"]
 
 [archive]
@@ -28,5 +28,5 @@ max_compression_ratio = 100
 [provenance]
 homepage = "https://github.com/Chrizhermann/chriz-iwd-encounters"
 license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
-url = "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/tag/v0.3.2"
-reviewed_on = "2026-11-22"
+url = "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/tag/v0.3.4"
+reviewed_on = "2026-11-27"

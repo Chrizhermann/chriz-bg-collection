@@ -217,7 +217,7 @@ const INSTALLERS: &[(&str, &str, &str)] = &[
     ),
     (
         "chriz-bg-modpack",
-        "chriz-bg-modpack-0.2.0-alpha.19",
+        "chriz-bg-modpack-0.2.0-alpha.21",
         "setup-chriz-bg-modpack.tp2",
     ),
     (
@@ -227,7 +227,7 @@ const INSTALLERS: &[(&str, &str, &str)] = &[
     ),
     (
         "chriz-iwd-encounters",
-        "chriz-iwd-encounters-0.3.2",
+        "chriz-iwd-encounters-0.3.4",
         "chriz-iwd-encounters/setup-chriz-iwd-encounters.tp2",
     ),
     (
@@ -398,14 +398,14 @@ const ARTIFACTS: &[Pin] = &[
         sha256: "117cd79cb5187640a5efd6c1d19181b43bcfa7381161df2f88db055d3af075f7",
     },
     Pin {
-        id: "chriz-bg-modpack-0.2.0-alpha.19",
-        version: "0.2.0-alpha.19",
+        id: "chriz-bg-modpack-0.2.0-alpha.21",
+        version: "0.2.0-alpha.21",
         kind: SourceKind::GithubRelease,
-        url: "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.19/chriz-bg-modpack-v0.2.0-alpha.19.zip",
-        reference: "v0.2.0-alpha.19",
-        filename: "chriz-bg-modpack-v0.2.0-alpha.19.zip",
-        length: 9_564_616,
-        sha256: "c2f1fc147f7f426ae6d1a36d2348e959f6313e009d96593afca02106cb1154d5",
+        url: "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.21/chriz-bg-modpack-v0.2.0-alpha.21.zip",
+        reference: "v0.2.0-alpha.21",
+        filename: "chriz-bg-modpack-v0.2.0-alpha.21.zip",
+        length: 9_597_844,
+        sha256: "717b17071e26e426d7d74f3a0c8b1d6ac1aa49d55932512b92bb21bb418c190f",
     },
     Pin {
         id: "chriz-bg-rebalance-0.8.12",
@@ -418,14 +418,14 @@ const ARTIFACTS: &[Pin] = &[
         sha256: "f64314ab1462cef661dc4191e37e9d8911e95bd8df13ad44c3a09744b23847a8",
     },
     Pin {
-        id: "chriz-iwd-encounters-0.3.2",
-        version: "0.3.2",
+        id: "chriz-iwd-encounters-0.3.4",
+        version: "0.3.4",
         kind: SourceKind::GithubRelease,
-        url: "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/download/v0.3.2/chriz-iwd-encounters-v0.3.2.zip",
-        reference: "v0.3.2",
-        filename: "chriz-iwd-encounters-v0.3.2.zip",
-        length: 706_913,
-        sha256: "077040e15da1bc7fc0e468e9258c97d920aeea3b817f4de9792ffc5e0198023d",
+        url: "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/download/v0.3.4/chriz-iwd-encounters-v0.3.4.zip",
+        reference: "v0.3.4",
+        filename: "chriz-iwd-encounters-v0.3.4.zip",
+        length: 756_790,
+        sha256: "8f6b5abf7f8a5af6ce22d99cabd0c4e5c188c09872d676f8542cf8456b5f83c6",
     },
     Pin {
         id: "chriz-iwd-party-dialog-0.1.0",
@@ -1919,12 +1919,16 @@ fn chriz_bg_modpack_scroll_learning_fix_470_runs_by_default_with_eeex_and_omits_
     assert_eq!(scroll_feature.requires, ["feature:eeex:component-1"]);
     assert!(!manifest.collection.features.iter().any(|feature| matches!(
         feature.id.as_str(),
-        "feature:chriz-bg-modpack:component-690" | "feature:chriz-bg-modpack:component-695"
+        "feature:chriz-bg-modpack:component-690"
+            | "feature:chriz-bg-modpack:component-695"
+            | "feature:chriz-bg-modpack:component-696"
+            | "feature:chriz-bg-modpack:component-697"
+            | "feature:chriz-bg-modpack:component-698"
     )));
     assert!(!manifest.mods["chriz-bg-modpack"]
         .components
         .iter()
-        .any(|component| matches!(component.id, 690 | 695)));
+        .any(|component| matches!(component.id, 690 | 695 | 696 | 697 | 698)));
 
     for disabled in ["mod:chriz-bg-modpack", "mod:eeex"] {
         let mut selection = Selection::defaults("windows");

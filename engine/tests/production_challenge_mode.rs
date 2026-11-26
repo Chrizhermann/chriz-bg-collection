@@ -13,7 +13,7 @@ use bg_engine::resolve::Selection;
 use bg_engine::Manifest;
 
 const GROUP: &str = "challenge-mode";
-const MEMBERS: [&str; 7] = [
+const MEMBERS: [&str; 8] = [
     "feature:chriz-bg-rebalance:component-301",
     "feature:chriz-bg-modpack:component-235",
     "feature:chriz-bg-rebalance:component-110",
@@ -21,6 +21,7 @@ const MEMBERS: [&str; 7] = [
     CAMPAIGN_XP_CAPS,
     CHAPTER_XP_CAPS,
     EET_WORLD_PROGRESSION,
+    "feature:chriz-bg-modpack:component-696",
 ];
 /// Christopher, 2026-11-22: no travel back into an earlier campaign only with Challenge Mode
 /// (Modpack 680, off by default and off in Chris's Recommended).

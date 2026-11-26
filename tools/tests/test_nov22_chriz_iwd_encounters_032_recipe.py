@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[2]
 EVIDENCE = "manifest/evidence/release-intake-20261122-chriz-iwd-encounters-v0.3.2-chriz-easy-iwd.toml"
 MOD = "chriz-iwd-encounters"
 PIN = "chriz-iwd-encounters-0.3.2"
+SUCCESSOR = "chriz-iwd-encounters-0.3.4"
 PRIOR_PIN = "chriz-iwd-encounters-0.3.1"
 TAG = "v0.3.2"
 FILENAME = "chriz-iwd-encounters-v0.3.2.zip"
@@ -65,6 +66,9 @@ class Nov22ChrizIwdEncounters032RecipeTests(unittest.TestCase):
 
     def test_iwd_recipe_pins_v0_3_2_with_the_same_selection(self) -> None:
         mod = load(f"{RECIPE}/mods/{MOD}.toml")
+        if mod["artifact_id"] == SUCCESSOR:
+            self.assertFalse((ROOT / f"{RECIPE}/artifacts/{PIN}.toml").exists())
+            return
         self.assertEqual(mod["artifact_id"], PIN)
         artifact = load(f"{RECIPE}/artifacts/{PIN}.toml")
         self.assertEqual(artifact["version"], "0.3.2")
@@ -140,23 +144,34 @@ class Nov22ChrizIwdEncounters032RecipeTests(unittest.TestCase):
         records = [row for row in acceptance if row["subject_id"] == "chriz-iwd-encounters-main"]
         self.assertEqual(len(records), 1)
         (record,) = records
-        self.assertEqual(
-            (record["kind"], record["status"], record["date"], record["commit"]),
-            ("static-test", "accepted", "2026-11-22", PIN_COMMIT),
-        )
-        self.assertIn("v0.3.2", record["scope"])
+        mod = load(f"{RECIPE}/mods/{MOD}.toml")
+        if mod["artifact_id"] != SUCCESSOR:
+            self.assertEqual(
+                (record["kind"], record["status"], record["date"], record["commit"]),
+                ("static-test", "accepted", "2026-11-22", PIN_COMMIT),
+            )
+            self.assertIn("v0.3.2", record["scope"])
+        else:
+            self.assertEqual((record["kind"], record["status"]), ("static-test", "accepted"))
+            self.assertIn("v0.3.4", record["scope"])
 
         # No hotpatch brings Encounters v0.3.2 to existing installations: it changes new games only.
         catalog = load("hotpatches/iwd/catalog.toml")
         self.assertFalse(any(hotpatch.get("artifact") == PIN for hotpatch in catalog["hotpatches"]))
 
         inventory = (ROOT / "docs/curation/iwdee/INVENTORY.md").read_text(encoding="utf-8")
-        self.assertIn(f"{PIN} (100, 110, 120, 200, 300–420; optional 500)", inventory)
+        self.assertTrue(
+            f"{PIN} (100, 110, 120, 200, 300–420; optional 500)" in inventory
+            or f"{SUCCESSOR} (100, 110, 120, 200, 300–420; optional 500; hotpatch-only 425)" in inventory
+        )
         changelog = (ROOT / "docs/plans/2026-10-14-next-release-changelogs.md").read_text(
             encoding="utf-8"
         )
         self.assertIn("(Chriz IWD Encounters v0.3.2,\n  collection 0.1.18)", changelog.replace("\r\n", "\n"))
-        self.assertIn("Chriz IWD Encounters v0.3.2 (was v0.3.1)", changelog)
+        self.assertTrue(
+            "Chriz IWD Encounters v0.3.2 (was v0.3.1)" in changelog
+            or "Chriz IWD Encounters v0.3.4 (was v0.3.2" in changelog
+        )
 
 
 if __name__ == "__main__":
