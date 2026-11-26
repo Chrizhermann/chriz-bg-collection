@@ -25,7 +25,7 @@ PIN = "chriz-bg-modpack-0.2.0-alpha.19"
 PREVIOUS = "chriz-bg-modpack-0.2.0-alpha.18"
 TAG = "v0.2.0-alpha.19"
 SOURCE_COMMIT = "6e6b3643682d50a63abcfe99a958afeb0ae3a108"
-PIN_COMMIT = "0000000000000000000000000000000000000000"
+PIN_COMMIT = "864102896d76b54c5cdb6e4ca7ce68610dd0a77b"
 FILENAME = "chriz-bg-modpack-v0.2.0-alpha.19.zip"
 URL = f"https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/{TAG}/{FILENAME}"
 LENGTH = 9_564_616
@@ -229,6 +229,51 @@ class Nov26ModpackAlpha19Bg1EarlyPartyXpTests(unittest.TestCase):
         self.assertIn(EVIDENCE, current)
         self.assertIn(f"artifact:{PIN}", current)
         self.assertIn(f"feature:{FEATURE}", current)
+
+    def test_static_acceptance_records_cite_alpha19_pin_commit(self) -> None:
+        bg_runs = {
+            "chriz-bg-modpack-bg2",
+            "chriz-bg-modpack-pre-continuity-bg2",
+            "chriz-bg-modpack-continuity-bg2",
+            "chriz-bg-modpack-late-companions-bg2",
+            "chriz-bg-modpack-edwin-bg2",
+            "chriz-bg-modpack-baeloth-bg2",
+            "chriz-bg-modpack-scrolls-bg2",
+        }
+        expected_artifact = "tools/tests/test_nov26_modpack_alpha19_bg1_early_party_xp_recipe.py"
+        for rel_path in (
+            "manifest/releases/v0.1.0-alpha.1/acceptance.toml",
+            "recipes/curated-full-current/releases/v0.1.0-alpha.1/acceptance.toml",
+        ):
+            data = tomllib.loads((ROOT / rel_path).read_text(encoding="utf-8"))
+            by_id = {
+                entry.get("subject_id"): entry
+                for entry in data.get("evidence", [])
+                if entry.get("subject_kind") == "run"
+            }
+            for run_id in bg_runs:
+                entry = by_id[run_id]
+                self.assertEqual(entry.get("commit"), PIN_COMMIT)
+                self.assertEqual(entry.get("test_artifact"), expected_artifact)
+                self.assertEqual(entry.get("date"), "2026-11-27")
+                self.assertEqual(entry.get("status"), "accepted")
+                self.assertIn("695", entry.get("scope", ""))
+                self.assertIn(EVIDENCE.rsplit("/", 1)[-1], entry.get("scope", ""))
+
+        iwd_data = tomllib.loads(
+            (ROOT / "recipes/iwd-current/releases/v0.1.0-alpha.1/acceptance.toml").read_text(encoding="utf-8")
+        )
+        iwd_entry = next(
+            entry
+            for entry in iwd_data.get("evidence", [])
+            if entry.get("subject_kind") == "run" and entry.get("subject_id") == "chriz-bg-modpack-main"
+        )
+        self.assertEqual(iwd_entry.get("commit"), PIN_COMMIT)
+        self.assertEqual(iwd_entry.get("test_artifact"), expected_artifact)
+        self.assertEqual(iwd_entry.get("date"), "2026-11-27")
+        self.assertEqual(iwd_entry.get("status"), "accepted")
+        self.assertIn("omitting 690 and 695", iwd_entry.get("scope", ""))
+        self.assertIn(EVIDENCE.rsplit("/", 1)[-1], iwd_entry.get("scope", ""))
 
 
 if __name__ == "__main__":
