@@ -773,16 +773,16 @@ _EXPANDED_RELEASE_EVIDENCE = {
     "date": "2026-09-16",
     "scope": "Passed focused selection, dependencies, native component ordering and source intake checks; Christopher performs the installation and gameplay acceptance separately.",
 }
-_MODPACK_ALPHA19_EVIDENCE = {
-    "commit": "864102896d76b54c5cdb6e4ca7ce68610dd0a77b",
-    "test_artifact": "tools/tests/test_nov26_modpack_alpha19_bg1_early_party_xp_recipe.py",
+_MODPACK_ALPHA20_EVIDENCE = {
+    "commit": "76bf8b730a01c051821265d847feca036a816f12",
+    "test_artifact": "tools/tests/test_nov27_modpack_alpha20_wk_teleports_room_effects_recipe.py",
     "date": "2026-11-27",
-    "scope": "Static alpha.19 pin, source, component (including BG1 early-party XP boost 695, omitting 690) and order assertions only; fresh source/package verification is in release-intake-20261127-chriz-bg-modpack-chriz-easy-bg-chriz-easy-iwd.toml; not a WeiDU installation or gameplay acceptance.",
+    "scope": "Static alpha.20 pin, source, component (including Watcher's Keep instant teleporters 697 and lingering room-effects cleanup 698, omitting 690) and order assertions only; fresh source/package verification is in release-intake-20261127-chriz-bg-modpack-v0.2.0-alpha.20-chriz-easy-bg-chriz-easy-iwd.toml; not a WeiDU installation or gameplay acceptance.",
 }
 CURATED_SCOPED_RUN_EVIDENCE = {
-    "chriz-bg-modpack-pre-continuity-bg2": _MODPACK_ALPHA19_EVIDENCE,
-    "chriz-bg-modpack-continuity-bg2": _MODPACK_ALPHA19_EVIDENCE,
-    "chriz-bg-modpack-late-companions-bg2": _MODPACK_ALPHA19_EVIDENCE,
+    "chriz-bg-modpack-pre-continuity-bg2": _MODPACK_ALPHA20_EVIDENCE,
+    "chriz-bg-modpack-continuity-bg2": _MODPACK_ALPHA20_EVIDENCE,
+    "chriz-bg-modpack-late-companions-bg2": _MODPACK_ALPHA20_EVIDENCE,
 }
 
 
