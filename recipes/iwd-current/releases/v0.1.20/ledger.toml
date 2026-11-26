@@ -1,0 +1,19 @@
+schema = 1
+recipe_id = "chriz-easy-iwd"
+version = "0.1.20"
+published_at = "2026-11-27T00:00:00Z"
+minimum_app_version = "0.1.1"
+supersedes = "0.1.19"
+
+[[changes]]
+id = "chriz-bg-modpack"
+title = "Chriz BG Modpack v0.2.0-alpha.19 updates the pinned Modpack package; IWD selection stays unchanged (component 470 only)"
+summary = "Updates the pinned Chriz BG Modpack package from v0.2.0-alpha.18 to v0.2.0-alpha.19 so Chriz Easy BG and Chriz Easy IWD ship the same release. Component 695 is scoped strictly to Baldur's Gate 1 and is not offered or installed in Chriz Easy IWD; component 470 (RAW spell-scroll learning fix) remains unchanged in IWD."
+save_applicability = "new-game-only"
+urgency = "informational"
+covers = [
+  "artifact:chriz-bg-modpack-0.2.0-alpha.19",
+  "feature:mod:chriz-bg-modpack",
+  "feature:feature:chriz-bg-modpack:component-470",
+  "run:chriz-bg-modpack-main",
+]

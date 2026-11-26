@@ -85,7 +85,8 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         // with Challenge Mode (Christopher, 2026-11-22), so it adds none.
         // November 22: Chriz Multiplayer Fix adds default components 0 and 1.
         // November 23: Chriz BG Modpack alpha.18 adds default RAW spell-scroll learning fix 470.
-        471
+        // November 27: Chriz BG Modpack alpha.19 adds default BG1 early-party XP boost 695.
+        472
     );
     // Scroll policy 430 hashes the final scrolls and spells, so it follows BuffBot.
     let (tail, rest) = result.plan.runs.split_last().unwrap();

@@ -411,7 +411,7 @@ args = []
 run_id = "chriz-bg-modpack-bg2"
 mod_id = "chriz-bg-modpack"
 phase = "post-eet-end"
-components = [130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680]
+components = [130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680, 695]
 args = []
 
 [[runs]]
@@ -5236,6 +5236,17 @@ readiness = "ready"
 parent = "mod:chriz-bg-modpack"
 requires = ["feature:eet:mandatory-components", "mod:eet-end"]
 components = [{ run_id = "chriz-bg-modpack-bg2", component = 680 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-695"
+title = "Early-party XP boost in Baldur's Gate 1"
+description = "Scales party-divided XP in Baldur's Gate 1 by +70% per additional living companion (100% solo, 85% duo, down to 75% in a full party of six) until each character reaches 16,000 total XP (including retired dual-class XP for both protagonist and companions). Inactive in solo play, Siege of Dragonspear, Shadows of Amn, and Throne of Bhaal; works standalone and with Challenge Mode XP banking. Requires EEex."
+category = "rules"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:eeex:mandatory-components", "feature:eet:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 695 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-640"

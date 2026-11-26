@@ -71,7 +71,8 @@ NATIVE_RUN_ORDERS = {
     # (November 3) declares Marek's Boomerang Dagger 670 after 660 and before 650.
     # Alpha.17 adds EET world progression and SoD backtracking 680 after 670.
     # Alpha.18 adds RAW specialist spell-scroll learning 470 after 460.
-    "chriz-bg-modpack-bg2": [130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680],
+    # Alpha.19 adds BG1 early-party XP boost 695 after 680.
+    "chriz-bg-modpack-bg2": [130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680, 695],
     # Modpack alpha.13 (October 20) declares EET join XP 239 right after 238; it runs
     # after the NPC mods and EET_end and before the campaign XP run, as 650 requires.
     "chriz-bg-modpack-late-companions-bg2": [189, 237, 238, 239, 620],

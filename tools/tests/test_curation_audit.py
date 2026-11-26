@@ -146,7 +146,8 @@ class CatalogParserTests(unittest.TestCase):
         # optional row.
         # November 22: the CHRIZ_MULTIPLAYER_FIX catalog adds components 0 and 1.
         # November 23: Modpack alpha.18 adds RAW specialist spell-scroll learning fix 470.
-        self.assertEqual(len(rows), 1_358)
+        # November 27: Modpack alpha.19 adds BG1 early-party XP boost 695.
+        self.assertEqual(len(rows), 1_359)
         self.assertEqual(
             decision_totals(rows),
             {
@@ -207,7 +208,9 @@ class CatalogParserTests(unittest.TestCase):
                 # 2026-11-22).
                 # November 23: Modpack 470 (RAW spell-scroll learning fix) is a default
                 # (Christopher, 2026-11-22).
-                Decision.DEFAULT: 339,
+                # November 27: Modpack 695 (BG1 early-party XP boost) is a default
+                # (Christopher, 2026-11-26).
+                Decision.DEFAULT: 340,
                 # October 13 intake: SoD 177/198/285 join the mandatory bundle (430 left it).
                 Decision.MANDATORY: 154,
             },
@@ -448,9 +451,10 @@ default = "none"
         # November 18 adds the default Round Clock row for BG Rebalance 361.
         # Modpack 680 maps to one feature; Chriz Multiplayer Fix 0 and 1 map to one each.
         # November 23: Modpack 470 maps to one feature.
-        self.assertEqual(result.mapped_rows, 1_358)
+        # November 27: Modpack 695 maps to one feature.
+        self.assertEqual(result.mapped_rows, 1_359)
         self.assertEqual(result.excluded_rows, 527)
-        self.assertEqual(result.feature_rows + result.omission_rows, 831)
+        self.assertEqual(result.feature_rows + result.omission_rows, 832)
         # October 14: Rebalance potion uniqueness and SCS fine weapons choices.
         # October 23: the SoD Remix Imoen in Shadows of Amn choice.
         # October 23: ten quest-mod choices (Ascalon's three with their first variant as
@@ -464,7 +468,7 @@ default = "none"
         self.assertEqual(result.choice_groups, 88)
         self.assertEqual(result.optional_none_groups, 33)
         self.assertEqual(result.fixed_groups, 12)
-        self.assertIn("rows=1358", coverage_report(rows, result))
+        self.assertIn("rows=1359", coverage_report(rows, result))
 
     def test_september16_intake_rows_match_the_approved_recipe_features(self) -> None:
         root = Path(__file__).resolve().parents[2]

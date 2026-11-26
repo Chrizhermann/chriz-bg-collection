@@ -217,7 +217,7 @@ const INSTALLERS: &[(&str, &str, &str)] = &[
     ),
     (
         "chriz-bg-modpack",
-        "chriz-bg-modpack-0.2.0-alpha.18",
+        "chriz-bg-modpack-0.2.0-alpha.19",
         "setup-chriz-bg-modpack.tp2",
     ),
     (
@@ -398,14 +398,14 @@ const ARTIFACTS: &[Pin] = &[
         sha256: "117cd79cb5187640a5efd6c1d19181b43bcfa7381161df2f88db055d3af075f7",
     },
     Pin {
-        id: "chriz-bg-modpack-0.2.0-alpha.18",
-        version: "0.2.0-alpha.18",
+        id: "chriz-bg-modpack-0.2.0-alpha.19",
+        version: "0.2.0-alpha.19",
         kind: SourceKind::GithubRelease,
-        url: "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.18/chriz-bg-modpack-v0.2.0-alpha.18.zip",
-        reference: "v0.2.0-alpha.18",
-        filename: "chriz-bg-modpack-v0.2.0-alpha.18.zip",
-        length: 9_554_843,
-        sha256: "ea7fd706d2e7eded3af29853874603e4fc7963fa18193d0c5df1757dbc3bcb6a",
+        url: "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.19/chriz-bg-modpack-v0.2.0-alpha.19.zip",
+        reference: "v0.2.0-alpha.19",
+        filename: "chriz-bg-modpack-v0.2.0-alpha.19.zip",
+        length: 9_564_616,
+        sha256: "c2f1fc147f7f426ae6d1a36d2348e959f6313e009d96593afca02106cb1154d5",
     },
     Pin {
         id: "chriz-bg-rebalance-0.8.12",
@@ -1921,11 +1921,14 @@ fn chriz_bg_modpack_scroll_learning_fix_470_runs_by_default_with_eeex_and_omits_
         .collection
         .features
         .iter()
-        .any(|feature| feature.id == "feature:chriz-bg-modpack:component-690"));
+        .any(|feature| matches!(
+            feature.id.as_str(),
+            "feature:chriz-bg-modpack:component-690" | "feature:chriz-bg-modpack:component-695"
+        )));
     assert!(!manifest.mods["chriz-bg-modpack"]
         .components
         .iter()
-        .any(|component| component.id == 690));
+        .any(|component| matches!(component.id, 690 | 695)));
 
     for disabled in ["mod:chriz-bg-modpack", "mod:eeex"] {
         let mut selection = Selection::defaults("windows");

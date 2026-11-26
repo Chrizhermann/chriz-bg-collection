@@ -317,7 +317,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
             modpack = tomllib.loads((output / "mods/chriz-bg-modpack.toml").read_text(encoding="utf-8"))
             # November 22: alpha.17 adds EET world progression and SoD backtracking 680.
             # November 23: alpha.18 adds RAW specialist spell-scroll learning fix 470.
-            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.18")
+            # November 27: alpha.19 adds BG1 early-party XP boost 695.
+            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.19")
             collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
             preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))
             mods = {path.stem for path in (output / "mods").glob("*.toml")}
@@ -486,7 +487,9 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # giving 8b8b8b65….
                 # November 23: Modpack alpha.18 (PR #24/#25) adds default component 470
                 # (RAW specialist spell-scroll learning fix, requiring EEex) after 460.
-                "db2eb13410e5d2a7a347925bb05cf81e587d99d31fcecd5b6316c345de43439c",
+                # November 27: Modpack alpha.19 (PR #26) adds default BG1 early-party XP boost 695
+                # (requiring EEex and EET) after 680.
+                "0ce7032b160eb58ef49c119de37bb53cb32b1902194b3b5c0e017c46f3cbdfdc",
             )
 
             legacy_bg1npc_groups = {

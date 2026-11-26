@@ -37,7 +37,14 @@ typed-write fix in PR #25), which remains unoffered and off in both installers u
 approved. Fresh source/package evidence is
 `manifest/evidence/release-intake-20261123-chriz-bg-modpack-chriz-easy-bg-chriz-easy-iwd.toml`,
 not a combined collection WeiDU installation or full campaign gameplay.
-67 current or historical entries; the collection exposes 50. Component `195` already includes the work from standalone component
+The recipe now pins **v0.2.0-alpha.19** (published 2026-11-26 15:26 UTC, annotated tag on public-main
+commit `6e6b364` of Modpack PR #26, built by the tagged release workflow). It adds default component
+`695` (`cbm_bg1_early_party_xp`, BG1 early-party XP boost, requiring EEex) after `680` in Chriz
+Easy BG only and omits it in Chriz Easy IWD (`470` stays the sole Modpack component in IWD; `690`
+stays unoffered and off in both installers). Fresh source/package evidence is
+`manifest/evidence/release-intake-20261127-chriz-bg-modpack-chriz-easy-bg-chriz-easy-iwd.toml`,
+not a combined collection WeiDU installation or full campaign gameplay.
+68 current or historical entries; the collection exposes 51. Component `195` already includes the work from standalone component
 `160`; Hexxat's three class routes are one at-most-one choice.
 The four ✓ marks record the old reference install, not the new default recipe.
 
@@ -66,7 +73,8 @@ The four ✓ marks record the old reference install, not the new default recipe.
   `188`, `189`, `199`, `220`–`225`, `400`, `410`, `430`, `440`, `450`, `610`, `611`, `620`, `630`, and `640`. It contains no advertised
   FAIL placeholders. Alpha.11 added `237`, `238`, `650`, `651` and `660`; alpha.12 added
   `230`–`234`; alpha.13 added `135`, `239`, `460` and `652`; alpha.14 added none;
-  alpha.15 adds `670`; alpha.16 added none; alpha.17 adds `680`; alpha.18 adds offered default `470` (while `690` remains unoffered/off).
+  alpha.15 adds `670`; alpha.16 added none; alpha.17 adds `680`; alpha.18 adds offered default `470` (while `690` remains unoffered/off); alpha.19 adds offered default `695` in Chriz Easy BG (while `690` stays unoffered/off and IWD keeps `470` only).
+- BG1 early-party XP boost `695` (alpha.19) is **default (Christopher's decision, 2026-11-26)** in Chriz Easy BG only (never offered/installed in IWD) and requires EEex and EET. For party-divided XP routed through `CInfGame::AddPartyXP` in BG1 (`STATE_DEAD` clear count `N`), it adds `+70%` per additional living companion to the party XP pool (`1.0x` solo, `1.7x` duo, `2.4x` trio, `3.1x` four, `3.8x` five, `4.5x` six -> `100%` down to `75%` per member) until each living character reaches `16,000` total XP (sum of active XP and any retired dual-class threshold / Challenge Mode banked old-class XP for both `Player1` and companions), clipping only the bonus at `16,000` without lowering normal `1/N` shares. Verified offline with real `EEex_PreprocessAssembly` + Keystone/Unicorn emulation and synthetic WeiDU 249 install/uninstall (`live quiet-lab pass pending`, skipped during OBS stream).
 - Spell scroll learning RAW fix `470` (alpha.18) is **default (Christopher's decision, 2026-11-23)** in both Chriz Easy BG and Chriz Easy IWD and requires EEex. Restricts the ±15% specialist scribing modifier (`opcode 147`) to Mage-class characters carrying one or more of the 8 wizard specialist bits (`0x0040`–`0x2000`, including custom multi-bit specialists); all Bards (Blade, Jester, Skald, mod kits), Wild Mages, kitted dual-class Mages, and non-Mages stay at 0%. Verified live in quiet labs (`2026-11-23`) on BG2:EE `2.7.3.0` and IWD:EE `2.7.3.0` with EEex `v1.3.1` (`BG:EE / SoD` live lab pass pending).
 - Dorn's ambush fix `135` (alpha.13) is **default (Christopher's decision,
   2026-10-25)**. When Dorn catches up with Senjak and Dorotea in BG1, the cutscene no
@@ -268,6 +276,7 @@ The four ✓ marks record the old reference install, not the new default recipe.
 | 660 | Degrodel: hand over the Helm of Balduran or keep it and fight him | chriz-bg-modpack: Gameplay tweaks | | | default |
 | 670 | Marek: carry the Boomerang Dagger +2 in BG1 (drops it when he dies) | chriz-bg-modpack: Gameplay tweaks | | | default |
 | 680 | EET: story-consistent campaign boundaries and SoD backtracking fixes | chriz-bg-modpack: Gameplay tweaks | | | optional |
+| 695 | BG1 early-party XP boost: +70% party XP pool per extra companion up to 16,000 XP (BG:EE and EET; Windows EEex) | chriz-bg-modpack: Gameplay tweaks | | | default |
 | 640 | Legacy UI translation helper compatibility | chriz-bg-modpack: Compatibility | | | mandatory |
 | 460 | Party AI Defensive Stance: obey the "Use special abilities" option | chriz-bg-modpack: Compatibility | | | default |
 | 470 | Spell Learning: restrict +/-15% specialist modifier to specialist mages (BG:EE, SoD, BG2:EE, EET, IWD:EE; Windows EEex) | chriz-bg-modpack: Spell and compatibility fixes | | | default |

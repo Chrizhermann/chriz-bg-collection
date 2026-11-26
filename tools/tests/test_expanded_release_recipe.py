@@ -100,11 +100,12 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # November 22: alpha.17 adds EET world progression and SoD backtracking 680, on only
         # with Challenge Mode (Christopher, 2026-11-22).
         # November 23: alpha.18 adds default RAW spell-scroll learning fix 470.
-        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.18")
-        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.18.toml").read_text())
-        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.18")
-        self.assertEqual(artifact["source"]["expected_length"], 9554843)
-        self.assertEqual(artifact["source"]["sha256"], "ea7fd706d2e7eded3af29853874603e4fc7963fa18193d0c5df1757dbc3bcb6a")
+        # November 27: alpha.19 adds default BG1 early-party XP boost 695.
+        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.19")
+        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.19.toml").read_text())
+        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.19")
+        self.assertEqual(artifact["source"]["expected_length"], 9564616)
+        self.assertEqual(artifact["source"]["sha256"], "c2f1fc147f7f426ae6d1a36d2348e959f6313e009d96593afca02106cb1154d5")
         self.assertTrue((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.16.toml").exists())
         self.assertTrue((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.14.toml").exists())
         self.assertFalse((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
@@ -151,8 +152,9 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # Modpack 680 is on only with Challenge Mode (Christopher, 2026-11-22) and adds none.
         # November 22: Chriz Multiplayer Fix adds default components 0 and 1 in their own run.
         # November 23: Modpack alpha.18 adds default component 470 with EEex.
-        self.assertEqual(len(without_controls), 470)
-        self.assertEqual(len(selected), 471)
+        # November 27: Modpack alpha.19 adds default component 695 with EEex + EET.
+        self.assertEqual(len(without_controls), 471)
+        self.assertEqual(len(selected), 472)
         self.assertNotIn(("chriz-bg-modpack-bg2", 680), selected)
         self.assertEqual(len({run for run, _ in selected}), 71)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
@@ -262,7 +264,8 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # November 22: Modpack 680 is not (on only with Challenge Mode, Christopher,
         # 2026-11-22); Chriz Multiplayer Fix 0 and 1 are selected by default.
         # November 23: Modpack 470 (RAW spell-scroll learning fix) is selected by default.
-        self.assertEqual(len(baseline), 471)
+        # November 27: Modpack 695 (BG1 early-party XP boost) is selected by default.
+        self.assertEqual(len(baseline), 472)
         self.assertEqual(self.selected({feature_id: "off"}), baseline)
         baeloth = "feature:chriz-bg-modpack:component-235"
         self.assertEqual(self.features[baeloth]["decision"], "optional")

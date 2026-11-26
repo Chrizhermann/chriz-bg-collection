@@ -19,7 +19,7 @@ EVIDENCE = "manifest/evidence/release-intake-20261108-chriz-bg-modpack-chriz-eas
 MOD = "chriz-bg-modpack"
 PIN = "chriz-bg-modpack-0.2.0-alpha.16"
 PREVIOUS = "chriz-bg-modpack-0.2.0-alpha.15"
-SUCCESSOR = "chriz-bg-modpack-0.2.0-alpha.18"
+SUCCESSOR = "chriz-bg-modpack-0.2.0-alpha.19"
 TAG = "v0.2.0-alpha.16"
 TAG_COMMIT = "ee82f6bcc82074c52b3216453e785cfb1a9ac182"
 LENGTH = 9_529_061
@@ -89,9 +89,9 @@ class Nov08ModpackAlpha16PinTests(unittest.TestCase):
                 collection = load(directory / "collection.toml")
                 native = set(self.record["native_components"])
                 # Alpha.17 adds component 680 in TP2 order; alpha.18 adds component 470 after 460;
-                # earlier declarations keep their order.
+                # alpha.19 adds component 695 after 680; earlier declarations keep their order.
                 for run in (run for run in collection["runs"] if run["mod_id"] == MOD):
-                    self.assertTrue(set(run["components"]) - {680, 470} <= native, run["run_id"])
+                    self.assertTrue(set(run["components"]) - {680, 470, 695} <= native, run["run_id"])
 
     def test_history_documents_name_alpha16_and_pin_list_moves_on(self):
         catalog = (ROOT / "docs/curation/components/CHRIZ-BG-MODPACK.md").read_text(encoding="utf-8")

@@ -1,7 +1,7 @@
 # Authored bridge from Christopher's component catalogs to Task 18 recipe targets.
 # Decisions stay authoritative in docs/curation/components; this file never infers them.
 schema = 1
-expected_rows = 1358
+expected_rows = 1359
 expected_choice_groups = 88
 expected_optional_none_groups = 33
 expected_fixed_groups = 12
@@ -4240,6 +4240,12 @@ parent = "mod:chriz-bg-modpack"
 id = "feature:chriz-bg-modpack:component-680"
 kind = "feature"
 rows = ["CHRIZ-BG-MODPACK:680"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-695"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:695"]
 parent = "mod:chriz-bg-modpack"
 
 [[targets]]

@@ -1,5 +1,5 @@
 id = "chriz-bg-modpack"
-artifact_id = "chriz-bg-modpack-0.2.0-alpha.18"
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.19"
 name = "chriz-bg-modpack"
 tp2 = "setup-chriz-bg-modpack.tp2"
 language = 0
@@ -193,6 +193,10 @@ name = "Marek: carry the Boomerang Dagger +2 in BG1 (drops it when he dies)"
 [[components]]
 id = 680
 name = "EET: story-consistent campaign boundaries and SoD backtracking fixes"
+
+[[components]]
+id = 695
+name = "BG1 early-party XP boost: +70% party XP pool per extra companion up to 16,000 XP (BG:EE and EET; Windows EEex)"
 
 [[components]]
 id = 650
