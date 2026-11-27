@@ -776,7 +776,7 @@ _EXPANDED_RELEASE_EVIDENCE = {
     "scope": "Passed focused selection, dependencies, native component ordering and source intake checks; Christopher performs the installation and gameplay acceptance separately.",
 }
 _MODPACK_ALPHA22_EVIDENCE = {
-    "commit": "0000000000000000000000000000000000000000",
+    "commit": "ba2847db7c7c49d99ee5aa79e31feb4551bfea76",
     "test_artifact": "tools/tests/test_nov27_modpack_alpha22_unpaused_inventory_recipe.py",
     "date": "2026-11-27",
     "scope": "Static alpha.22 pin, source, component (optional mutually exclusive EEex unpaused inventory 699 always / 700 combat only, keeping optional Challenge Mode 696, defaults 697 and 698, and omitting 690) and order assertions only; fresh source/package verification is in release-intake-20261127-chriz-bg-modpack-v0.2.0-alpha.22-chriz-easy-bg-chriz-easy-iwd.toml; not a WeiDU installation or gameplay acceptance.",
