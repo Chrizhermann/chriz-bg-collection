@@ -350,7 +350,7 @@ class Nov22ChrizMultiplayerFixIntakeTests(unittest.TestCase):
         self.assertEqual(hotpatch["mod"], MOD)
         self.assertEqual(hotpatch["components"], COMPONENTS)
         self.assertEqual(hotpatch["requires_components"], [{"mod": "eeex", "any_of": [1]}])
-        earlier = [base["id"] for base in catalog["bases"] if base["id"] not in ("iwd-0.1.18", "iwd-0.1.19", "iwd-0.1.20", "iwd-0.1.21", "iwd-0.1.22")]
+        earlier = [base["id"] for base in catalog["bases"] if base["id"] not in ("iwd-0.1.18", "iwd-0.1.19", "iwd-0.1.20", "iwd-0.1.21", "iwd-0.1.22", "iwd-0.1.23")]
         self.assertEqual(hotpatch["bases"], earlier)
         self.assertEqual(len(hotpatch["changes"]), 2)
         for change in hotpatch["changes"]:

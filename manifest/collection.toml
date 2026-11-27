@@ -413,7 +413,7 @@ args = []
 run_id = "chriz-bg-modpack-bg2"
 mod_id = "chriz-bg-modpack"
 phase = "post-eet-end"
-components = [130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680, 695, 696, 697, 698]
+components = [130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680, 695, 696, 697, 698, 699, 700]
 args = []
 
 [[runs]]
@@ -5281,6 +5281,32 @@ readiness = "ready"
 parent = "mod:chriz-bg-modpack"
 requires = ["feature:eeex:mandatory-components"]
 components = [{ run_id = "chriz-bg-modpack-bg2", component = 698 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-699"
+title = "Unpaused inventory: always"
+description = "Cancels any active pause when opening Inventory in singleplayer, keeps the world simulation timer running while Inventory stays open, blocks pause requests inside Inventory, and leaves the game unpaused when closing Inventory. Mutually exclusive with combat-only unpaused inventory (700). Requires EEex."
+category = "convenience"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+choice_group = "choice:chriz-bg-modpack:unpaused-inventory-mode"
+requires = ["feature:eeex:mandatory-components"]
+conflicts = [{ feature_id = "feature:chriz-bg-modpack:component-700", reason = "Choose at most one unpaused-inventory mode: always (699) or combat only (700)." }]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 699 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-700"
+title = "Unpaused inventory: in combat only"
+description = "Keeps the native pause in Inventory out of combat, and unpauses / blocks pausing while combat is active in singleplayer (active battle song counter, combat counter, or a living party member seeing a hostile creature). Automatically unpauses if combat begins while paused in Inventory, and restores native pausing once combat clears. Mutually exclusive with always-unpaused inventory (699). Requires EEex."
+category = "convenience"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+choice_group = "choice:chriz-bg-modpack:unpaused-inventory-mode"
+requires = ["feature:eeex:mandatory-components"]
+conflicts = [{ feature_id = "feature:chriz-bg-modpack:component-699", reason = "Choose at most one unpaused-inventory mode: always (699) or combat only (700)." }]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 700 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-640"

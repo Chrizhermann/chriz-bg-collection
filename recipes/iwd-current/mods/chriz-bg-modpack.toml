@@ -1,5 +1,5 @@
 id = "chriz-bg-modpack"
-artifact_id = "chriz-bg-modpack-0.2.0-alpha.21"
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.22"
 name = "Chriz BG Modpack"
 tp2 = "setup-chriz-bg-modpack.tp2"
 language = 0
@@ -9,3 +9,11 @@ invocation_mode = "setup-name"
 [[components]]
 id = 470
 name = "Spell Learning: restrict +/-15% specialist modifier to specialist mages (BG:EE, SoD, BG2:EE, EET, IWD:EE; Windows EEex)"
+
+[[components]]
+id = 699
+name = "Inventory: always keep game unpaused while Inventory is open (BG:EE, SoD, BG2:EE, EET, IWD:EE; Windows EEex)"
+
+[[components]]
+id = 700
+name = "Inventory: keep game unpaused in Inventory during combat only (BG:EE, SoD, BG2:EE, EET, IWD:EE; Windows EEex)"

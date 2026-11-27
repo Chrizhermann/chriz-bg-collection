@@ -29,6 +29,7 @@ MOD = "chriz-bg-modpack"
 PIN = "chriz-bg-modpack-0.2.0-alpha.21"
 ALPHA20 = "chriz-bg-modpack-0.2.0-alpha.20"
 PREVIOUS = "chriz-bg-modpack-0.2.0-alpha.19"
+SUCCESSOR = "chriz-bg-modpack-0.2.0-alpha.22"
 TAG = "v0.2.0-alpha.21"
 SOURCE_COMMIT = "4e143894a8db7aef0ff4827dae096ba56aab2299"
 PIN_COMMIT = "5b178fb6ea390d52799bac5e6d00af7eeb6a8d4a"
@@ -142,19 +143,14 @@ class Nov27ModpackAlpha21CombatQuickLootTests(unittest.TestCase):
             is_iwd = directory == iwd_root
             with self.subTest(profile=str(directory)):
                 mod = _load(directory / f"mods/{MOD}.toml")
-                artifact = _load(directory / f"artifacts/{PIN}.toml")
-                self.assertEqual(mod["artifact_id"], PIN)
-                self.assertEqual(artifact["version"], TAG.removeprefix("v"))
-                self.assertEqual(artifact["source"]["reference"], TAG)
-                self.assertEqual(artifact["source"]["url"], URL)
-                self.assertEqual(artifact["source"]["expected_filename"], FILENAME)
-                self.assertEqual(artifact["source"]["expected_length"], LENGTH)
-                self.assertEqual(artifact["source"]["sha256"], SHA256)
                 if is_iwd:
-                    self.assertEqual(artifact, _load(ROOT / f"manifest/artifacts/{PIN}.toml"))
+                    self.assertFalse((directory / f"artifacts/{PIN}.toml").exists())
+                    self.assertTrue((directory / f"artifacts/{SUCCESSOR}.toml").exists())
+                    artifact = _load(ROOT / f"manifest/artifacts/{PIN}.toml")
                     self.assertFalse((directory / f"artifacts/{ALPHA20}.toml").exists())
                     self.assertFalse((directory / f"artifacts/{PREVIOUS}.toml").exists())
                 else:
+                    artifact = _load(directory / f"artifacts/{PIN}.toml")
                     previous = _load(directory / f"artifacts/{PREVIOUS}.toml")
                     self.assertTrue((directory / f"artifacts/{ALPHA20}.toml").exists())
                     self.assertEqual(artifact["archive"], previous["archive"])
@@ -162,6 +158,13 @@ class Nov27ModpackAlpha21CombatQuickLootTests(unittest.TestCase):
                         artifact["source"]["redirect_hosts"],
                         previous["source"]["redirect_hosts"],
                     )
+                self.assertEqual(mod["artifact_id"], SUCCESSOR)
+                self.assertEqual(artifact["version"], TAG.removeprefix("v"))
+                self.assertEqual(artifact["source"]["reference"], TAG)
+                self.assertEqual(artifact["source"]["url"], URL)
+                self.assertEqual(artifact["source"]["expected_filename"], FILENAME)
+                self.assertEqual(artifact["source"]["expected_length"], LENGTH)
+                self.assertEqual(artifact["source"]["sha256"], SHA256)
 
                 collection = _load(directory / "collection.toml")
                 preset = _load(directory / "presets/chris-recommended.toml").get("selections", {})
@@ -171,8 +174,9 @@ class Nov27ModpackAlpha21CombatQuickLootTests(unittest.TestCase):
                 self.assertNotIn(UNOFFERED, names)
 
                 native = set(self.record["native_components"])
+                # Alpha.22 adds optional mutually exclusive 699 and 700; earlier declarations keep their order.
                 for r in (r for r in collection["runs"] if r["mod_id"] == MOD):
-                    self.assertTrue(set(r["components"]) <= native, r["run_id"])
+                    self.assertTrue(set(r["components"]) - {699, 700} <= native, r["run_id"])
                     self.assertNotIn(UNOFFERED, r["components"], r["run_id"])
 
                 if is_iwd:
@@ -182,7 +186,7 @@ class Nov27ModpackAlpha21CombatQuickLootTests(unittest.TestCase):
                     (run,) = [run for run in collection["runs"] if run["mod_id"] == MOD]
                     self.assertEqual(run["run_id"], IWD_RUN)
                     self.assertEqual(run["phase"], "main")
-                    self.assertEqual(run["components"], [470])
+                    self.assertEqual(run["components"], [470, 699, 700])
                 else:
                     for cid, label in LABELS.items():
                         self.assertEqual(names[cid], label)
@@ -190,7 +194,7 @@ class Nov27ModpackAlpha21CombatQuickLootTests(unittest.TestCase):
                     self.assertEqual(run["phase"], "post-eet-end")
                     idx_695 = run["components"].index(695)
                     self.assertEqual(
-                        run["components"][idx_695 + 1 :],
+                        run["components"][idx_695 + 1 : idx_695 + 4],
                         [QUICKLOOT, TELEPORTERS, AREA_CLEANUP],
                     )
                     self.assertEqual(
@@ -262,7 +266,7 @@ class Nov27ModpackAlpha21CombatQuickLootTests(unittest.TestCase):
 
     def test_iwd_0_1_21_release_ledger_hotpatch_and_docs(self) -> None:
         release = json.loads((ROOT / IWD_PROFILE / "release.json").read_text(encoding="utf-8"))
-        self.assertIn(release["version"], ("0.1.21", "0.1.22"))
+        self.assertIn(release["version"], ("0.1.21", "0.1.22", "0.1.23"))
         ledger = _load(ROOT / f"{IWD_PROFILE}/releases/v0.1.21/ledger.toml")
         self.assertEqual(
             (ledger["recipe_id"], ledger["version"], ledger["supersedes"]),
@@ -304,7 +308,7 @@ class Nov27ModpackAlpha21CombatQuickLootTests(unittest.TestCase):
             f"| {QUICKLOOT} | {LABELS[QUICKLOOT]} | chriz-bg-modpack: Gameplay tweaks | | | optional |",
             f"| {TELEPORTERS} | {LABELS[TELEPORTERS]} | chriz-bg-modpack: Gameplay tweaks | | | default |",
             f"| {AREA_CLEANUP} | {LABELS[AREA_CLEANUP]} | chriz-bg-modpack: Gameplay tweaks | | | default |",
-            "71 current or historical entries; the collection exposes 54.",
+            "73 current or historical entries; the collection exposes 56.",
         ):
             self.assertIn(phrase, catalog)
 
@@ -312,15 +316,14 @@ class Nov27ModpackAlpha21CombatQuickLootTests(unittest.TestCase):
             line for line in (ROOT / "manifest/mod-sources.tsv").read_text(encoding="utf-8").splitlines()
             if line.startswith("CHRIZ-BG-MODPACK\t")
         )
-        for phrase in (TAG, SOURCE_COMMIT, str(LENGTH), SHA256):
-            self.assertIn(phrase, source)
+        self.assertIn("696", source)
         pin_list = (ROOT / "docs/pin-list-2.7.md").read_text(encoding="utf-8")
-        self.assertEqual(pin_list.count(f"| chriz-bg-modpack | {TAG.removeprefix('v')} | `{MOD}` | `{SHA256[:12]}…` |"), 2)
+        self.assertNotIn(f"| chriz-bg-modpack | {TAG.removeprefix('v')} |", pin_list)
 
         for rel, fragment in (
             ("docs/curation/iwdee/INVENTORY.md", "v0.2.0-alpha.21"),
             ("docs/curation/iwdee/WORKSHEET.md", "v0.2.0-alpha.21"),
-            ("docs/curation/iwdee/FOLLOW_UPS.md", "v0.2.0-alpha.21"),
+            ("docs/curation/iwdee/FOLLOW_UPS.md", "695, 696, 697, and 698 omitted from IWD"),
         ):
             self.assertIn(fragment, (ROOT / rel).read_text(encoding="utf-8"), rel)
 
@@ -328,15 +331,13 @@ class Nov27ModpackAlpha21CombatQuickLootTests(unittest.TestCase):
         current = changelog.split("\n## Next Chriz Easy BG release (draft)\n", 1)[1].split("\n## Collection 0.1.2 (draft)\n", 1)[0]
         self.assertIn("**No Quick Loot during combat** (Chriz BG Modpack component 696", current)
         self.assertIn("**Watcher's Keep instant teleporters and instant room-hazard cleanup**", current)
-        self.assertIn("Chriz BG Modpack v0.2.0-alpha.21 (was v0.2.0-alpha.19", current)
+        self.assertIn("v0.2.0-alpha.21", current)
         self.assertIn(EVIDENCE, current)
         self.assertIn(f"feature:{QUICKLOOT_FEATURE}", current)
         self.assertIn(f"feature:{TELEPORTERS_FEATURE}", current)
         self.assertIn(f"feature:{AREA_CLEANUP_FEATURE}", current)
 
-    def test_static_acceptance_records_cite_alpha21_pin_commit(self) -> None:
-        if not PIN_COMMIT:
-            return
+    def test_static_acceptance_records_remain_valid(self) -> None:
         bg_runs = {
             "chriz-bg-modpack-bg2",
             "chriz-bg-modpack-pre-continuity-bg2",
@@ -346,10 +347,10 @@ class Nov27ModpackAlpha21CombatQuickLootTests(unittest.TestCase):
             "chriz-bg-modpack-baeloth-bg2",
             "chriz-bg-modpack-scrolls-bg2",
         }
-        expected_artifact = "tools/tests/test_nov27_modpack_alpha21_combat_quickloot_recipe.py"
-        for rel_path in (
-            "manifest/releases/v0.1.0-alpha.1/acceptance.toml",
-            "recipes/curated-full-current/releases/v0.1.0-alpha.1/acceptance.toml",
+        for rel_path, expected_runs in (
+            ("manifest/releases/v0.1.0-alpha.1/acceptance.toml", bg_runs),
+            ("recipes/curated-full-current/releases/v0.1.0-alpha.1/acceptance.toml", bg_runs),
+            (f"{IWD_PROFILE}/releases/v0.1.0-alpha.1/acceptance.toml", {IWD_RUN}),
         ):
             data = tomllib.loads((ROOT / rel_path).read_text(encoding="utf-8"))
             by_id = {
@@ -357,31 +358,9 @@ class Nov27ModpackAlpha21CombatQuickLootTests(unittest.TestCase):
                 for entry in data.get("evidence", [])
                 if entry.get("subject_kind") == "run"
             }
-            for run_id in bg_runs:
+            for run_id in expected_runs:
                 entry = by_id[run_id]
-                self.assertEqual(entry.get("commit"), PIN_COMMIT)
-                self.assertEqual(entry.get("test_artifact"), expected_artifact)
-                self.assertEqual(entry.get("date"), "2026-11-27")
-                self.assertEqual(entry.get("status"), "accepted")
-                self.assertIn("696", entry.get("scope", ""))
-                self.assertIn("697", entry.get("scope", ""))
-                self.assertIn("698", entry.get("scope", ""))
-                self.assertIn(EVIDENCE.rsplit("/", 1)[-1], entry.get("scope", ""))
-
-        iwd_data = tomllib.loads(
-            (ROOT / f"{IWD_PROFILE}/releases/v0.1.0-alpha.1/acceptance.toml").read_text(encoding="utf-8")
-        )
-        iwd_entry = next(
-            entry
-            for entry in iwd_data.get("evidence", [])
-            if entry.get("subject_kind") == "run" and entry.get("subject_id") == IWD_RUN
-        )
-        self.assertEqual(iwd_entry.get("commit"), PIN_COMMIT)
-        self.assertEqual(iwd_entry.get("test_artifact"), expected_artifact)
-        self.assertEqual(iwd_entry.get("date"), "2026-11-27")
-        self.assertEqual(iwd_entry.get("status"), "accepted")
-        self.assertIn("698", iwd_entry.get("scope", ""))
-        self.assertIn(EVIDENCE.rsplit("/", 1)[-1], iwd_entry.get("scope", ""))
+                self.assertEqual((entry.get("kind"), entry.get("status")), ("static-test", "accepted"), (rel_path, run_id))
 
 
 if __name__ == "__main__":

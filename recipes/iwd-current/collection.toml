@@ -384,14 +384,13 @@ phase = "main"
 components = [361]
 args = []
 
-# Chriz BG Modpack v0.2.0-alpha.18, component 470 (Christopher, 2026-11-23): restricts the +/-15%
-# opcode 147 specialist spell-scroll learning bonus/penalty to specialist mages only; bards,
-# Wild Mages, kitted dual-class mages, and non-mages stay at 0%. Requires EEex (#1) at install time.
+# Chriz BG Modpack v0.2.0-alpha.22: mandatory RAW spell-scroll learning fix (470) plus optional
+# mutually exclusive unpaused-inventory choices (699 always / 700 combat only). Requires EEex (#1).
 [[runs]]
 run_id = "chriz-bg-modpack-main"
 mod_id = "chriz-bg-modpack"
 phase = "main"
-components = [470]
+components = [470, 699, 700]
 args = []
 
 # Needs EEex #1 and #8 at install time.
@@ -4909,7 +4908,7 @@ requires = ["feature:eeex:component-1"]
 [[features]]
 id = "mod:chriz-bg-modpack"
 title = "Chriz BG Modpack"
-description = "Fixes Enhanced Edition spell-scroll learning so only Mage specialist kits apply the +/-15% school modifier."
+description = "Fixes Enhanced Edition spell-scroll learning (470) and adds optional mutually exclusive unpaused-inventory modes (699 always / 700 combat only)."
 category = "rules"
 source_label = "Chriz BG Modpack"
 decision = "default"
@@ -4926,3 +4925,33 @@ readiness = "ready"
 parent = "mod:chriz-bg-modpack"
 components = [{ run_id = "chriz-bg-modpack-main", component = 470 }]
 requires = ["feature:eeex:component-1"]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-699"
+title = "Unpaused inventory: always"
+description = "Cancels any active pause when opening Inventory in singleplayer, keeps the world simulation timer running while Inventory stays open, blocks pause requests inside Inventory, and leaves the game unpaused when closing Inventory. Mutually exclusive with combat-only unpaused inventory (700). Requires EEex."
+category = "convenience"
+source_label = "Chriz BG Modpack"
+group_label = "Unpaused inventory"
+choice_group = "choice:chriz-bg-modpack:unpaused-inventory-mode"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-main", component = 699 }]
+requires = ["feature:eeex:component-1"]
+conflicts = [{ feature_id = "feature:chriz-bg-modpack:component-700", reason = "Choose at most one option for Unpaused inventory: always (699) or combat only (700)." }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-700"
+title = "Unpaused inventory: in combat only"
+description = "Keeps the native pause in Inventory out of combat, and unpauses / blocks pausing while combat is active in singleplayer (active battle song counter, combat counter, or a living party member seeing a hostile creature). Automatically unpauses if combat begins while paused in Inventory, and restores native pausing once combat clears. Mutually exclusive with always-unpaused inventory (699). Requires EEex."
+category = "convenience"
+source_label = "Chriz BG Modpack"
+group_label = "Unpaused inventory"
+choice_group = "choice:chriz-bg-modpack:unpaused-inventory-mode"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-main", component = 700 }]
+requires = ["feature:eeex:component-1"]
+conflicts = [{ feature_id = "feature:chriz-bg-modpack:component-699", reason = "Choose at most one option for Unpaused inventory: always (699) or combat only (700)." }]

@@ -176,7 +176,7 @@ const RUNS: &[(&str, &str, Phase, &[u32])] = &[
         "chriz-bg-modpack-main",
         "chriz-bg-modpack",
         Phase::Main,
-        &[470],
+        &[470, 699, 700],
     ),
     ("eeexremote-main", "eeexremote", Phase::Main, &[0]),
 ];
@@ -217,7 +217,7 @@ const INSTALLERS: &[(&str, &str, &str)] = &[
     ),
     (
         "chriz-bg-modpack",
-        "chriz-bg-modpack-0.2.0-alpha.21",
+        "chriz-bg-modpack-0.2.0-alpha.22",
         "setup-chriz-bg-modpack.tp2",
     ),
     (
@@ -398,14 +398,14 @@ const ARTIFACTS: &[Pin] = &[
         sha256: "117cd79cb5187640a5efd6c1d19181b43bcfa7381161df2f88db055d3af075f7",
     },
     Pin {
-        id: "chriz-bg-modpack-0.2.0-alpha.21",
-        version: "0.2.0-alpha.21",
+        id: "chriz-bg-modpack-0.2.0-alpha.22",
+        version: "0.2.0-alpha.22",
         kind: SourceKind::GithubRelease,
-        url: "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.21/chriz-bg-modpack-v0.2.0-alpha.21.zip",
-        reference: "v0.2.0-alpha.21",
-        filename: "chriz-bg-modpack-v0.2.0-alpha.21.zip",
-        length: 9_597_844,
-        sha256: "717b17071e26e426d7d74f3a0c8b1d6ac1aa49d55932512b92bb21bb418c190f",
+        url: "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.22/chriz-bg-modpack-v0.2.0-alpha.22.zip",
+        reference: "v0.2.0-alpha.22",
+        filename: "chriz-bg-modpack-v0.2.0-alpha.22.zip",
+        length: 9_607_048,
+        sha256: "53044637cbd3259b3eabf8032b53137560aa2ae821074c8ecf8a64a42474a317",
     },
     Pin {
         id: "chriz-bg-rebalance-0.8.12",
@@ -881,7 +881,7 @@ fn declares_a_standalone_iwdee_collection_with_its_own_data_folder() {
             .collect::<Vec<_>>(),
         [PRESET]
     );
-    assert_eq!(manifest.collection.features.len(), 335);
+    assert_eq!(manifest.collection.features.len(), 337);
     assert!(
         validate(&manifest).is_empty(),
         "authoring validation findings: {:?}",
@@ -1210,7 +1210,7 @@ fn every_choice_group_offers_exclusive_alternatives() {
             groups.entry(group).or_default().push(feature.id.as_str());
         }
     }
-    assert_eq!(groups.len(), 30);
+    assert_eq!(groups.len(), 31);
     let evaluation = recommended(&manifest);
     for (group, members) in &groups {
         assert!(members.len() > 1, "{group}");
@@ -1942,4 +1942,43 @@ fn chriz_bg_modpack_scroll_learning_fix_470_runs_by_default_with_eeex_and_omits_
             "{disabled}"
         );
     }
+
+    for (choice_id, expected_id) in [
+        ("feature:chriz-bg-modpack:component-699", 699u32),
+        ("feature:chriz-bg-modpack:component-700", 700u32),
+    ] {
+        let ctrl = evaluation.view.control(choice_id).unwrap();
+        assert_eq!(ctrl.decision, Decision::Optional);
+        assert!(!ctrl.selected);
+        let mut selection = Selection::defaults("windows");
+        selection.set_feature(choice_id, true);
+        let picked = evaluate(&manifest, &selection).unwrap();
+        assert_eq!(
+            picked.plan.components_for("chriz-bg-modpack-main"),
+            Some(&[470, expected_id][..])
+        );
+    }
+
+    let mut both = Selection::defaults("windows");
+    both.set_feature("feature:chriz-bg-modpack:component-699", true);
+    both.set_feature("feature:chriz-bg-modpack:component-700", true);
+    let conflict_eval = evaluate(&manifest, &both).unwrap();
+    assert_eq!(
+        conflict_eval.plan.components_for("chriz-bg-modpack-main"),
+        Some(&[470][..])
+    );
+    assert!(
+        !conflict_eval
+            .view
+            .control("feature:chriz-bg-modpack:component-699")
+            .unwrap()
+            .selected
+    );
+    assert!(
+        !conflict_eval
+            .view
+            .control("feature:chriz-bg-modpack:component-700")
+            .unwrap()
+            .selected
+    );
 }

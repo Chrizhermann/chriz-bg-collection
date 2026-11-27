@@ -147,8 +147,9 @@ class CatalogParserTests(unittest.TestCase):
         # November 22: the CHRIZ_MULTIPLAYER_FIX catalog adds components 0 and 1.
         # November 23: Modpack alpha.18 adds RAW specialist spell-scroll learning fix 470.
         # November 27: Modpack alpha.19 adds BG1 early-party XP boost 695.
-        # November 27: Modpack alpha.20/alpha.21 add 696, 697, and 698.
-        self.assertEqual(len(rows), 1_362)
+        # November 27: Modpack alpha.20/alpha.21 add 696, 697, and 698;
+        # alpha.22 adds optional mutually exclusive 699 and 700.
+        self.assertEqual(len(rows), 1_364)
         self.assertEqual(
             decision_totals(rows),
             {
@@ -179,8 +180,9 @@ class CatalogParserTests(unittest.TestCase):
                 # November 22: Modpack 680 is optional, on only with Challenge Mode
                 # (Christopher, 2026-11-22).
                 # November 27: Modpack 696 (disable Quick Loot during combat) is optional,
-                # on only with Challenge Mode (Christopher, 2026-11-27).
-                Decision.OPTIONAL: 339,
+                # on only with Challenge Mode (Christopher, 2026-11-27), and 699/700 (unpaused
+                # inventory always / combat only) are optional mutually exclusive (off by default).
+                Decision.OPTIONAL: 341,
                 # Approved Rebalance 111/302 defaults; Artisan 51010 is optional.
                 # October 13: bard ceilings Rebalance 420/421 and Bardic 3010 are defaults;
                 # EET 100 (desktop shortcut) leaves the defaults.
@@ -455,10 +457,10 @@ default = "none"
         # November 18 adds the default Round Clock row for BG Rebalance 361.
         # Modpack 680 maps to one feature; Chriz Multiplayer Fix 0 and 1 map to one each.
         # November 23: Modpack 470 maps to one feature.
-        # November 27: Modpack 695 maps to one feature; 696, 697, 698 map to one each.
-        self.assertEqual(result.mapped_rows, 1_362)
+        # November 27: Modpack 695 maps to one feature; 696, 697, 698, 699, and 700 map to one each.
+        self.assertEqual(result.mapped_rows, 1_364)
         self.assertEqual(result.excluded_rows, 527)
-        self.assertEqual(result.feature_rows + result.omission_rows, 835)
+        self.assertEqual(result.feature_rows + result.omission_rows, 837)
         # October 14: Rebalance potion uniqueness and SCS fine weapons choices.
         # October 23: the SoD Remix Imoen in Shadows of Amn choice.
         # October 23: ten quest-mod choices (Ascalon's three with their first variant as
@@ -472,7 +474,7 @@ default = "none"
         self.assertEqual(result.choice_groups, 88)
         self.assertEqual(result.optional_none_groups, 33)
         self.assertEqual(result.fixed_groups, 12)
-        self.assertIn("rows=1362", coverage_report(rows, result))
+        self.assertIn("rows=1364", coverage_report(rows, result))
 
     def test_september16_intake_rows_match_the_approved_recipe_features(self) -> None:
         root = Path(__file__).resolve().parents[2]

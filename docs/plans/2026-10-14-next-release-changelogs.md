@@ -63,6 +63,8 @@ candidate on 2026-11-01. The player-facing notes are in
   clear immediately upon teleporting, travelling, or stepping outside the hazard room, including while
   paused, so spellcasting recovers immediately without waiting for the round timer.
 
+- **Unpaused inventory: always or in combat only** (Chriz BG Modpack components 699 and 700, Optional mutually exclusive in BG and IWD, off by default, requires EEex). Lets you keep Inventory unpaused either always (`699`: cancels pause on open, suppresses pausing inside Inventory, keeps world unpaused on close) or during combat only (`700`: pauses normally out of combat and unpauses / suppresses pausing whenever combat is active, including auto-unpausing if combat starts while paused in Inventory).
+
 ### Mod versions
 
 - The Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.7 (was chriz.6), main, NPC and tweak
@@ -70,7 +72,7 @@ candidate on 2026-11-01. The player-facing notes are in
 - Bardic Wonders v2.9c-balance.9 (was balance.8), curated Chriz Easy BG.
 - BG Rebalance v0.8.12 (was v0.8.11), both Chriz Easy BG recipes (adds component 361; Chriz Easy IWD also adds component 361).
 - Chriz Multiplayer Fix v0.1.0 (new), both Chriz Easy BG recipes and Chriz Easy IWD.
-- Chriz BG Modpack v0.2.0-alpha.21 (was v0.2.0-alpha.19; v0.2.0-alpha.20 added 697/698 in between), both Chriz Easy BG recipes (keeps component 680 and adds component 696 in Challenge Mode, keeps defaults 470 and 695, and adds defaults 697 and 698 after 695) and Chriz Easy IWD (artifact bump only, keeping component 470 sole and leaving 695, 696, 697, and 698 omitted). (Previously pinned v0.2.0-alpha.19 was v0.2.0-alpha.18, after v0.2.0-alpha.17.)
+- Chriz BG Modpack v0.2.0-alpha.22 (was v0.2.0-alpha.21; after v0.2.0-alpha.19/alpha.20), both Chriz Easy BG recipes (keeps optional Challenge Mode 680 and 696, keeps defaults 470, 695, 697, and 698, and adds optional mutually exclusive 699 always / 700 combat only) and Chriz Easy IWD (adds optional mutually exclusive 699 / 700 alongside default 470; omits 695–698). (Previously pinned v0.2.0-alpha.19 was v0.2.0-alpha.18, after v0.2.0-alpha.17.)
 
 ### Notes for the release integrator
 
@@ -150,6 +152,11 @@ candidate on 2026-11-01. The player-facing notes are in
   `feature:feature:chriz-bg-modpack:component-696`,
   `feature:feature:chriz-bg-modpack:component-697`, and
   `feature:feature:chriz-bg-modpack:component-698`.
+- The Chriz BG Modpack v0.2.0-alpha.22 intake verified the deterministic archive, TP2 declaration order (`699` and `700` after `698` and before `650`; `690` stays unoffered/off), and optional mutually exclusive wiring of `699` and `700` (off in Chris's Recommended) in both Chriz Easy BG recipes and Chriz Easy IWD (collection `0.1.23`, keeping `695`–`698` omitted from IWD). Upstream verified `699` and `700` live in `BuffBot-Dev` (`BG2:EE 2.7.3.0` + `EEex v1.3.1`, `11/11` checks, zero audio leak) alongside Lua 5.2 / LuaJIT 2.1, Keystone/Unicorn x64 emulation, real `2.7.3.0` EXEs, WeiDU 249, and deterministic archive checks; combined full-collection installation and campaign playthrough remain untested.
+  [Collection intake](../../manifest/evidence/release-intake-20261127-chriz-bg-modpack-v0.2.0-alpha.22-chriz-easy-bg-chriz-easy-iwd.toml)
+- The next BG recipe update ledger must also cover `artifact:chriz-bg-modpack-0.2.0-alpha.22`,
+  `feature:feature:chriz-bg-modpack:component-699`, and
+  `feature:feature:chriz-bg-modpack:component-700`.
 
 ## Next Chriz Easy IWD release (draft)
 
@@ -187,11 +194,13 @@ candidate on 2026-11-01. The player-facing notes are in
   collection 0.1.20 with BG1-only 695 omitted from IWD, and to v0.2.0-alpha.21 in collection 0.1.21
   with BG-only/Challenge Mode 696, 697, and 698 omitted from IWD)
 
+- **Unpaused inventory: always or in combat only** (Optional mutually exclusive, off by default, requires EEex). Lets you keep Inventory unpaused either always (`699`) or during combat only (`700`: pauses normally out of combat and unpauses / suppresses pausing while combat is active, including auto-unpausing if combat starts while paused in Inventory). (Chriz BG Modpack v0.2.0-alpha.22, collection 0.1.23)
+
 ### Mod versions
 
 - Chriz IWD Encounters v0.3.4 (was v0.3.2; same recipe components 100..420 and optional 500, plus hotpatch-only 425).
 - Chriz Multiplayer Fix v0.1.0 (new).
-- Chriz BG Modpack v0.2.0-alpha.21 (was v0.2.0-alpha.19; component 470 default with EEex, 695/696/697/698 omitted in IWD).
+- Chriz BG Modpack v0.2.0-alpha.22 (was v0.2.0-alpha.21; component 470 default with EEex plus optional mutually exclusive 699/700; 695/696/697/698 omitted in IWD).
 
 ## Collection 0.1.2 (draft)
 

@@ -101,12 +101,13 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # with Challenge Mode (Christopher, 2026-11-22).
         # November 23: alpha.18 adds default RAW spell-scroll learning fix 470.
         # November 27: alpha.19 adds default BG1 early-party XP boost 695.
-        # November 27: alpha.21 adds optional Challenge Mode 696 and defaults 697, 698.
-        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.21")
-        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.21.toml").read_text())
-        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.21")
-        self.assertEqual(artifact["source"]["expected_length"], 9597844)
-        self.assertEqual(artifact["source"]["sha256"], "717b17071e26e426d7d74f3a0c8b1d6ac1aa49d55932512b92bb21bb418c190f")
+        # November 27: alpha.21 adds optional Challenge Mode 696 and defaults 697, 698;
+        # alpha.22 adds optional mutually exclusive unpaused inventory 699 and 700 (both off).
+        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.22")
+        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.22.toml").read_text())
+        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.22")
+        self.assertEqual(artifact["source"]["expected_length"], 9607048)
+        self.assertEqual(artifact["source"]["sha256"], "53044637cbd3259b3eabf8032b53137560aa2ae821074c8ecf8a64a42474a317")
         self.assertTrue((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.16.toml").exists())
         self.assertTrue((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.14.toml").exists())
         self.assertFalse((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
@@ -159,6 +160,8 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         self.assertEqual(len(selected), 474)
         self.assertNotIn(("chriz-bg-modpack-bg2", 680), selected)
         self.assertNotIn(("chriz-bg-modpack-bg2", 696), selected)
+        self.assertNotIn(("chriz-bg-modpack-bg2", 699), selected)
+        self.assertNotIn(("chriz-bg-modpack-bg2", 700), selected)
         self.assertEqual(len({run for run, _ in selected}), 71)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())

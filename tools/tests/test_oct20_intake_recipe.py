@@ -23,7 +23,7 @@ PREVIOUS_ARTIFACT_ID = "chriz-bg-modpack-0.2.0-alpha.12"
 # The October 26 alpha.22 pin batch replaced this pin with alpha.14, and the November 3
 # intake (test_nov03_modpack_alpha15_marek_dagger_recipe) with alpha.15, then the November 8
 # alpha.16 pin (test_nov08_modpack_alpha16_pin_recipe), alpha.17 (680), alpha.18 (470), and alpha.19 (695).
-SUCCESSOR_ARTIFACT_ID = "chriz-bg-modpack-0.2.0-alpha.21"
+SUCCESSOR_ARTIFACT_ID = "chriz-bg-modpack-0.2.0-alpha.22"
 LATE_RUN = "chriz-bg-modpack-late-companions-bg2"
 CAMPAIGN_RUN = "chriz-bg-modpack-campaign-xp-bg2"
 MODPACK = "feature:chriz-bg-modpack:component-{}"
@@ -207,9 +207,10 @@ class Oct20IntakeTests(unittest.TestCase):
                 runs = [run for run in collection["runs"] if run["mod_id"] == MOD_ID]
                 self.assertEqual(len(runs), 9)
                 # Alpha.14 keeps alpha.13's declaration order; alpha.15 adds 670, alpha.16
-                # keeps it, alpha.17 adds 680, alpha.18 adds 470, alpha.19 adds 695, and alpha.20/alpha.21 add 696/697/698.
+                # keeps it, alpha.17 adds 680, alpha.18 adds 470, alpha.19 adds 695,
+                # alpha.20/alpha.21 add 696/697/698, and alpha.22 adds 699/700.
                 for run in runs:
-                    components = [c for c in run["components"] if c not in (470, 670, 680, 695, 696, 697, 698)]
+                    components = [c for c in run["components"] if c not in (470, 670, 680, 695, 696, 697, 698, 699, 700)]
                     self.assertEqual(components, [c for c in ALPHA13_NATIVE if c in components],
                                      run["run_id"])
         # The checked-in curated artifact is the generator's copy of the authored pin.
