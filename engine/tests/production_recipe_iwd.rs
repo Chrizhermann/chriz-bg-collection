@@ -1967,14 +1967,18 @@ fn chriz_bg_modpack_scroll_learning_fix_470_runs_by_default_with_eeex_and_omits_
         conflict_eval.plan.components_for("chriz-bg-modpack-main"),
         Some(&[470][..])
     );
-    assert!(!conflict_eval
-        .view
-        .control("feature:chriz-bg-modpack:component-699")
-        .unwrap()
-        .selected);
-    assert!(!conflict_eval
-        .view
-        .control("feature:chriz-bg-modpack:component-700")
-        .unwrap()
-        .selected);
+    assert!(
+        !conflict_eval
+            .view
+            .control("feature:chriz-bg-modpack:component-699")
+            .unwrap()
+            .selected
+    );
+    assert!(
+        !conflict_eval
+            .view
+            .control("feature:chriz-bg-modpack:component-700")
+            .unwrap()
+            .selected
+    );
 }
