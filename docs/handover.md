@@ -2,6 +2,37 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 27 — Chriz Easy IWD 0.1.17 (collection 0.1.22) released
+
+Published from [main at 16fecba](https://github.com/Chrizhermann/chriz-bg-collection/commit/16fecba94f0ba216a0b621f59636a6241dfb8bdd)
+after [PR #169](https://github.com/Chrizhermann/chriz-bg-collection/pull/169) (which also landed
+`Chriz BG Modpack v0.2.0-alpha.21` commits `5b178fb` and `2d264b1` intact). The IWD release
+`v0.1.17` and `updates` feed went live and passed anonymous SHA-256 verification on 2026-11-27,
+the distribution `README.md` was updated at
+[7494fcb](https://github.com/Chrizhermann/chriz-easy-iwd/commit/7494fcb9de17ae4f70ad0c494d88af6a729d2693),
+and [website PR #118](https://github.com/Chrizhermann/twitch-setup-chriz/pull/118) (`e5fd837`)
+deployed `bg.chrizfader.org/iwd` (`0.1.17`) and `/iwd-encounters` (`v0.3.4`).
+
+- **Chriz Easy IWD 0.1.17** bundles collection **0.1.22** and hotpatch base
+  `iwd-0.1.22` (`31c158ea070afe5cd516d42593b9f133f58842ae4e4ecd56b033e4069fbb8e1e`)
+  with **148 default components, 36 runs, 35 mods, and 18 companions**.
+  - Pins **Chriz IWD Encounters v0.3.4**, aligning all thinned-area quest kill counters
+    (Dragon's Eye Level 2 `Talonite > 5 / < 6`, Severed Hand `ELVEN_SOLDIER > 11`, Lower Dorn's
+    Deep `8001_Salamanders > 8` and `8008_Salamanders > 4`), preserving quest DVs on custom
+    squads, fixing `CIE4xx`/`CIE5xx` stacked mastery stats, marking bespoke elite gear and AI
+    buff potions undroppable, stretching `AR3503` crypt wave timers (`48 s` / `+54 s`), removing
+    remaining Bombardier Beetles, and adding six apex encounters.
+  - Adds current-save hotpatch `chriz-iwd-encounters-0.3.4-quest-counters` (`component 425`)
+    for `0.1.15`–`0.1.16` installs (`iwd-0.1.16`..`iwd-0.1.21`).
+  - Bundles **Chriz Multiplayer Fix v0.1.0** (`0`, optional `1`) and **Chriz BG Modpack
+    v0.2.0-alpha.21** (`470` RAW scroll learning).
+  - `Chriz.Easy.IWD_0.1.17_x64-setup.exe` (7,146,996 bytes), SHA-256
+    `e51d54f2656fbc00833405178f362bbde39fb4bc08340415b78f1ed75ef9ebeb`.
+  - `updates/latest.json` (1,109 bytes), SHA-256
+    `dea82b98ec58ebac25ae00c9847425f1984a36ad7469c81a6e9cb3d16bdaa07c`.
+  - [Package acceptance](package-acceptance-iwd-0.1.17-2026-11-27.md) and
+    [release notes](release-notes-iwd-0.1.17.md).
+
 ## November 21 — Chriz Easy IWD 0.1.16 (collection 0.1.17) released
 
 Published from [main at 6b93be3](https://github.com/Chrizhermann/chriz-bg-collection/commit/6b93be33599a49cf4db166c65d8bce3527c5c481)
