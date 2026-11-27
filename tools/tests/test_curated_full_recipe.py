@@ -318,8 +318,9 @@ class CuratedFullRecipeTests(unittest.TestCase):
             # November 22: alpha.17 adds EET world progression and SoD backtracking 680.
             # November 23: alpha.18 adds RAW specialist spell-scroll learning fix 470.
             # November 27: alpha.19 adds BG1 early-party XP boost 695.
-            # November 27: alpha.21 adds 696 (Challenge Mode Quick Loot), 697, and 698.
-            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.21")
+            # November 27: alpha.21 adds 696 (Challenge Mode Quick Loot), 697, and 698;
+            # alpha.22 adds optional mutually exclusive unpaused inventory 699 and 700.
+            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.22")
             collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
             preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))
             mods = {path.stem for path in (output / "mods").glob("*.toml")}
@@ -493,8 +494,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # November 27: Modpack alpha.21 (PR #29, following alpha.20 PR #28) adds optional
                 # Challenge Mode 696 (Quick Loot during combat, requiring EEex) plus defaults 697
                 # (Watcher's Keep instant teleporters) and 698 (clear lingering room effects on leave,
-                # requiring EEex) after 695.
-                "a7ed57aaf167d3881ea1fe65c31e08a29651983c79e8191ec97dedca1d6b1f3d",
+                # requiring EEex) after 695; alpha.22 adds optional mutually exclusive 699 and 700.
+                "c1e99a364a4d7729ad68dd1ac16073b030396ffee8d0ed259fb1e94429a8e996",
             )
 
             legacy_bg1npc_groups = {

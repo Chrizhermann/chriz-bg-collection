@@ -73,8 +73,9 @@ NATIVE_RUN_ORDERS = {
     # Alpha.18 adds RAW specialist spell-scroll learning 470 after 460.
     # Alpha.19 adds BG1 early-party XP boost 695 after 680; alpha.20 adds Watcher's Keep
     # teleporters 697 and room-effects cleanup 698; alpha.21 adds Challenge Mode combat Quick Loot
-    # disable 696 before 697.
-    "chriz-bg-modpack-bg2": [130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680, 695, 696, 697, 698],
+    # disable 696 before 697; alpha.22 adds optional mutually exclusive Unpaused Inventory
+    # choices 699 (always) and 700 (combat only) after 698.
+    "chriz-bg-modpack-bg2": [130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680, 695, 696, 697, 698, 699, 700],
     # Modpack alpha.13 (October 20) declares EET join XP 239 right after 238; it runs
     # after the NPC mods and EET_end and before the campaign XP run, as 650 requires.
     "chriz-bg-modpack-late-companions-bg2": [189, 237, 238, 239, 620],
@@ -774,16 +775,16 @@ _EXPANDED_RELEASE_EVIDENCE = {
     "date": "2026-09-16",
     "scope": "Passed focused selection, dependencies, native component ordering and source intake checks; Christopher performs the installation and gameplay acceptance separately.",
 }
-_MODPACK_ALPHA21_EVIDENCE = {
-    "commit": "5b178fb6ea390d52799bac5e6d00af7eeb6a8d4a",
-    "test_artifact": "tools/tests/test_nov27_modpack_alpha21_combat_quickloot_recipe.py",
+_MODPACK_ALPHA22_EVIDENCE = {
+    "commit": "0000000000000000000000000000000000000000",
+    "test_artifact": "tools/tests/test_nov27_modpack_alpha22_unpaused_inventory_recipe.py",
     "date": "2026-11-27",
-    "scope": "Static alpha.21 pin, source, component (Challenge Mode Quick Loot suppression 696, defaults 697 and 698, omitting 690) and order assertions only; fresh source/package verification is in release-intake-20261127-chriz-bg-modpack-v0.2.0-alpha.21-chriz-easy-bg-chriz-easy-iwd.toml; not a WeiDU installation or gameplay acceptance.",
+    "scope": "Static alpha.22 pin, source, component (optional mutually exclusive EEex unpaused inventory 699 always / 700 combat only, keeping optional Challenge Mode 696, defaults 697 and 698, and omitting 690) and order assertions only; fresh source/package verification is in release-intake-20261127-chriz-bg-modpack-v0.2.0-alpha.22-chriz-easy-bg-chriz-easy-iwd.toml; not a WeiDU installation or gameplay acceptance.",
 }
 CURATED_SCOPED_RUN_EVIDENCE = {
-    "chriz-bg-modpack-pre-continuity-bg2": _MODPACK_ALPHA21_EVIDENCE,
-    "chriz-bg-modpack-continuity-bg2": _MODPACK_ALPHA21_EVIDENCE,
-    "chriz-bg-modpack-late-companions-bg2": _MODPACK_ALPHA21_EVIDENCE,
+    "chriz-bg-modpack-pre-continuity-bg2": _MODPACK_ALPHA22_EVIDENCE,
+    "chriz-bg-modpack-continuity-bg2": _MODPACK_ALPHA22_EVIDENCE,
+    "chriz-bg-modpack-late-companions-bg2": _MODPACK_ALPHA22_EVIDENCE,
 }
 
 

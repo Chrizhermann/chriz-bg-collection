@@ -451,12 +451,17 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // adds optional Challenge Mode Quick Loot suppression 696 (requiring EEex) plus defaults
     // BG2 spells in SoD 697 and non-party creature resilience 698 (requiring EEex); undoing
     // 696/697/698 and restoring alpha.19 reproduces `alpha19_digests`.
+    // Pinned on November 27 to Modpack v0.2.0-alpha.22 (PR #30): adds optional mutually exclusive
+    // EEex unpaused inventory choices 699 (always) and 700 (combat only) after 698; undoing
+    // 699/700 and restoring alpha.21 reproduces `alpha21_digests`.
     const ROUND_CLOCK: &str = "feature:chriz-bg-rebalance:component-361";
     const SCROLL_LEARN_FIX: &str = "feature:chriz-bg-modpack:component-470";
     const BG1_EARLY_PARTY_XP: &str = "feature:chriz-bg-modpack:component-695";
     const NO_COMBAT_QUICKLOOT: &str = "feature:chriz-bg-modpack:component-696";
     const BG2_SPELLS_IN_SOD: &str = "feature:chriz-bg-modpack:component-697";
     const NON_PARTY_CREATURE_RESILIENCE: &str = "feature:chriz-bg-modpack:component-698";
+    const UNPAUSED_INVENTORY_ALWAYS: &str = "feature:chriz-bg-modpack:component-699";
+    const UNPAUSED_INVENTORY_COMBAT: &str = "feature:chriz-bg-modpack:component-700";
     const EET_WORLD_PROGRESSION: &str = "feature:chriz-bg-modpack:component-680";
     const EET_WORLD_PROGRESSION_DEFAULT_TITLE: &str =
         "Story-consistent EET campaign boundaries and SoD backtracking";
@@ -474,6 +479,7 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     for (
         dir,
         current_digests,
+        alpha21_digests,
         alpha19_digests,
         alpha18_digests,
         challenge_680_digests,
@@ -485,6 +491,11 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     ) in [
         (
             "../manifest",
+            [
+                "677fe9ee251a9d832566642872e5453db742848dcbc689028bc91a74708d4fb5",
+                "e324404e2713946dda41c7b06dc0d66ffe61b0628c04270e559d6cc3fd234796",
+                "26772f6b9cec06f0f8045ee10d4f87d004cd0a3961d6315591e0a33435ac7f2a",
+            ],
             [
                 "5e324aabd6bc28042f03cd5dab0402a7886f455941803e12be90c28f5e5a0780",
                 "6d3aacb32f3e90cb2c975fc1b7ce35b5dbe392b4e57b0d12f15711ef145bb3f3",
@@ -529,6 +540,11 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         ),
         (
             "../recipes/curated-full-current",
+            [
+                "b39393fcdae891da953fd290dd64b7f6d8af58bf66161b955d1dfddc8110cbb0",
+                "ce6e93185ac5bf34136aa9f06506eaaa021d26c56c447925ba58e483c25af149",
+                "b3654b01359715b5e33efa85d1a36e5d83322b502bc65e7655e758efb41b89b9",
+            ],
             [
                 "2b4e78d121a65d8793a32e838263547664d9a335da12a1ca116496491d0f2b0d",
                 "bb446834b8d67e17aa207c3c1d3ce3941fe77f024d5d8050d426d8b198147256",
@@ -577,6 +593,37 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         assert_eq!(
             recommended_digests(&manifest, &evaluation),
             current_digests,
+            "{dir}"
+        );
+
+        // Undoing Modpack alpha.22 (removing 699/700 and restoring alpha.21) must reproduce
+        // `alpha21_digests`.
+        let modpack = manifest.mods.get_mut("chriz-bg-modpack").unwrap();
+        assert_eq!(modpack.artifact_id, "chriz-bg-modpack-0.2.0-alpha.22");
+        modpack.artifact_id = "chriz-bg-modpack-0.2.0-alpha.21".to_owned();
+        let components_before = modpack.components.len();
+        modpack
+            .components
+            .retain(|component| !matches!(component.id, 699..=700));
+        assert_eq!(modpack.components.len() + 2, components_before);
+        let modpack_run = manifest
+            .collection
+            .runs
+            .iter_mut()
+            .find(|run| run.run_id == "chriz-bg-modpack-bg2")
+            .unwrap();
+        let run_components_before = modpack_run.components.len();
+        modpack_run.components.retain(|id| !matches!(id, 699..=700));
+        assert_eq!(modpack_run.components.len() + 2, run_components_before);
+        let features_before = manifest.collection.features.len();
+        manifest.collection.features.retain(|feature| {
+            feature.id != UNPAUSED_INVENTORY_ALWAYS && feature.id != UNPAUSED_INVENTORY_COMBAT
+        });
+        assert_eq!(manifest.collection.features.len() + 2, features_before);
+        let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        assert_eq!(
+            recommended_digests(&manifest, &evaluation),
+            alpha21_digests,
             "{dir}"
         );
 

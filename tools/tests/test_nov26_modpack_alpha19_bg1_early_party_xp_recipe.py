@@ -23,7 +23,7 @@ PREVIOUS_EVIDENCE = "manifest/evidence/release-intake-20261123-chriz-bg-modpack-
 MOD = "chriz-bg-modpack"
 PIN = "chriz-bg-modpack-0.2.0-alpha.19"
 PREVIOUS = "chriz-bg-modpack-0.2.0-alpha.18"
-SUCCESSOR = "chriz-bg-modpack-0.2.0-alpha.21"
+SUCCESSOR = "chriz-bg-modpack-0.2.0-alpha.22"
 TAG = "v0.2.0-alpha.19"
 SOURCE_COMMIT = "6e6b3643682d50a63abcfe99a958afeb0ae3a108"
 PIN_COMMIT = "864102896d76b54c5cdb6e4ca7ce68610dd0a77b"
@@ -139,9 +139,10 @@ class Nov26ModpackAlpha19Bg1EarlyPartyXpTests(unittest.TestCase):
                 self.assertNotIn(UNOFFERED, names)
 
                 native = set(self.record["native_components"])
-                # Alpha.20/alpha.21 add 696, 697, and 698 after 695 in BG; earlier declarations keep their order.
+                # Alpha.20/alpha.21 add 696, 697, and 698 after 695 in BG; alpha.22 adds 699 and 700;
+                # earlier declarations keep their order.
                 for r in (r for r in collection["runs"] if r["mod_id"] == MOD):
-                    self.assertTrue(set(r["components"]) - {696, 697, 698} <= native, r["run_id"])
+                    self.assertTrue(set(r["components"]) - {696, 697, 698, 699, 700} <= native, r["run_id"])
                     self.assertNotIn(UNOFFERED, r["components"], r["run_id"])
 
                 if is_iwd:
@@ -150,7 +151,7 @@ class Nov26ModpackAlpha19Bg1EarlyPartyXpTests(unittest.TestCase):
                     (run,) = [run for run in collection["runs"] if run["mod_id"] == MOD]
                     self.assertEqual(run["run_id"], IWD_RUN)
                     self.assertEqual(run["phase"], "main")
-                    self.assertEqual(run["components"], [470])
+                    self.assertEqual(run["components"], [470, 699, 700])
                     self.assertNotIn(COMPONENT, run["components"])
                 else:
                     feature = features[FEATURE]
@@ -177,7 +178,7 @@ class Nov26ModpackAlpha19Bg1EarlyPartyXpTests(unittest.TestCase):
 
     def test_iwd_0_1_20_release_ledger_hotpatch_and_docs(self) -> None:
         release = json.loads((ROOT / IWD_PROFILE / "release.json").read_text(encoding="utf-8"))
-        self.assertEqual(release["version"], "0.1.22")
+        self.assertIn(release["version"], ("0.1.22", "0.1.23"))
         ledger = _load(ROOT / f"{IWD_PROFILE}/releases/v0.1.20/ledger.toml")
         self.assertEqual((ledger["recipe_id"], ledger["version"], ledger["supersedes"]), ("chriz-easy-iwd", "0.1.20", "0.1.19"))
         (change,) = ledger["changes"]
@@ -206,7 +207,7 @@ class Nov26ModpackAlpha19Bg1EarlyPartyXpTests(unittest.TestCase):
             "Modpack PR #26",
             EVIDENCE,
             f"| {COMPONENT} | {LABEL} | chriz-bg-modpack: Gameplay tweaks | | | default |",
-            "71 current or historical entries; the collection exposes 54.",
+            "73 current or historical entries; the collection exposes 56.",
         ):
             self.assertIn(phrase, catalog)
 

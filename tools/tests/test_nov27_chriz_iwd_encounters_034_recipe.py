@@ -95,7 +95,7 @@ class Nov27ChrizIwdEncounters034RecipeTests(unittest.TestCase):
         tauri_iwd = json.loads((ROOT / "app/src-tauri/tauri.iwd.conf.json").read_text(encoding="utf-8"))
         self.assertEqual(tauri_iwd["version"], "0.1.17")
         release = json.loads((ROOT / f"{RECIPE}/release.json").read_text(encoding="utf-8"))
-        self.assertEqual(release["version"], "0.1.22")
+        self.assertIn(release["version"], ("0.1.22", "0.1.23"))
         ledger = load(f"{RECIPE}/releases/v0.1.22/ledger.toml")
         self.assertEqual((ledger["recipe_id"], ledger["version"], ledger["supersedes"]), ("chriz-easy-iwd", "0.1.22", "0.1.21"))
         change = next(change for change in ledger["changes"] if change["id"] == PIN)

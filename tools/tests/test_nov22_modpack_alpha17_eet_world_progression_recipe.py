@@ -24,7 +24,7 @@ PREVIOUS_EVIDENCE = "manifest/evidence/release-intake-20261108-chriz-bg-modpack-
 MOD = "chriz-bg-modpack"
 PIN = "chriz-bg-modpack-0.2.0-alpha.17"
 PREVIOUS = "chriz-bg-modpack-0.2.0-alpha.16"
-SUCCESSOR = "chriz-bg-modpack-0.2.0-alpha.21"
+SUCCESSOR = "chriz-bg-modpack-0.2.0-alpha.22"
 TAG = "v0.2.0-alpha.17"
 SOURCE_COMMIT = "5d93338aff1b85a2bc1ebc602084e255a8c11cea"
 PIN_COMMIT = "41e1ac82d45e93402707aaafc25337784fd11477"
@@ -134,10 +134,11 @@ class Nov22ModpackAlpha17EETWorldProgressionTests(unittest.TestCase):
                 run_ids = [run["run_id"] for run in collection["runs"]]
                 (run,) = [run for run in collection["runs"] if run["run_id"] == RUN]
                 native = set(self.record["native_components"])
-                # Alpha.18 adds component 470 after 460; alpha.19 adds 695 after 680; alpha.20/alpha.21 add 696, 697, 698;
+                # Alpha.18 adds component 470 after 460; alpha.19 adds 695 after 680;
+                # alpha.20/alpha.21 add 696, 697, 698; alpha.22 adds 699, 700;
                 # earlier declarations keep their order.
                 for r in (r for r in collection["runs"] if r["mod_id"] == MOD):
-                    self.assertTrue(set(r["components"]) - {470, 695, 696, 697, 698} <= native, r["run_id"])
+                    self.assertTrue(set(r["components"]) - {470, 695, 696, 697, 698, 699, 700} <= native, r["run_id"])
 
                 feature = features[FEATURE]
                 # Christopher, 2026-11-22: on only with Challenge Mode, off by default.
@@ -152,7 +153,7 @@ class Nov22ModpackAlpha17EETWorldProgressionTests(unittest.TestCase):
                 self.assertIn(FEATURE, group["members"])
                 self.assertNotIn(GROUP, preset)
                 self.assertEqual(run["phase"], "post-eet-end")
-                self.assertEqual(run["components"][-6:-4], [670, COMPONENT])
+                self.assertEqual(run["components"][-8:-6], [670, COMPONENT])
                 for earlier in ("eet-end-bg2", "stratagems-bg2", "chriz-sod-remix-bg2"):
                     self.assertLess(run_ids.index(earlier), run_ids.index(RUN), earlier)
                 names = {item["id"]: item["name"] for item in mod["components"]}
@@ -196,7 +197,7 @@ class Nov22ModpackAlpha17EETWorldProgressionTests(unittest.TestCase):
             EVIDENCE,
             f"| {COMPONENT} | {LABEL} | chriz-bg-modpack: Gameplay tweaks | | | optional |",
             "Christopher's decision, 2026-11-22: on only with Challenge Mode, off by default.",
-            "71 current or historical entries; the collection exposes 54.",
+            "73 current or historical entries; the collection exposes 56.",
         ):
             self.assertIn(phrase, catalog)
 

@@ -30,7 +30,7 @@ no installer references, such as older versions, are not listed.
 | Bubb's Spell Menu Extended | 5.2 | `bubb-spell-menu` | `ac5380e99a53…` | [tag archive](https://codeload.github.com/Bubb13/Bubbs-Spell-Menu-Extended/zip/refs/tags/v5.2) |
 | BuffBot | 1.16.2 | `buffbot` | `ab2d95f58911…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.16.2/buffbot-v1.16.2.zip) |
 | The Tweaks Anthology | 7649ced6cd25865874d787ec1a9abbc67b068729 | `cdtweaks` | `117cd79cb518…` | [commit archive](https://codeload.github.com/Gibberlings3/Tweaks-Anthology/zip/7649ced6cd25865874d787ec1a9abbc67b068729) |
-| chriz-bg-modpack | 0.2.0-alpha.21 | `chriz-bg-modpack` | `717b17071e26…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.21/chriz-bg-modpack-v0.2.0-alpha.21.zip) |
+| chriz-bg-modpack | 0.2.0-alpha.22 | `chriz-bg-modpack` | `53044637cbd3…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.22/chriz-bg-modpack-v0.2.0-alpha.22.zip) |
 | CHRIZ-BG-REBALANCE | 0.8.12 | `chriz-bg-rebalance` | `f64314ab1462…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.12/chriz-bg-rebalance-v0.8.12-windows.zip) |
 | Chriz Multiplayer Fix | 0.1.0 | `chriz-multiplayer-fix` | `5b85b267d33a…` | [release asset](https://github.com/Chrizhermann/chriz-multiplayer-fix/releases/download/v0.1.0/chriz-multiplayer-fix-v0.1.0.zip) |
 | Chriz Overhead Text | 0.1.0 | `chriz-overhead-text` | `a7023258fbc6…` | [release asset](https://github.com/Chrizhermann/chriz-overhead-text/releases/download/v0.1.0/chriz-overhead-text-v0.1.0.zip) |
@@ -105,7 +105,7 @@ no installer references, such as older versions, are not listed.
 | Black Hearts | 2.05 | `blackhearts` | `a1a6257a2c21…` | [release asset](https://github.com/A-Wizard-Did-It/Black-Hearts/releases/download/v2.05/BlackHearts-v2.05.iemod) |
 | Bubb's Spell Menu Extended | 5.2 | `bubb-spell-menu` | `ac5380e99a53…` | [tag archive](https://codeload.github.com/Bubb13/Bubbs-Spell-Menu-Extended/zip/refs/tags/v5.2) |
 | BuffBot | 1.16.2 | `buffbot` | `ab2d95f58911…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.16.2/buffbot-v1.16.2.zip) |
-| chriz-bg-modpack | 0.2.0-alpha.21 | `chriz-bg-modpack` | `717b17071e26…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.21/chriz-bg-modpack-v0.2.0-alpha.21.zip) |
+| chriz-bg-modpack | 0.2.0-alpha.22 | `chriz-bg-modpack` | `53044637cbd3…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.22/chriz-bg-modpack-v0.2.0-alpha.22.zip) |
 | CHRIZ-BG-REBALANCE | 0.8.12 | `chriz-bg-rebalance` | `f64314ab1462…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.12/chriz-bg-rebalance-v0.8.12-windows.zip) |
 | Chriz Multiplayer Fix | 0.1.0 | `chriz-multiplayer-fix` | `5b85b267d33a…` | [release asset](https://github.com/Chrizhermann/chriz-multiplayer-fix/releases/download/v0.1.0/chriz-multiplayer-fix-v0.1.0.zip) |
 | Chriz Overhead Text | 0.1.0 | `chriz-overhead-text` | `a7023258fbc6…` | [release asset](https://github.com/Chrizhermann/chriz-overhead-text/releases/download/v0.1.0/chriz-overhead-text-v0.1.0.zip) |

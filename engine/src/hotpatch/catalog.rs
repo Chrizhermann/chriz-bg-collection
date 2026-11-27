@@ -622,7 +622,12 @@ mod tests {
                 .filter(|id| {
                     !matches!(
                         id.as_str(),
-                        "iwd-0.1.18" | "iwd-0.1.19" | "iwd-0.1.20" | "iwd-0.1.21" | "iwd-0.1.22"
+                        "iwd-0.1.18"
+                            | "iwd-0.1.19"
+                            | "iwd-0.1.20"
+                            | "iwd-0.1.21"
+                            | "iwd-0.1.22"
+                            | "iwd-0.1.23"
                     )
                 })
                 .collect::<Vec<_>>()
@@ -632,6 +637,8 @@ mod tests {
         assert!(catalog.base("iwd-0.1.20").is_some());
         assert!(catalog.base("iwd-0.1.21").is_some());
         assert!(catalog.base("iwd-0.1.22").is_some());
+        assert!(catalog.base("iwd-0.1.23").is_some());
+        assert!(catalog.base("iwd-0.1.23").is_some());
 
         let quest_fix = catalog
             .hotpatch("chriz-iwd-encounters-0.3.4-quest-counters")

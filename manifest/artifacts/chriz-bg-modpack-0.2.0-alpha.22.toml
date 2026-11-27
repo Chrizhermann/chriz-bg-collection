@@ -1,15 +1,15 @@
-id = "chriz-bg-modpack-0.2.0-alpha.21"
+id = "chriz-bg-modpack-0.2.0-alpha.22"
 name = "chriz-bg-modpack"
-version = "0.2.0-alpha.21"
+version = "0.2.0-alpha.22"
 acquisition = "fetch-only"
 
 [source]
 kind = "github-release"
-url = "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.21/chriz-bg-modpack-v0.2.0-alpha.21.zip"
-reference = "v0.2.0-alpha.21"
-expected_filename = "chriz-bg-modpack-v0.2.0-alpha.21.zip"
-expected_length = 9597844
-sha256 = "717b17071e26e426d7d74f3a0c8b1d6ac1aa49d55932512b92bb21bb418c190f"
+url = "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.22/chriz-bg-modpack-v0.2.0-alpha.22.zip"
+reference = "v0.2.0-alpha.22"
+expected_filename = "chriz-bg-modpack-v0.2.0-alpha.22.zip"
+expected_length = 9607048
+sha256 = "53044637cbd3259b3eabf8032b53137560aa2ae821074c8ecf8a64a42474a317"
 redirect_hosts = ["release-assets.githubusercontent.com"]
 
 [archive]
@@ -28,5 +28,5 @@ max_compression_ratio = 100
 [provenance]
 homepage = "https://github.com/Chrizhermann/chriz-bg-modpack"
 license = "MIT"
-url = "https://github.com/Chrizhermann/chriz-bg-modpack/releases/tag/v0.2.0-alpha.21"
+url = "https://github.com/Chrizhermann/chriz-bg-modpack/releases/tag/v0.2.0-alpha.22"
 reviewed_on = "2026-11-27"

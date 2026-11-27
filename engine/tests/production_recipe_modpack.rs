@@ -10,7 +10,7 @@ use bg_engine::Manifest;
 const MODPACK_COMPONENTS: &[u32] = &[
     110, 130, 135, 140, 170, 188, 189, 190, 192, 193, 194, 195, 196, 197, 198, 199, 220, 221, 222,
     223, 224, 225, 230, 231, 232, 233, 234, 400, 410, 430, 440, 450, 460, 470, 610, 611, 620, 630,
-    640, 235, 236, 237, 238, 239, 660, 670, 680, 695, 696, 697, 698, 650, 651, 652,
+    640, 235, 236, 237, 238, 239, 660, 670, 680, 695, 696, 697, 698, 699, 700, 650, 651, 652,
 ];
 
 /// The September 16 intake split the single post-EET modpack run into the
@@ -34,8 +34,11 @@ const CONTINUITY_COMPONENTS: &[u32] = &[199];
 /// spell-scroll learning fix 470 after 460 (omitting 690). Alpha.19 adds BG1 early-party
 /// XP boost 695 after 680. Alpha.20 adds Watcher's Keep instant teleporters 697 and clear
 /// lingering room effects 698. Alpha.21 adds Challenge Mode combat Quick Loot disable 696 before 697.
+// Alpha.21 adds Challenge Mode combat Quick Loot disable 696 before 697; alpha.22 adds optional
+// mutually exclusive EEex unpaused inventory choices 699 (always) and 700 (combat only) after 698.
 const POST_EET_END_COMPONENTS: &[u32] = &[
-    130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680, 695, 696, 697, 698,
+    130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680, 695, 696, 697, 698, 699,
+    700,
 ];
 
 const RECOMMENDED_PRE_CONTINUITY_COMPONENTS: &[u32] = &[
@@ -67,10 +70,13 @@ fn recipe() -> Manifest {
 fn freezes_the_public_modpack_alpha_without_publishing_its_bundled_weidu() {
     let manifest = recipe();
     let artifact_id = &manifest.mods["chriz-bg-modpack"].artifact_id;
-    // November 27: alpha.21 adds Challenge Mode combat Quick Loot disable 696 on top of alpha.20
-    // (697, 698); alpha.20, alpha.19 and earlier stay as history.
-    assert_eq!(artifact_id, "chriz-bg-modpack-0.2.0-alpha.21");
+    // November 27: alpha.22 adds optional mutually exclusive EEex unpaused inventory choices 699
+    // (always) and 700 (combat only) on top of alpha.21 (696..698); alpha.21 and earlier stay as history.
+    assert_eq!(artifact_id, "chriz-bg-modpack-0.2.0-alpha.22");
     let artifact = &manifest.artifacts[artifact_id];
+    assert!(manifest
+        .artifacts
+        .contains_key("chriz-bg-modpack-0.2.0-alpha.21"));
     assert!(manifest
         .artifacts
         .contains_key("chriz-bg-modpack-0.2.0-alpha.20"));
@@ -92,22 +98,22 @@ fn freezes_the_public_modpack_alpha_without_publishing_its_bundled_weidu() {
     assert!(!manifest
         .artifacts
         .contains_key("chriz-bg-modpack-0.2.0-alpha.5"));
-    assert_eq!(artifact.version, "0.2.0-alpha.21");
+    assert_eq!(artifact.version, "0.2.0-alpha.22");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
-    assert_eq!(artifact.source.reference, "v0.2.0-alpha.21");
+    assert_eq!(artifact.source.reference, "v0.2.0-alpha.22");
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.21/chriz-bg-modpack-v0.2.0-alpha.21.zip"
+        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.22/chriz-bg-modpack-v0.2.0-alpha.22.zip"
     );
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-bg-modpack-v0.2.0-alpha.21.zip")
+        Some("chriz-bg-modpack-v0.2.0-alpha.22.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(9_597_844));
+    assert_eq!(artifact.source.expected_length, Some(9_607_048));
     assert_eq!(
         artifact.source.sha256,
-        "717b17071e26e426d7d74f3a0c8b1d6ac1aa49d55932512b92bb21bb418c190f"
+        "53044637cbd3259b3eabf8032b53137560aa2ae821074c8ecf8a64a42474a317"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -184,7 +190,7 @@ fn authors_all_approved_components_between_remote_console_and_buffbot() {
     assert_eq!(runs[baeloth].components, [235]);
 
     let installer = &manifest.mods["chriz-bg-modpack"];
-    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.21");
+    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.22");
     assert_eq!(installer.tp2, "setup-chriz-bg-modpack.tp2");
     assert_eq!(installer.language, 0);
     assert_eq!(installer.weidu_artifact_id, "weidu-249-amd64");
@@ -297,7 +303,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
         .unwrap()
         .contains(&130));
 
-    for component in [222, 223, 235, 610] {
+    for component in [222, 223, 235, 610, 699, 700] {
         let id = format!("feature:chriz-bg-modpack:component-{component}");
         let control = evaluation
             .view
@@ -307,6 +313,30 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
         assert_eq!(control.readiness, Readiness::Ready, "{id}");
         assert!(!control.selected, "{id}");
     }
+
+    for (choice_id, expected_id) in [
+        ("feature:chriz-bg-modpack:component-699", 699u32),
+        ("feature:chriz-bg-modpack:component-700", 700u32),
+    ] {
+        let mut picked = evaluation.normalized_selection.to_selection();
+        picked.set_feature(choice_id, true);
+        let picked_eval = bg_engine::recipe_view::evaluate(&manifest, &picked).unwrap();
+        assert!(picked_eval
+            .plan
+            .components_for("chriz-bg-modpack-bg2")
+            .unwrap()
+            .contains(&expected_id));
+    }
+    let mut both_inv = evaluation.normalized_selection.to_selection();
+    both_inv.set_feature("feature:chriz-bg-modpack:component-699", true);
+    both_inv.set_feature("feature:chriz-bg-modpack:component-700", true);
+    let conflict_inv = bg_engine::recipe_view::evaluate(&manifest, &both_inv).unwrap();
+    let inv_run = conflict_inv
+        .plan
+        .components_for("chriz-bg-modpack-bg2")
+        .unwrap();
+    assert!(!inv_run.contains(&699));
+    assert!(!inv_run.contains(&700));
 
     // Campaign XP caps 650/651 and chapter caps 652 ship experimental, optional and unchecked.
     for component in [650, 651, 652] {

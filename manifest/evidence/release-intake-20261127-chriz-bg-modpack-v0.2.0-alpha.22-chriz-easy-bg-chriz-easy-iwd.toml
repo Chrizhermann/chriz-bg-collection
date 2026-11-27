@@ -1,0 +1,23 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-11-27"
+generator = "tools/prepare_own_mod_pin.py + chriz-bg-author + check_native_component_order.py"
+command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 <TP2 path>; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python -I tools/check_native_component_order.py --recipe-root <recipe> --mod-id <mod> --archive <fresh downloaded ZIP>"
+scope = "Chriz BG Modpack v0.2.0-alpha.22 (annotated tag at public-main commit 283e59e of Modpack PR #30, following v0.2.0-alpha.21 at 4e14389) replaces chriz-bg-modpack-0.2.0-alpha.21 in manifest, recipes/curated-full-current, and recipes/iwd-current. Adds optional mutually exclusive EEex inventory-unpause components 699 (always keep game unpaused while Inventory is open) and 700 (keep game unpaused in Inventory during combat only) after 698 in Chriz Easy BG (both optional and off by default in Chris's Recommended) and alongside 470 in Chriz Easy IWD (both optional and off by default in Chris's Recommended), while keeping 695, 696, 697, and 698 BG-only and keeping component 690 unoffered and off in all profiles. Each archive was verified against its artifact contract and native component order across all three recipes. The superseded evidence records stay as history, and so do the superseded artifact TOMLs in manifest and recipes/curated-full-current; in recipes/iwd-current the new artifact TOML replaces the superseded one. This is automated source/package verification, not a combined collection WeiDU installation or full campaign gameplay."
+
+# 244 entries, 11,699,119 bytes uncompressed, largest entry 7,197,358 bytes, depth 5.
+[[artifacts]]
+mod_id = "chriz-bg-modpack"
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.22"
+recipe_profiles = ["manifest", "recipes/curated-full-current", "recipes/iwd-current"]
+source_reference = "v0.2.0-alpha.22"
+source_commit = "283e59e3647ac1b422eae922b2efda62960aa072"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.22/chriz-bg-modpack-v0.2.0-alpha.22.zip"
+actual_length = 9607048
+actual_sha256 = "53044637cbd3259b3eabf8032b53137560aa2ae821074c8ecf8a64a42474a317"
+tp2_sha256 = "dfc689118152bd06df90bcb16df5196ba675a37c6617cec9ad7b2a557682ceeb"
+native_components = [110, 130, 135, 140, 160, 170, 188, 189, 190, 192, 193, 194, 195, 196, 197, 198, 199, 220, 221, 222, 223, 224, 225, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 400, 410, 430, 440, 450, 460, 470, 610, 611, 620, 630, 640, 660, 670, 680, 690, 695, 696, 697, 698, 699, 700, 650, 651, 652]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true

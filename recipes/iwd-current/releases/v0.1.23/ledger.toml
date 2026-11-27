@@ -1,0 +1,21 @@
+schema = 1
+recipe_id = "chriz-easy-iwd"
+version = "0.1.23"
+published_at = "2026-11-27T00:00:00Z"
+minimum_app_version = "0.1.1"
+supersedes = "0.1.22"
+
+[[changes]]
+id = "chriz-bg-modpack-0.2.0-alpha.22"
+title = "Chriz BG Modpack v0.2.0-alpha.22 adds optional unpaused-inventory modes (699 always / 700 combat only)"
+summary = "Pins Chriz BG Modpack v0.2.0-alpha.22 (was v0.2.0-alpha.21), adding mutually exclusive optional EEex components 699 (always keep game unpaused while Inventory is open) and 700 (keep game unpaused in Inventory during combat only) alongside mandatory component 470 (RAW spell-scroll learning fix). Both new options stay off by default in Chris's Recommended."
+save_applicability = "new-game-only"
+urgency = "informational"
+covers = [
+  "artifact:chriz-bg-modpack-0.2.0-alpha.21",
+  "artifact:chriz-bg-modpack-0.2.0-alpha.22",
+  "feature:mod:chriz-bg-modpack",
+  "feature:feature:chriz-bg-modpack:component-699",
+  "feature:feature:chriz-bg-modpack:component-700",
+  "run:chriz-bg-modpack-main",
+]
