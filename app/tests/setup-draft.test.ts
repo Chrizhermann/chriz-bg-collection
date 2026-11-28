@@ -99,4 +99,17 @@ describe("setup draft preferences", () => {
     clearSetupDraft("d:/my adventure/");
     expect(window.localStorage.getItem(SETUP_DRAFT_STORAGE_KEY)).toBeNull();
   });
+
+  it("round-trips a Linux selection and clears a saved draft when the host platform differs", () => {
+    const linuxDraft: SetupDraft = {
+      ...draft(),
+      destinationPath: "/home/deck/Games/My adventure",
+      sourcePaths: { bg1: "/home/deck/.local/share/Steam/BGEE", bg2: "/home/deck/.local/share/Steam/BG2EE" },
+      selection: { ...draft().selection, platform: "linux" },
+    };
+    saveSetupDraft(linuxDraft);
+    expect(loadSetupDraft({ ...status, platform: "linux" })).toEqual({ draft: linuxDraft, notice: null });
+    expect(loadSetupDraft({ ...status, platform: "windows" }).draft).toBeNull();
+    expect(window.localStorage.getItem(SETUP_DRAFT_STORAGE_KEY)).toBeNull();
+  });
 });

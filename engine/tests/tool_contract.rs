@@ -1,4 +1,4 @@
-#![cfg(all(windows, target_arch = "x86_64"))]
+#![cfg(all(any(windows, target_os = "linux"), target_arch = "x86_64"))]
 
 use std::env;
 use std::ffi::{OsStr, OsString};

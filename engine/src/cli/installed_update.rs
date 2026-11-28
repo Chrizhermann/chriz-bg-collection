@@ -243,7 +243,9 @@ pub(crate) fn verify_installed_baseline(
             })?,
             GameRoot::Bg2 => &created.staged_bg2,
         };
-        let bytes = bounded_file(&root, &game.join("WeiDU.log"))?;
+        let log_path = crate::weidu::log::resolve_weidu_log(game)
+            .map_err(|error| problem(format!("Could not locate WeiDU.log: {error}")))?;
+        let bytes = bounded_file(&root, &log_path)?;
         let active = parse_active_entries(&String::from_utf8_lossy(&bytes)).map_err(problem)?;
         let mut expected = final_log.components.clone();
         if final_log.target == GameRoot::Bg2 {

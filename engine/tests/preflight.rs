@@ -8,11 +8,12 @@ use bg_engine::games::{
     Eligibility, FindingKind, GameCandidate, GameFinding, GameRole, Storefront,
 };
 use bg_engine::preflight::{
-    initial_preflight_with, is_creator_protected_destination,
-    recheck_staging_target_before_mutation_with, recheck_target_before_mutation_with,
-    ExclusiveFileError, InitialPreflight, PreflightError, PreflightHost, RequiredInput,
-    SpaceRequirement, SystemPreflight,
+    initial_preflight_with, recheck_staging_target_before_mutation_with,
+    recheck_target_before_mutation_with, ExclusiveFileError, InitialPreflight, PreflightError,
+    PreflightHost, RequiredInput, SpaceRequirement,
 };
+#[cfg(windows)]
+use bg_engine::preflight::{is_creator_protected_destination, SystemPreflight};
 use bg_engine::recipe_view::NormalizedSelection;
 use bg_engine::resolve::InstallPlan;
 use bg_engine::session::{
@@ -585,11 +586,13 @@ fn locked_root_tlk_is_rejected_before_mutation() {
 
 /// A host whose TLK probe fails while another program briefly holds the file, for the first
 /// `held_for` calls, as a virus scanner does.
+#[cfg(windows)]
 struct BrieflyHeldTlkHost {
     held_for: usize,
     calls: std::cell::Cell<usize>,
 }
 
+#[cfg(windows)]
 impl PreflightHost for BrieflyHeldTlkHost {
     fn available_space(&self, path: &Path) -> io::Result<u64> {
         FakeHost::default().available_space(path)

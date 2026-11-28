@@ -1463,6 +1463,7 @@ fn gog_and_beamdog_games_in_their_default_folders_are_found() {
         &StoreFolders {
             beamdog_games: vec![beamdog_games, temp.path().join("missing")],
             gog_libraries: vec![gog_library],
+            ..StoreFolders::default()
         },
     )
     .unwrap();
@@ -1841,6 +1842,7 @@ fn discovers_gog_and_beamdog_iwdee_and_unhyphenated_bg2ee_and_ignores_os_metadat
     let folders = StoreFolders {
         beamdog_games: vec![beamdog_lib],
         gog_libraries: vec![gog_lib],
+        ..StoreFolders::default()
     };
     let iwd_found = discover_games_with(
         &iwd_profiles,

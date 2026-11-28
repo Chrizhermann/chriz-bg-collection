@@ -143,7 +143,49 @@ fn known_application_data_parents() -> Result<Vec<PathBuf>, String> {
     allow(dead_code)
 )]
 fn known_application_data_parents() -> Result<Vec<PathBuf>, String> {
-    Err("only the Windows uninstaller removes application data".to_owned())
+    let home = std::env::var_os("HOME").map(PathBuf::from);
+    let xdg_data = std::env::var_os("XDG_DATA_HOME").map(PathBuf::from);
+    let xdg_config = std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from);
+    let xdg_cache = std::env::var_os("XDG_CACHE_HOME").map(PathBuf::from);
+    unix_application_data_parents(
+        home.as_deref(),
+        xdg_data.as_deref(),
+        xdg_config.as_deref(),
+        xdg_cache.as_deref(),
+    )
+}
+
+#[cfg(any(not(windows), test))]
+fn unix_application_data_parents(
+    home: Option<&Path>,
+    xdg_data: Option<&Path>,
+    xdg_config: Option<&Path>,
+    xdg_cache: Option<&Path>,
+) -> Result<Vec<PathBuf>, String> {
+    let home = home.filter(|path| path.is_absolute());
+    let mut parents = Vec::new();
+    let specs = [
+        (xdg_data, ".local/share"),
+        (xdg_config, ".config"),
+        (xdg_cache, ".cache"),
+    ];
+    for (explicit, fallback_rel) in specs {
+        let candidate = explicit
+            .filter(|path| path.is_absolute())
+            .map(Path::to_path_buf)
+            .or_else(|| home.map(|base| base.join(fallback_rel)));
+        if let Some(dir) = candidate {
+            if !parents.contains(&dir) {
+                parents.push(dir);
+            }
+        }
+    }
+    if parents.is_empty() {
+        return Err(
+            "could not determine XDG application data folders from XDG_*_HOME or HOME".to_owned(),
+        );
+    }
+    Ok(parents)
 }
 
 #[cfg(windows)]
@@ -212,6 +254,35 @@ mod tests {
     use std::fs;
     use std::path::{Path, PathBuf};
     use std::time::Duration;
+
+    #[test]
+    fn unix_application_data_parents_resolve_xdg_and_home_fallbacks_without_duplicates() {
+        let home = if cfg!(windows) {
+            Path::new(r"C:\home\player")
+        } else {
+            Path::new("/home/player")
+        };
+        let xdg_data = if cfg!(windows) {
+            Path::new(r"C:\custom\data")
+        } else {
+            Path::new("/custom/data")
+        };
+        let parents = super::unix_application_data_parents(
+            Some(home),
+            Some(xdg_data),
+            Some(xdg_data),
+            Some(Path::new("relative/cache")),
+        )
+        .unwrap();
+        assert_eq!(parents, vec![xdg_data.to_path_buf(), home.join(".cache")]);
+        assert!(super::unix_application_data_parents(
+            Some(Path::new("relative/home")),
+            None,
+            None,
+            None
+        )
+        .is_err());
+    }
 
     use super::{parse, remove_folders, Request, IDENTIFIER, REMOVE_APPLICATION_DATA};
 

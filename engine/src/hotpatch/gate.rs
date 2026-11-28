@@ -50,7 +50,7 @@ pub fn compare_setup(
     installed: &InstallPlan,
     rules: &GateRules,
 ) -> Result<SetupComparison, String> {
-    let recommended = evaluate_preset(manifest, &rules.recommended_preset, "windows")
+    let recommended = evaluate_preset(manifest, &rules.recommended_preset, crate::HOST_PLATFORM)
         .map_err(|error| format!("The recommended setup could not be evaluated: {error}"))?
         .plan;
     let by_mod = |plan: &InstallPlan| {
@@ -227,14 +227,15 @@ pub(super) fn assess_with(
                 let present = if let Some(installer) =
                     baseline.manifest.mods.get(&requirement.mod_id)
                 {
-                    let rows = crate::patches::files::read(
-                        &ctx.game().join("WeiDU.log"),
-                        16 * 1024 * 1024,
-                    )
-                    .and_then(|bytes| {
-                        crate::weidu::log::parse_active_entries(&String::from_utf8_lossy(&bytes))
+                    let rows = crate::weidu::log::resolve_weidu_log(&ctx.game())
+                        .map_err(|error| error.to_string())
+                        .and_then(|path| crate::patches::files::read(&path, 16 * 1024 * 1024))
+                        .and_then(|bytes| {
+                            crate::weidu::log::parse_active_entries(&String::from_utf8_lossy(
+                                &bytes,
+                            ))
                             .map_err(|error| error.to_string())
-                    });
+                        });
                     match rows {
                         Ok(rows) => {
                             let key = crate::weidu::log::normalize_tp2_key(&installer.tp2);

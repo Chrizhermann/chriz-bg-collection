@@ -78,6 +78,72 @@ pub fn safe_relative(name: &str) -> Result<(), String> {
     }
     Ok(())
 }
+
+/// Resolves a validated relative path under `root`, matching ASCII case-insensitively on
+/// case-sensitive Unix filesystems while refusing symlinks and case collisions.
+pub(crate) fn resolve_relative(root: &Path, name: &str) -> Result<std::path::PathBuf, String> {
+    safe_relative(name)?;
+    #[cfg(windows)]
+    {
+        Ok(root.join(name))
+    }
+    #[cfg(not(windows))]
+    {
+        let mut current = root.to_path_buf();
+        let mut components = name.split('/').peekable();
+        while let Some(part) = components.next() {
+            let is_leaf = components.peek().is_none();
+            let entries = match fs::read_dir(&current) {
+                Ok(entries) => entries,
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                    current.push(part);
+                    for rest in components {
+                        current.push(rest);
+                    }
+                    return Ok(current);
+                }
+                Err(error) => return Err(err(error)),
+            };
+            let mut matched: Option<(std::path::PathBuf, fs::Metadata)> = None;
+            for entry in entries {
+                let entry = entry.map_err(err)?;
+                if entry
+                    .file_name()
+                    .to_str()
+                    .is_some_and(|text| text.eq_ignore_ascii_case(part))
+                {
+                    if matched.is_some() {
+                        return Err("Case-colliding files are not supported.".into());
+                    }
+                    let entry_path = entry.path();
+                    let entry_meta = fs::symlink_metadata(&entry_path).map_err(err)?;
+                    matched = Some((entry_path, entry_meta));
+                }
+            }
+            match matched {
+                Some((found_path, found_meta)) => {
+                    if crate::reparse::metadata_is_link(&found_path, &found_meta)
+                        || (!is_leaf && !found_meta.is_dir())
+                    {
+                        return Err(format!(
+                            "Linked path is not supported: {}",
+                            found_path.display()
+                        ));
+                    }
+                    current = found_path;
+                }
+                None => {
+                    current.push(part);
+                    for rest in components {
+                        current.push(rest);
+                    }
+                    return Ok(current);
+                }
+            }
+        }
+        Ok(current)
+    }
+}
 pub fn create(path: &Path, bytes: &[u8]) -> Result<(), String> {
     let parent = path.parent().ok_or("Missing parent")?;
     // Inspect the nearest existing ancestor before creating any directory.
@@ -309,6 +375,16 @@ pub struct Stamp {
 }
 pub type Inventory = BTreeMap<String, Stamp>;
 pub fn inventory(root: &Path, profile: bool) -> Result<Inventory, String> {
+    Ok(inventory_entries(root, profile)?
+        .into_iter()
+        .map(|(lower, (_, stamp))| (lower, stamp))
+        .collect())
+}
+
+fn inventory_entries(
+    root: &Path,
+    profile: bool,
+) -> Result<BTreeMap<String, (String, Stamp)>, String> {
     if !profile {
         direct(root)?;
     }
@@ -348,7 +424,10 @@ pub fn inventory(root: &Path, profile: bool) -> Result<Inventory, String> {
             },
             directory: meta.is_dir(),
         };
-        if out.insert(name.to_ascii_lowercase(), stamp).is_some() {
+        if out
+            .insert(name.to_ascii_lowercase(), (name, stamp))
+            .is_some()
+        {
             return Err("Case-colliding files are not supported.".into());
         }
     }
@@ -373,24 +452,23 @@ pub fn copy_tree_with_progress(
     if destination.exists() {
         return Err("Backup destination already exists.".into());
     }
-    let before = inventory(source, profile)?;
+    let before = inventory_entries(source, profile)?;
     let total = before
         .values()
-        .filter(|stamp| !stamp.directory)
-        .map(|stamp| stamp.length)
+        .filter(|(_, stamp)| !stamp.directory)
+        .map(|(_, stamp)| stamp.length)
         .sum();
     let mut completed = 0;
     let mut reported = std::time::Instant::now();
     crate::operation_progress::bytes(progress, stage, completed, total);
     direct(destination.parent().ok_or("Backup parent missing")?)?;
     fs::create_dir(destination).map_err(err)?;
-    for (name, stamp) in &before {
-        let to = destination.join(name);
+    for (actual_name, stamp) in before.values() {
+        let to = destination.join(actual_name);
         if stamp.directory {
             fs::create_dir_all(&to).map_err(err)?;
         } else {
-            // Inventory path casing is canonicalized only on Windows, the supported platform.
-            let from = source.join(name);
+            let from = source.join(actual_name);
             if let Some(parent) = to.parent() {
                 fs::create_dir_all(parent).map_err(err)?;
             }
@@ -404,7 +482,7 @@ pub fn copy_tree_with_progress(
             std::io::copy(&mut input, &mut output).map_err(err)?;
             output.sync_all().map_err(err)?;
             if hash(&to)? != before_hash || hash(&from)? != before_hash {
-                return Err(format!("Backup verification failed: {name}"));
+                return Err(format!("Backup verification failed: {actual_name}"));
             }
             completed += stamp.length;
             if completed < total && reported.elapsed() >= std::time::Duration::from_millis(250) {
@@ -413,7 +491,11 @@ pub fn copy_tree_with_progress(
             }
         }
     }
-    if inventory(source, profile)? != before {
+    let before_stamps: Inventory = before
+        .into_iter()
+        .map(|(lower, (_, stamp))| (lower, stamp))
+        .collect();
+    if inventory(source, profile)? != before_stamps {
         return Err("Backup source changed during copying.".into());
     }
     crate::operation_progress::bytes(progress, stage, completed, total);
@@ -503,5 +585,42 @@ mod tests {
         for name in ["../other", "/root", "x:stream", "a\\b", ""] {
             assert!(safe_relative(name).is_err());
         }
+    }
+
+    #[test]
+    fn copy_tree_preserves_mixed_case_relative_paths() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path().join("src");
+        fs::create_dir_all(src.join("Override")).unwrap();
+        fs::write(src.join("Chitin.key"), b"key").unwrap();
+        fs::write(src.join("Override/WeiDU.log"), b"log").unwrap();
+        let dst = temp.path().join("backup");
+
+        copy_tree(&src, &dst, false).unwrap();
+
+        assert_eq!(fs::read(dst.join("Chitin.key")).unwrap(), b"key");
+        assert_eq!(fs::read(dst.join("Override/WeiDU.log")).unwrap(), b"log");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn resolve_relative_refuses_leaf_symlinks_and_exact_case_collisions() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("game");
+        let outside = temp.path().join("outside.txt");
+        fs::create_dir_all(root.join("override")).unwrap();
+        fs::write(&outside, b"outside").unwrap();
+
+        let dangling_leaf = root.join("override/dangling.2da");
+        std::os::unix::fs::symlink(temp.path().join("does-not-exist"), &dangling_leaf).unwrap();
+        assert!(resolve_relative(&root, "override/dangling.2da").is_err());
+
+        let live_leaf = root.join("override/live.2da");
+        std::os::unix::fs::symlink(&outside, &live_leaf).unwrap();
+        assert!(resolve_relative(&root, "override/live.2da").is_err());
+
+        fs::create_dir_all(root.join("Override")).unwrap();
+        fs::write(root.join("override/exact.2da"), b"lower").unwrap();
+        assert!(resolve_relative(&root, "override/exact.2da").is_err());
     }
 }

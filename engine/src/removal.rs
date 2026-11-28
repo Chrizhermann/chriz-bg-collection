@@ -605,6 +605,10 @@ fn reject_broad_root(root: &Path) -> Result<(), RemovalError> {
         "ProgramFiles(x86)",
         "APPDATA",
         "LOCALAPPDATA",
+        "XDG_DATA_HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_CACHE_HOME",
+        "XDG_STATE_HOME",
     ] {
         if let Some(path) = std::env::var_os(name)
             .map(PathBuf::from)
@@ -615,6 +619,56 @@ fn reject_broad_root(root: &Path) -> Result<(), RemovalError> {
                 return Err(failure(
                     "Refusing home, system, or application-data folder.",
                 ));
+            }
+        }
+    }
+    #[cfg(unix)]
+    {
+        for protected in [
+            "/bin",
+            "/boot",
+            "/dev",
+            "/etc",
+            "/lib",
+            "/lib64",
+            "/opt",
+            "/proc",
+            "/root",
+            "/run",
+            "/sbin",
+            "/srv",
+            "/sys",
+            "/tmp",
+            "/usr",
+            "/usr/bin",
+            "/usr/lib",
+            "/usr/local",
+            "/var",
+            "/var/cache",
+            "/var/lib",
+            "/var/log",
+            "/var/tmp",
+        ] {
+            if let Some(resolved) = resolvable_path(Path::new(protected))? {
+                if crate::reparse::windows_path_starts_with(&resolved, root) {
+                    return Err(failure(
+                        "Refusing home, system, or application-data folder.",
+                    ));
+                }
+            }
+        }
+        if let Some(home) = std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .filter(|path| path.is_absolute())
+        {
+            for sub in [".local", ".local/share", ".config", ".cache"] {
+                if let Some(resolved) = resolvable_path(&home.join(sub))? {
+                    if crate::reparse::windows_path_starts_with(&resolved, root) {
+                        return Err(failure(
+                            "Refusing home, system, or application-data folder.",
+                        ));
+                    }
+                }
             }
         }
     }
@@ -1848,5 +1902,42 @@ mod tests {
         let plan = preview(&f.app, "fixture-removal").unwrap();
         assert!(run(&f, &plan).is_err());
         assert!(f.source.join("original.txt").exists());
+    }
+    #[cfg(unix)]
+    #[test]
+    fn deletes_registered_copy_after_wine_created_proton_prefix_symlinks() {
+        use std::os::unix::fs::symlink;
+
+        let f = fixture();
+        let profile = reserve_profile(&f);
+        fs::create_dir_all(profile.join("save")).unwrap();
+        fs::write(profile.join("save/saved.gam"), b"save").unwrap();
+        complete(&f, &profile);
+
+        let pfx = f.root.join(".chriz/proton/pfx");
+        let dosdevices = pfx.join("dosdevices");
+        let prefix_docs = pfx.join("drive_c/users/steamuser/Documents");
+        fs::create_dir_all(&dosdevices).unwrap();
+        fs::create_dir_all(&prefix_docs).unwrap();
+        fs::create_dir_all(f.root.join(".chriz/weidu-env/xdg-data")).unwrap();
+        fs::write(
+            f.root.join(".chriz/weidu-env/xdg-data/Baldur.lua"),
+            b"-- eet env",
+        )
+        .unwrap();
+        symlink("../drive_c", dosdevices.join("c:")).unwrap();
+        symlink("/", dosdevices.join("z:")).unwrap();
+        symlink("/nonexistent/ttyS0", dosdevices.join("com1")).unwrap();
+        symlink(&profile, prefix_docs.join(profile.file_name().unwrap())).unwrap();
+
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert_kept(&plan, &profile);
+        run(&f, &plan).unwrap();
+
+        assert!(!f.root.exists());
+        assert_eq!(fs::read(profile.join("save/saved.gam")).unwrap(), b"save");
+        assert!(profile.join(SAVE_OWNER_MARKER).is_file());
+        assert!(f.source.join("original.txt").exists());
+        assert!(f.cache.join("archive.zip").exists());
     }
 }

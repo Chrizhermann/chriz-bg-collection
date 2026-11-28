@@ -109,10 +109,8 @@ fn tables(game: &Path) -> Result<BTreeMap<String, Vec<u8>>, String> {
     description::TABLES
         .iter()
         .map(|name| {
-            Ok((
-                (*name).to_owned(),
-                files::read(&game.join("override").join(name), 16 * 1024 * 1024)?,
-            ))
+            let path = files::resolve_relative(game, &format!("override/{name}"))?;
+            Ok(((*name).to_owned(), files::read(&path, 16 * 1024 * 1024)?))
         })
         .collect()
 }
@@ -121,16 +119,26 @@ fn plan(ctx: &Context<'_>, catalog: &catalog::Catalog) -> Result<Plan, String> {
     crate::manual_checkpoint::game_update_guard(&ctx.record.managed_root)?;
     validate_context(ctx)?;
     let game = ctx.game();
-    if !String::from_utf8(files::read(&game.join("weidu.conf"), 65536)?)
-        .map_err(err)?
-        .trim()
-        .eq_ignore_ascii_case("lang_dir = en_us")
+    if !String::from_utf8(files::read(
+        &files::resolve_relative(&game, "weidu.conf")?,
+        65536,
+    )?)
+    .map_err(err)?
+    .trim()
+    .eq_ignore_ascii_case("lang_dir = en_us")
     {
         return Err("This first patch supports English installations only.".into());
     }
-    let log = files::read(&game.join("WeiDU.log"), 16 * 1024 * 1024)?;
-    let kitlist = files::read(&game.join("override/KITLIST.2DA"), 16 * 1024 * 1024)?;
-    let tlk = files::read(&game.join("lang/en_US/dialog.tlk"), 256 * 1024 * 1024)?;
+    let log_path = crate::weidu::log::resolve_weidu_log(&game).map_err(err)?;
+    let log = files::read(&log_path, 16 * 1024 * 1024)?;
+    let kitlist = files::read(
+        &files::resolve_relative(&game, "override/KITLIST.2DA")?,
+        16 * 1024 * 1024,
+    )?;
+    let tlk = files::read(
+        &files::resolve_relative(&game, "lang/en_US/dialog.tlk")?,
+        256 * 1024 * 1024,
+    )?;
     let description = description::plan(
         &kitlist,
         &tables(&game)?,
@@ -147,7 +155,7 @@ fn plan(ctx: &Context<'_>, catalog: &catalog::Catalog) -> Result<Plan, String> {
     ];
     let mut game_executables = 0_usize;
     for candidate in crate::games::GameRole::Bg2ee.known_executables() {
-        if game.join(candidate).exists() {
+        if files::resolve_relative(&game, candidate)?.exists() {
             paths.push((*candidate).to_string());
             game_executables += 1;
         }
@@ -156,7 +164,8 @@ fn plan(ctx: &Context<'_>, catalog: &catalog::Catalog) -> Result<Plan, String> {
         paths.push("Baldur.exe".into());
     }
     paths.extend(description::TABLES.iter().map(|p| format!("override/{p}")));
-    for entry in walkdir::WalkDir::new(game.join("lang")).follow_links(false) {
+    let lang_dir = files::resolve_relative(&game, "lang")?;
+    for entry in walkdir::WalkDir::new(lang_dir).follow_links(false) {
         let entry = entry.map_err(err)?;
         if entry
             .metadata()
@@ -179,15 +188,15 @@ fn plan(ctx: &Context<'_>, catalog: &catalog::Catalog) -> Result<Plan, String> {
             );
         }
     }
-    if game.join("dialog.tlk").exists() {
+    if files::resolve_relative(&game, "dialog.tlk")?.exists() {
         paths.push("dialog.tlk".into());
     }
-    if game.join("dialogf.tlk").exists() {
+    if files::resolve_relative(&game, "dialogf.tlk")?.exists() {
         paths.push("dialogf.tlk".into());
     }
     let mut hashes = BTreeMap::new();
     for name in paths {
-        let p = game.join(&name);
+        let p = files::resolve_relative(&game, &name)?;
         files::regular(&p)?;
         hashes.insert(name, files::hash(&p)?);
     }
@@ -267,7 +276,7 @@ pub fn inspect(ctx: &Context<'_>, catalog: &catalog::Catalog) -> Result<PatchPre
         preview.detail="These description links already match this game's installed kit text. No patch is needed.".into();
         return Ok(preview);
     }
-    if ctx.game().join(catalog::ADAPTER).exists() {
+    if files::resolve_relative(&ctx.game(), catalog::ADAPTER)?.exists() {
         preview.detail =
             "An existing copy of this adapter is present. Automatic replacement is not supported."
                 .into();
@@ -287,7 +296,7 @@ pub fn inspect(ctx: &Context<'_>, catalog: &catalog::Catalog) -> Result<PatchPre
 
 fn unchanged_hashes(game: &Path, hashes: &BTreeMap<String, String>) -> Result<(), String> {
     for (name, expected) in hashes {
-        let path = game.join(name);
+        let path = files::resolve_relative(game, name)?;
         files::regular(&path)?;
         if files::hash(&path)? != *expected {
             return Err(format!("File changed: {name}"));
@@ -321,7 +330,7 @@ pub(crate) fn close_check_in(
     }
     let mut paths = Vec::new();
     for name in hashes.keys() {
-        let path = game.join(name);
+        let path = files::resolve_relative(game, name)?;
         if restorable.is_some_and(|restorable| restorable(&name.to_ascii_lowercase()))
             && !path.exists()
         {
@@ -340,16 +349,12 @@ pub(crate) fn close_check_in(
                 e.source
             )
         })?;
-    #[cfg(windows)]
-    {
-        if has_running_installer_targeting(game)? {
-            return Err("Close any installer targeting this game before patching.".into());
-        }
+    if has_running_installer_targeting(game)? {
+        return Err("Close any installer targeting this game before patching.".into());
     }
     Ok(())
 }
 
-#[cfg(windows)]
 fn is_weidu_installer_exe_name(name: &str) -> bool {
     name.eq_ignore_ascii_case("weidu.exe")
         || (name.len() > "setup-.exe".len()
@@ -359,6 +364,17 @@ fn is_weidu_installer_exe_name(name: &str) -> bool {
             && name
                 .get(name.len() - 4..)
                 .is_some_and(|s| s.eq_ignore_ascii_case(".exe")))
+}
+
+#[cfg(any(target_os = "linux", test))]
+fn is_weidu_installer_process_name(name: &str) -> bool {
+    is_weidu_installer_exe_name(name)
+        || name.eq_ignore_ascii_case("weidu")
+        || (name.len() > "setup-".len()
+            && name
+                .get(..6)
+                .is_some_and(|p| p.eq_ignore_ascii_case("setup-"))
+            && !name.contains('.'))
 }
 
 #[cfg(windows)]
@@ -531,6 +547,197 @@ fn has_running_installer_targeting(game: &Path) -> Result<bool, String> {
     Ok(false)
 }
 
+#[cfg(target_os = "linux")]
+fn has_running_installer_targeting(game: &Path) -> Result<bool, String> {
+    linux_installer_guard::has_running_installer_targeting(
+        Path::new("/proc"),
+        game,
+        Some(std::process::id()),
+    )
+}
+
+#[cfg(not(any(windows, target_os = "linux")))]
+fn has_running_installer_targeting(_game: &Path) -> Result<bool, String> {
+    Ok(false)
+}
+
+#[cfg(any(target_os = "linux", test))]
+mod linux_installer_guard {
+    use std::fs;
+    use std::io;
+    use std::path::{Path, PathBuf};
+
+    use super::is_weidu_installer_process_name;
+
+    #[derive(Debug, Default)]
+    pub(super) struct InstallerProcSnapshot {
+        pub(super) comm: Option<String>,
+        pub(super) exe: Option<PathBuf>,
+        pub(super) cwd: Option<PathBuf>,
+        pub(super) cmdline: Vec<String>,
+    }
+
+    pub(super) fn has_running_installer_targeting(
+        proc_root: &Path,
+        game: &Path,
+        self_pid: Option<u32>,
+    ) -> Result<bool, String> {
+        let entries = fs::read_dir(proc_root).map_err(super::err)?;
+        for entry in entries {
+            let entry = match entry {
+                Ok(entry) => entry,
+                Err(error) if is_ignored_proc_error(&error) => continue,
+                Err(error) => return Err(super::err(error)),
+            };
+            let name = entry.file_name();
+            let Some(pid_text) = name
+                .to_str()
+                .filter(|s| !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit()))
+            else {
+                continue;
+            };
+            let Ok(pid) = pid_text.parse::<u32>() else {
+                continue;
+            };
+            if self_pid.is_some_and(|me| me == pid) {
+                continue;
+            }
+            let pid_dir = entry.path();
+            let comm = match fs::read_to_string(pid_dir.join("comm")) {
+                Ok(text) => Some(text.trim_end_matches(['\r', '\n']).to_owned()),
+                Err(error) if is_ignored_proc_error(&error) => None,
+                Err(error) => return Err(super::err(error)),
+            };
+            let cmdline = match fs::read(pid_dir.join("cmdline")) {
+                Ok(bytes) => parse_nul_args(&bytes),
+                Err(error) if is_ignored_proc_error(&error) => Vec::new(),
+                Err(error) => return Err(super::err(error)),
+            };
+            let exe = read_proc_link(&pid_dir.join("exe")).map_err(super::err)?;
+            let preliminary = InstallerProcSnapshot {
+                comm,
+                exe,
+                cwd: None,
+                cmdline,
+            };
+            if !snapshot_is_weidu_installer(&preliminary) {
+                continue;
+            }
+            let cwd = read_proc_link(&pid_dir.join("cwd")).map_err(super::err)?;
+            let snapshot = InstallerProcSnapshot { cwd, ..preliminary };
+            if snapshot_targets_game(&snapshot, game) {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
+    fn is_ignored_proc_error(error: &io::Error) -> bool {
+        matches!(
+            error.kind(),
+            io::ErrorKind::NotFound | io::ErrorKind::PermissionDenied | io::ErrorKind::InvalidInput
+        ) || error.raw_os_error() == Some(3)
+    }
+
+    fn read_proc_link(path: &Path) -> io::Result<Option<PathBuf>> {
+        match fs::read_link(path) {
+            Ok(target) => {
+                let cleaned = match target.to_str().and_then(|s| s.strip_suffix(" (deleted)")) {
+                    Some(trimmed) if !trimmed.is_empty() => PathBuf::from(trimmed),
+                    _ => target,
+                };
+                Ok(Some(cleaned))
+            }
+            Err(error) if is_ignored_proc_error(&error) => Ok(None),
+            Err(error) => Err(error),
+        }
+    }
+
+    fn parse_nul_args(bytes: &[u8]) -> Vec<String> {
+        bytes
+            .split(|byte| *byte == 0)
+            .filter(|part| !part.is_empty())
+            .map(|part| String::from_utf8_lossy(part).into_owned())
+            .collect()
+    }
+
+    fn extract_file_name(raw: &str) -> &str {
+        raw.rsplit(['/', '\\'])
+            .find(|segment| !segment.is_empty())
+            .unwrap_or(raw)
+    }
+
+    fn normalize_posix_match_path(path: &Path) -> PathBuf {
+        let text = path.to_string_lossy();
+        normalize_raw_match_path(&text)
+    }
+
+    fn normalize_raw_match_path(raw: &str) -> PathBuf {
+        let trimmed = raw.trim();
+        let without_wine_z = if trimmed.len() >= 3
+            && (trimmed.as_bytes()[0] == b'z' || trimmed.as_bytes()[0] == b'Z')
+            && trimmed.as_bytes()[1] == b':'
+            && (trimmed.as_bytes()[2] == b'\\' || trimmed.as_bytes()[2] == b'/')
+        {
+            &trimmed[2..]
+        } else {
+            trimmed
+        };
+        PathBuf::from(without_wine_z.replace('\\', "/"))
+    }
+
+    fn snapshot_is_weidu_installer(snapshot: &InstallerProcSnapshot) -> bool {
+        if snapshot
+            .comm
+            .as_deref()
+            .is_some_and(is_weidu_installer_process_name)
+        {
+            return true;
+        }
+        if snapshot
+            .exe
+            .as_ref()
+            .and_then(|exe| exe.file_name())
+            .and_then(|name| name.to_str())
+            .is_some_and(is_weidu_installer_process_name)
+        {
+            return true;
+        }
+        snapshot
+            .cmdline
+            .iter()
+            .any(|arg| is_weidu_installer_process_name(extract_file_name(arg)))
+    }
+
+    pub(super) fn snapshot_targets_game(snapshot: &InstallerProcSnapshot, game: &Path) -> bool {
+        if !snapshot_is_weidu_installer(snapshot) {
+            return false;
+        }
+        let target = normalize_posix_match_path(game);
+        if target.as_os_str().is_empty() {
+            return false;
+        }
+        if snapshot
+            .exe
+            .as_ref()
+            .is_some_and(|exe| normalize_posix_match_path(exe).starts_with(&target))
+        {
+            return true;
+        }
+        if snapshot
+            .cwd
+            .as_ref()
+            .is_some_and(|cwd| normalize_posix_match_path(cwd).starts_with(&target))
+        {
+            return true;
+        }
+        snapshot.cmdline.iter().any(|arg| {
+            let candidate = arg.strip_prefix("--game=").unwrap_or(arg.as_str());
+            !candidate.is_empty() && normalize_raw_match_path(candidate).starts_with(&target)
+        })
+    }
+}
+
 fn changed(before: &Inventory, after: &Inventory) -> Vec<String> {
     before
         .keys()
@@ -580,9 +787,10 @@ fn allowed(name: &str) -> bool {
         .contains(&name)
 }
 
-#[cfg(all(test, windows))]
+#[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::TempDir;
 
     #[test]
     fn installer_process_name_filter_matches_weidu_and_setup_exes() {
@@ -592,8 +800,64 @@ mod tests {
         assert!(!is_weidu_installer_exe_name("setup-.exe"));
         assert!(!is_weidu_installer_exe_name("notepad.exe"));
         assert!(!is_weidu_installer_exe_name("setup-eet.txt"));
+        assert!(is_weidu_installer_process_name("weidu"));
+        assert!(is_weidu_installer_process_name("setup-stratagems"));
+        assert!(!is_weidu_installer_process_name("setup-eet.txt"));
+        assert!(!is_weidu_installer_process_name("setup-"));
     }
 
+    #[test]
+    fn linux_installer_guard_detects_targeted_game_via_cwd_cmdline_or_wine_z() {
+        let game = Path::new("/home/deck/Games/CEBG/game");
+        let other = Path::new("/home/deck/Games/CEBG/game2");
+
+        // Native weidu with cwd = game
+        assert!(linux_installer_guard::snapshot_targets_game(
+            &linux_installer_guard::InstallerProcSnapshot {
+                comm: Some("weidu".into()),
+                exe: Some(PathBuf::from("/home/deck/.local/share/chriz/weidu")),
+                cwd: Some(game.to_path_buf()),
+                cmdline: vec!["weidu".into(), "foo.tp2".into()],
+            },
+            game
+        ));
+
+        // Prefix-boundary safety: /home/.../game2 must NOT match /home/.../game
+        assert!(!linux_installer_guard::snapshot_targets_game(
+            &linux_installer_guard::InstallerProcSnapshot {
+                comm: Some("weidu".into()),
+                exe: Some(other.join("setup-foo")),
+                cwd: Some(other.to_path_buf()),
+                cmdline: vec![other.join("setup-foo").to_string_lossy().into_owned()],
+            },
+            game
+        ));
+
+        // Wine Z:\... targeting via /proc scan
+        let temp = TempDir::new().unwrap();
+        let pid_dir = temp.path().join("404");
+        std::fs::create_dir(&pid_dir).unwrap();
+        std::fs::write(pid_dir.join("comm"), "setup-eet.exe\n").unwrap();
+        std::fs::write(
+            pid_dir.join("cmdline"),
+            b"Z:\\home\\deck\\Games\\CEBG\\game\\setup-eet.exe\0--skip-at-view\0",
+        )
+        .unwrap();
+        assert!(linux_installer_guard::has_running_installer_targeting(
+            temp.path(),
+            game,
+            Some(999)
+        )
+        .unwrap());
+        assert!(!linux_installer_guard::has_running_installer_targeting(
+            temp.path(),
+            other,
+            Some(999)
+        )
+        .unwrap());
+    }
+
+    #[cfg(windows)]
     #[test]
     fn nt_query_process_command_line_reads_current_process() {
         use windows_sys::Win32::System::Threading::GetCurrentProcess;

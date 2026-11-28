@@ -3,6 +3,7 @@ import type {
   DestinationEvaluation,
   FrozenReview,
   GameCandidate,
+  HostPlatform,
   InputValue,
   ManualBreakpoint,
   NormalizedSelection,
@@ -31,6 +32,7 @@ export interface AppState {
 export type AppAction =
   | { readonly type: "navigate"; readonly route: Route; readonly remember?: boolean }
   | { readonly type: "back" }
+  | { readonly type: "set-platform"; readonly platform: HostPlatform }
   | { readonly type: "select-game"; readonly game: "bg1" | "bg2"; readonly id: string }
   | { readonly type: "set-installation-defaults"; readonly name: string; readonly path: string }
   | { readonly type: "set-installation-name"; readonly name: string }
@@ -76,6 +78,8 @@ export function reduce(state: AppState, action: AppAction): AppState {
       const route = state.history.at(-1);
       return route === undefined ? state : { ...state, route, history: state.history.slice(0, -1) };
     }
+    case "set-platform":
+      return { ...state, selection: { ...state.selection, platform: action.platform }, frozenReview: null };
     case "select-game":
       return action.game === "bg1" ? { ...state, selectedBg1Id: action.id } : { ...state, selectedBg2Id: action.id };
     case "set-installation-defaults":

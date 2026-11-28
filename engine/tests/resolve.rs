@@ -91,10 +91,19 @@ fn windows_resolution_never_silently_filters_declared_runs() {
 
 #[test]
 fn unsupported_platform_is_an_error_instead_of_a_filter() {
-    let message = invalid_selection_message(resolve(&fixture(), &Selection::defaults("linux")));
+    let message = invalid_selection_message(resolve(&fixture(), &Selection::defaults("macos")));
 
-    assert!(message.contains("linux"), "{message}");
+    assert!(message.contains("macos"), "{message}");
     assert!(message.contains("windows"), "{message}");
+    assert!(message.contains("linux"), "{message}");
+}
+
+#[test]
+fn linux_platform_resolves_default_selection() {
+    let manifest = fixture();
+    let plan = resolve(&manifest, &Selection::defaults("linux")).unwrap();
+
+    assert_eq!(plan.runs.len(), manifest.collection.runs.len());
 }
 
 #[test]

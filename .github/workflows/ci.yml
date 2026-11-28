@@ -1,4 +1,4 @@
-name: Windows source checks
+name: Source checks
 
 on:
   push:
@@ -152,6 +152,8 @@ jobs:
       - name: Verify locked dependency notices
         if: ${{ !cancelled() && (steps.native_tests.outcome == 'success' || steps.native_tests.outcome == 'failure') }}
         run: |
+          cargo fetch --locked 2>&1 | Tee-Object -FilePath target/ci-evidence/cargo-fetch-notices.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/generate-third-party-notices.py --check --npm-cache $env:CEBG_NPM_CACHE 2>&1 | Tee-Object -FilePath target/ci-evidence/dependency-notices.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -254,5 +256,249 @@ jobs:
         with:
           name: cebg-UNSIGNED-CI-windows-x64-${{ github.run_id }}-${{ github.run_attempt }}
           path: target/ci-unsigned-package/
+          if-no-files-found: error
+          retention-days: 7
+
+  linux:
+    name: Linux x64 checks and unsigned packages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: '0'
+      RUST_BACKTRACE: '1'
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Linux system dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            pkg-config \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libfuse2t64 \
+            unzip
+
+      - name: Install the repository's Rust toolchain
+        run: |
+          set -euo pipefail
+          cebg_toolchain=$(python -c "import tomllib; print(tomllib.load(open('rust-toolchain.toml', 'rb'))['toolchain']['channel'])")
+          rustup toolchain install "$cebg_toolchain" --profile minimal --component clippy --component rustfmt
+          rustup target add --toolchain "$cebg_toolchain" x86_64-unknown-linux-gnu
+
+      - name: Install pinned WeiDU 251 for Linux integration tests
+        run: |
+          set -euo pipefail
+          weidu_zip="$RUNNER_TEMP/WeiDU-Linux-251.zip"
+          curl -fsSL --retry 3 -o "$weidu_zip" "https://github.com/WeiDUorg/weidu/releases/download/v251.00/WeiDU-Linux-251.zip"
+          echo "3e1a34ec5d6e934b1d4a34541a1312d0170b120c6efe903a732415acde3bd3c0  $weidu_zip" | sha256sum -c -
+          unzip -q "$weidu_zip" "WeiDU-Linux/weidu" -d "$RUNNER_TEMP/weidu-bin"
+          weidu_exe="$RUNNER_TEMP/weidu-bin/WeiDU-Linux/weidu"
+          echo "881c6b62e031480c305b11cbdd6acabf8403d5550661d17e505872ccc4c7415d  $weidu_exe" | sha256sum -c -
+          chmod +x "$weidu_exe"
+          echo "CHRIZ_WEIDU_EXE=$weidu_exe" >> "$GITHUB_ENV"
+
+      - name: Record source and build environment
+        run: |
+          set -euo pipefail
+          mkdir -p target/ci-evidence
+          python - <<'PY'
+          import json, os, subprocess
+          from pathlib import Path
+          def read_json(p):
+              return json.loads(Path(p).read_text(encoding='utf-8'))
+          def cmd(*args):
+              return subprocess.check_output(args, text=True).strip()
+          record = {
+              'artifact_role': 'Unsigned CI development packages; not an official release',
+              'source_commit': cmd('git', 'rev-parse', 'HEAD'),
+              'repository': os.environ.get('GITHUB_REPOSITORY'),
+              'run_url': f"{os.environ.get('GITHUB_SERVER_URL')}/{os.environ.get('GITHUB_REPOSITORY')}/actions/runs/{os.environ.get('GITHUB_RUN_ID')}",
+              'run_attempt': os.environ.get('GITHUB_RUN_ATTEMPT'),
+              'app_version': read_json('app/package.json')['version'],
+              'recipe_version': read_json('recipes/curated-full-current/release.json')['version'],
+              'iwd_app_version': read_json('app/src-tauri/tauri.iwd.conf.json')['version'],
+              'iwd_recipe_version': read_json('recipes/iwd-current/release.json')['version'],
+              'runner_os': os.environ.get('ImageOS'),
+              'runner_image_version': os.environ.get('ImageVersion'),
+              'tools': {
+                  'rustc': cmd('rustc', '--version'),
+                  'cargo': cmd('cargo', '--version'),
+                  'node': cmd('node', '--version'),
+                  'npm': cmd('npm', '--version'),
+                  'python': cmd('python', '--version'),
+              },
+          }
+          Path('target/ci-evidence/provenance.json').write_text(json.dumps(record, indent=2) + '\n', encoding='utf-8')
+          PY
+          sha256sum rust-toolchain.toml Cargo.lock app/package-lock.json app/src-tauri/tauri.conf.json LICENSE THIRD_PARTY_NOTICES.md LICENSES/supplemental.json tools/generate-third-party-notices.py > target/ci-evidence/SOURCE-SHA256SUMS
+
+      - name: Install locked frontend dependencies
+        working-directory: app
+        run: |
+          set -euo pipefail
+          cebg_npm_cache="$(npm config get cache)"
+          echo "CEBG_NPM_CACHE=$cebg_npm_cache" >> "$GITHUB_ENV"
+          printf '%s\n' "$cebg_npm_cache" > ../target/ci-evidence/npm-cache.txt
+          npm ci 2>&1 | tee ../target/ci-evidence/npm-ci.log
+
+      - name: Typecheck, test, and build the frontend
+        working-directory: app
+        run: |
+          set -euo pipefail
+          npm run check 2>&1 | tee ../target/ci-evidence/frontend.log
+
+      - name: Check Rust formatting
+        run: |
+          set -euo pipefail
+          cargo fmt --all -- --check 2>&1 | tee target/ci-evidence/rustfmt.log
+
+      - name: Run native workspace tests
+        id: native_tests
+        run: |
+          set -euo pipefail
+          cargo test --locked --workspace --no-fail-fast 2>&1 | tee target/ci-evidence/cargo-test.log
+          cargo test --locked -p chriz-bg-engine --test weidu_integration -- --ignored --nocapture 2>&1 | tee target/ci-evidence/weidu-integration.log
+
+      - name: Check native code with Clippy
+        if: ${{ !cancelled() && (steps.native_tests.outcome == 'success' || steps.native_tests.outcome == 'failure') }}
+        run: |
+          set -euo pipefail
+          cargo clippy --locked --workspace --all-targets -- -D warnings 2>&1 | tee target/ci-evidence/clippy.log
+          cargo clippy --locked --workspace -- -D warnings 2>&1 | tee target/ci-evidence/clippy-lib.log
+
+      - name: Test and lint the Chriz Easy IWD build
+        if: ${{ !cancelled() && (steps.native_tests.outcome == 'success' || steps.native_tests.outcome == 'failure') }}
+        run: |
+          set -euo pipefail
+          export TAURI_CONFIG="$(cat app/src-tauri/tauri.iwd.conf.json)"
+          cargo test --locked -p chriz-bg-app --no-fail-fast 2>&1 | tee target/ci-evidence/cargo-test-iwd.log
+          cargo clippy --locked -p chriz-bg-app --all-targets -- -D warnings 2>&1 | tee target/ci-evidence/clippy-iwd.log
+          npm --prefix app test -- --run --mode iwd tests/iwd-flavor.test.ts tests/iwd-index-html.test.ts tests/hotpatch.test.ts 2>&1 | tee target/ci-evidence/frontend-test-iwd.log
+          npm --prefix app run build -- --mode iwd 2>&1 | tee target/ci-evidence/frontend-iwd.log
+
+      - name: Test authoring and packaging tools
+        if: ${{ !cancelled() && (steps.native_tests.outcome == 'success' || steps.native_tests.outcome == 'failure') }}
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s tools/tests 2>&1 | tee target/ci-evidence/python-tests.log
+
+      - name: Verify locked dependency notices
+        if: ${{ !cancelled() && (steps.native_tests.outcome == 'success' || steps.native_tests.outcome == 'failure') }}
+        run: |
+          set -euo pipefail
+          cargo fetch --locked 2>&1 | tee target/ci-evidence/cargo-fetch-notices.log
+          python tools/generate-third-party-notices.py --check --npm-cache "$CEBG_NPM_CACHE" 2>&1 | tee target/ci-evidence/dependency-notices.log
+
+      - name: Build unsigned Linux development packages (Chriz Easy BG)
+        working-directory: app
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+          NO_STRIP: 'true'
+        run: |
+          set -euo pipefail
+          local_cfg="$RUNNER_TEMP/cebg-unsigned-ci.json"
+          printf '%s\n' '{"bundle":{"createUpdaterArtifacts":false}}' > "$local_cfg"
+          rm -rf ../target/x86_64-unknown-linux-gnu/release/bundle/deb ../target/x86_64-unknown-linux-gnu/release/bundle/appimage
+          npm run tauri -- build --target x86_64-unknown-linux-gnu --bundles deb,appimage --config "$local_cfg" -- --locked 2>&1 | tee ../target/ci-evidence/unsigned-package-bg.log
+          bundle_root="../target/x86_64-unknown-linux-gnu/release/bundle"
+          mapfile -t debs < <(find "$bundle_root/deb" -maxdepth 1 -type f -name '*.deb')
+          mapfile -t appimages < <(find "$bundle_root/appimage" -maxdepth 1 -type f -name '*.AppImage')
+          if [ "${#debs[@]}" -ne 1 ]; then echo "Expected 1 .deb, found ${#debs[@]}" >&2; exit 1; fi
+          if [ "${#appimages[@]}" -ne 1 ]; then echo "Expected 1 .AppImage, found ${#appimages[@]}" >&2; exit 1; fi
+          if [ -n "$(find "$bundle_root" -type f -name '*.sig')" ]; then echo "CI must not produce .sig files" >&2; exit 1; fi
+          out_dir="../target/ci-unsigned-package"
+          mkdir -p "$out_dir"
+          commit="$(git -C .. rev-parse --short=12 HEAD)"
+          deb_name="CEBG-UNSIGNED-CI-$commit-linux-amd64.deb"
+          appimage_name="CEBG-UNSIGNED-CI-$commit-linux-x86_64.AppImage"
+          cp "${debs[0]}" "$out_dir/$deb_name"
+          cp "${appimages[0]}" "$out_dir/$appimage_name"
+          (cd "$out_dir" && sha256sum "$deb_name" "$appimage_name" > SHA256SUMS)
+          printf '%s\n' 'UNSIGNED CI DEVELOPMENT PACKAGES. No GPG or Tauri updater signature. No installer, game, or updater acceptance is implied. This is not an official CEBG release.' > "$out_dir/README.txt"
+          cp ../target/ci-evidence/provenance.json "$out_dir/"
+          rm -rf "$bundle_root/deb" "$bundle_root/appimage"
+
+      - name: Build unsigned Linux development packages (Chriz Easy IWD)
+        working-directory: app
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+          NO_STRIP: 'true'
+        run: |
+          set -euo pipefail
+          local_cfg="$RUNNER_TEMP/cebg-unsigned-ci.json"
+          iwd_cfg="$(realpath src-tauri/tauri.iwd.conf.json)"
+          npm run tauri -- build --target x86_64-unknown-linux-gnu --bundles deb,appimage --config "$iwd_cfg" --config "$local_cfg" -- --locked 2>&1 | tee ../target/ci-evidence/unsigned-package-iwd.log
+          bundle_root="../target/x86_64-unknown-linux-gnu/release/bundle"
+          mapfile -t debs < <(find "$bundle_root/deb" -maxdepth 1 -type f -name '*.deb')
+          mapfile -t appimages < <(find "$bundle_root/appimage" -maxdepth 1 -type f -name '*.AppImage')
+          if [ "${#debs[@]}" -ne 1 ]; then echo "Expected 1 IWD .deb, found ${#debs[@]}" >&2; exit 1; fi
+          if [ "${#appimages[@]}" -ne 1 ]; then echo "Expected 1 IWD .AppImage, found ${#appimages[@]}" >&2; exit 1; fi
+          if [ -n "$(find "$bundle_root" -type f -name '*.sig')" ]; then echo "CI must not produce .sig files" >&2; exit 1; fi
+          out_dir="../target/ci-unsigned-package-iwd"
+          mkdir -p "$out_dir"
+          commit="$(git -C .. rev-parse --short=12 HEAD)"
+          deb_name="IWD-UNSIGNED-CI-$commit-linux-amd64.deb"
+          appimage_name="IWD-UNSIGNED-CI-$commit-linux-x86_64.AppImage"
+          cp "${debs[0]}" "$out_dir/$deb_name"
+          cp "${appimages[0]}" "$out_dir/$appimage_name"
+          (cd "$out_dir" && sha256sum "$deb_name" "$appimage_name" > SHA256SUMS)
+          printf '%s\n' 'UNSIGNED CI DEVELOPMENT PACKAGES. No GPG or Tauri updater signature. No installer, game, or updater acceptance is implied. This is not an official Chriz Easy IWD release.' > "$out_dir/README.txt"
+          cp ../target/ci-evidence/provenance.json "$out_dir/"
+          (cd .. && cargo tree --locked --target x86_64-unknown-linux-gnu --edges normal,build > target/ci-evidence/cargo-production-tree.txt)
+          npm ls --depth=0 --json > ../target/ci-evidence/npm-direct-dependencies.json
+          git -C .. diff --exit-code
+
+      - name: Retain Linux source-check evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: cebg-linux-source-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: target/ci-evidence/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Retain unsigned Linux packages (Chriz Easy BG)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: cebg-UNSIGNED-CI-linux-x64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: target/ci-unsigned-package/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Retain unsigned Linux packages (Chriz Easy IWD)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: iwd-UNSIGNED-CI-linux-x64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: target/ci-unsigned-package-iwd/
           if-no-files-found: error
           retention-days: 7

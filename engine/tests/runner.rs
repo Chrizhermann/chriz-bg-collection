@@ -8,8 +8,10 @@ use std::time::{Duration, Instant};
 
 use bg_engine::events::{ChannelSink, EngineEvent};
 use bg_engine::weidu::invocation::{Invocation, ResolvedPrompt};
+#[cfg(windows)]
+use bg_engine::weidu::runner::run_controlled;
 use bg_engine::weidu::runner::{
-    run, run_controlled, RunOutcome, RunnerControl, RunnerControlHandle, RunnerRequest,
+    run, RunOutcome, RunnerControl, RunnerControlHandle, RunnerRequest,
 };
 use crossbeam_channel::{Receiver, Sender};
 use tempfile::TempDir;
