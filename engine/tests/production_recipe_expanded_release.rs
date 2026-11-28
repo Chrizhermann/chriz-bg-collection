@@ -220,10 +220,10 @@ fn freezes_the_reviewed_release_sources() {
         ),
         (
             "chriz-bg-modpack",
-            "chriz-bg-modpack-0.2.0-alpha.16",
-            "v0.2.0-alpha.16",
-            9_529_061,
-            "668937ba7ea468834aad1fd1ecc214be72a9b1b0564109a48fc0827dab09e570",
+            "chriz-bg-modpack-0.2.0-alpha.22",
+            "v0.2.0-alpha.22",
+            9_607_048,
+            "53044637cbd3259b3eabf8032b53137560aa2ae821074c8ecf8a64a42474a317",
         ),
         (
             "safana",

@@ -465,6 +465,12 @@ fn writable(name: &str, package: &Package, language: &str) -> bool {
         || below(&format!("weidu_external/data/{}", package.mod_folder))
         || name == format!("lang/{language}/dialog.tlk")
         || name == format!("lang/{language}/dialogf.tlk")
+        // EEex mods install their own pattern databases here by design (the loader reads every
+        // `.db` in this folder), so a hotpatch may write them like override files. One level
+        // only: the loader does not look into subfolders.
+        || name
+            .strip_prefix("eeex_scripts/extra_pattern_dbs/")
+            .is_some_and(|file| !file.contains('/') && file.ends_with(".db"))
 }
 
 /// Root files copied before WeiDU runs: those it writes, and the key a misbehaving package

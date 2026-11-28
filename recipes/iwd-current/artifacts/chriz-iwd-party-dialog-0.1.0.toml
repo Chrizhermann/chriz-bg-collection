@@ -1,0 +1,32 @@
+id = "chriz-iwd-party-dialog-0.1.0"
+name = "Chriz IWD Party Dialog"
+version = "0.1.0"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/chriz-iwd-party-dialog/releases/download/v0.1.0/chriz-iwd-party-dialog-v0.1.0.zip"
+reference = "v0.1.0"
+expected_filename = "chriz-iwd-party-dialog-v0.1.0.zip"
+expected_length = 1282596
+sha256 = "d801101ca396b88b39995185bf4d784777a8f24a23bdb7e4746cda08a3bbe8e2"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["chriz-iwd-party-dialog"]
+tp2_paths = ["chriz-iwd-party-dialog/setup-chriz-iwd-party-dialog.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 64
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 8388608
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-iwd-party-dialog"
+license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/chriz-iwd-party-dialog/releases/tag/v0.1.0"
+reviewed_on = "2026-11-17"

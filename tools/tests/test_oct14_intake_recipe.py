@@ -1,5 +1,5 @@
 """October 14 intake: Modpack v0.2.0-alpha.12, Rebalance v0.8.3, SCS fine weapons, Tweaks 7649ced,
-Bardic Wonders v2.9c-balance.8. Later intakes supersede the Modpack and Rebalance pins.
+Bardic Wonders v2.9c-balance.8. Later intakes supersede the Modpack, Rebalance and Bardic Wonders pins.
 
 Static recipe, selection, dependency and order checks for both recipe profiles only.
 The pins follow the October 14 publications and the unreleased Tweaks Anthology master
@@ -118,8 +118,9 @@ class Oct14IntakeTests(unittest.TestCase):
             # effect clocks 360 after 340 and v0.8.8 (test_oct29_rebalance_088_pin_recipe)
             # Druid weapons 410 and Alaghor of Clangeddin weapons 411 after 302, each checked
             # against its own evidence; the v0.8.3 rows keep their order.
-            self.assertEqual(components[-5:], [330, 331, 332, 340, 360])
-            v083_rows = [component for component in components if component not in (340, 360, 410, 411)]
+            # v0.8.12 appends Round Clock after these earlier changes.
+            self.assertEqual(components[-6:], [330, 331, 332, 340, 360, 361])
+            v083_rows = [component for component in components if component not in (340, 360, 361, 410, 411)]
             self.assertEqual(v083_rows, self._native("chriz-bg-rebalance", v083_rows))
             self.assertEqual((features[strict]["decision"], features[genius]["decision"], features[heroism]["decision"]),
                              ("optional", "default", "default"))
@@ -236,8 +237,10 @@ class Oct14IntakeTests(unittest.TestCase):
         }
         # The October 20 intake (test_oct20_intake_recipe) supersedes the Modpack pin and
         # the October 26 intake (test_oct26_alpha22_pins_recipe) the Rebalance pin; their
-        # pinned files stay exactly as verified here.
-        superseded = {"chriz-bg-modpack", "chriz-bg-rebalance"}
+        # pinned files stay exactly as verified here. The November 18 intake archives
+        # Bardic Wonders' balance.8 descriptor under the historical references.
+        historical = ROOT / "manifest/reference/historical-artifacts"
+        superseded = {"chriz-bg-modpack": None, "chriz-bg-rebalance": None, "bardicwonders": historical}
         for record in self.evidence["artifacts"]:
             for flag in ("fresh_download", "fresh_extraction", "native_component_order_verified"):
                 self.assertIs(record[flag], True, (record["mod_id"], flag))
@@ -248,8 +251,12 @@ class Oct14IntakeTests(unittest.TestCase):
                     with self.subTest(profile=str(profile), mod=record["mod_id"]):
                         mod_path = profile / f"mods/{record['mod_id']}.toml"
                         if record["mod_id"] in superseded and name in record["recipe_profiles"]:
-                            artifact = tomllib.loads(
-                                (profile / f"artifacts/{record['artifact_id']}.toml").read_text(encoding="utf-8"))
+                            historical_dir = superseded[record["mod_id"]]
+                            artifact_name = f"{record['artifact_id']}.toml"
+                            active = profile / "artifacts" / artifact_name
+                            self.assertEqual(active.is_file(), historical_dir is None)
+                            artifact_path = active if historical_dir is None else historical_dir / artifact_name
+                            artifact = tomllib.loads(artifact_path.read_text(encoding="utf-8"))
                             for key, measured in (("sha256", "actual_sha256"), ("expected_length", "actual_length"),
                                                   ("url", "immutable_source_url"), ("reference", "source_reference")):
                                 self.assertEqual(artifact["source"][key], record[measured])

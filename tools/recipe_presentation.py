@@ -213,6 +213,8 @@ SOURCE_LABELS = {
     "BRANWEN": "Branwen for BGII",
     "BUBB_SPELL_MENU_EXTENDED": "Bubb's Spell Menu Extended",
     "CDTWEAKS": "The Tweaks Anthology",
+    "CHRIZ_MULTIPLAYER_FIX": "Chriz Multiplayer Fix",
+    "CHRIZ_OVERHEAD_TEXT": "Chriz Overhead Text",
     "CROSSMODBG2": "Crossmod Banter Pack",
     "EEEXREMOTE": "EEex Remote Console",
     "HQ_SOUNDCLIPS_BG2EE": "HQ SoundClips for BG2EE",

@@ -1,0 +1,109 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-11-18"
+# The artifact rows were combined from the per-mod evidence written by:
+#   python -B -I tools/prepare_own_mod_pin.py artisans-kitpack
+#   python -B -I tools/prepare_own_mod_pin.py bardic-wonders
+# The owner_releases rows were added from the owner release verification and CI results.
+# Bardic's curated recipe entries were edited in tools/curated_full_recipe.py before
+# preparing its pin. The script regenerated the curated recipe again after the
+# balance.8 descriptor was moved to historical references.
+command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 <TP2 path>; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python -I tools/check_native_component_order.py --recipe-root <recipe> --mod-id <mod> --archive <fresh downloaded ZIP>"
+scope = "Christopher approved these save and rest bug fixes for the frozen forks on 2026-11-18. Artisan's Kitpack chriz.7 replaces chriz.6 for the main, NPC and tweak installers in both BG recipes. Bardic Wonders balance.9 replaces balance.8 in the curated BG recipe. The IWD recipe ships neither fork. Each active artifact descriptor passed fresh anonymous inspection, production acquisition and extraction, and native component order checks. All release ZIP files in the published roots match their tagged merge tree byte for byte. The TP2 component numbers, names and native order match the previous pins. Artisan's three TP2s change only VERSION. Bardic's TP2 also hooks Bard description refreshes for existing options. The Artisan chriz.6 descriptors and prior evidence remain available. The superseded Bardic balance.8 descriptor is in historical-artifacts. The standalone Abettor tail remains byte-identical to balance.8 and stays outside the recipe. These checks cover source and packages. The owner release notes document synthetic installs and pending live gameplay verification."
+
+# 3028 entries, 118,400,047 bytes uncompressed, largest entry 6,142,193 bytes, depth 7, maximum compression ratio about 431.1.
+[[artifacts]]
+mod_id = "artisanskitpack"
+artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.7"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v4.81a-dev.85928f9-chriz.7"
+source_commit = "b8065326f40307267e85290e0ae91188dbcc201d"
+immutable_source_url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.7/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.7.zip"
+actual_length = 89864746
+actual_sha256 = "6148fa21b58e181db1673f143e10d45fa2cecd2513ae9efa72e7969d066ab709"
+tp2_sha256 = "221c0e04458cf3a088272bc60cb11a343efa41cc3cb9c86af4fdb221f92d17b4"
+native_components = [1, 2, 3, 20000, 20001, 8001, 8101, 8102, 8002, 8003, 8004, 10001, 10002, 10003, 10004, 1100, 1003, 1006, 1004, 1005, 1007, 1002, 1000, 1001, 1008, 1009, 1010, 2000, 2010, 2011, 2012, 2002, 2003, 3000, 3010, 3003, 3011, 3004, 3001, 3002, 3005, 5300, 5100, 5110, 5111, 5200, 5001, 5002, 7000, 7004, 7007, 7006, 7008, 7001, 7002, 7003, 7005, 9001, 30001]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+# 3028 entries, 118,400,047 bytes uncompressed, largest entry 6,142,193 bytes, depth 7, maximum compression ratio about 431.1.
+[[artifacts]]
+mod_id = "artisanskitpack-npc"
+artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.7"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v4.81a-dev.85928f9-chriz.7"
+source_commit = "b8065326f40307267e85290e0ae91188dbcc201d"
+immutable_source_url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.7/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.7.zip"
+actual_length = 89864746
+actual_sha256 = "6148fa21b58e181db1673f143e10d45fa2cecd2513ae9efa72e7969d066ab709"
+tp2_sha256 = "7253c89a39b8a3c9ca1a79d821d89d35b7ee1d4be2a64a630a14feab4235bcf4"
+native_components = [1101, 1102, 1103, 1104, 2001, 3101, 3102, 5101, 5102, 7101, 7102, 7104, 21001, 9101, 10004, 20002, 200010, 99001]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+# 3028 entries, 118,400,047 bytes uncompressed, largest entry 6,142,193 bytes, depth 7, maximum compression ratio about 431.1.
+[[artifacts]]
+mod_id = "artisanskitpack-tweak"
+artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.7"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v4.81a-dev.85928f9-chriz.7"
+source_commit = "b8065326f40307267e85290e0ae91188dbcc201d"
+immutable_source_url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.7/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.7.zip"
+actual_length = 89864746
+actual_sha256 = "6148fa21b58e181db1673f143e10d45fa2cecd2513ae9efa72e7969d066ab709"
+tp2_sha256 = "7bccfa5b90a14db87f452fff784ddd46eb1e7a08cfb68347881b277caeb05771"
+native_components = [51010, 20101, 12012, 20021, 3210, 1209, 1110, 3202, 3302, 7203, 7205, 8204, 110000, 1, 2, 300010, 1010000, 1020000, 2000001]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+# 856 entries, 33,115,406 bytes uncompressed, largest entry 3,311,752 bytes, depth 5, maximum compression ratio about 431.1.
+[[artifacts]]
+mod_id = "bardicwonders"
+artifact_id = "bardicwonders-v2.9c-balance.9"
+recipe_profiles = ["recipes/curated-full-current"]
+source_reference = "v2.9c-balance.9"
+source_commit = "c0c2e4113d016c935162011667cffe0c0756b325"
+immutable_source_url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.9/Bardic-Wonders-v2.9c-balance.9.zip"
+actual_length = 5220111
+actual_sha256 = "e34af0d979e43e95885452d2b8133c009014558c40fd0ea9bfdcd958dbbb5708"
+tp2_sha256 = "ae60a1f219a744a1ec917f93a12e128d4c1c0710299e1ddf02bb51695d95ea02"
+native_components = [1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010, 1011, 1012, 2001, 2002, 2007, 2008, 2003, 2004, 2005, 2012, 2013, 2006, 2009, 2010, 2011, 3001, 3010]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[owner_releases]]
+repository = "Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch"
+release = "v4.81a-dev.85928f9-chriz.7"
+source_commit = "b8065326f40307267e85290e0ae91188dbcc201d"
+release_url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/tag/v4.81a-dev.85928f9-chriz.7"
+pull_request_url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/pull/19"
+offline_tests = 154
+weidu_syntax_checks = 3
+weidu_version = 24900
+synthetic_games = ["BG2:EE", "EET"]
+we_overwrite_mutation_verified = true
+live_gameplay_verified = false
+
+[[owner_releases]]
+repository = "Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch"
+release = "v2.9c-balance.9"
+source_commit = "c0c2e4113d016c935162011667cffe0c0756b325"
+release_url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.9"
+pull_request_url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/pull/14"
+offline_tests = 211
+weidu_syntax_checks = 54
+weidu_version = 24900
+synthetic_games = ["BG2:EE", "EET", "IWD:EE"]
+native_fixture_checks = 15
+pr_ci_run = 44256134414
+master_ci_run = 44256455852
+tag_ci_run = 44256528348
+live_gameplay_verified = false

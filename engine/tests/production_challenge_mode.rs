@@ -13,14 +13,19 @@ use bg_engine::resolve::Selection;
 use bg_engine::Manifest;
 
 const GROUP: &str = "challenge-mode";
-const MEMBERS: [&str; 6] = [
+const MEMBERS: [&str; 8] = [
     "feature:chriz-bg-rebalance:component-301",
     "feature:chriz-bg-modpack:component-235",
     "feature:chriz-bg-rebalance:component-110",
     "feature:chriz-sod-remix:component-257",
     CAMPAIGN_XP_CAPS,
     CHAPTER_XP_CAPS,
+    EET_WORLD_PROGRESSION,
+    "feature:chriz-bg-modpack:component-696",
 ];
+/// Christopher, 2026-11-22: no travel back into an earlier campaign only with Challenge Mode
+/// (Modpack 680, off by default and off in Chris's Recommended).
+const EET_WORLD_PROGRESSION: &str = "feature:chriz-bg-modpack:component-680";
 /// Christopher, 2026-11-10: Challenge Mode includes campaign XP caps with chapter caps
 /// (Modpack 650 + 652). 652 requires 650 and comes on with the group; the Shadows of Amn cap
 /// 651 conflicts with 652 and stays a separate choice outside the group.

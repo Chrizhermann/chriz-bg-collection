@@ -127,7 +127,8 @@ const RUNS: &[(&str, &str, Phase, &[u32])] = &[
         "chriz-iwd-encounters",
         Phase::Main,
         &[
-            100, 110, 200, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410,
+            100, 110, 120, 200, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410, 420,
+            500,
         ],
     ),
     (
@@ -147,6 +148,36 @@ const RUNS: &[(&str, &str, Phase, &[u32])] = &[
     ),
     ("klatu-armor-thieving-main", "klatu", Phase::Main, &[2150]),
     ("buffbot-main", "buffbot", Phase::Main, &[1, 0]),
+    (
+        "chriz-overhead-text-main",
+        "chriz-overhead-text",
+        Phase::Main,
+        &[0],
+    ),
+    (
+        "chriz-multiplayer-fix-main",
+        "chriz-multiplayer-fix",
+        Phase::Main,
+        &[0, 1],
+    ),
+    (
+        "chriz-iwd-party-dialog-main",
+        "chriz-iwd-party-dialog",
+        Phase::Main,
+        &[0],
+    ),
+    (
+        "chriz-bg-rebalance-main",
+        "chriz-bg-rebalance",
+        Phase::Main,
+        &[361],
+    ),
+    (
+        "chriz-bg-modpack-main",
+        "chriz-bg-modpack",
+        Phase::Main,
+        &[470, 699, 700],
+    ),
     ("eeexremote-main", "eeexremote", Phase::Main, &[0]),
 ];
 
@@ -173,7 +204,7 @@ const INSTALLERS: &[(&str, &str, &str)] = &[
         "bubb-spell-menu-5.2",
         "bubb_spell_menu_extended/bubb_spell_menu_extended.tp2",
     ),
-    ("buffbot", "buffbot-1.16.1", "buffbot/setup-buffbot.tp2"),
+    ("buffbot", "buffbot-1.16.2", "buffbot/setup-buffbot.tp2"),
     (
         "cassianpc",
         "cassianpc-8f9af4ca4e76ec72240f961b18a1d83739acd994",
@@ -185,9 +216,34 @@ const INSTALLERS: &[(&str, &str, &str)] = &[
         "cdtweaks/setup-cdtweaks.tp2",
     ),
     (
+        "chriz-bg-modpack",
+        "chriz-bg-modpack-0.2.0-alpha.22",
+        "setup-chriz-bg-modpack.tp2",
+    ),
+    (
+        "chriz-bg-rebalance",
+        "chriz-bg-rebalance-0.8.12",
+        "setup-chriz-bg-rebalance.tp2",
+    ),
+    (
         "chriz-iwd-encounters",
-        "chriz-iwd-encounters-0.2.2",
+        "chriz-iwd-encounters-0.3.4",
         "chriz-iwd-encounters/setup-chriz-iwd-encounters.tp2",
+    ),
+    (
+        "chriz-iwd-party-dialog",
+        "chriz-iwd-party-dialog-0.1.0",
+        "chriz-iwd-party-dialog/setup-chriz-iwd-party-dialog.tp2",
+    ),
+    (
+        "chriz-multiplayer-fix",
+        "chriz-multiplayer-fix-0.1.0",
+        "chriz_multiplayer_fix/setup-chriz_multiplayer_fix.tp2",
+    ),
+    (
+        "chriz-overhead-text",
+        "chriz-overhead-text-0.1.0",
+        "chriz_overhead_text/setup-chriz_overhead_text.tp2",
     ),
     ("dendjelion", "dendjelion-2.1", "dendjelion/Dendjelion.tp2"),
     ("dusky", "dusky-2.5", "Dusky/Dusky.tp2"),
@@ -312,14 +368,14 @@ const ARTIFACTS: &[Pin] = &[
         sha256: "ac5380e99a534dd96200e97fa4358ca22ff2738266570d95195eac85d8f82e12",
     },
     Pin {
-        id: "buffbot-1.16.1",
-        version: "1.16.1",
+        id: "buffbot-1.16.2",
+        version: "1.16.2",
         kind: SourceKind::GithubRelease,
-        url: "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.16.1/buffbot-v1.16.1.zip",
-        reference: "v1.16.1",
-        filename: "buffbot-v1.16.1.zip",
-        length: 5_797_598,
-        sha256: "e116ab16e98f055e398e23b3f1f417f61e37c9d2bf04aefced6c9a3f629ed31d",
+        url: "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.16.2/buffbot-v1.16.2.zip",
+        reference: "v1.16.2",
+        filename: "buffbot-v1.16.2.zip",
+        length: 5_798_498,
+        sha256: "ab2d95f589111d49f0b1e62cce47c2203e1cede91e7cd2316ffe76ce6ba6924a",
     },
     Pin {
         id: "cassianpc-8f9af4ca4e76ec72240f961b18a1d83739acd994",
@@ -342,14 +398,64 @@ const ARTIFACTS: &[Pin] = &[
         sha256: "117cd79cb5187640a5efd6c1d19181b43bcfa7381161df2f88db055d3af075f7",
     },
     Pin {
-        id: "chriz-iwd-encounters-0.2.2",
-        version: "0.2.2",
+        id: "chriz-bg-modpack-0.2.0-alpha.22",
+        version: "0.2.0-alpha.22",
         kind: SourceKind::GithubRelease,
-        url: "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/download/v0.2.2/chriz-iwd-encounters-v0.2.2.zip",
-        reference: "v0.2.2",
-        filename: "chriz-iwd-encounters-v0.2.2.zip",
-        length: 381_722,
-        sha256: "c9a653aeb61bee0f3b76e230e793b4f835bb2e5ce13de48d5f1dce630a94442c",
+        url: "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.22/chriz-bg-modpack-v0.2.0-alpha.22.zip",
+        reference: "v0.2.0-alpha.22",
+        filename: "chriz-bg-modpack-v0.2.0-alpha.22.zip",
+        length: 9_607_048,
+        sha256: "53044637cbd3259b3eabf8032b53137560aa2ae821074c8ecf8a64a42474a317",
+    },
+    Pin {
+        id: "chriz-bg-rebalance-0.8.12",
+        version: "0.8.12",
+        kind: SourceKind::GithubRelease,
+        url: "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.12/chriz-bg-rebalance-v0.8.12-windows.zip",
+        reference: "v0.8.12",
+        filename: "chriz-bg-rebalance-v0.8.12-windows.zip",
+        length: 1_825_506,
+        sha256: "f64314ab1462cef661dc4191e37e9d8911e95bd8df13ad44c3a09744b23847a8",
+    },
+    Pin {
+        id: "chriz-iwd-encounters-0.3.4",
+        version: "0.3.4",
+        kind: SourceKind::GithubRelease,
+        url: "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/download/v0.3.4/chriz-iwd-encounters-v0.3.4.zip",
+        reference: "v0.3.4",
+        filename: "chriz-iwd-encounters-v0.3.4.zip",
+        length: 756_790,
+        sha256: "8f6b5abf7f8a5af6ce22d99cabd0c4e5c188c09872d676f8542cf8456b5f83c6",
+    },
+    Pin {
+        id: "chriz-iwd-party-dialog-0.1.0",
+        version: "0.1.0",
+        kind: SourceKind::GithubRelease,
+        url: "https://github.com/Chrizhermann/chriz-iwd-party-dialog/releases/download/v0.1.0/chriz-iwd-party-dialog-v0.1.0.zip",
+        reference: "v0.1.0",
+        filename: "chriz-iwd-party-dialog-v0.1.0.zip",
+        length: 1_282_596,
+        sha256: "d801101ca396b88b39995185bf4d784777a8f24a23bdb7e4746cda08a3bbe8e2",
+    },
+    Pin {
+        id: "chriz-multiplayer-fix-0.1.0",
+        version: "0.1.0",
+        kind: SourceKind::GithubRelease,
+        url: "https://github.com/Chrizhermann/chriz-multiplayer-fix/releases/download/v0.1.0/chriz-multiplayer-fix-v0.1.0.zip",
+        reference: "v0.1.0",
+        filename: "chriz-multiplayer-fix-v0.1.0.zip",
+        length: 1_824_127,
+        sha256: "5b85b267d33a7bc596bef54c38b3e6b7b57aa5b2239f6d5a337f744e4a42906a",
+    },
+    Pin {
+        id: "chriz-overhead-text-0.1.0",
+        version: "0.1.0",
+        kind: SourceKind::GithubRelease,
+        url: "https://github.com/Chrizhermann/chriz-overhead-text/releases/download/v0.1.0/chriz-overhead-text-v0.1.0.zip",
+        reference: "v0.1.0",
+        filename: "chriz-overhead-text-v0.1.0.zip",
+        length: 1_277_567,
+        sha256: "a7023258fbc6f5621663ed40fd7927877f45a074d896002b36993c88b132ef9a",
     },
     Pin {
         id: "dendjelion-2.1",
@@ -738,7 +844,7 @@ const RECOMMENDED: &[(&str, &[u32])] = &[
     (
         "chriz-iwd-encounters-main",
         &[
-            100, 110, 200, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410,
+            100, 110, 120, 200, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410, 420,
         ],
     ),
     (
@@ -751,6 +857,11 @@ const RECOMMENDED: &[(&str, &[u32])] = &[
     ("cdtweaks-spell-save-penalties", &[2312]),
     ("klatu-armor-thieving-main", &[2150]),
     ("buffbot-main", &[1, 0]),
+    ("chriz-overhead-text-main", &[0]),
+    ("chriz-multiplayer-fix-main", &[0, 1]),
+    ("chriz-iwd-party-dialog-main", &[0]),
+    ("chriz-bg-rebalance-main", &[361]),
+    ("chriz-bg-modpack-main", &[470]),
 ];
 
 #[test]
@@ -770,7 +881,7 @@ fn declares_a_standalone_iwdee_collection_with_its_own_data_folder() {
             .collect::<Vec<_>>(),
         [PRESET]
     );
-    assert_eq!(manifest.collection.features.len(), 321);
+    assert_eq!(manifest.collection.features.len(), 337);
     assert!(
         validate(&manifest).is_empty(),
         "authoring validation findings: {:?}",
@@ -882,10 +993,31 @@ fn pins_the_exact_ordered_runs_and_component_lists() {
         position(&manifest, "klatu-armor-thieving-main") + 1,
         position(&manifest, "buffbot-main")
     );
-    // BuffBot after EEex, late as in the BG installer.
+    // BuffBot, Chriz Overhead Text, Chriz Multiplayer Fix and Chriz IWD Party Dialog run after
+    // EEex, late.
     assert!(position(&manifest, "eeex-main") < position(&manifest, "buffbot-main"));
     assert_eq!(
         position(&manifest, "buffbot-main") + 1,
+        position(&manifest, "chriz-overhead-text-main")
+    );
+    assert_eq!(
+        position(&manifest, "chriz-overhead-text-main") + 1,
+        position(&manifest, "chriz-multiplayer-fix-main")
+    );
+    assert_eq!(
+        position(&manifest, "chriz-multiplayer-fix-main") + 1,
+        position(&manifest, "chriz-iwd-party-dialog-main")
+    );
+    assert_eq!(
+        position(&manifest, "chriz-iwd-party-dialog-main") + 1,
+        position(&manifest, "chriz-bg-rebalance-main")
+    );
+    assert_eq!(
+        position(&manifest, "chriz-bg-rebalance-main") + 1,
+        position(&manifest, "chriz-bg-modpack-main")
+    );
+    assert_eq!(
+        position(&manifest, "chriz-bg-modpack-main") + 1,
         position(&manifest, "eeexremote-main")
     );
 }
@@ -1023,7 +1155,7 @@ fn resolves_the_exact_recommended_plan() {
         .iter()
         .map(|run| run.components.len())
         .sum::<usize>();
-    assert_eq!(components, 140);
+    assert_eq!(components, 148);
 }
 
 #[test]
@@ -1078,7 +1210,7 @@ fn every_choice_group_offers_exclusive_alternatives() {
             groups.entry(group).or_default().push(feature.id.as_str());
         }
     }
-    assert_eq!(groups.len(), 30);
+    assert_eq!(groups.len(), 31);
     let evaluation = recommended(&manifest);
     for (group, members) in &groups {
         assert!(members.len() > 1, "{group}");
@@ -1310,9 +1442,10 @@ fn chriz_iwd_encounters_is_on_by_default_and_each_part_needs_its_scs_ai() {
         ]
     );
     assert_eq!(priests.requires, ["feature:stratagems:component-6040"]);
-    let all: Vec<u32> = [100, 110, 200]
+    let all: Vec<u32> = [100, 110, 120, 200]
         .into_iter()
         .chain(ENCOUNTERS_FIGHTS)
+        .chain([420])
         .collect();
     assert_eq!(
         evaluation.plan.components_for("chriz-iwd-encounters-main"),
@@ -1322,7 +1455,11 @@ fn chriz_iwd_encounters_is_on_by_default_and_each_part_needs_its_scs_ai() {
     let mut selection = Selection::defaults("windows");
     selection.set_feature("feature:chriz-iwd-encounters:component-200", false);
     let without_priests = evaluate(&manifest, &selection).unwrap();
-    let expected: Vec<u32> = [100, 110].into_iter().chain(ENCOUNTERS_FIGHTS).collect();
+    let expected: Vec<u32> = [100, 110, 120]
+        .into_iter()
+        .chain(ENCOUNTERS_FIGHTS)
+        .chain([420])
+        .collect();
     assert_eq!(
         without_priests
             .plan
@@ -1330,11 +1467,15 @@ fn chriz_iwd_encounters_is_on_by_default_and_each_part_needs_its_scs_ai() {
         Some(&expected[..])
     );
 
-    // Without SCS only its two AI parts go: the banter guard and the fights work without it.
+    // Without SCS only its two AI parts go: the spell rules, banter guard and encounters work without it.
     let mut selection = Selection::defaults("windows");
     selection.set_feature("mod:stratagems", false);
     let without_scs = evaluate(&manifest, &selection).unwrap();
-    let expected: Vec<u32> = [110].into_iter().chain(ENCOUNTERS_FIGHTS).collect();
+    let expected: Vec<u32> = [110, 120]
+        .into_iter()
+        .chain(ENCOUNTERS_FIGHTS)
+        .chain([420])
+        .collect();
     assert_eq!(
         without_scs.plan.components_for("chriz-iwd-encounters-main"),
         Some(&expected[..])
@@ -1430,6 +1571,51 @@ fn chriz_iwd_encounters_fights_are_on_by_default_and_each_can_be_left_out() {
         .components_for("chriz-iwd-encounters-main")
         .unwrap();
     assert!(!plan.contains(&300) && plan.contains(&310) && plan.contains(&410));
+}
+
+#[test]
+fn chriz_iwd_encounters_0_3_0_adds_default_spell_rules_and_main_overhaul_and_optional_expansion() {
+    // Christopher, 2026-11-21: 120 and 420 on by default; 500 optional and off by default.
+    let manifest = recipe();
+    let evaluation = recommended(&manifest);
+    for component in [120, 420] {
+        let id = format!("feature:chriz-iwd-encounters:component-{component}");
+        let control = evaluation.view.control(&id).unwrap();
+        assert_eq!(control.decision, Decision::Default, "{id}");
+        assert!(control.selected, "{id}");
+        assert_eq!(
+            control.parent.as_deref(),
+            Some("mod:chriz-iwd-encounters"),
+            "{id}"
+        );
+        assert!(
+            control.requires.is_empty() && control.requires_any.is_empty(),
+            "{id}"
+        );
+    }
+
+    let expansion = evaluation
+        .view
+        .control("feature:chriz-iwd-encounters:component-500")
+        .unwrap();
+    assert_eq!(expansion.decision, Decision::Optional);
+    assert!(!expansion.selected);
+    assert_eq!(
+        expansion.parent.as_deref(),
+        Some("mod:chriz-iwd-encounters")
+    );
+    assert!(expansion.requires.is_empty() && expansion.requires_any.is_empty());
+
+    let mut selection = Selection::defaults("windows");
+    selection.set_feature("feature:chriz-iwd-encounters:component-120", false);
+    selection.set_feature("feature:chriz-iwd-encounters:component-420", false);
+    selection.set_feature("feature:chriz-iwd-encounters:component-500", true);
+    let toggled = evaluate(&manifest, &selection).unwrap();
+    let plan = toggled
+        .plan
+        .components_for("chriz-iwd-encounters-main")
+        .unwrap();
+    assert!(!plan.contains(&120) && !plan.contains(&420) && plan.contains(&500));
 }
 
 #[test]
@@ -1582,5 +1768,217 @@ fn save_penalties_run_after_scs_and_default_to_arcane_and_divine() {
             .plan
             .components_for("cdtweaks-spell-save-penalties"),
         Some(&[2312][..])
+    );
+}
+
+#[test]
+fn chriz_overhead_text_is_on_by_default_and_needs_eeex() {
+    let manifest = recipe();
+    let evaluation = recommended(&manifest);
+    let mod_control = evaluation.view.control("mod:chriz-overhead-text").unwrap();
+    assert_eq!(mod_control.decision, Decision::Default);
+    assert_eq!(mod_control.readiness, Readiness::Ready);
+    assert!(mod_control.selected);
+    assert_eq!(
+        evaluation.plan.components_for("chriz-overhead-text-main"),
+        Some(&[0][..])
+    );
+
+    let mut without_eeex = Selection::defaults("windows");
+    without_eeex.set_feature("mod:eeex", false);
+    let without_eeex = evaluate(&manifest, &without_eeex).unwrap();
+    assert!(without_eeex
+        .plan
+        .components_for("chriz-overhead-text-main")
+        .is_none());
+}
+
+#[test]
+fn chriz_iwd_party_dialog_is_on_by_default_and_needs_eeex() {
+    let manifest = recipe();
+    let evaluation = recommended(&manifest);
+    let mod_control = evaluation
+        .view
+        .control("mod:chriz-iwd-party-dialog")
+        .unwrap();
+    assert_eq!(mod_control.decision, Decision::Default);
+    assert_eq!(mod_control.readiness, Readiness::Ready);
+    assert!(mod_control.selected);
+    assert_eq!(
+        evaluation
+            .plan
+            .components_for("chriz-iwd-party-dialog-main"),
+        Some(&[0][..])
+    );
+
+    let mut without_eeex = Selection::defaults("windows");
+    without_eeex.set_feature("mod:eeex", false);
+    let without_eeex = evaluate(&manifest, &without_eeex).unwrap();
+    assert!(without_eeex
+        .plan
+        .components_for("chriz-iwd-party-dialog-main")
+        .is_none());
+}
+
+#[test]
+fn round_clock_is_the_only_rebalance_component_and_needs_eeex() {
+    let manifest = recipe();
+    let run = "chriz-bg-rebalance-main";
+    let evaluation = recommended(&manifest);
+    let parent = evaluation.view.control("mod:chriz-bg-rebalance").unwrap();
+    assert_eq!(parent.decision, Decision::Default);
+    assert_eq!(parent.readiness, Readiness::Ready);
+    assert!(parent.selected);
+    assert_eq!(evaluation.plan.components_for(run), Some(&[361][..]));
+
+    for disabled in ["mod:chriz-bg-rebalance", "mod:eeex"] {
+        let mut selection = Selection::defaults("windows");
+        selection.set_feature(disabled, false);
+        let changed = evaluate(&manifest, &selection).unwrap();
+        assert!(changed.plan.components_for(run).is_none(), "{disabled}");
+    }
+}
+
+#[test]
+fn chriz_multiplayer_fix_installs_the_crash_fix_always_and_the_copy_button_by_default() {
+    let manifest = recipe();
+    let evaluation = recommended(&manifest);
+    let mod_control = evaluation
+        .view
+        .control("mod:chriz-multiplayer-fix")
+        .unwrap();
+    assert_eq!(mod_control.decision, Decision::Default);
+    assert_eq!(mod_control.readiness, Readiness::Ready);
+    assert!(mod_control.selected);
+    let copy = evaluation
+        .view
+        .control("feature:chriz-multiplayer-fix:component-1")
+        .unwrap();
+    assert_eq!(copy.decision, Decision::Default);
+    assert!(copy.selected);
+    assert_eq!(
+        evaluation.plan.components_for("chriz-multiplayer-fix-main"),
+        Some(&[0, 1][..])
+    );
+
+    // The save copy button can be turned off; the crash fix stays with the mod.
+    let mut without_copy = Selection::defaults("windows");
+    without_copy.set_feature("feature:chriz-multiplayer-fix:component-1", false);
+    let without_copy = evaluate(&manifest, &without_copy).unwrap();
+    assert_eq!(
+        without_copy
+            .plan
+            .components_for("chriz-multiplayer-fix-main"),
+        Some(&[0][..])
+    );
+
+    let mut without_mod = Selection::defaults("windows");
+    without_mod.set_feature("mod:chriz-multiplayer-fix", false);
+    let without_mod = evaluate(&manifest, &without_mod).unwrap();
+    assert!(without_mod
+        .plan
+        .components_for("chriz-multiplayer-fix-main")
+        .is_none());
+
+    let mut without_eeex = Selection::defaults("windows");
+    without_eeex.set_feature("mod:eeex", false);
+    let without_eeex = evaluate(&manifest, &without_eeex).unwrap();
+    assert!(without_eeex
+        .plan
+        .components_for("chriz-multiplayer-fix-main")
+        .is_none());
+}
+
+#[test]
+fn chriz_bg_modpack_scroll_learning_fix_470_runs_by_default_with_eeex_and_omits_690() {
+    let manifest = recipe();
+    let evaluation = recommended(&manifest);
+    let mod_control = evaluation.view.control("mod:chriz-bg-modpack").unwrap();
+    assert_eq!(mod_control.decision, Decision::Default);
+    assert_eq!(mod_control.readiness, Readiness::Ready);
+    assert!(mod_control.selected);
+
+    let scroll_fix = evaluation
+        .view
+        .control("feature:chriz-bg-modpack:component-470")
+        .unwrap();
+    assert_eq!(scroll_fix.decision, Decision::Mandatory);
+    assert_eq!(scroll_fix.readiness, Readiness::Ready);
+    assert!(scroll_fix.selected);
+    assert_eq!(
+        evaluation.plan.components_for("chriz-bg-modpack-main"),
+        Some(&[470][..])
+    );
+
+    let scroll_feature = manifest
+        .collection
+        .features
+        .iter()
+        .find(|feature| feature.id == "feature:chriz-bg-modpack:component-470")
+        .unwrap();
+    assert_eq!(scroll_feature.requires, ["feature:eeex:component-1"]);
+    assert!(!manifest.collection.features.iter().any(|feature| matches!(
+        feature.id.as_str(),
+        "feature:chriz-bg-modpack:component-690"
+            | "feature:chriz-bg-modpack:component-695"
+            | "feature:chriz-bg-modpack:component-696"
+            | "feature:chriz-bg-modpack:component-697"
+            | "feature:chriz-bg-modpack:component-698"
+    )));
+    assert!(!manifest.mods["chriz-bg-modpack"]
+        .components
+        .iter()
+        .any(|component| matches!(component.id, 690 | 695 | 696 | 697 | 698)));
+
+    for disabled in ["mod:chriz-bg-modpack", "mod:eeex"] {
+        let mut selection = Selection::defaults("windows");
+        selection.set_feature(disabled, false);
+        let changed = evaluate(&manifest, &selection).unwrap();
+        assert!(
+            changed
+                .plan
+                .components_for("chriz-bg-modpack-main")
+                .is_none(),
+            "{disabled}"
+        );
+    }
+
+    for (choice_id, expected_id) in [
+        ("feature:chriz-bg-modpack:component-699", 699u32),
+        ("feature:chriz-bg-modpack:component-700", 700u32),
+    ] {
+        let ctrl = evaluation.view.control(choice_id).unwrap();
+        assert_eq!(ctrl.decision, Decision::Optional);
+        assert!(!ctrl.selected);
+        let mut selection = Selection::defaults("windows");
+        selection.set_feature(choice_id, true);
+        let picked = evaluate(&manifest, &selection).unwrap();
+        assert_eq!(
+            picked.plan.components_for("chriz-bg-modpack-main"),
+            Some(&[470, expected_id][..])
+        );
+    }
+
+    let mut both = Selection::defaults("windows");
+    both.set_feature("feature:chriz-bg-modpack:component-699", true);
+    both.set_feature("feature:chriz-bg-modpack:component-700", true);
+    let conflict_eval = evaluate(&manifest, &both).unwrap();
+    assert_eq!(
+        conflict_eval.plan.components_for("chriz-bg-modpack-main"),
+        Some(&[470][..])
+    );
+    assert!(
+        !conflict_eval
+            .view
+            .control("feature:chriz-bg-modpack:component-699")
+            .unwrap()
+            .selected
+    );
+    assert!(
+        !conflict_eval
+            .view
+            .control("feature:chriz-bg-modpack:component-700")
+            .unwrap()
+            .selected
     );
 }

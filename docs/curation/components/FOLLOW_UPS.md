@@ -38,6 +38,31 @@ On `main` for the next Chriz Easy BG version:
   card in Customize, and "Details" opens that card. Chriz Easy IWD has no feature group and
   shows no card. See `docs/plans/2026-10-13-challenge-mode-group.md`. Open: no packaged app
   was built and no installation was run with it.
+- Saves between single player and multiplayer (Christopher, 2026-11-22): Chriz Multiplayer
+  Fix v0.1.0 is a default in both installers, component `0` (no crash after leaving the
+  multiplayer lobby) and `1` (Load screen button that copies a save between single player
+  and multiplayer, for chatter runs where viewers create the party). Chriz Easy IWD also
+  brings it to existing installations (recipe 0.1.18, hotpatch `chriz-multiplayer-fix-0.1.0`).
+  Open: Chriz Easy BG offers no hotpatches yet (`hotpatches/bg/catalog.toml` only updates
+  installed mods), so an existing BG installation gets the fix only with a new installation
+  or by hand from the release zip. A BG hotpatch for it comes after the next Chriz Easy BG
+  release, as the first BG hotpatch (it needs bases for the released BG recipes). No
+  packaged-app installation with these components was run yet; that is part of each
+  release's acceptance.
+- No travel back into an earlier campaign, only with Challenge Mode (Christopher,
+  2026-11-22: "Wahrscheinlich besser nur für Challenge Mode"): Chriz BG Modpack
+  v0.2.0-alpha.17 component `680` is pinned, optional and off by default, and a member of
+  the Challenge Mode group; Chris's Recommended leaves it off. It also fixes several Siege
+  of Dragonspear camp problems. Open: its area list (Modpack `eet_world_progression.2da`)
+  is still to be checked with Christopher (see the 2026-11-01 idea under Ideas for later),
+  and it was not tested in a game across the campaign transitions.
+  Plan: 680 also carries Siege of Dragonspear camp fixes that do not depend on the travel
+  lock (dismissed companions no longer trapped in an abandoned camp, storage chest
+  forwarding, Flaming Fist sentry cleanup, duplicate Jegg, Ch.10 battle audio; Modpack
+  `lib/cbm_eet_world_progression.tpa` sections D-H at v0.2.0-alpha.17). Split them into
+  their own default Modpack component in the next Modpack release, so Recommended gets the
+  fixes while the travel lock stays in Challenge Mode. Until then they are off in
+  Recommended, as in every release so far.
 - Planned next major milestones (Christopher, 2026-11-13; details under
   [Conditional/future feature gates](#conditionalfuture-feature-gates)):
   (1) integrate the first releases of `chriz-bg-magic`, `chriz-bg-kits` and
@@ -586,8 +611,13 @@ On `main` for the next Chriz Easy BG version:
     - Adding or removing it during a playthrough stays unsupported (Christopher's rule).
     - Pinned for alpha.22 in PR #56.
 - Spell Revisions, Artisan's Kitpack and Bardic Wonders forks frozen (Christopher,
-  2026-11-03): no more fixes or balancing; CEBG keeps the current pins until the own spell
-  mod and own kit mod replace them (design chats running).
+  2026-11-03) pending our spell and kit replacements. Christopher approved a save/rest
+  bug-fix exception for the Artisan and Bardic forks on 2026-11-18. The collection takes
+  chriz.7 for all three Artisan TP2s in both Chriz Easy BG recipes, and balance.9 for
+  Bardic in the curated BG recipe. The freeze on balance changes continues. The fixes
+  have installer-fixture coverage. Checking save/rest in the affected playthrough and the
+  separate visible-hostile refusal remains open.
+  [Artisan chriz.7](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/tag/v4.81a-dev.85928f9-chriz.7) · [Bardic balance.9](https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.9)
 - [x] BG1 NPC Project out of the default (Christopher, 2026-11-03). **Done** on
   2026-11-03 in [PR #88](https://github.com/Chrizhermann/chriz-bg-collection/pull/88)
   (merge commit `9eda4e6`): it is optional and unticked in Recommended and in the curated
@@ -781,6 +811,11 @@ On `main` for the next Chriz Easy BG version:
   is fine. Optional quest mods that need such travel must say that they don't work with
   Challenge Mode. Reasons: fewer bugs, and no exploits through shops or stashed items. The
   exact area list is defined together with Christopher later.
+  Since 2026-11-22 this is Chriz BG Modpack component `680` (v0.2.0-alpha.17), on only with
+  Challenge Mode (see [CHRIZ-BG-MODPACK](CHRIZ-BG-MODPACK.md)). Its area list is the
+  Modpack's `eet_world_progression.2da` at alpha.17; still to be checked with Christopher.
+  Open: quest mods that need travel back into an earlier campaign must be named, so they
+  can say that they don't work with Challenge Mode; none is named yet.
 - Low priority: make cloud creatures able to squeeze through doors. (Christopher told a
   Codex chat on 2026-11-01; it was only written into a stale copy of this list and moved
   here on 2026-11-04.)
@@ -863,8 +898,8 @@ content, evaluated component by component (keep, fix or extend).
   `a821992228c87a4bef75be4bc2fc833f8db46819` (still upstream head), update the renamed
   `Artisans_Warlock/Artisans_Warlock.TP2` path, and stop describing it as a v3.0 target.
   Waits for the Contingency prompt answer below.
-- [ ] Stale catalog wording: `BARDICWONDERS.md` cites `balance.4`/`balance.6`; `ABETTORHLAREBALANCE.md` still says
-  "keep unavailable" although the finite Abettor HLA work ships inside Bardic Wonders.
+- [ ] `ABETTORHLAREBALANCE.md` still says "keep unavailable" although the finite Abettor
+  HLA work ships inside Bardic Wonders.
 - [ ] [Sarah](SARAHTOB.md) portraits: captured with hashes on Modpack branch
   `codex/sarah-options`, but their artist and licence are unknown, so they are not
   published and the recipe has no feature for them.

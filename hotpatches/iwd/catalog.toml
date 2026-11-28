@@ -17,14 +17,19 @@ runtime_files = [
     "infinityloader-previous.log",
     "infinityloader_crash/**",
     # The pattern databases: on the first start, and whenever the game changes, the loader writes
-    # the addresses it found into them. The same first start creates the empty folder
-    # EEex_scripts/override; a file put into it still counts as a change. Seen 2026-10-29 in
-    # Christopher's played installation and in the 0.1.1 release lab.
+    # the addresses it found into its own database and into EEex's version database
+    # (v2.7.3.0.db and so on, copied from EEex/loader). Mods' own databases in
+    # extra_pattern_dbs use NoCache=1 and stay byte-identical, so they stay checked and Undo
+    # removes them: the loader refuses to start the game when one of their patterns finds
+    # nothing. The same first start creates the empty folder EEex_scripts/override; a file put
+    # into it still counts as a change. Seen 2026-10-29 in Christopher's played installation and
+    # in the 0.1.1 release lab; mod databases checked 2026-11-22.
     "infinityloader.db",
-    "eeex_scripts/extra_pattern_dbs/*.db",
+    "eeex_scripts/extra_pattern_dbs/v2.*.db",
     "eeex_scripts/override",
     # BuffBot 1.12: logs, the generated panel backgrounds, its innate helpers, exported presets.
     "buffbot_*.log",
+    "chriz_iwd_party_dialog.log",
     "override/bfbotbg*.mos",
     "override/bfbtch.spl",
     "override/bfbtcr.spl",
@@ -99,6 +104,72 @@ id = "iwd-0.1.10"
 label = "Chriz Easy IWD 0.1.10"
 recipe_version = "0.1.10"
 content_sha256 = "079a287df2caa5cb125f62c0c2a4d4536286a43bc49577485134182f03f628c0"
+
+[[bases]]
+id = "iwd-0.1.13"
+label = "Chriz Easy IWD 0.1.13"
+recipe_version = "0.1.13"
+content_sha256 = "3540064fb278f30e240eedec4d0a2e43aebc6f16e3ba0fa5ee11fd4630c521b8"
+
+[[bases]]
+id = "iwd-0.1.14"
+label = "Chriz Easy IWD 0.1.14"
+recipe_version = "0.1.14"
+content_sha256 = "d0bb83c08061f3b55306a00df14dd3a6950f151b9a83d5f508951c9cc56ab523"
+
+[[bases]]
+id = "iwd-0.1.15"
+label = "Chriz Easy IWD 0.1.15"
+recipe_version = "0.1.15"
+content_sha256 = "518171a581f42c3c82e732ae2d67759ae49668258d8d803f24fc9368245e83fe"
+
+[[bases]]
+id = "iwd-0.1.16"
+label = "Chriz Easy IWD 0.1.15"
+recipe_version = "0.1.16"
+content_sha256 = "ba389b0325f180c53d14c65d2c4638e9a129fdee84ca3627e7e53ca2212b09d4"
+
+[[bases]]
+id = "iwd-0.1.17"
+label = "Chriz Easy IWD 0.1.16"
+recipe_version = "0.1.17"
+content_sha256 = "6aceb183900fb7b3640dbedc8f4dd84e931c7cfe1549aa0c31cf115726d397c1"
+
+[[bases]]
+id = "iwd-0.1.18"
+label = "Chriz Easy IWD 0.1.17"
+recipe_version = "0.1.18"
+content_sha256 = "bb1b5b7fabc87f7a6ae5c4b96355eab7fae53698cd39a029b0b45852fa13de0d"
+
+[[bases]]
+id = "iwd-0.1.19"
+label = "Chriz Easy IWD 0.1.17"
+recipe_version = "0.1.19"
+content_sha256 = "3eadb7a097a3476a876fc2ea667fb27e6544b0228683348b9c10695048724891"
+
+[[bases]]
+id = "iwd-0.1.20"
+label = "Chriz Easy IWD 0.1.17"
+recipe_version = "0.1.20"
+content_sha256 = "169e05d1a2607ebc69e7016732b42c8d18024dd16f814e5b67796e9249488526"
+
+[[bases]]
+id = "iwd-0.1.21"
+label = "Chriz Easy IWD 0.1.17"
+recipe_version = "0.1.21"
+content_sha256 = "adba2f20b157ebb8d97c0103518c7b78c5efe23e053983a32607851b9280cd9a"
+
+[[bases]]
+id = "iwd-0.1.22"
+label = "Chriz Easy IWD 0.1.17"
+recipe_version = "0.1.22"
+content_sha256 = "31c158ea070afe5cd516d42593b9f133f58842ae4e4ecd56b033e4069fbb8e1e"
+
+[[bases]]
+id = "iwd-0.1.23"
+label = "Chriz Easy IWD 0.1.17"
+recipe_version = "0.1.23"
+content_sha256 = "ff2e35f3f41b9b24569c1f31b47e185c4f6df70e0cee9a5846c921425ecabba0"
 
 # Christopher's twelve boss fights (Chriz IWD Encounters 0.2.0, 2026-11-04) for installations of
 # the releases before 0.1.6, which install them itself. Each fight takes effect where the party
@@ -213,4 +284,56 @@ components = [110]
 [[hotpatches.changes]]
 title = "Banter only between living party members"
 summary = "Banter starts only when both partners live and are in the same area."
+save_applicability = "current-save"
+
+# Repairs Dragon's Eye Level 2, Severed Hand, and Lower Dorn's Deep quest kill counters (Chriz IWD
+# Encounters 0.3.4, Christopher, 2026-11-27) for installations of 0.1.15-0.1.16 (recipes 0.1.16-
+# 0.1.21) before collection 0.1.22, which pins 0.3.4 directly. Works on saves already in progress.
+[[hotpatches]]
+id = "chriz-iwd-encounters-0.3.4-quest-counters"
+title = "Dragon's Eye, Severed Hand, and Dorn's Deep quest fix"
+summary = "Repairs the quest kill counters for Mother Egenia and the Dragon's Eye captives (Level 2), Kaylessa in the Severed Hand, and the Lower Dorn's Deep salamander quests, and preserves quest death counts on the custom squads in unvisited areas."
+bases = ["iwd-0.1.16", "iwd-0.1.17", "iwd-0.1.18", "iwd-0.1.19", "iwd-0.1.20", "iwd-0.1.21"]
+artifact = "chriz-iwd-encounters-0.3.4"
+mod = "chriz-iwd-encounters-0.3.4"
+components = [425]
+requires_components = [{ mod = "chriz-iwd-encounters", any_of = [420] }]
+
+[[hotpatches.changes]]
+title = "Mother Egenia and the Dragon's Eye captives"
+summary = "Mother Egenia and the captives on Dragon's Eye Level 2 recognize when the Talonite guards are defeated (> 5 / < 6), including in saves already on that floor."
+save_applicability = "current-save"
+
+[[hotpatches.changes]]
+title = "Kaylessa's quest in the Severed Hand"
+summary = "Kaylessa counts defeated shadowed elven soldiers accurately (> 11) with the thinned Severed Hand encounters, including in saves already in the tower."
+save_applicability = "current-save"
+
+[[hotpatches.changes]]
+title = "Lower Dorn's Deep salamander quests"
+summary = "Guello and the deep gnomes recognize thinned salamander counts (8001_Salamanders > 8 and 8008_Salamanders > 4), including in saves already in Dorn's Deep."
+save_applicability = "current-save"
+
+# Stops the crash after leaving the multiplayer lobby and adds the Load screen button that copies
+# saves between single player and multiplayer (Chriz Multiplayer Fix 0.1.0, Christopher,
+# 2026-11-22) for installations of the releases before collection 0.1.18, which installs it
+# itself. Both components only add runtime files and need EEex's core at install time.
+[[hotpatches]]
+id = "chriz-multiplayer-fix-0.1.0"
+title = "No more crash after the multiplayer lobby"
+summary = "Stops the random crash right after leaving the multiplayer lobby and adds a Copy button to each save on the Load screen that copies it between single player and multiplayer."
+bases = ["iwd-0.1.1", "iwd-0.1.2", "iwd-0.1.3", "iwd-0.1.4", "iwd-0.1.5", "iwd-0.1.6", "iwd-0.1.8", "iwd-0.1.9", "iwd-0.1.10", "iwd-0.1.13", "iwd-0.1.14", "iwd-0.1.15", "iwd-0.1.16", "iwd-0.1.17"]
+artifact = "chriz-multiplayer-fix-0.1.0"
+mod = "chriz-multiplayer-fix"
+components = [0, 1]
+requires_components = [{ mod = "eeex", any_of = [1] }]
+
+[[hotpatches.changes]]
+title = "No more crash after the multiplayer lobby"
+summary = "Leaving Beamdog's multiplayer lobby, for example on Multiplayer > Local network game > Load, no longer crashes the game at random."
+save_applicability = "current-save"
+
+[[hotpatches.changes]]
+title = "Copy saves between single player and multiplayer"
+summary = "A small Copy button on each save of the Load screen copies the save into the other mode's save list, so a party created in multiplayer can continue in single player and back. The original save stays."
 save_applicability = "current-save"

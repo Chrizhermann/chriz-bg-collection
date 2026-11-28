@@ -1,20 +1,211 @@
 # Next release — changelog drafts
 
-14 October 2026. Drafts for the release after app alpha.21 / collection alpha.20,
-on branch `claude/cebg-installer-fixes-20261014`. Nothing here is released.
+The current Chriz Easy BG and Chriz Easy IWD drafts are followed by the historical 0.1.2 and 0.1.0 drafts.
+The original drafts started on 14 October 2026, after app alpha.21 / collection alpha.20.
 Labels: **Mandatory** = always installed with its mod; **Default** = selected in
 Chris's Recommended; **Optional** = offered, unchecked; **Pending** = waiting for
 Christopher's choice. Version the next release properly; never republish over
 alpha.21. The [alpha.20 drafts](2026-10-13-next-release-changelogs.md) are already
-published. Christopher decided on 2026-11-01 that this release is app and collection
-**0.1.0** (prepared as alpha.22); the player-facing notes are in
+published. Christopher chose app and collection **0.1.0** for the alpha.22
+candidate on 2026-11-01. The player-facing notes are in
 [`docs/release-notes-0.1.0.md`](../release-notes-0.1.0.md).
+
+## Next Chriz Easy BG release (draft)
+
+### Changed behavior
+
+- **Saving and resting with passive kit abilities and bard songs.** Recurring Artisan's
+  Kitpack effects such as Awareness, Combat Casting and Tracking, and Bardic Wonders'
+  songs, Inspirations and kit auras now use projectiles that allow saving and resting.
+  Visible hostiles and active combat can still prevent both. The changes reach new
+  Chriz Easy BG installations after this recipe ships.
+  [Artisan chriz.7](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/tag/v4.81a-dev.85928f9-chriz.7) · [Bardic balance.9](https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.9)
+- **Round Clock** (BG Rebalance component 361, Default, requires EEex). Time spent
+  travelling, resting or advancing the clock in a script counts toward the wait after
+  casting a spell, using an item, swinging a weapon or trying to hide. It also counts
+  toward the next contingency check. When Hide in Shadows is ready, you can use Stealth
+  while paused. Only elapsed game time counts.
+- **No more crash after the multiplayer lobby, and saves copy between single player and
+  multiplayer** (Default, each part separately, requires EEex). Leaving Beamdog's multiplayer
+  lobby, for example on Multiplayer > Local network game > Load, no longer crashes the game at
+  random. A new button at the bottom of the Load screen copies the selected save into the other
+  mode's save list, so a party created in multiplayer can continue in single player and back; the
+  original save stays. (Chriz Multiplayer Fix v0.1.0)
+- **No travel back into an earlier campaign** (part of Challenge Mode, Optional; Chriz BG
+  Modpack component 680). Once you move on to the next campaign (Baldur's Gate, then Siege
+  of Dragonspear, Shadows of Amn and Throne of Bhaal), you can no longer travel back to the
+  earlier campaign's areas. Watcher's Keep stays open in Shadows of Amn and Throne of Bhaal.
+  It also fixes several Siege of Dragonspear camp problems: companions stranded in an
+  abandoned camp, the storage chest, leftover sentries and a duplicate Jegg. Switching
+  Challenge Mode on turns it on. Not yet tested in a full playthrough.
+- **Spell scroll learning matches Rules as Written** (Chriz BG Modpack component 470, Default
+  in BG and IWD, requires EEex). Fixes the vanilla Enhanced Edition engine bug where kitted
+  bards (Blade, Jester, Skald, mod kits), Wild Mages, kitted dual-class mages, and custom
+  multi-bit specialists took the -15% spell-scribing penalty on regular scrolls. Only
+  Mage-class characters carrying one or more of the 8 wizard specialist bits receive +15% on
+  their own school and -15% on opposing/other schools; all other kits use the pure INTMOD
+  chance.
+- **BG1 early-party XP boost** (Chriz BG Modpack component 695, Default in BG only, requires
+  EEex). Encourages gathering a full party early in Baldur's Gate 1 instead of solo-farming:
+  party-divided XP scales by +70% per additional living companion (100% solo, 85% duo, down to
+  75% in a full party of six) until each living protagonist or companion reaches 16,000 total XP
+  (counting retired dual-class XP as well as active XP). Inactive in solo play, Siege of
+  Dragonspear, Shadows of Amn, and Throne of Bhaal; works standalone and with Challenge Mode.
+- **No Quick Loot during combat** (Chriz BG Modpack component 696, Optional, off by default;
+  turning Challenge Mode on turns it on; requires EEex). Disables the Quick Loot bar while you
+  are in combat so items must be looted from bodies, ground piles, or containers directly, and
+  restores Quick Loot once combat clears if it was open beforehand.
+- **Watcher's Keep instant teleporters and instant room-hazard cleanup** (Chriz BG Modpack
+  components 697 and 698, Default in BG only; 698 requires EEex). Watcher's Keep teleporters
+  move the party immediately with crisp portal visuals and sound instead of multi-second black-screen
+  fade stalls, while keeping quest/statue/item gates and autosaves intact. Room-pulsed hazard debuffs
+  (Dead Magic, Wild Magic, Vicross's magic-null field, and Watcher's Keep Ice Library slow/freeze)
+  clear immediately upon teleporting, travelling, or stepping outside the hazard room, including while
+  paused, so spellcasting recovers immediately without waiting for the round timer.
+
+- **Unpaused inventory: always or in combat only** (Chriz BG Modpack components 699 and 700, Optional mutually exclusive in BG and IWD, off by default, requires EEex). Lets you keep Inventory unpaused either always (`699`: cancels pause on open, suppresses pausing inside Inventory, keeps world unpaused on close) or during combat only (`700`: pauses normally out of combat and unpauses / suppresses pausing whenever combat is active, including auto-unpausing if combat starts while paused in Inventory).
+
+### Mod versions
+
+- The Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.7 (was chriz.6), main, NPC and tweak
+  installers in both Chriz Easy BG recipes.
+- Bardic Wonders v2.9c-balance.9 (was balance.8), curated Chriz Easy BG.
+- BG Rebalance v0.8.12 (was v0.8.11), both Chriz Easy BG recipes (adds component 361; Chriz Easy IWD also adds component 361).
+- Chriz Multiplayer Fix v0.1.0 (new), both Chriz Easy BG recipes and Chriz Easy IWD.
+- Chriz BG Modpack v0.2.0-alpha.22 (was v0.2.0-alpha.21; after v0.2.0-alpha.19/alpha.20), both Chriz Easy BG recipes (keeps optional Challenge Mode 680 and 696, keeps defaults 470, 695, 697, and 698, and adds optional mutually exclusive 699 always / 700 combat only) and Chriz Easy IWD (adds optional mutually exclusive 699 / 700 alongside default 470; omits 695–698). (Previously pinned v0.2.0-alpha.19 was v0.2.0-alpha.18, after v0.2.0-alpha.17.)
+
+### Notes for the release integrator
+
+- Christopher approved this save/rest bug-fix exception to the two forks' freeze on
+  2026-11-18. The pins carry forward the component selections and native order. Owner
+  evidence includes 154 Artisan offline and WeiDU tests and synthetic BG2:EE/EET
+  installer and We Overwrite checks. Bardic passed 211 automated tests, 54 WeiDU syntax
+  and version checks, and 15 native fixtures across BG2:EE, EET and IWD:EE. Live
+  gameplay and a combined collection install with these pins remain untested.
+  [Collection intake](../../manifest/evidence/release-intake-20261118-artisan-chriz7-bardic-balance9.toml)
+- The next recipe update ledger needs entries for
+  `artifact:artisans-kitpack-4.81a-dev.85928f9-chriz.7` and
+  `artifact:bardicwonders-v2.9c-balance.9`.
+- The BG Rebalance intake verified the archive and native component order in all three
+  recipes. Recommended selects 468 components in curated BG and 143 in IWD, where 361 is
+  the only BG Rebalance component. [Collection intake](../../manifest/evidence/release-intake-20261118-chriz-bg-rebalance-chriz-easy-bg-chriz-easy-iwd.toml)
+- Upstream's single-player BG2:EE 2.7.3.0 quiet lab covered world-map travel, completed
+  and interrupted rest, and using Stealth while paused with components 360 and 361. The
+  standalone IWD:EE quiet lab also verified paused Stealth. A combined full-collection
+  install, EET and IWD campaign gameplay, waylaid travel and multiplayer remain untested.
+- The next BG recipe update ledger must cover `artifact:chriz-bg-rebalance-0.8.12` and
+  `feature:feature:chriz-bg-rebalance:component-361`.
+- **Chriz Multiplayer Fix v0.1.0** (taken in 2026-11-22, Christopher's decision of that day)
+  adds components `0` and `1` as defaults in both Chriz Easy BG recipes
+  (`chriz-multiplayer-fix-bg2`, in `post-eet-end` directly after `chriz-overhead-text-bg2` and
+  before `eeexremote-bg2`) and in Chriz Easy IWD (`chriz-multiplayer-fix-main`, directly after
+  `chriz-overhead-text-main`; `0` always comes with the mod, `1` is a default). Both need EEex's
+  core. The BG Recommended plans grow by two components in one new run, IWD's by two. The IWD
+  collection is numbered 0.1.18 with a ledger entry, and existing IWD installations get both
+  components through the hotpatch `chriz-multiplayer-fix-0.1.0`. Its record
+  (`manifest/evidence/release-intake-20261122-chriz-multiplayer-fix-chriz-easy-bg-chriz-easy-iwd.toml`)
+  covers the published release: a fresh download, length, SHA-256, `artifact verify` for every
+  artifact TOML and native order (`fresh_download` and `published_release_verified` are true).
+  Combined full-collection installs
+  and multiplayer sessions remain untested. The next BG recipe update ledger must cover
+  `artifact:chriz-multiplayer-fix-0.1.0`, `feature:feature:chriz-multiplayer-fix:component-0`
+  and `feature:feature:chriz-multiplayer-fix:component-1`.
+- The Chriz BG Modpack v0.2.0-alpha.17 intake verified the fresh download, archive, TP2
+  declaration order (`680` between `670` and `650`), and the wiring in both Chriz Easy BG
+  recipes. Christopher decided on 2026-11-22 that `680` is on only with Challenge Mode: it
+  is optional, a member of the Challenge Mode group and off in Chris's Recommended, so the
+  Recommended plans do not grow with this pin. Real-EET and
+  isolated WeiDU 249 install/uninstall fixture verification passed upstream; live combined
+  collection installation and full campaign playthrough remain untested.
+  [Collection intake](../../manifest/evidence/release-intake-20261122-chriz-bg-modpack-chriz-easy-bg.toml)
+- The Chriz BG Modpack v0.2.0-alpha.18 intake verified the fresh download, archive, TP2
+  declaration order (`470` between `460` and `610`; `690` stays unoffered/off), and default
+  wiring in both Chriz Easy BG recipes and Chriz Easy IWD (collection 0.1.19, where `470` is
+  the sole Modpack component). Standalone live quiet-lab `op147` checks passed on BG2:EE
+  `2.7.3.0` (`BuffBot-Dev`) and IWD:EE `2.7.3.0` (`IWD-MP-Lab-20261122`) with EEex `v1.3.1`,
+  alongside synthetic/extracted WeiDU 249 and x64 emulation checks; `BG:EE / SoD` live lab,
+  combined collection installation, and full campaign playthrough remain untested.
+  [Collection intake](../../manifest/evidence/release-intake-20261123-chriz-bg-modpack-chriz-easy-bg-chriz-easy-iwd.toml)
+- The next BG recipe update ledger must cover `artifact:chriz-bg-modpack-0.2.0-alpha.18`,
+  `feature:feature:chriz-bg-modpack:component-680`, and
+  `feature:feature:chriz-bg-modpack:component-470`.
+- The Chriz BG Modpack v0.2.0-alpha.19 intake verified the fresh download, archive, TP2
+  declaration order (`695` between `680` and `650`; `690` stays unoffered/off), default wiring in
+  both Chriz Easy BG recipes (`chriz-bg-modpack-bg2` + `chris-recommended.toml`), and exclusion from
+  Chriz Easy IWD (collection `0.1.20`, where `470` stays sole Modpack component). Offline real
+  `EEex_PreprocessAssembly` + Keystone/Unicorn emulation and synthetic WeiDU 249 install/uninstall
+  passed upstream, and standalone live quiet-lab verification (`2026-11-27`) passed `27/27` checks across `BG:EE 2.7.3.0` (`6/6`) and `EET 2.7.3.0` (`21/21`: `N = 2..6`, dead intermediate slot exclusion, dual-class `XPLEVEL.2DA` thresholds, SoD/`CHAPTER` gating, and Challenge Mode `650`/`652` coexistence) with `EEex v1.3.1`; combined collection installation and full campaign playthrough remain untested.
+  [Collection intake](../../manifest/evidence/release-intake-20261127-chriz-bg-modpack-chriz-easy-bg-chriz-easy-iwd.toml)
+- The next BG recipe update ledger must also cover `artifact:chriz-bg-modpack-0.2.0-alpha.19` and
+  `feature:feature:chriz-bg-modpack:component-695`.
+- The Chriz BG Modpack v0.2.0-alpha.20 / v0.2.0-alpha.21 intake verified the fresh download, archive, TP2
+  declaration order (`696`, `697`, and `698` after `695` and before `650`; `690` stays unoffered/off),
+  optional Challenge Mode wiring of `696` (off in Chris's Recommended) and default wiring of `697`/`698`
+  in both Chriz Easy BG recipes (`chriz-bg-modpack-bg2` + `chris-recommended.toml`),
+  and exclusion from Chriz Easy IWD (collection `0.1.21`, where `470` stays sole Modpack
+  component). Upstream verified `696` live on BG2:EE `2.7.3.0` + EEex `v1.3.1` (`BuffBot-Dev`, `5/5`
+  checks passing) plus Lua 5.1/5.2/LuaJIT and WeiDU 249 checks, and verified `697`/`698` live in
+  `Magic-Lab-20261104` (`6/6` checks passing) plus 89 offline/WeiDU/archive checks;
+  combined full-collection installation and campaign playthrough remain untested.
+  [Collection intake](../../manifest/evidence/release-intake-20261127-chriz-bg-modpack-v0.2.0-alpha.21-chriz-easy-bg-chriz-easy-iwd.toml)
+- The next BG recipe update ledger must also cover `artifact:chriz-bg-modpack-0.2.0-alpha.21`,
+  `feature:feature:chriz-bg-modpack:component-696`,
+  `feature:feature:chriz-bg-modpack:component-697`, and
+  `feature:feature:chriz-bg-modpack:component-698`.
+- The Chriz BG Modpack v0.2.0-alpha.22 intake verified the deterministic archive, TP2 declaration order (`699` and `700` after `698` and before `650`; `690` stays unoffered/off), and optional mutually exclusive wiring of `699` and `700` (off in Chris's Recommended) in both Chriz Easy BG recipes and Chriz Easy IWD (collection `0.1.23`, keeping `695`–`698` omitted from IWD). Upstream verified `699` and `700` live in `BuffBot-Dev` (`BG2:EE 2.7.3.0` + `EEex v1.3.1`, `11/11` checks, zero audio leak) alongside Lua 5.2 / LuaJIT 2.1, Keystone/Unicorn x64 emulation, real `2.7.3.0` EXEs, WeiDU 249, and deterministic archive checks; combined full-collection installation and campaign playthrough remain untested.
+  [Collection intake](../../manifest/evidence/release-intake-20261127-chriz-bg-modpack-v0.2.0-alpha.22-chriz-easy-bg-chriz-easy-iwd.toml)
+- The next BG recipe update ledger must also cover `artifact:chriz-bg-modpack-0.2.0-alpha.22`,
+  `feature:feature:chriz-bg-modpack:component-699`, and
+  `feature:feature:chriz-bg-modpack:component-700`.
+
+## Next Chriz Easy IWD release (draft)
+
+### Changed behavior
+
+- **No more crash after the multiplayer lobby, and saves copy between single player and
+  multiplayer** (requires EEex). Leaving Beamdog's multiplayer lobby no longer crashes the game
+  at random, and a small Copy button on each save of the Load screen copies the save into the
+  other mode's save list; the original save stays. The crash fix always comes with the mod, the
+  Copy button can be turned off. Games already installed get both through the hotpatch.
+  (Chriz Multiplayer Fix v0.1.0, collection 0.1.18)
+- **Chapters 2-6 bring mixed elite squads, and the finale's dispel is back.** Six mixed
+  squads with real multiclasses, using SCS caster and combat AI, replace the uniform five-man
+  squads, Kaylessa fights as a level-15 elven weapons master, the related quests need fewer
+  kills, and an endless staircase respawn is fixed. Poquelin's transformation in the finale dispels the party again as
+  in the base game. The optional Heart of Winter and Trials of the Luremaster overhaul repairs
+  the Polar Bear Spirit's roar, thins Burial Isle's undead and puts a Frost Giant War-Shaman
+  on the glacier in Gloomfrost. New games only. (Chriz IWD Encounters v0.3.2,
+  collection 0.1.18)
+- **Dragon's Eye, Severed Hand, and Dorn's Deep quest kill counters fixed, plus elite stats,
+  loot economy, and dungeon pacing overhaul.** Preserves quest death variables on custom squad
+  placements in Dragon's Eye Level 2 and the Severed Hand and aligns thinned-area quest kill
+  thresholds across Dragon's Eye (`> 5 / < 6`), the Severed Hand (`> 11`), and Lower Dorn's Deep
+  (`> 8` and `> 4`). Also fixes triple-stacked AC/THAC0/APR mastery bonuses on custom elites,
+  marks bespoke elite equipment and AI buff potions undroppable, recalibrates the Talonite Coven
+  (`Priestess + Champion + Venom-Troll`), stretches Kresselack's antechamber wave timers (`48 s` /
+  `+54 s`), removes the remaining Bombardier Beetles, adds six apex guardians, and trims additional
+  late-chapter and Watchknight hordes. Existing `0.1.15`–`0.1.16` games get the quest-counter
+  repair on saves in progress through the hotpatch (component `425`). (Chriz IWD Encounters v0.3.4,
+  collection 0.1.22)
+- **Spell scroll learning matches Rules as Written** (requires EEex). Bards (such as Blades),
+  Wild Mages, kitted dual-class mages, and non-mages no longer take a -15% penalty on spell
+  scrolls; only specialist mages apply +/-15% school modifiers. New games only. (Chriz BG
+  Modpack v0.2.0-alpha.18 component 470, collection 0.1.19; package updated to v0.2.0-alpha.19 in
+  collection 0.1.20 with BG1-only 695 omitted from IWD, and to v0.2.0-alpha.21 in collection 0.1.21
+  with BG-only/Challenge Mode 696, 697, and 698 omitted from IWD)
+
+- **Unpaused inventory: always or in combat only** (Optional mutually exclusive, off by default, requires EEex). Lets you keep Inventory unpaused either always (`699`) or during combat only (`700`: pauses normally out of combat and unpauses / suppresses pausing while combat is active, including auto-unpausing if combat starts while paused in Inventory). (Chriz BG Modpack v0.2.0-alpha.22, collection 0.1.23)
+
+### Mod versions
+
+- Chriz IWD Encounters v0.3.4 (was v0.3.2; same recipe components 100..420 and optional 500, plus hotpatch-only 425).
+- Chriz Multiplayer Fix v0.1.0 (new).
+- Chriz BG Modpack v0.2.0-alpha.22 (was v0.2.0-alpha.21; component 470 default with EEex plus optional mutually exclusive 699/700; 695/696/697/698 omitted in IWD).
 
 ## Collection 0.1.2 (draft)
 
-Drafts for the next release, Chriz Easy BG 0.1.2, on the same branch. Nothing here is
-released. Everything after this section is the 0.1.0 draft, published on 2026-11-02; 0.1.1
-is described in [`docs/release-notes-0.1.1.md`](../release-notes-0.1.1.md).
+Historical draft for Chriz Easy BG 0.1.2. The 0.1.0 draft follows this section.
+[0.1.2 release notes](../release-notes-0.1.2.md) · [0.1.1 release notes](../release-notes-0.1.1.md)
 
 ### Changed behavior
 
@@ -84,6 +275,10 @@ is described in [`docs/release-notes-0.1.1.md`](../release-notes-0.1.1.md).
   the 18 packs writes its player-soundset registration whatever `CHARSND.2DA` holds; the audio
   is unchanged. The generated packs are now 1.0.2, Ajantis is 2.0.1, Viconia BG1/BG2 are 1.0.1,
   and Garithos is 1.1.1. (ChrizFader's voicepacks v1.2.0)
+- **Spoken lines above characters stay visible with Tab / Reveal Details and overhead HP**
+  (Default). Holding or toggling Tab / Reveal Details or enabling `HP Over Head` no longer
+  suppresses or clears spoken overhead lines (`DisplayStringHead*`, `VerbalConstant`): the spoken
+  box stacks cleanly above the nameplate or HP bar. (Chriz Overhead Text v0.1.0)
 - **Smaller BuffBot changes** (Default):
   - New: five text sizes instead of three. Tiny and Huge join Small, Medium and Large, and
     your setting stays. Large and Huge change only the title and the button captions.
@@ -103,6 +298,7 @@ These changes apply to new installations; existing games and saves are unchanged
 - BuffBot v1.16.1 (was v1.12.6)
 - SoD Remix v0.6.17 (was v0.6.16)
 - ChrizFader's voicepacks v1.2.0 (was v1.1.0)
+- Chriz Overhead Text v0.1.0 (new)
 
 ### Notes for the release integrator
 
@@ -172,6 +368,26 @@ These changes apply to new installations; existing games and saves are unchanged
   466-component BG2:EE 2.7.3.0 Recommended installation that started and loaded a save;
   playing the changed scenes remains untested. The 0.1.2 update ledger needs an entry covering
   `artifact:chriz-sod-remix-0.6.17`.
+- **Chriz Overhead Text v0.1.0** (taken in 2026-11-16, Christopher's OK of that day) adds
+  component `0` as a default in both Chriz Easy BG (`chriz-overhead-text-bg2`, in `post-eet-end`
+  immediately before `eeexremote-bg2`) and Chriz Easy IWD (`chriz-overhead-text-main`,
+  immediately after `buffbot-main` and before `eeexremote-main`). The Recommended BG plan grows
+  from 466 to 467 components across 70 runs, and IWD's Recommended plan grows from 140 to 141
+  components. Owner verification covers 173 offline checks across synthetic `2.7.3.0`
+  BG:EE/SoD/BG2:EE/EET/IWD:EE layouts plus live in-game screenshots in a disposable BG2:EE
+  `2.7.3.0` + EEex `v1.3.1` lab; fresh-download/artifact-verify and native-order evidence are in
+  `manifest/evidence/release-intake-20261116-chriz-overhead-text-chriz-easy-bg-chriz-easy-iwd.toml`.
+  Combined full-collection EET and IWD:EE runtime checks remain untested. The 0.1.2 update ledger
+  needs an entry covering `feature:feature:chriz-overhead-text:component-0`.
+- **BuffBot v1.16.2** (pinned 2026-11-16 in both Chriz Easy BG and Chriz Easy IWD) updates
+  the Italian translation catalog (`buffbot/lang/italian/setup.tra`, 72 updated entries across
+  the 252-entry catalog; [bg-eeex-buffbot#119](https://github.com/Chrizhermann/bg-eeex-buffbot/pull/119))
+  with no runtime Lua logic, `.menu`, component, order, default or save-schema changes. Owner
+  validation covers 2,124 offline tests and a BG2:EE 2.7.3.0 / EEex 1.3.1 headless suite with
+  909 passing checks plus a live Italian catalog smoke check; fresh-download evidence is in
+  `manifest/evidence/release-intake-20261116-buffbot-chriz-easy-bg-chriz-easy-iwd.toml`. The
+  next recipe update ledger needs an entry covering `artifact:buffbot-1.16.2` (existing games
+  already receive it via **Updates -> BuffBot**).
 
 ## Installer changelog
 

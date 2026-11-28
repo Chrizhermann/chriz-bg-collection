@@ -30,8 +30,10 @@ MODPACK_ALPHA11_ORDER = [
     610, 611, 620, 630, 640, 660, 650, 651,
 ]
 # Rows alpha.13 declared after alpha.11: 239 (October 20) and 135/460/652 (offered October 26);
-# alpha.15 declares 670 (offered November 3, test_nov03_modpack_alpha15_marek_dagger_recipe).
-LATER_ROWS = {135, 239, 460, 652, 670}
+# alpha.15 declares 670 (offered November 3, test_nov03_modpack_alpha15_marek_dagger_recipe),
+# alpha.17 adds 680, alpha.18 adds 470, alpha.19 adds 695, alpha.20/alpha.21 add 696/697/698,
+# and alpha.22 adds 699/700.
+LATER_ROWS = {135, 239, 460, 470, 652, 670, 680, 695, 696, 697, 698, 699, 700}
 SOD_V0613_RUN = [
     100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 177, 185, 190,
     195, 210, 197, 198, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257,
@@ -81,10 +83,12 @@ class Oct13IntakeTests(unittest.TestCase):
             runs = {run["run_id"]: run for run in collection["runs"]}
             order = [run["run_id"] for run in collection["runs"]]
             # Alpha.13's 135 and 460, offered from the alpha.14 pin
-            # (test_oct26_alpha22_pins_recipe), and alpha.15's 670
-            # (test_nov03_modpack_alpha15_marek_dagger_recipe) join this run in TP2 order.
+            # (test_oct26_alpha22_pins_recipe), alpha.15's 670
+            # (test_nov03_modpack_alpha15_marek_dagger_recipe), alpha.17's 680,
+            # alpha.18's 470 (after 460), alpha.19's 695 (after 680), alpha.20/alpha.21's 696/697/698,
+            # and alpha.22's 699/700 join this run in TP2 order.
             self.assertEqual(runs["chriz-bg-modpack-bg2"]["components"],
-                             [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660, 670])
+                             [130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680, 695, 696, 697, 698, 699, 700])
             # Modpack alpha.13 (test_oct20_intake_recipe) adds EET join XP 239 after 238.
             self.assertEqual(runs[LATE_RUN]["components"], [189, 237, 238, 239, 620])
             # Alpha.13's chapter caps 652 follow 651 (alpha.14 pin).
@@ -214,7 +218,9 @@ class Oct13IntakeTests(unittest.TestCase):
             self.assertEqual(bridge["decision"], "optional")
             group = next(g for g in collection["feature_groups"] if g["id"] == "challenge-mode")
             # October 14 adds Tweaks 2760 where Tweaks Anthology exists (curated only), always last;
-            # November 10 adds campaign XP caps with chapter caps (Modpack 650 + 652).
+            # November 10 adds campaign XP caps with chapter caps (Modpack 650 + 652);
+            # November 22 adds no travel back into an earlier campaign (Modpack 680);
+            # November 27 adds no Quick Loot during combat (Modpack 696).
             self.assertEqual(group["members"][:4], [
                 "feature:chriz-bg-rebalance:component-301",
                 "feature:chriz-bg-modpack:component-235",
@@ -225,7 +231,11 @@ class Oct13IntakeTests(unittest.TestCase):
                 "feature:chriz-bg-modpack:component-650",
                 "feature:chriz-bg-modpack:component-652",
             ])
-            self.assertEqual(group["members"][6:], ["feature:cdtweaks:component-2760"] if name == "curated" else [])
+            self.assertEqual(group["members"][6:8], [
+                "feature:chriz-bg-modpack:component-680",
+                "feature:chriz-bg-modpack:component-696",
+            ])
+            self.assertEqual(group["members"][8:], ["feature:cdtweaks:component-2760"] if name == "curated" else [])
 
     def test_release_gate_records_cover_only_what_the_default_selection_installs(self):
         for name, directory, collection, preset in self._each_profile():
@@ -263,7 +273,7 @@ class Oct13IntakeTests(unittest.TestCase):
         # (test_oct14_intake_recipe), alpha.13 (test_oct20_intake_recipe), alpha.14
         # (test_oct26_alpha22_pins_recipe) and alpha.15
         # (test_nov03_modpack_alpha15_marek_dagger_recipe) supersede alpha.11 and keep these rows.
-        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.16")
+        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.22")
         sod = tomllib.loads((self.output / "mods/chriz-sod-remix.toml").read_text(encoding="utf-8"))
         # SoD Remix v0.6.15 (test_oct23_sod_remix_recipe), v0.6.16
         # (test_oct29_sod_remix_pin_recipe) and v0.6.17 (test_nov08_sod_remix_pin_recipe)

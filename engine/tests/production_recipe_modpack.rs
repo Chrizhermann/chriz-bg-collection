@@ -9,8 +9,8 @@ use bg_engine::Manifest;
 
 const MODPACK_COMPONENTS: &[u32] = &[
     110, 130, 135, 140, 170, 188, 189, 190, 192, 193, 194, 195, 196, 197, 198, 199, 220, 221, 222,
-    223, 224, 225, 230, 231, 232, 233, 234, 400, 410, 430, 440, 450, 460, 610, 611, 620, 630, 640,
-    235, 236, 237, 238, 239, 660, 670, 650, 651, 652,
+    223, 224, 225, 230, 231, 232, 233, 234, 400, 410, 430, 440, 450, 460, 470, 610, 611, 620, 630,
+    640, 235, 236, 237, 238, 239, 660, 670, 680, 695, 696, 697, 698, 699, 700, 650, 651, 652,
 ];
 
 /// The September 16 intake split the single post-EET modpack run into the
@@ -29,9 +29,17 @@ const CONTINUITY_COMPONENTS: &[u32] = &[199];
 /// its own final run and adds Degrodel 660 after 630 in TP2 order. The October 26
 /// alpha.14 pin adds alpha.13's Dorn ambush fix 135 after 130 and its party AI
 /// Defensive Stance fix 460 after 450, in TP2 order. Alpha.15 adds Marek's Boomerang
-/// Dagger 670 after 660; alpha.16 keeps that declaration order.
-const POST_EET_END_COMPONENTS: &[u32] =
-    &[130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660, 670];
+/// Dagger 670 after 660; alpha.16 keeps that declaration order. Alpha.17 adds EET world
+/// progression and SoD backtracking 680 after 670. Alpha.18 adds the RAW specialist
+/// spell-scroll learning fix 470 after 460 (omitting 690). Alpha.19 adds BG1 early-party
+/// XP boost 695 after 680. Alpha.20 adds Watcher's Keep instant teleporters 697 and clear
+/// lingering room effects 698. Alpha.21 adds Challenge Mode combat Quick Loot disable 696 before 697.
+// Alpha.21 adds Challenge Mode combat Quick Loot disable 696 before 697; alpha.22 adds optional
+// mutually exclusive EEex unpaused inventory choices 699 (always) and 700 (combat only) after 698.
+const POST_EET_END_COMPONENTS: &[u32] = &[
+    130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680, 695, 696, 697, 698, 699,
+    700,
+];
 
 const RECOMMENDED_PRE_CONTINUITY_COMPONENTS: &[u32] = &[
     110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 230, 231, 232, 233, 234,
@@ -40,7 +48,15 @@ const RECOMMENDED_PRE_CONTINUITY_COMPONENTS: &[u32] = &[
 // November 3: BG1 NPC Project left the defaults (Christopher, 2026-11-03), so the Kivan
 // quest guard 130 installs only when it is ticked. Marek's Boomerang Dagger 670
 // (alpha.15) is a default for 0.1.1; alpha.16 keeps it.
-const RECOMMENDED_COMPONENTS: &[u32] = &[135, 410, 440, 450, 460, 611, 660, 670];
+// November 22: EET world progression and SoD backtracking 680 (alpha.17) is on only with
+// Challenge Mode (Christopher, 2026-11-22), so Recommended leaves it out.
+// November 23: RAW spell-scroll learning fix 470 (alpha.18) is a default with EEex.
+// November 27: BG1 early-party XP boost 695 (alpha.19) is a default with EEex + EET.
+// November 27: Watcher's Keep instant teleporters 697 and lingering room-effects cleanup 698
+// (alpha.20) are defaults (698 requires EEex); Challenge Mode combat Quick Loot disable 696
+// (alpha.21) is optional in Challenge Mode so Recommended leaves it off.
+const RECOMMENDED_COMPONENTS: &[u32] =
+    &[135, 410, 440, 450, 460, 470, 611, 660, 670, 695, 697, 698];
 
 fn recipe_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../manifest")
@@ -54,31 +70,50 @@ fn recipe() -> Manifest {
 fn freezes_the_public_modpack_alpha_without_publishing_its_bundled_weidu() {
     let manifest = recipe();
     let artifact_id = &manifest.mods["chriz-bg-modpack"].artifact_id;
-    // November 8: alpha.16 keeps alpha.15's component declarations; alpha.15 stays as history.
-    assert_eq!(artifact_id, "chriz-bg-modpack-0.2.0-alpha.16");
+    // November 27: alpha.22 adds optional mutually exclusive EEex unpaused inventory choices 699
+    // (always) and 700 (combat only) on top of alpha.21 (696..698); alpha.21 and earlier stay as history.
+    assert_eq!(artifact_id, "chriz-bg-modpack-0.2.0-alpha.22");
     let artifact = &manifest.artifacts[artifact_id];
+    assert!(manifest
+        .artifacts
+        .contains_key("chriz-bg-modpack-0.2.0-alpha.21"));
+    assert!(manifest
+        .artifacts
+        .contains_key("chriz-bg-modpack-0.2.0-alpha.20"));
+    assert!(manifest
+        .artifacts
+        .contains_key("chriz-bg-modpack-0.2.0-alpha.19"));
+    assert!(manifest
+        .artifacts
+        .contains_key("chriz-bg-modpack-0.2.0-alpha.18"));
+    assert!(manifest
+        .artifacts
+        .contains_key("chriz-bg-modpack-0.2.0-alpha.17"));
+    assert!(manifest
+        .artifacts
+        .contains_key("chriz-bg-modpack-0.2.0-alpha.16"));
     assert!(manifest
         .artifacts
         .contains_key("chriz-bg-modpack-0.2.0-alpha.14"));
     assert!(!manifest
         .artifacts
         .contains_key("chriz-bg-modpack-0.2.0-alpha.5"));
-    assert_eq!(artifact.version, "0.2.0-alpha.16");
+    assert_eq!(artifact.version, "0.2.0-alpha.22");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
-    assert_eq!(artifact.source.reference, "v0.2.0-alpha.16");
+    assert_eq!(artifact.source.reference, "v0.2.0-alpha.22");
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.16/chriz-bg-modpack-v0.2.0-alpha.16.zip"
+        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.22/chriz-bg-modpack-v0.2.0-alpha.22.zip"
     );
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-bg-modpack-v0.2.0-alpha.16.zip")
+        Some("chriz-bg-modpack-v0.2.0-alpha.22.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(9_529_061));
+    assert_eq!(artifact.source.expected_length, Some(9_607_048));
     assert_eq!(
         artifact.source.sha256,
-        "668937ba7ea468834aad1fd1ecc214be72a9b1b0564109a48fc0827dab09e570"
+        "53044637cbd3259b3eabf8032b53137560aa2ae821074c8ecf8a64a42474a317"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -155,7 +190,7 @@ fn authors_all_approved_components_between_remote_console_and_buffbot() {
     assert_eq!(runs[baeloth].components, [235]);
 
     let installer = &manifest.mods["chriz-bg-modpack"];
-    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.16");
+    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.22");
     assert_eq!(installer.tp2, "setup-chriz-bg-modpack.tp2");
     assert_eq!(installer.language, 0);
     assert_eq!(installer.weidu_artifact_id, "weidu-249-amd64");
@@ -216,9 +251,10 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // October 20: so is EET join XP 239 (Modpack alpha.13).
     // October 26: and alpha.13's Dorn ambush fix 135 and party AI fix 460 (alpha.14 pin).
     // November 3: Marek's Boomerang Dagger 670 (alpha.15 pin), retained by alpha.16.
+    // November 23: RAW specialist spell-scroll learning fix 470 (alpha.18 pin).
     for component in [
         110, 135, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 230, 231, 232, 233, 234, 236,
-        237, 239, 430, 460, 611, 660, 670,
+        237, 239, 430, 460, 470, 611, 660, 670,
     ] {
         let id = format!("feature:chriz-bg-modpack:component-{component}");
         let control = evaluation
@@ -267,7 +303,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
         .unwrap()
         .contains(&130));
 
-    for component in [222, 223, 235, 610] {
+    for component in [222, 223, 235, 610, 699, 700] {
         let id = format!("feature:chriz-bg-modpack:component-{component}");
         let control = evaluation
             .view
@@ -277,6 +313,30 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
         assert_eq!(control.readiness, Readiness::Ready, "{id}");
         assert!(!control.selected, "{id}");
     }
+
+    for (choice_id, expected_id) in [
+        ("feature:chriz-bg-modpack:component-699", 699u32),
+        ("feature:chriz-bg-modpack:component-700", 700u32),
+    ] {
+        let mut picked = evaluation.normalized_selection.to_selection();
+        picked.set_feature(choice_id, true);
+        let picked_eval = bg_engine::recipe_view::evaluate(&manifest, &picked).unwrap();
+        assert!(picked_eval
+            .plan
+            .components_for("chriz-bg-modpack-bg2")
+            .unwrap()
+            .contains(&expected_id));
+    }
+    let mut both_inv = evaluation.normalized_selection.to_selection();
+    both_inv.set_feature("feature:chriz-bg-modpack:component-699", true);
+    both_inv.set_feature("feature:chriz-bg-modpack:component-700", true);
+    let conflict_inv = bg_engine::recipe_view::evaluate(&manifest, &both_inv).unwrap();
+    let inv_run = conflict_inv
+        .plan
+        .components_for("chriz-bg-modpack-bg2")
+        .unwrap();
+    assert!(!inv_run.contains(&699));
+    assert!(!inv_run.contains(&700));
 
     // Campaign XP caps 650/651 and chapter caps 652 ship experimental, optional and unchecked.
     for component in [650, 651, 652] {
@@ -289,6 +349,24 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
         assert_eq!(control.readiness, Readiness::Experimental, "{id}");
         assert!(!control.selected, "{id}");
     }
+
+    // November 22: EET world progression and SoD backtracking 680 (alpha.17 pin) is on only
+    // with Challenge Mode (Christopher, 2026-11-22): optional, unchecked, a group member.
+    let world_progression = "feature:chriz-bg-modpack:component-680";
+    let control = evaluation.view.control(world_progression).unwrap();
+    assert_eq!(control.decision, Decision::Optional);
+    assert_eq!(control.readiness, Readiness::Ready);
+    assert!(!control.selected);
+    let challenge_mode = manifest
+        .collection
+        .feature_groups
+        .iter()
+        .find(|group| group.id == "challenge-mode")
+        .unwrap();
+    assert!(challenge_mode
+        .members
+        .iter()
+        .any(|member| member == world_progression));
     assert_eq!(
         evaluation
             .plan
@@ -312,6 +390,25 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
         utility_xp.requires,
         ["feature:eeex:mandatory-components", "mod:eet-end"]
     );
+    let scroll_learn_fix = manifest
+        .collection
+        .features
+        .iter()
+        .find(|feature| feature.id == "feature:chriz-bg-modpack:component-470")
+        .expect("RAW scroll learning feature");
+    assert_eq!(
+        scroll_learn_fix.requires,
+        ["feature:eeex:mandatory-components"]
+    );
+    assert!(!manifest
+        .collection
+        .features
+        .iter()
+        .any(|feature| feature.id == "feature:chriz-bg-modpack:component-690"));
+    assert!(!manifest.mods["chriz-bg-modpack"]
+        .components
+        .iter()
+        .any(|component| component.id == 690));
 
     // The base manifest includes the approved SoD skip (910) added after alpha.10,
     // Red Wizard 5102 (c907b38), the Acton Balthis 25 opt-out (9c66cee) and the
@@ -344,7 +441,18 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // November 3: BG1 NPC Project is optional and unselected (Christopher, 2026-11-03),
     // which removes its 8 defaults and the Kivan quest guard 130 from both plans.
     // Its Modpack alpha.15 pin adds default Marek's Boomerang Dagger 670, retained by alpha.16.
-    // This 371-component base plan is distinct from the 466-component curated plan.
+    // November 16: Chriz Overhead Text adds default component 0 to both plans.
+    // November 18 adds Round Clock 361 to both plans, bringing the base to 373 and curated to 468.
+    // November 22: Modpack 680 is on only with Challenge Mode (Christopher, 2026-11-22) and
+    // adds none; Chriz Multiplayer Fix adds default components 0 and 1, bringing the base to
+    // 375 and curated to 470.
+    // November 23: Modpack alpha.18 adds default component 470, bringing the base to 376
+    // and curated to 471.
+    // November 27: Modpack alpha.19 adds default BG1 early-party XP boost 695, bringing the
+    // base to 377 and curated to 472.
+    // November 27: Modpack alpha.20/alpha.21 add default Watcher's Keep teleporters 697 and
+    // lingering room-effects cleanup 698 (plus optional Challenge Mode 696, off here), bringing
+    // the base to 379 and curated to 474.
     assert_eq!(
         evaluation
             .plan
@@ -352,7 +460,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        371
+        379
     );
 }
 

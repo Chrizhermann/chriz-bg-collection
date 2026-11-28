@@ -52,8 +52,9 @@ RECOMMENDED = {100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 
 # against its own record; the November 2 intake replaces v0.8.8 with v0.8.9, and the
 # November 3 intake v0.8.9 with v0.8.10 and November 8 intake v0.8.10 with v0.8.11; neither
 # changes a component.
-SUCCESSOR = "chriz-bg-rebalance-0.8.11"
-LATER = {410, 411}
+# November 18 adds Round Clock (361) after the earlier weapon choices.
+SUCCESSOR = "chriz-bg-rebalance-0.8.12"
+LATER = {410, 411, 361}
 
 
 def _load(path: Path) -> dict:
@@ -218,7 +219,7 @@ class Oct29RebalanceV087PinTests(unittest.TestCase):
                 (run,) = runs
                 components = [c for c in run["components"] if c not in LATER]
                 self.assertEqual(components, [c for c in native if c in components])
-                self.assertEqual(run["components"][-2:], [340, 360])
+                self.assertEqual(components[-2:], [340, 360])
                 self.assertEqual(run["phase"], "post-eet-end")
                 order = [entry["run_id"] for entry in collection["runs"]]
                 self.assertLess(order.index(EEEX_RUN), order.index(RUN))

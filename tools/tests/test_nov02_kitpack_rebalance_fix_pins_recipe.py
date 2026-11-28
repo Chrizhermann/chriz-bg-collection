@@ -14,7 +14,8 @@ profiles only. Nothing here is a game installation or gameplay acceptance. The N
 intake (test_nov03_rebalance_0810_pin_recipe) supersedes the Rebalance pin with v0.8.10 for
 0.1.2, and the November 8 intake (test_nov08_rebalance_0811_pin_recipe) supersedes that pin
 with v0.8.11; neither changes a component. The v0.8.9 record,
-artifacts and 0.1.0 texts stay as verified here.
+artifacts and 0.1.0 texts stay as verified here. The November 18 intake supersedes
+the Kitpack pin with chriz.7 without changing the components or order.
 """
 
 from pathlib import Path
@@ -43,6 +44,7 @@ PINS = {
                "v4.81a-dev.85928f9-chriz.6/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.6.zip",
         "length": 89_856_136,
         "sha256": "9644f01cdeeebf56912723e53267e91feb4404fb5c8d7305e0b112189095777e",
+        "successor": "artisans-kitpack-4.81a-dev.85928f9-chriz.7",
     },
     "rebalance": {
         "mods": ("chriz-bg-rebalance",),
@@ -55,8 +57,8 @@ PINS = {
                "chriz-bg-rebalance-v0.8.9-windows.zip",
         "length": 1_844_195,
         "sha256": "da03fe9e2a36f5af155311197e68d6f82ead270426015363fa161ad56e8ea6f2",
-        # The November 8 intake moves both profiles to v0.8.11.
-        "successor": "chriz-bg-rebalance-0.8.11",
+        # November 18 moves both BG profiles to v0.8.12 and appends Round Clock.
+        "successor": "chriz-bg-rebalance-0.8.12",
     },
 }
 REBALANCE_RUN = "chriz-bg-rebalance-bg2"
@@ -167,6 +169,8 @@ class Nov02FixPinsTests(unittest.TestCase):
                 for mod_id, record in self.records.items():
                     mod = _load(directory / f"mods/{mod_id}.toml")
                     native = record["native_components"]
+                    if mod_id == "chriz-bg-rebalance":
+                        native = [*native, 361]
                     self.assertTrue({component["id"] for component in mod["components"]} <= set(native), mod_id)
                     for run in (run for run in collection["runs"] if run["mod_id"] == mod_id):
                         self.assertEqual(run["components"], [c for c in native if c in run["components"]],

@@ -248,6 +248,22 @@ fn a_group_without_variants_serializes_and_evaluates_exactly_as_before_variants(
     );
 }
 
+fn recommended_digests(manifest: &Manifest, evaluation: &SelectionEvaluation) -> [String; 3] {
+    // The frozen collection predates the group and the component dependency metadata.
+    let mut collection = manifest.collection.clone();
+    assert_eq!(collection.feature_groups.len(), 1);
+    collection.feature_groups.clear();
+    collection.component_needs.clear();
+    for feature in &mut collection.features {
+        feature.core_components = None;
+    }
+    [
+        sha256_bytes(&serde_json::to_vec(&collection).unwrap()),
+        selection_digest(&evaluation.normalized_selection).unwrap(),
+        plan_digest(&evaluation.plan).unwrap(),
+    ]
+}
+
 #[test]
 fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // (recipe, collection JSON without the group, Recommended selection, plan)
@@ -397,40 +413,485 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // Recommended plan changes, in those runs' artifact ids; components, order and the
     // selection stay. With their prior pins restored, the November 8 preceding plan digests
     // return (manifest 666e2cbf…, curated da37cc38…).
-    for (dir, collection_sha, selection_sha, plan_sha) in [
+    // Re-pinned on November 16 for Chriz Overhead Text v0.1.0 (Christopher, 2026-11-16):
+    // feature:chriz-overhead-text:component-0 is on by default in both recipes, adding its
+    // feature to the collection digests, its preset entry to the selection digests, and
+    // chriz-overhead-text-bg2 [0] before eeexremote-bg2 in both plans. Without that intake,
+    // the November 8 digests return (manifest c90f8f1b…, 25301534…, 8dd9cf31…; curated
+    // 4dcb1fd4…, 999046f1…, d5f6d9b9…).
+    // Re-pinned on November 16 for BuffBot v1.16.2 (complete Italian translation): in both
+    // recipes only the Recommended plan changes, in the BuffBot run's artifact id; components,
+    // order and the selection stay. With v1.16.1 restored, the preceding November 16 plan
+    // digests return (manifest ca0104b6…, curated dbad60a8…).
+    // Re-pinned on November 18 for the save/rest fixes in Artisan chriz.7 (both BG
+    // recipes) and Bardic Wonders balance.9 (curated only). Restoring just those
+    // artifact IDs reproduces the previously frozen plan digests.
+    // Rebalance v0.8.12 then added Round Clock to both Recommended selections.
+    // Removing 361 and restoring v0.8.11 must reproduce all six PR #151 digests.
+    // Re-pinned on November 22 for Modpack alpha.17 (component 680 added after 670 as
+    // a default in chriz-bg-modpack-bg2). Removing 680 and restoring alpha.16 must reproduce
+    // all six November 18 Round Clock digests before reverting Round Clock.
+    // Re-pinned on November 22 for Chriz Multiplayer Fix v0.1.0 (Christopher, 2026-11-22):
+    // its components 0 and 1 are on by default in both recipes, adding two features to the
+    // collection digests, their preset entries to the selection digests, and
+    // chriz-multiplayer-fix-bg2 [0, 1] after chriz-overhead-text-bg2 in both plans. Without
+    // its run, features, preset entries, mod and artifact, the alpha.17 digests return.
+    // Re-pinned on November 22 for Christopher's decision that Modpack 680 is on only with
+    // Challenge Mode: it is optional, a group member, off in Recommended and has a player
+    // title and description. The group is not part of these digests; the collection and selection
+    // digests change, and the plans lose chriz-bg-modpack-bg2's 680. Undoing the decision
+    // reproduces the digests of the PR #161 merge (manifest 23437d33…, curated e682d3e4…).
+    // Pinned on November 23 to Modpack v0.2.0-alpha.18 (PR #24/#25): adds default component 470
+    // (RAW specialist spell-scroll learning fix, requiring EEex) after 460; undoing 470 and
+    // restoring the alpha.17 artifact reproduces PR #163's digests (`challenge_680_digests`).
+    // Pinned on November 27 to Modpack v0.2.0-alpha.19 (PR #26): adds default BG1 early-party XP
+    // boost 695 (requiring EEex and EET) after 680; undoing 695 and restoring alpha.18 reproduces
+    // PR #164's digests (`alpha18_digests`).
+    // Pinned on November 27 to Modpack v0.2.0-alpha.21 (PR #29, superseding alpha.20 PR #28):
+    // adds optional Challenge Mode Quick Loot suppression 696 (requiring EEex) plus defaults
+    // BG2 spells in SoD 697 and non-party creature resilience 698 (requiring EEex); undoing
+    // 696/697/698 and restoring alpha.19 reproduces `alpha19_digests`.
+    // Pinned on November 27 to Modpack v0.2.0-alpha.22 (PR #30): adds optional mutually exclusive
+    // EEex unpaused inventory choices 699 (always) and 700 (combat only) after 698; undoing
+    // 699/700 and restoring alpha.21 reproduces `alpha21_digests`.
+    const ROUND_CLOCK: &str = "feature:chriz-bg-rebalance:component-361";
+    const SCROLL_LEARN_FIX: &str = "feature:chriz-bg-modpack:component-470";
+    const BG1_EARLY_PARTY_XP: &str = "feature:chriz-bg-modpack:component-695";
+    const NO_COMBAT_QUICKLOOT: &str = "feature:chriz-bg-modpack:component-696";
+    const BG2_SPELLS_IN_SOD: &str = "feature:chriz-bg-modpack:component-697";
+    const NON_PARTY_CREATURE_RESILIENCE: &str = "feature:chriz-bg-modpack:component-698";
+    const UNPAUSED_INVENTORY_ALWAYS: &str = "feature:chriz-bg-modpack:component-699";
+    const UNPAUSED_INVENTORY_COMBAT: &str = "feature:chriz-bg-modpack:component-700";
+    const EET_WORLD_PROGRESSION: &str = "feature:chriz-bg-modpack:component-680";
+    const EET_WORLD_PROGRESSION_DEFAULT_TITLE: &str =
+        "Story-consistent EET campaign boundaries and SoD backtracking";
+    const EET_WORLD_PROGRESSION_DEFAULT_DESCRIPTION: &str = "Closes cross-campaign backtracking \
+        exploits between BG1, Siege of Dragonspear, Shadows of Amn and Throne of Bhaal (including \
+        returning from Watcher's Keep to Amn once ToB begins and post-SoD travel reopening) while \
+        keeping BG1, SoD, SoA and ToB new-game starts intact. Keeps the SoD Ch.8-10 road open \
+        until the Dragonspear assault and fixes abandoned camp companion stranding, player \
+        storage chest forwarding, Baeloth's pit cleanup, camp sentries, siege audio and duplicate \
+        Jegg.";
+    const MULTIPLAYER_FIX: [&str; 2] = [
+        "feature:chriz-multiplayer-fix:component-0",
+        "feature:chriz-multiplayer-fix:component-1",
+    ];
+    for (
+        dir,
+        current_digests,
+        alpha21_digests,
+        alpha19_digests,
+        alpha18_digests,
+        challenge_680_digests,
+        default_680_digests,
+        alpha17_digests,
+        combined_digests,
+        save_rest_digests,
+        previous_plan_sha,
+    ) in [
         (
             "../manifest",
-            "c90f8f1b57deda983af1eafb2ffdd987eba60c253907f14972d10c3fd144b855",
-            "253015344c72b69bd35011cb03f9dbf8ad395999deb9fa5a3278ed7baa943c1e",
-            "8dd9cf3126669c394047f39f21acb5f116a280a445ee21a2f08493e90351ef5f",
+            [
+                "677fe9ee251a9d832566642872e5453db742848dcbc689028bc91a74708d4fb5",
+                "e324404e2713946dda41c7b06dc0d66ffe61b0628c04270e559d6cc3fd234796",
+                "26772f6b9cec06f0f8045ee10d4f87d004cd0a3961d6315591e0a33435ac7f2a",
+            ],
+            [
+                "5e324aabd6bc28042f03cd5dab0402a7886f455941803e12be90c28f5e5a0780",
+                "6d3aacb32f3e90cb2c975fc1b7ce35b5dbe392b4e57b0d12f15711ef145bb3f3",
+                "43eb15329529e1174fafb4e3560ce4a345c25c68b9049836d6fc2acf42f95191",
+            ],
+            [
+                "3964ac1c075bab2ca1a26ea55fadf9731ccbf4b7eda288a78df50b0dfb10a202",
+                "881475e4cd9e2ac28248c2506ba5601e567e0c57d736edc70da1e4ee294f1ad2",
+                "4ab7ad90ab467a6e80d212bd893009252d59a29e019e2308ad971c86930eee76",
+            ],
+            [
+                "80881462bdf7ee08758adadef2d4605977b3cfd6b261c6b9f7325e9f49e584eb",
+                "e0f0d3c1562194c3dd3194f059d2c21dfea44d69d1696a7e14c3ab9ba27c188a",
+                "95764a05a21987ec9e0698da176339f4df76f14571390c38bb027e19719ef9db",
+            ],
+            [
+                "71d08c0bbd6f74843319914bb07b31ded5fcd5b3476e59e182e26b40b82c2e61",
+                "6114ffd05035f4f683cfead67e2b59db4b27b2035630664bb422701c6324639a",
+                "ce64b750dbf1f418cd1b317a98add694e0781fe5c1b6f62608eb584f49b6f140",
+            ],
+            [
+                "23437d33a7bb60528a677629dd7475c4fbf8b1e9afa464d2d65ead62d54346ef",
+                "d67a959c418cef23b60fbc3302207fb5c538758e605c8d7b1a3a04f67edc4729",
+                "d708db23e832fadd29b17b0a787bea90582376df632c388c64e75c4b426add5c",
+            ],
+            [
+                "e365e33ed0508e8fcac5a9f6316df82240e8553d403c3b5db9fe03f20ddb9ac7",
+                "2bf1a5290d4b18ee42938068fb7a36f2c5865213720929deffeca75b36af9b31",
+                "c7f615a0ca7e06f8f7acd55410732535069bec28c16a85de2afb678b82c51b95",
+            ],
+            [
+                "5d980b9b5ce440a69c0cc8bd55a61cd6a54699a60f21824a5791caf91896c7f6",
+                "a467fe44b7e2773ee29595ce69cc7023de0bb0b8dbd307b45efa0ff906819f29",
+                "bfcaa87e74c0f7941dc78ae5783655025a53cdf20684adec55b8558a9a3e8b88",
+            ],
+            [
+                "228825ab02bfd91190dc6ce3ae909fd28863a8936d11526ad21dc588390f5479",
+                "637bff40a2fde3a6af3938b2e25eed38bed3357739566a9ea4cca5f507637151",
+                "21679388a966523c853019bcfd652a22f598ce4002c98cb8e317ad19a4739941",
+            ],
+            "794f3ecfb9b8d399741e8f68c424e133351cc76010dcaa82466c19306e9ea606",
         ),
         (
             "../recipes/curated-full-current",
-            "4dcb1fd4fccc2609a013e458d1ddb1434be2dfc0ee9ea7d04544dbb73649a47f",
-            "999046f16958aecc0b39f4e9540ec03e5a2d510d81c871368d50f627f12e3fcb",
-            "d5f6d9b9734373de51836509901a65fbf30dee4a56f5992ad0dfaa31d4970d84",
+            [
+                "b39393fcdae891da953fd290dd64b7f6d8af58bf66161b955d1dfddc8110cbb0",
+                "ce6e93185ac5bf34136aa9f06506eaaa021d26c56c447925ba58e483c25af149",
+                "b3654b01359715b5e33efa85d1a36e5d83322b502bc65e7655e758efb41b89b9",
+            ],
+            [
+                "2b4e78d121a65d8793a32e838263547664d9a335da12a1ca116496491d0f2b0d",
+                "bb446834b8d67e17aa207c3c1d3ce3941fe77f024d5d8050d426d8b198147256",
+                "a6d07630768b1f5591d177ae429ba69a3285e418a8a1a8221a4ca6e490c670e8",
+            ],
+            [
+                "3dddff853ced98bc99588291e35e708bb5f81c2d45d25bc49e0cc857e5689dd4",
+                "fef2de60f7ae3d3b9e3e060a1de2dc717d210de32c6dee529e861ff3b83102b1",
+                "a6770737746fba01ebf950e2581450094a449a1357604a97038361cbd42e9aab",
+            ],
+            [
+                "22ad1ba80c8dbd413f9f8432267d5fb22c5989631ba894a5aff30fab6ec10f60",
+                "bf21a58279bd24249560b828142a4941a087c701e3f7f8dbaa53bf2fa2dba569",
+                "e0568f4eacfe9210616df3b2fca7a6023c483a015cc81b2388df5afa4b5671ab",
+            ],
+            [
+                "7df5adb11a5c19240275cfa17615c311200914e800e16ee49aa4752986cfb9f1",
+                "58b7e3f1cacf98619e6edbdd56b83bbf183dccba8070c454e82e335067ccf948",
+                "6c6a6b75d59fa86ae8c0e195d8155ad7758fe947d6a62dd7db57590a8eda3871",
+            ],
+            [
+                "e682d3e4a81c00798bd231d2ed53d75db4ffde625975c456e3d42d71e98e5b5d",
+                "dd00a7fd4946b5a781bd4a71541808e48ca41e781aa52fd60142dc1a129f9e83",
+                "6d6628bd564fe9e1f42ad77ebe1ef6609cc191ea9a652a66fa3c06c0e2f0ed2b",
+            ],
+            [
+                "6393e51ddc023070c11eecf062e0271904e193fa9d78f4041d0eb758ff531d55",
+                "5c0a62bad494e7f643d0e94790aeb1c156cf42cb8a73372fb655d84889627d57",
+                "96b35d4be83ef5ce3fab21e3ba787a6cca6b0b35cb1562bd66ffdc45432aa282",
+            ],
+            [
+                "0fa3abae7fbe94cd5bba2bc84d0074212891f4cd0ce88379989d34e8a66339a5",
+                "227d2834ad89600e48e767c6bfc4ece1a9d59293eabdc1829bb6dc1491cafa36",
+                "d1164d2569cb60d83513e8fea8fda0a1a3e88af506a269788e7a2453e6d2b256",
+            ],
+            [
+                "fab413456c438136699bd56485b8f834e12f3b3c6a1ba340966c3668495ff8a4",
+                "071398d8982d27c0316a63cf7edebecc97a87a2feb4388c44adae46099c04171",
+                "5728d3574cb2656fecd6bdd073948e0ab83642bc312a0b47baab138bf0ebc3a0",
+            ],
+            "0c3da570ec67625115f0b28f97e7bb313d10efabc3c408373a6607997287a8ad",
         ),
     ] {
-        let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();
+        let mut manifest = Manifest::load(&engine_dir().join(dir)).unwrap();
         let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
         assert_eq!(
-            selection_digest(&evaluation.normalized_selection).unwrap(),
-            selection_sha,
+            recommended_digests(&manifest, &evaluation),
+            current_digests,
             "{dir}"
         );
-        assert_eq!(plan_digest(&evaluation.plan).unwrap(), plan_sha, "{dir}");
-        // The group and what says what components need are the only changes to the frozen
-        // collection.
-        let mut without_groups: Collection = manifest.collection.clone();
-        assert_eq!(without_groups.feature_groups.len(), 1, "{dir}");
-        without_groups.feature_groups.clear();
-        without_groups.component_needs.clear();
-        for feature in &mut without_groups.features {
-            feature.core_components = None;
+
+        // Undoing Modpack alpha.22 (removing 699/700 and restoring alpha.21) must reproduce
+        // `alpha21_digests`.
+        let modpack = manifest.mods.get_mut("chriz-bg-modpack").unwrap();
+        assert_eq!(modpack.artifact_id, "chriz-bg-modpack-0.2.0-alpha.22");
+        modpack.artifact_id = "chriz-bg-modpack-0.2.0-alpha.21".to_owned();
+        let components_before = modpack.components.len();
+        modpack
+            .components
+            .retain(|component| !matches!(component.id, 699..=700));
+        assert_eq!(modpack.components.len() + 2, components_before);
+        let modpack_run = manifest
+            .collection
+            .runs
+            .iter_mut()
+            .find(|run| run.run_id == "chriz-bg-modpack-bg2")
+            .unwrap();
+        let run_components_before = modpack_run.components.len();
+        modpack_run.components.retain(|id| !matches!(id, 699..=700));
+        assert_eq!(modpack_run.components.len() + 2, run_components_before);
+        let features_before = manifest.collection.features.len();
+        manifest.collection.features.retain(|feature| {
+            feature.id != UNPAUSED_INVENTORY_ALWAYS && feature.id != UNPAUSED_INVENTORY_COMBAT
+        });
+        assert_eq!(manifest.collection.features.len() + 2, features_before);
+        let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        assert_eq!(
+            recommended_digests(&manifest, &evaluation),
+            alpha21_digests,
+            "{dir}"
+        );
+
+        // Undoing Modpack alpha.21 (removing 696/697/698 and restoring alpha.19) must reproduce
+        // `alpha19_digests`.
+        let modpack = manifest.mods.get_mut("chriz-bg-modpack").unwrap();
+        assert_eq!(modpack.artifact_id, "chriz-bg-modpack-0.2.0-alpha.21");
+        modpack.artifact_id = "chriz-bg-modpack-0.2.0-alpha.19".to_owned();
+        let components_before = modpack.components.len();
+        modpack
+            .components
+            .retain(|component| !matches!(component.id, 696..=698));
+        assert_eq!(modpack.components.len() + 3, components_before);
+        let modpack_run = manifest
+            .collection
+            .runs
+            .iter_mut()
+            .find(|run| run.run_id == "chriz-bg-modpack-bg2")
+            .unwrap();
+        let run_components_before = modpack_run.components.len();
+        modpack_run.components.retain(|id| !matches!(id, 696..=698));
+        assert_eq!(modpack_run.components.len() + 3, run_components_before);
+        let challenge_mode = manifest
+            .collection
+            .feature_groups
+            .iter_mut()
+            .find(|group| group.id == "challenge-mode")
+            .unwrap();
+        let members_before = challenge_mode.members.len();
+        challenge_mode
+            .members
+            .retain(|member| member != NO_COMBAT_QUICKLOOT);
+        assert_eq!(challenge_mode.members.len() + 1, members_before);
+        let features_before = manifest.collection.features.len();
+        manifest.collection.features.retain(|feature| {
+            feature.id != NO_COMBAT_QUICKLOOT
+                && feature.id != BG2_SPELLS_IN_SOD
+                && feature.id != NON_PARTY_CREATURE_RESILIENCE
+        });
+        assert_eq!(manifest.collection.features.len() + 3, features_before);
+        let recommended = manifest.presets.get_mut("chris-recommended").unwrap();
+        assert!(recommended.selections.remove(BG2_SPELLS_IN_SOD).is_some());
+        assert!(recommended
+            .selections
+            .remove(NON_PARTY_CREATURE_RESILIENCE)
+            .is_some());
+        let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        assert_eq!(
+            recommended_digests(&manifest, &evaluation),
+            alpha19_digests,
+            "{dir}"
+        );
+
+        // Undoing Modpack alpha.19 (removing 695 and restoring alpha.18) must reproduce
+        // PR #164's digests (`alpha18_digests`).
+        let modpack = manifest.mods.get_mut("chriz-bg-modpack").unwrap();
+        assert_eq!(modpack.artifact_id, "chriz-bg-modpack-0.2.0-alpha.19");
+        modpack.artifact_id = "chriz-bg-modpack-0.2.0-alpha.18".to_owned();
+        let components_before = modpack.components.len();
+        modpack.components.retain(|component| component.id != 695);
+        assert_eq!(modpack.components.len() + 1, components_before);
+        let modpack_run = manifest
+            .collection
+            .runs
+            .iter_mut()
+            .find(|run| run.run_id == "chriz-bg-modpack-bg2")
+            .unwrap();
+        let run_components_before = modpack_run.components.len();
+        modpack_run.components.retain(|&id| id != 695);
+        assert_eq!(modpack_run.components.len() + 1, run_components_before);
+        let features_before = manifest.collection.features.len();
+        manifest
+            .collection
+            .features
+            .retain(|feature| feature.id != BG1_EARLY_PARTY_XP);
+        assert_eq!(manifest.collection.features.len() + 1, features_before);
+        assert!(manifest
+            .presets
+            .get_mut("chris-recommended")
+            .unwrap()
+            .selections
+            .remove(BG1_EARLY_PARTY_XP)
+            .is_some());
+        let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        assert_eq!(
+            recommended_digests(&manifest, &evaluation),
+            alpha18_digests,
+            "{dir}"
+        );
+
+        // Undoing Modpack alpha.18 (removing 470 and restoring alpha.17) must reproduce
+        // PR #163's digests (`challenge_680_digests`).
+        let modpack = manifest.mods.get_mut("chriz-bg-modpack").unwrap();
+        assert_eq!(modpack.artifact_id, "chriz-bg-modpack-0.2.0-alpha.18");
+        modpack.artifact_id = "chriz-bg-modpack-0.2.0-alpha.17".to_owned();
+        let components_before = modpack.components.len();
+        modpack.components.retain(|component| component.id != 470);
+        assert_eq!(modpack.components.len() + 1, components_before);
+        let modpack_run = manifest
+            .collection
+            .runs
+            .iter_mut()
+            .find(|run| run.run_id == "chriz-bg-modpack-bg2")
+            .unwrap();
+        let run_components_before = modpack_run.components.len();
+        modpack_run.components.retain(|&id| id != 470);
+        assert_eq!(modpack_run.components.len() + 1, run_components_before);
+        let features_before = manifest.collection.features.len();
+        manifest
+            .collection
+            .features
+            .retain(|feature| feature.id != SCROLL_LEARN_FIX);
+        assert_eq!(manifest.collection.features.len() + 1, features_before);
+        assert!(manifest
+            .presets
+            .get_mut("chris-recommended")
+            .unwrap()
+            .selections
+            .remove(SCROLL_LEARN_FIX)
+            .is_some());
+        let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        assert_eq!(
+            recommended_digests(&manifest, &evaluation),
+            challenge_680_digests,
+            "{dir}"
+        );
+
+        // Christopher, 2026-11-22: Modpack 680 is on only with Challenge Mode. Undoing that
+        // decision (default again, PR #161's title and description, on in Recommended) must reproduce
+        // the digests of the merge of PR #161 into this branch.
+        let world_progression = manifest
+            .collection
+            .features
+            .iter_mut()
+            .find(|feature| feature.id == EET_WORLD_PROGRESSION)
+            .unwrap();
+        assert_eq!(world_progression.decision, Decision::Optional);
+        world_progression.decision = Decision::Default;
+        world_progression.title = EET_WORLD_PROGRESSION_DEFAULT_TITLE.to_owned();
+        world_progression.description = EET_WORLD_PROGRESSION_DEFAULT_DESCRIPTION.to_owned();
+        // Group members must be optional; the group is not part of these digests.
+        let members = &mut manifest.collection.feature_groups[0].members;
+        let count = members.len();
+        members.retain(|id| id != EET_WORLD_PROGRESSION);
+        assert_eq!(members.len() + 1, count);
+        assert!(manifest
+            .presets
+            .get_mut("chris-recommended")
+            .unwrap()
+            .selections
+            .insert(EET_WORLD_PROGRESSION.to_owned(), "on".to_owned())
+            .is_none());
+        let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        assert_eq!(
+            recommended_digests(&manifest, &evaluation),
+            default_680_digests,
+            "{dir}"
+        );
+
+        assert!(manifest.mods.remove("chriz-multiplayer-fix").is_some());
+        assert!(manifest
+            .artifacts
+            .remove("chriz-multiplayer-fix-0.1.0")
+            .is_some());
+        let runs = manifest.collection.runs.len();
+        manifest
+            .collection
+            .runs
+            .retain(|run| run.run_id != "chriz-multiplayer-fix-bg2");
+        assert_eq!(manifest.collection.runs.len() + 1, runs);
+        let features = manifest.collection.features.len();
+        manifest
+            .collection
+            .features
+            .retain(|feature| !MULTIPLAYER_FIX.contains(&feature.id.as_str()));
+        assert_eq!(manifest.collection.features.len() + 2, features);
+        let selections = &mut manifest
+            .presets
+            .get_mut("chris-recommended")
+            .unwrap()
+            .selections;
+        for feature in MULTIPLAYER_FIX {
+            assert!(selections.remove(feature).is_some());
+        }
+        let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        assert_eq!(
+            recommended_digests(&manifest, &evaluation),
+            alpha17_digests,
+            "{dir}"
+        );
+
+        let modpack = manifest.mods.get_mut("chriz-bg-modpack").unwrap();
+        assert_eq!(modpack.artifact_id, "chriz-bg-modpack-0.2.0-alpha.17");
+        modpack.artifact_id = "chriz-bg-modpack-0.2.0-alpha.16".to_owned();
+        modpack.components.retain(|component| component.id != 680);
+        let modpack_run = manifest
+            .collection
+            .runs
+            .iter_mut()
+            .find(|run| run.run_id == "chriz-bg-modpack-bg2")
+            .unwrap();
+        assert_eq!(modpack_run.components.pop(), Some(680));
+        manifest
+            .collection
+            .features
+            .retain(|feature| feature.id != EET_WORLD_PROGRESSION);
+        assert!(manifest
+            .presets
+            .get_mut("chris-recommended")
+            .unwrap()
+            .selections
+            .remove(EET_WORLD_PROGRESSION)
+            .is_some());
+
+        let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        assert_eq!(
+            recommended_digests(&manifest, &evaluation),
+            combined_digests,
+            "{dir}"
+        );
+
+        let rebalance = manifest.mods.get_mut("chriz-bg-rebalance").unwrap();
+        assert_eq!(rebalance.artifact_id, "chriz-bg-rebalance-0.8.12");
+        rebalance.artifact_id = "chriz-bg-rebalance-0.8.11".to_owned();
+        rebalance.components.retain(|component| component.id != 361);
+        let run = manifest
+            .collection
+            .runs
+            .iter_mut()
+            .find(|run| run.run_id == "chriz-bg-rebalance-bg2")
+            .unwrap();
+        assert_eq!(run.components.pop(), Some(361));
+        manifest
+            .collection
+            .features
+            .retain(|feature| feature.id != ROUND_CLOCK);
+        manifest
+            .presets
+            .get_mut("chris-recommended")
+            .unwrap()
+            .selections
+            .remove(ROUND_CLOCK);
+
+        let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        assert_eq!(
+            recommended_digests(&manifest, &evaluation),
+            save_rest_digests,
+            "{dir}"
+        );
+        let mut previous_plan = evaluation.plan;
+        for run in &mut previous_plan.runs {
+            let (current, previous) = match run.mod_id.as_str() {
+                "artisanskitpack" | "artisanskitpack-npc" | "artisanskitpack-tweak" => (
+                    "artisans-kitpack-4.81a-dev.85928f9-chriz.7",
+                    "artisans-kitpack-4.81a-dev.85928f9-chriz.6",
+                ),
+                "bardicwonders" => (
+                    "bardicwonders-v2.9c-balance.9",
+                    "bardicwonders-v2.9c-balance.8",
+                ),
+                _ => continue,
+            };
+            assert_eq!(run.artifact_id, current, "{dir}: {}", run.run_id);
+            run.artifact_id = previous.to_owned();
         }
         assert_eq!(
-            sha256_bytes(&serde_json::to_vec(&without_groups).unwrap()),
-            collection_sha,
+            plan_digest(&previous_plan).unwrap(),
+            previous_plan_sha,
             "{dir}"
         );
     }

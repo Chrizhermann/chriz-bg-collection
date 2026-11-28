@@ -140,7 +140,16 @@ class CatalogParserTests(unittest.TestCase):
         # October 29: Rebalance v0.8.8 adds Druid weapons 410 and Alaghor of Clangeddin
         # weapons 411, and Artisan's Kitpack chriz.5 adds tweak 7205.
         # November 3: Modpack alpha.15 adds Marek's Boomerang Dagger 670.
-        self.assertEqual(len(rows), 1_352)
+        # November 16: the CHRIZ_OVERHEAD_TEXT catalog adds component 0.
+        # November 18 adds the default Round Clock row for BG Rebalance 361.
+        # November 22: Modpack 680 (no travel back into an earlier campaign) adds one
+        # optional row.
+        # November 22: the CHRIZ_MULTIPLAYER_FIX catalog adds components 0 and 1.
+        # November 23: Modpack alpha.18 adds RAW specialist spell-scroll learning fix 470.
+        # November 27: Modpack alpha.19 adds BG1 early-party XP boost 695.
+        # November 27: Modpack alpha.20/alpha.21 add 696, 697, and 698;
+        # alpha.22 adds optional mutually exclusive 699 and 700.
+        self.assertEqual(len(rows), 1_364)
         self.assertEqual(
             decision_totals(rows),
             {
@@ -168,7 +177,12 @@ class CatalogParserTests(unittest.TestCase):
                 # October 27: Tweaks 2292 (druids level on the cleric XP table) is optional.
                 # October 29: Sirene BG1's alternate classes 7, 8 and 9 are optional.
                 # November 4: Tweaks 3000 and 3010 are optional (Christopher, 2026-11-04).
-                Decision.OPTIONAL: 337,
+                # November 22: Modpack 680 is optional, on only with Challenge Mode
+                # (Christopher, 2026-11-22).
+                # November 27: Modpack 696 (disable Quick Loot during combat) is optional,
+                # on only with Challenge Mode (Christopher, 2026-11-27), and 699/700 (unpaused
+                # inventory always / combat only) are optional mutually exclusive (off by default).
+                Decision.OPTIONAL: 341,
                 # Approved Rebalance 111/302 defaults; Artisan 51010 is optional.
                 # October 13: bard ceilings Rebalance 420/421 and Bardic 3010 are defaults;
                 # EET 100 (desktop shortcut) leaves the defaults.
@@ -194,7 +208,15 @@ class CatalogParserTests(unittest.TestCase):
                 # November 3: Modpack 670 (Marek's Boomerang Dagger) is a default
                 # (Christopher, 2026-11-03).
                 # November 4: Tweaks 3000 and 3010 leave the defaults (Christopher, 2026-11-04).
-                Decision.DEFAULT: 334,
+                # November 16: Chriz Overhead Text 0 is a default (Christopher, 2026-11-16).
+                # November 22: Chriz Multiplayer Fix 0 and 1 are defaults (Christopher,
+                # 2026-11-22).
+                # November 23: Modpack 470 (RAW spell-scroll learning fix) is a default
+                # (Christopher, 2026-11-22).
+                # November 27: Modpack 695 (BG1 early-party XP boost) is a default
+                # (Christopher, 2026-11-26).
+                # November 27: Modpack 697 and 698 are defaults (Christopher, 2026-11-27).
+                Decision.DEFAULT: 342,
                 # October 13 intake: SoD 177/198/285 join the mandatory bundle (430 left it).
                 Decision.MANDATORY: 154,
             },
@@ -431,9 +453,14 @@ default = "none"
         # October 29: Rebalance 410 and 411 map to one feature each (v0.8.8 pin), and so
         # does Artisan tweak 7205 (chriz.5 pin).
         # November 3: Modpack 670 maps to one feature (alpha.15 pin).
-        self.assertEqual(result.mapped_rows, 1_352)
+        # November 16: Chriz Overhead Text 0 maps to one feature.
+        # November 18 adds the default Round Clock row for BG Rebalance 361.
+        # Modpack 680 maps to one feature; Chriz Multiplayer Fix 0 and 1 map to one each.
+        # November 23: Modpack 470 maps to one feature.
+        # November 27: Modpack 695 maps to one feature; 696, 697, 698, 699, and 700 map to one each.
+        self.assertEqual(result.mapped_rows, 1_364)
         self.assertEqual(result.excluded_rows, 527)
-        self.assertEqual(result.feature_rows + result.omission_rows, 825)
+        self.assertEqual(result.feature_rows + result.omission_rows, 837)
         # October 14: Rebalance potion uniqueness and SCS fine weapons choices.
         # October 23: the SoD Remix Imoen in Shadows of Amn choice.
         # October 23: ten quest-mod choices (Ascalon's three with their first variant as
@@ -447,7 +474,7 @@ default = "none"
         self.assertEqual(result.choice_groups, 88)
         self.assertEqual(result.optional_none_groups, 33)
         self.assertEqual(result.fixed_groups, 12)
-        self.assertIn("rows=1352", coverage_report(rows, result))
+        self.assertIn("rows=1364", coverage_report(rows, result))
 
     def test_september16_intake_rows_match_the_approved_recipe_features(self) -> None:
         root = Path(__file__).resolve().parents[2]

@@ -483,5 +483,29 @@
       "feature:feature:iwdification:mandatory-components",
       "feature:feature:stratagems:mandatory-components"
     ]
+  },
+  {
+    "version": "0.1.3",
+    "from_commit": "c95db24",
+    "to_commit": "bc5fc11",
+    "subjects": [
+      "artifact:chriz-overhead-text-0.1.0",
+      "feature:feature:chriz-overhead-text:component-0",
+      "run:chriz-overhead-text-bg2"
+    ]
+  },
+  {
+    "version": "0.1.4",
+    "from_commit": "bc5fc11",
+    "to_commit": "d9585d0",
+    "subjects": [
+      "artifact:artisans-kitpack-4.81a-dev.85928f9-chriz.7",
+      "artifact:bardicwonders-v2.9c-balance.8",
+      "artifact:bardicwonders-v2.9c-balance.9",
+      "artifact:buffbot-1.16.2",
+      "artifact:chriz-bg-rebalance-0.8.12",
+      "feature:feature:chriz-bg-rebalance:component-361",
+      "run:chriz-bg-rebalance-bg2"
+    ]
   }
 ]

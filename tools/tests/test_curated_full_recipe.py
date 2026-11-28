@@ -89,7 +89,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
         run_id = "chriz-bg-rebalance-bg2"
         runs = tomllib.loads(collection)["runs"]
         run = next(run for run in runs if run["run_id"] == run_id)
-        self.assertEqual(run["components"][-15:], [408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360])
+        self.assertEqual(run["components"][-16:], [408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360, 361])
         # Regression: sorting numerical IDs recreated the September 30 failure.
         sorted_source = collection.replace(
             f"components = {run['components']}",
@@ -315,8 +315,12 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.1.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
             modpack = tomllib.loads((output / "mods/chriz-bg-modpack.toml").read_text(encoding="utf-8"))
-            # November 8: alpha.16 keeps alpha.15's Marek's Boomerang Dagger 670.
-            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.16")
+            # November 22: alpha.17 adds EET world progression and SoD backtracking 680.
+            # November 23: alpha.18 adds RAW specialist spell-scroll learning fix 470.
+            # November 27: alpha.19 adds BG1 early-party XP boost 695.
+            # November 27: alpha.21 adds 696 (Challenge Mode Quick Loot), 697, and 698;
+            # alpha.22 adds optional mutually exclusive unpaused inventory 699 and 700.
+            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.22")
             collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
             preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))
             mods = {path.stem for path in (output / "mods").glob("*.toml")}
@@ -468,7 +472,30 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # (Modpack 650 + 652, Christopher, 2026-11-10); only the group's members change,
                 # and without the two the November 4 digest
                 # d5086af1d90ea7199bc4da012f9d745608f6e32fb6cb1637d3481742ebca68f3 returns.
-                "452ae6d86c228f1ca830c9f5c1462a7a7643f3316a9d877ca8e0b73f6b5acde6",
+                # November 16: Chriz Overhead Text v0.1.0 adds default component 0 in its own
+                # post-EET_end run before eeexremote-bg2, requiring EEex's core (Christopher,
+                # 2026-11-16); without its run, feature and preset entry the November 10 digest
+                # 452ae6d86c228f1ca830c9f5c1462a7a7643f3316a9d877ca8e0b73f6b5acde6 returns.
+                # November 18 adds 361 to the Rebalance run, features and preset.
+                # Removing the addition restores the November 16 digest 962d203f….
+                # Modpack 680 adds EET story-consistent campaign boundaries and SoD
+                # backtracking after 670; removing it restores the November 18 digest 500c85f8….
+                # November 22: Chriz Multiplayer Fix v0.1.0 adds default components 0 and 1
+                # in their own post-EET_end run after Chriz Overhead Text, each requiring
+                # EEex's core (Christopher, 2026-11-22), giving dfce2c4d…; without its run,
+                # features and preset entries main's alpha.17 digest e6a274c0… returns.
+                # November 22: Modpack 680 is on only with Challenge Mode (Christopher,
+                # 2026-11-22): optional, a group member, off in Recommended, plain description,
+                # giving 8b8b8b65….
+                # November 23: Modpack alpha.18 (PR #24/#25) adds default component 470
+                # (RAW specialist spell-scroll learning fix, requiring EEex) after 460.
+                # November 27: Modpack alpha.19 (PR #26) adds default BG1 early-party XP boost 695
+                # (requiring EEex and EET) after 680.
+                # November 27: Modpack alpha.21 (PR #29, following alpha.20 PR #28) adds optional
+                # Challenge Mode 696 (Quick Loot during combat, requiring EEex) plus defaults 697
+                # (Watcher's Keep instant teleporters) and 698 (clear lingering room effects on leave,
+                # requiring EEex) after 695; alpha.22 adds optional mutually exclusive 699 and 700.
+                "c1e99a364a4d7729ad68dd1ac16073b030396ffee8d0ed259fb1e94429a8e996",
             )
 
             legacy_bg1npc_groups = {
@@ -618,21 +645,21 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertNotIn(258, runs["chriz-sod-remix-bg2"]["components"])
             self.assertLess(runs["chriz-sod-remix-bg2"]["components"].index(210), runs["chriz-sod-remix-bg2"]["components"].index(197))
             buffbot = tomllib.loads((output / "mods/buffbot.toml").read_text(encoding="utf-8"))
-            self.assertEqual(buffbot["artifact_id"], "buffbot-1.16.1")
+            self.assertEqual(buffbot["artifact_id"], "buffbot-1.16.2")
             buffbot_artifact = tomllib.loads(
-                (output / "artifacts/buffbot-1.16.1.toml").read_text(encoding="utf-8")
+                (output / "artifacts/buffbot-1.16.2.toml").read_text(encoding="utf-8")
             )
-            self.assertEqual(buffbot_artifact["version"], "1.16.1")
-            self.assertEqual(buffbot_artifact["source"]["reference"], "v1.16.1")
-            self.assertEqual(buffbot_artifact["source"]["expected_filename"], "buffbot-v1.16.1.zip")
-            self.assertEqual(buffbot_artifact["source"]["expected_length"], 5797598)
-            self.assertEqual(buffbot_artifact["source"]["sha256"], "e116ab16e98f055e398e23b3f1f417f61e37c9d2bf04aefced6c9a3f629ed31d")
+            self.assertEqual(buffbot_artifact["version"], "1.16.2")
+            self.assertEqual(buffbot_artifact["source"]["reference"], "v1.16.2")
+            self.assertEqual(buffbot_artifact["source"]["expected_filename"], "buffbot-v1.16.2.zip")
+            self.assertEqual(buffbot_artifact["source"]["expected_length"], 5798498)
+            self.assertEqual(buffbot_artifact["source"]["sha256"], "ab2d95f589111d49f0b1e62cce47c2203e1cede91e7cd2316ffe76ce6ba6924a")
             self.assertEqual(runs["buffbot-bg2"]["components"], [1, 0])
             self.assertEqual(runs["bardicwonders-garrick-bg2"]["components"], [1008])
             bardic = tomllib.loads((output / "mods/bardicwonders.toml").read_text(encoding="utf-8"))
-            self.assertEqual(bardic["artifact_id"], "bardicwonders-v2.9c-balance.8")
+            self.assertEqual(bardic["artifact_id"], "bardicwonders-v2.9c-balance.9")
             bardic_artifact = tomllib.loads(
-                (output / "artifacts/bardicwonders-v2.9c-balance.8.toml").read_text(
+                (output / "artifacts/bardicwonders-v2.9c-balance.9.toml").read_text(
                     encoding="utf-8"
                 )
             )
@@ -645,22 +672,23 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertFalse((output / "artifacts/bardicwonders-v2.9c-balance.5.toml").exists())
             self.assertFalse((output / "artifacts/bardicwonders-v2.9c-balance.6.toml").exists())
             self.assertFalse((output / "artifacts/bardicwonders-v2.9c-balance.7.toml").exists())
-            self.assertEqual(bardic_artifact["version"], "2.9c-balance.8")
+            self.assertFalse((output / "artifacts/bardicwonders-v2.9c-balance.8.toml").exists())
+            self.assertEqual(bardic_artifact["version"], "2.9c-balance.9")
             self.assertEqual(bardic_artifact["source"]["kind"], "github-release")
-            self.assertEqual(bardic_artifact["source"]["reference"], "v2.9c-balance.8")
+            self.assertEqual(bardic_artifact["source"]["reference"], "v2.9c-balance.9")
             self.assertEqual(
                 bardic_artifact["source"]["url"],
                 "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/"
-                "releases/download/v2.9c-balance.8/Bardic-Wonders-v2.9c-balance.8.zip",
+                "releases/download/v2.9c-balance.9/Bardic-Wonders-v2.9c-balance.9.zip",
             )
             self.assertEqual(
                 bardic_artifact["source"]["expected_filename"],
-                "Bardic-Wonders-v2.9c-balance.8.zip",
+                "Bardic-Wonders-v2.9c-balance.9.zip",
             )
-            self.assertEqual(bardic_artifact["source"]["expected_length"], 5205399)
+            self.assertEqual(bardic_artifact["source"]["expected_length"], 5220111)
             self.assertEqual(
                 bardic_artifact["source"]["sha256"],
-                "fa99ef91f39dfa4ae1fc15d234022e2623c359e991372f24afa116f5053feda1",
+                "e34af0d979e43e95885452d2b8133c009014558c40fd0ea9bfdcd958dbbb5708",
             )
             self.assertEqual(bardic_artifact["archive"]["root_rule"], "direct")
             self.assertEqual(bardic_artifact["archive"]["publish_roots"], ["BardicWonders"])
@@ -689,7 +717,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             bardic_credit = next(
                 mod for mod in credits["mods"] if mod["id"] == "bardicwonders"
             )
-            self.assertEqual(bardic_credit["version"], "2.9c-balance.8")
+            self.assertEqual(bardic_credit["version"], "2.9c-balance.9")
             self.assertEqual(
                 bardic_credit["homepage"],
                 "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch",
@@ -786,26 +814,25 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertLess(order.index("cdtweaks-spell-save-penalties-bg2"), order.index("spell-rev-npc-spellbooks-bg2"))
             self.assertEqual(preset["selections"]["feature:evandra:component-1"], "on")
             bg_mod = tomllib.loads((output / "mods/chriz-bg-rebalance.toml").read_text(encoding="utf-8"))
-            # November 2: v0.8.9 (texts of 210/211) replaced v0.8.8; November 3 intake: v0.8.10
-            # (Flail of the Ages 302 without Spell Revisions), and November 8 v0.8.11, replace
-            # v0.8.9. All three artifacts stay.
-            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.8.11")
+            # Round Clock arrives in v0.8.12. Earlier BG artifacts remain as pin history.
+            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.8.12")
             bg_artifact = tomllib.loads(
-                (output / "artifacts/chriz-bg-rebalance-0.8.11.toml").read_text(encoding="utf-8")
+                (output / "artifacts/chriz-bg-rebalance-0.8.12.toml").read_text(encoding="utf-8")
             )
-            self.assertTrue((output / "artifacts/chriz-bg-rebalance-0.8.9.toml").exists())
+            for previous in ("0.8.11", "0.8.10", "0.8.9"):
+                self.assertTrue((output / f"artifacts/chriz-bg-rebalance-{previous}.toml").exists())
             self.assertTrue((output / "artifacts/chriz-bg-rebalance-0.8.8.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.3.1.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.4.0.toml").exists())
-            self.assertEqual(bg_artifact["version"], "0.8.11")
-            self.assertEqual(bg_artifact["source"]["reference"], "v0.8.11")
-            self.assertEqual(bg_artifact["source"]["expected_length"], 1813831)
+            self.assertEqual(bg_artifact["version"], "0.8.12")
+            self.assertEqual(bg_artifact["source"]["reference"], "v0.8.12")
+            self.assertEqual(bg_artifact["source"]["expected_length"], 1825506)
             self.assertEqual(
                 bg_artifact["source"]["sha256"],
-                "c9e9adf57a06b95bac055b4aee983b92690e3dacb2173b6c584cf4f75f059b34",
+                "f64314ab1462cef661dc4191e37e9d8911e95bd8df13ad44c3a09744b23847a8",
             )
-            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.2")
-            for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14", "0.1.0-alpha.15", "0.1.0-alpha.16", "0.1.0-alpha.17", "0.1.0-alpha.18", "0.1.0-alpha.19", "0.1.0-alpha.20", "0.1.0", "0.1.1", "0.1.2"):
+            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.4")
+            for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14", "0.1.0-alpha.15", "0.1.0-alpha.16", "0.1.0-alpha.17", "0.1.0-alpha.18", "0.1.0-alpha.19", "0.1.0-alpha.20", "0.1.0", "0.1.1", "0.1.2", "0.1.3", "0.1.4"):
                 generated_ledger = output / f"releases/v{version}/ledger.toml"
                 authored_ledger = self.root / f"manifest/releases/v{version}/ledger.toml"
                 self.assertEqual(
@@ -1168,7 +1195,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
         self.assertTrue(all(f"feature:chriz-bg-rebalance:component-{id_}" not in features for id_ in (420, 421)))
         run = next(run for run in collection["runs"] if run["run_id"] == "chriz-bg-rebalance-bg2")
         self.assertEqual(run["phase"], "post-eet-end")
-        self.assertEqual(run["components"][-15:], [408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360])
+        self.assertEqual(run["components"][-16:], [408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360, 361])
 
     def test_shifted_dialogue_is_optional_and_requires_either_kit_without_eeex(self) -> None:
         collection = tomllib.loads((self.root / "manifest/collection.toml").read_text(encoding="utf-8"))
@@ -1255,6 +1282,10 @@ class CuratedFullRecipeTests(unittest.TestCase):
             # Christopher, 2026-11-10: campaign XP caps with chapter caps (Modpack 650 + 652).
             "feature:chriz-bg-modpack:component-650",
             "feature:chriz-bg-modpack:component-652",
+            # Christopher, 2026-11-22: no travel back into an earlier campaign (Modpack 680).
+            "feature:chriz-bg-modpack:component-680",
+            # Christopher, 2026-11-27: disable Quick Loot during combat (Modpack 696).
+            "feature:chriz-bg-modpack:component-696",
         ]
         [authored] = base["feature_groups"]
         self.assertEqual(authored["members"], fallback_members)

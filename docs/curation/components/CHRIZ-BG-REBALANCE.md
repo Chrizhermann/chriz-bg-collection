@@ -14,7 +14,23 @@ The release retains component `120`
 weapon-protection repair, component `121` EEex/SCS ambient-readiness bridge, and the
 component `401` correction for Artisan CLAB cells packed into `ABILITY1`.
 
-The recipe pins **v0.8.11** (published 2026-11-08, annotated tag on merge commit `5cd9067`
+Both installers pin **v0.8.12** (2026-11-18, Rebalance PR #28, commit `2cb1b14`).
+Round Clock `361` (`cbr_time_jump_round_cooldowns`) follows True Time Stop `360` in BG.
+It is the only BG Rebalance component selected in Chriz Easy IWD. Both enable it by default with EEex. Elapsed world
+time after travel, rest, `DayNight` or `AdvanceTime` counts toward the spell or item aura,
+the remainder of a completed attack swing's round, the Hide in Shadows lockout and the
+next contingency check. A thief can use Stealth on the first paused frame after the lockout
+expires. A zero-tick transition grants no recovery.
+
+The upstream single-player BG2:EE 2.7.3.0 quiet lab covered world-map travel, completed and
+interrupted rest, and a paused Stealth click with components 360 and 361 together. Standalone
+IWD:EE also accepted the paused click with LuaJIT and embedded Lua 5.2. Waylaid travel,
+a live multiplayer session, custom action bars and a full BG:EE/SoD launch remain open.
+The installer intake verified the published archive, extraction and native component order
+for all three recipes. [Upstream release](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/tag/v0.8.12)
+and [intake evidence](../../../manifest/evidence/release-intake-20261118-chriz-bg-rebalance-chriz-easy-bg-chriz-easy-iwd.toml).
+
+The previous BG pin was **v0.8.11** (published 2026-11-08, annotated tag on merge commit `5cd9067`
 of Rebalance PR #27). It keeps the same 36 components, source order and Recommended
 selection as v0.8.10. Every selected component writes the result it decides regardless of
 edited game values, another mod's version of the same spell, item or table, or a missing
@@ -57,7 +73,7 @@ Chris Revisions `340`; v0.8.3 added potion uniqueness `330`/`331` and the Herois
 `332`; v0.8.4 (2026-10-23) released the October 8 compatibility follow-ups for existing
 components (see below).
 
-36 curated entries, 27 recommended selections for the next release. Bard spell-level
+37 curated entries, 28 recommended selections for the next release. Bard spell-level
 ceilings `420`/`421` are one checked choice: **default (Christopher's decision,
 2026-10-13)** (see below).
 ✓ = selected and receipt-verified in the isolated
@@ -121,6 +137,7 @@ release-candidate provenance.
 | 332 | Heroism family: Heroism, Greater Heroism and the Potion of Heroism do not combine | Cross-cutting audits |  |  | default |
 | 340 | Chris Revisions: Christopher's spell balance changes (Aid, Luck, Bless, Chaotic Commands, Prayer and Recitation) | Spell balance |  |  | default |
 | 360 | True Time Stop – fair Haste & Slow | Spell balance |  |  | default |
+| 361 | Round Clock for personal rounds and stealth cooldowns | Spell balance |  |  | default |
 
 ## Atomic Tempus UI behavior
 

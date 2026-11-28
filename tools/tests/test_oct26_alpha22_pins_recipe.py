@@ -49,9 +49,9 @@ SUCCESSORS["buffbot"] = "buffbot-1.12.1"
 # The November 1 intake (test_nov01_buffbot_pin_recipe) replaces v1.12.1 with v1.12.6, which
 # keeps both components and their order.
 SUCCESSORS["buffbot"] = "buffbot-1.12.6"
-# The November 8 intake (test_nov08_buffbot_pin_recipe) replaces v1.16.0 with v1.16.1, which
+# The November 16 intake (test_nov16_buffbot_pin_recipe) replaces v1.16.1 with v1.16.2, which
 # also keeps both components and their order.
-SUCCESSORS["buffbot"] = "buffbot-1.16.1"
+SUCCESSORS["buffbot"] = "buffbot-1.16.2"
 # Components declared by a successor pin, checked against its own record; none is in a
 # record of this intake.
 LATER_COMPONENTS = {"chriz-bg-rebalance": {360}}
@@ -75,15 +75,22 @@ LATER_ROWS["ARTISANSKITPACK_TWEAK"] = {7205}
 SUCCESSORS.update({mod_id: "artisans-kitpack-4.81a-dev.85928f9-chriz.6"
                    for mod_id in ("artisanskitpack", "artisanskitpack-npc", "artisanskitpack-tweak")})
 SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.9"
+# The November 18 save/rest fixes move all three Kitpack installers to chriz.7.
+SUCCESSORS.update({mod_id: "artisans-kitpack-4.81a-dev.85928f9-chriz.7"
+                   for mod_id in ("artisanskitpack", "artisanskitpack-npc", "artisanskitpack-tweak")})
 # The November 8 Rebalance intake (test_nov08_rebalance_0811_pin_recipe) replaces v0.8.10 with
 # v0.8.11, which keeps every component and the order.
-SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.11"
+# November 18 adds Round Clock after all earlier declarations.
+SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.12"
+LATER_COMPONENTS["chriz-bg-rebalance"].add(361)
+LATER_ROWS["CHRIZ-BG-REBALANCE"].add(361)
 # The November 3 intake (test_nov03_modpack_alpha15_marek_dagger_recipe) replaces Modpack
 # alpha.14 with alpha.15, which declares Marek's Boomerang Dagger 670 between 660 and 650;
-# alpha.16 keeps that declaration.
-SUCCESSORS["chriz-bg-modpack"] = "chriz-bg-modpack-0.2.0-alpha.16"
-LATER_COMPONENTS["chriz-bg-modpack"] = {670}
-LATER_ROWS["CHRIZ-BG-MODPACK"] = {670}
+# alpha.16 keeps that declaration; alpha.17 adds 680 after 670; alpha.18 adds 470 after 460;
+# alpha.19 adds 695 after 680; alpha.20/alpha.21 add 696, 697, 698 after 695; alpha.22 adds 699, 700 after 698.
+SUCCESSORS["chriz-bg-modpack"] = "chriz-bg-modpack-0.2.0-alpha.22"
+LATER_COMPONENTS["chriz-bg-modpack"] = {470, 670, 680, 695, 696, 697, 698, 699, 700}
+LATER_ROWS["CHRIZ-BG-MODPACK"] = {470, 670, 680, 695, 696, 697, 698, 699, 700}
 # Per mod: the new pin, the superseded pin (kept as history), its tag, the archive name and
 # the catalog that lists the mod's components.
 PINS = {
@@ -304,7 +311,7 @@ class Oct26Alpha22PinBatchTests(unittest.TestCase):
             self.assertEqual(preset.get(REVISIONS), "on")
             runs = {run["run_id"]: run for run in collection["runs"]}
             # v0.8.6 declares 360 after 340 (test_oct27_alpha22_pins_recipe).
-            self.assertEqual(runs[REBALANCE_RUN]["components"][-5:], [330, 331, 332, 340, 360])
+            self.assertEqual(runs[REBALANCE_RUN]["components"][-6:], [330, 331, 332, 340, 360, 361])
             self.assertEqual(runs[REBALANCE_RUN]["phase"], "post-eet-end")
             baseline = self._selected(collection, preset)
             self.assertIn((REBALANCE_RUN, 340), baseline)
@@ -370,7 +377,7 @@ class Oct26Alpha22PinBatchTests(unittest.TestCase):
             # Alpha.13's TP2 declares 135 after 130 and 460 after 450; alpha.15's 670 follows
             # 660 (test_nov03_modpack_alpha15_marek_dagger_recipe).
             self.assertEqual(runs[MODPACK_MAIN_RUN]["components"],
-                             [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660, 670])
+                             [130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680, 695, 696, 697, 698, 699, 700])
             self.assertEqual(runs[MODPACK_MAIN_RUN]["phase"], "post-eet-end")
             # 135 installs after the mods that change Dorn's ambush scripts, such as EET,
             # and 460 after EET and the party AI writers; SCS changes neither.
@@ -439,7 +446,7 @@ class Oct26Alpha22PinBatchTests(unittest.TestCase):
             self.assertNotIn(SOA_CAP, group["members"])
         self.assertEqual(NATIVE_RUN_ORDERS[CAMPAIGN_RUN], [650, 651, 652])
         self.assertEqual(NATIVE_RUN_ORDERS[MODPACK_MAIN_RUN],
-                         [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660, 670])
+                         [130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680, 695, 696, 697, 698, 699, 700])
 
     def test_superseded_records_still_match_their_kept_artifacts(self):
         superseded = {

@@ -1221,6 +1221,10 @@ fn evaluate_build_projects_the_challenge_mode_group_and_its_derived_state() {
         // still counts as available, because switching the group on turns on both.
         "feature:chriz-bg-modpack:component-650",
         "feature:chriz-bg-modpack:component-652",
+        // Christopher, 2026-11-22: no travel back into an earlier campaign (Modpack 680).
+        "feature:chriz-bg-modpack:component-680",
+        // Christopher, 2026-11-27: disable Quick Loot during combat (Modpack 696).
+        "feature:chriz-bg-modpack:component-696",
     ];
     let evaluate = |features: &[(&str, bool)]| {
         bridge

@@ -1,10 +1,11 @@
 # ARTISANSKITPACK_TWEAK — components
 
 Refreshed for the selected Artisan fork release **v4.81a-dev.85928f9-chriz.1**
-(`0798dc4ee3d09b5d97c56b69c80d9d2ac2317911`). The recipes pin
+(`0798dc4ee3d09b5d97c56b69c80d9d2ac2317911`). Both Chriz Easy BG recipes pin
+**v4.81a-dev.85928f9-chriz.7** (tag commit `b806532`, 2026-11-18), replacing
 **v4.81a-dev.85928f9-chriz.6** (tag commit `d70d213`, pinned 2026-11-02), which replaced
-chriz.5 (tag commit `10a4a29`, pinned 2026-10-29) and changes only the tweak TP2's version:
-its tweak TP2 declares chriz.1's 18 components in the same order and adds `7205` between
+chriz.5 (tag commit `10a4a29`, pinned 2026-10-29). In chriz.7 the tweak TP2 changes only its version.
+It declares chriz.1's 18 components in the same order and includes `7205` between
 `7203` and `8204` (below). The tweak installer uses the main
 installer's libraries, so the sorcerer and kit weapon fixes (see
 [ARTISANSKITPACK](ARTISANSKITPACK.md)) reach `8204` (Arcane Trickster sorcerer thief
@@ -17,7 +18,7 @@ the pass that puts "apply `C0PR#CL`" back into every class and kit ability table
 chriz.4, `1010000` also gives that entry to ability tables that later mods added or
 replaced; no component or decision changes. Besides its version and the new library in
 ALWAYS, chriz.5's tweak TP2 only adds `7205`, a default since 2026-10-29, and with
-chriz.5 `1010000` also ends with `7205`'s pass (below).
+chriz.5 `1010000` also ends with `7205`'s pass (below). [chriz.7 release](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/tag/v4.81a-dev.85928f9-chriz.7)
 19 entries, 7 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
 
 ## UI/dependency notes

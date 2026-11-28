@@ -14,24 +14,26 @@ no installer references, such as older versions, are not listed.
 <!-- BEGIN GENERATED PINS -->
 ### Shipped recipe: `recipes/curated-full-current/`
 
-69 archives for 72 installers.
+71 archives for 74 installers.
 
 | Archive | Version | Used by | SHA-256 | Source |
 |---|---|---|---|---|
 | Ascalon's Questpack | 7.0 | `ac-quest` | `87c2feb30c89…` | [release asset](https://github.com/Gitjas/Ascalons_Questpack/releases/download/v7.0/ascalons-questpack-7.0.iemod) |
-| The Artisan's Kitpack - Chriz Balance Patch | 4.81a-dev.85928f9-chriz.6 | `artisanskitpack`, `artisanskitpack-npc`, `artisanskitpack-tweak` | `9644f01cdeee…` | [release asset](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.6/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.6.zip) |
+| The Artisan's Kitpack - Chriz Balance Patch | 4.81a-dev.85928f9-chriz.7 | `artisanskitpack`, `artisanskitpack-npc`, `artisanskitpack-tweak` | `6148fa21b58e…` | [release asset](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.7/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.7.zip) |
 | Ascension | 2.1.0 | `ascension` | `bd0ee14b3770…` | [release asset](https://github.com/Gibberlings3/Ascension/releases/download/2.1.0/ascension-2.1.0.zip) |
-| Bardic Wonders — Christopher's balance fork | 2.9c-balance.8 | `bardicwonders` | `fa99ef91f39d…` | [release asset](https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.8/Bardic-Wonders-v2.9c-balance.8.zip) |
+| Bardic Wonders — Christopher's balance fork | 2.9c-balance.9 | `bardicwonders` | `e34af0d979e4…` | [release asset](https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.9/Bardic-Wonders-v2.9c-balance.9.zip) |
 | The BG1 NPC Project | 32 | `bg1npc` | `8e34f397e960…` | [release asset](https://github.com/Gibberlings3/BG1NPC/releases/download/v32/the-bg1npc-project-v32.iemod) |
 | BG1 Unfinished Business | 17.1 | `bg1ub` | `5a525eb37f68…` | [release asset](https://github.com/Pocket-Plane-Group/bg1ub/releases/download/v17.1/bg1-unfinished-business-v17.1.iemod) |
 | Baldur's Gate Graphical Overhaul | 3.6 | `bggo` | `59e01a3dcf48…` | [release asset](https://github.com/Spellhold-Studios/Baldurs-Gate-Graphical-Overhaul/releases/download/v3.6/baldurs-gate-graphical-overhaul-v3.6.zip) |
 | Black Hearts | 2.05 | `blackhearts` | `a1a6257a2c21…` | [release asset](https://github.com/A-Wizard-Did-It/Black-Hearts/releases/download/v2.05/BlackHearts-v2.05.iemod) |
 | Branwen for BGII | 8 | `branwen` | `f82c93e67f19…` | [release asset](https://github.com/Pocket-Plane-Group/Branwen_for_BGII/releases/download/v8/branwen-v8pre.zip) |
 | Bubb's Spell Menu Extended | 5.2 | `bubb-spell-menu` | `ac5380e99a53…` | [tag archive](https://codeload.github.com/Bubb13/Bubbs-Spell-Menu-Extended/zip/refs/tags/v5.2) |
-| BuffBot | 1.16.1 | `buffbot` | `e116ab16e98f…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.16.1/buffbot-v1.16.1.zip) |
+| BuffBot | 1.16.2 | `buffbot` | `ab2d95f58911…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.16.2/buffbot-v1.16.2.zip) |
 | The Tweaks Anthology | 7649ced6cd25865874d787ec1a9abbc67b068729 | `cdtweaks` | `117cd79cb518…` | [commit archive](https://codeload.github.com/Gibberlings3/Tweaks-Anthology/zip/7649ced6cd25865874d787ec1a9abbc67b068729) |
-| chriz-bg-modpack | 0.2.0-alpha.16 | `chriz-bg-modpack` | `668937ba7ea4…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.16/chriz-bg-modpack-v0.2.0-alpha.16.zip) |
-| CHRIZ-BG-REBALANCE | 0.8.11 | `chriz-bg-rebalance` | `c9e9adf57a06…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.11/chriz-bg-rebalance-v0.8.11-windows.zip) |
+| chriz-bg-modpack | 0.2.0-alpha.22 | `chriz-bg-modpack` | `53044637cbd3…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.22/chriz-bg-modpack-v0.2.0-alpha.22.zip) |
+| CHRIZ-BG-REBALANCE | 0.8.12 | `chriz-bg-rebalance` | `f64314ab1462…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.12/chriz-bg-rebalance-v0.8.12-windows.zip) |
+| Chriz Multiplayer Fix | 0.1.0 | `chriz-multiplayer-fix` | `5b85b267d33a…` | [release asset](https://github.com/Chrizhermann/chriz-multiplayer-fix/releases/download/v0.1.0/chriz-multiplayer-fix-v0.1.0.zip) |
+| Chriz Overhead Text | 0.1.0 | `chriz-overhead-text` | `a7023258fbc6…` | [release asset](https://github.com/Chrizhermann/chriz-overhead-text/releases/download/v0.1.0/chriz-overhead-text-v0.1.0.zip) |
 | CHRIZ-SOD-REMIX | 0.6.17 | `chriz-sod-remix` | `d8ce264f4288…` | [release asset](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.17/chriz-sod-remix-v0.6.17.zip) |
 | Crossmod Banter Pack for Baldur's Gate II | 30 | `crossmodbg2` | `6b1555d1cf6f…` | [release asset](https://github.com/Gibberlings3/Crossmod_Banter_Pack_for_Baldurs_Gate_II/releases/download/v30/crossmod-banter-pack-for-baldurs-gate-ii-v30.iemod) |
 | DLC Merger | 2.1 | `dlcmerger` | `ea7584fd7285…` | [release asset](https://github.com/Argent77/A7-DlcMerger/releases/download/v2.1/DlcMerger-v2.1.iemod) |
@@ -90,21 +92,23 @@ no installer references, such as older versions, are not listed.
 
 ### Base recipe: `manifest/`
 
-63 archives for 66 installers.
+65 archives for 68 installers.
 
 | Archive | Version | Used by | SHA-256 | Source |
 |---|---|---|---|---|
 | Ascalon's Questpack | 7.0 | `ac-quest` | `87c2feb30c89…` | [release asset](https://github.com/Gitjas/Ascalons_Questpack/releases/download/v7.0/ascalons-questpack-7.0.iemod) |
-| The Artisan's Kitpack - Chriz Balance Patch | 4.81a-dev.85928f9-chriz.6 | `artisanskitpack`, `artisanskitpack-npc`, `artisanskitpack-tweak` | `9644f01cdeee…` | [release asset](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.6/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.6.zip) |
+| The Artisan's Kitpack - Chriz Balance Patch | 4.81a-dev.85928f9-chriz.7 | `artisanskitpack`, `artisanskitpack-npc`, `artisanskitpack-tweak` | `6148fa21b58e…` | [release asset](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.7/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.7.zip) |
 | Ascension | 2.1.0 | `ascension` | `bd0ee14b3770…` | [release asset](https://github.com/Gibberlings3/Ascension/releases/download/2.1.0/ascension-2.1.0.zip) |
 | The BG1 NPC Project | 32 | `bg1npc` | `8e34f397e960…` | [release asset](https://github.com/Gibberlings3/BG1NPC/releases/download/v32/the-bg1npc-project-v32.iemod) |
 | BG1 Unfinished Business | 17.1 | `bg1ub` | `5a525eb37f68…` | [release asset](https://github.com/Pocket-Plane-Group/bg1ub/releases/download/v17.1/bg1-unfinished-business-v17.1.iemod) |
 | Baldur's Gate Graphical Overhaul | 3.6 | `bggo` | `59e01a3dcf48…` | [release asset](https://github.com/Spellhold-Studios/Baldurs-Gate-Graphical-Overhaul/releases/download/v3.6/baldurs-gate-graphical-overhaul-v3.6.zip) |
 | Black Hearts | 2.05 | `blackhearts` | `a1a6257a2c21…` | [release asset](https://github.com/A-Wizard-Did-It/Black-Hearts/releases/download/v2.05/BlackHearts-v2.05.iemod) |
 | Bubb's Spell Menu Extended | 5.2 | `bubb-spell-menu` | `ac5380e99a53…` | [tag archive](https://codeload.github.com/Bubb13/Bubbs-Spell-Menu-Extended/zip/refs/tags/v5.2) |
-| BuffBot | 1.16.1 | `buffbot` | `e116ab16e98f…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.16.1/buffbot-v1.16.1.zip) |
-| chriz-bg-modpack | 0.2.0-alpha.16 | `chriz-bg-modpack` | `668937ba7ea4…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.16/chriz-bg-modpack-v0.2.0-alpha.16.zip) |
-| CHRIZ-BG-REBALANCE | 0.8.11 | `chriz-bg-rebalance` | `c9e9adf57a06…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.11/chriz-bg-rebalance-v0.8.11-windows.zip) |
+| BuffBot | 1.16.2 | `buffbot` | `ab2d95f58911…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.16.2/buffbot-v1.16.2.zip) |
+| chriz-bg-modpack | 0.2.0-alpha.22 | `chriz-bg-modpack` | `53044637cbd3…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.22/chriz-bg-modpack-v0.2.0-alpha.22.zip) |
+| CHRIZ-BG-REBALANCE | 0.8.12 | `chriz-bg-rebalance` | `f64314ab1462…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.12/chriz-bg-rebalance-v0.8.12-windows.zip) |
+| Chriz Multiplayer Fix | 0.1.0 | `chriz-multiplayer-fix` | `5b85b267d33a…` | [release asset](https://github.com/Chrizhermann/chriz-multiplayer-fix/releases/download/v0.1.0/chriz-multiplayer-fix-v0.1.0.zip) |
+| Chriz Overhead Text | 0.1.0 | `chriz-overhead-text` | `a7023258fbc6…` | [release asset](https://github.com/Chrizhermann/chriz-overhead-text/releases/download/v0.1.0/chriz-overhead-text-v0.1.0.zip) |
 | CHRIZ-SOD-REMIX | 0.6.17 | `chriz-sod-remix` | `d8ce264f4288…` | [release asset](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.17/chriz-sod-remix-v0.6.17.zip) |
 | Crossmod Banter Pack for Baldur's Gate II | 30 | `crossmodbg2` | `6b1555d1cf6f…` | [release asset](https://github.com/Gibberlings3/Crossmod_Banter_Pack_for_Baldurs_Gate_II/releases/download/v30/crossmod-banter-pack-for-baldurs-gate-ii-v30.iemod) |
 | DLC Merger | 2.1 | `dlcmerger` | `ea7584fd7285…` | [release asset](https://github.com/Argent77/A7-DlcMerger/releases/download/v2.1/DlcMerger-v2.1.iemod) |

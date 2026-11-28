@@ -21,8 +21,42 @@ table is copied by its tracked name `xplevel.2da`, so a case-sensitive WeiDU fin
 source/package evidence is
 `manifest/evidence/release-intake-20261108-chriz-bg-modpack-chriz-easy-bg.toml`, not a WeiDU
 installation or gameplay acceptance.
-65 current or historical entries; the collection exposes 48. Component `195` already includes the work from standalone component
-`160`; Hexxat's three class routes are one at-most-one choice.
+The recipe now pins **v0.2.0-alpha.17** (published 2026-11-22, annotated tag on public-main
+commit `5d93338` of Modpack PRs #20 and #21, built by the tagged release workflow). It adds
+component `680` (EET story-consistent campaign boundaries and SoD backtracking fixes; optional,
+on only with Challenge Mode)
+after `670` and before `650` while keeping every earlier component and choice. Fresh source/package
+evidence is `manifest/evidence/release-intake-20261122-chriz-bg-modpack-chriz-easy-bg.toml`,
+not a full collection WeiDU installation or gameplay acceptance.
+The recipe now pins **v0.2.0-alpha.18** (published 2026-11-22 21:13 UTC, annotated tag on public-main
+commit `533913c` of Modpack PRs #24 and #25, built by the tagged release workflow). It adds
+default component `470` (RAW specialist spell-scroll learning fix, requiring EEex) after `460`
+in both Chriz Easy BG and Chriz Easy IWD (`470` is the sole Modpack component in IWD). Modpack
+alpha.18 also ships component `690` (`cbm_fast_traps`, integrated in Modpack PR #23 with its
+typed-write fix in PR #25), which remains unoffered and off in both installers until explicitly
+approved. Fresh source/package evidence is
+`manifest/evidence/release-intake-20261123-chriz-bg-modpack-chriz-easy-bg-chriz-easy-iwd.toml`,
+not a combined collection WeiDU installation or full campaign gameplay.
+The recipe now pins **v0.2.0-alpha.19** (published 2026-11-26 15:26 UTC, annotated tag on public-main
+commit `6e6b364` of Modpack PR #26, built by the tagged release workflow). It adds default component
+`695` (`cbm_bg1_early_party_xp`, BG1 early-party XP boost, requiring EEex) after `680` in Chriz
+Easy BG only and omits it in Chriz Easy IWD (`470` stays the sole Modpack component in IWD; `690`
+stays unoffered and off in both installers). Fresh source/package evidence is
+`manifest/evidence/release-intake-20261127-chriz-bg-modpack-chriz-easy-bg-chriz-easy-iwd.toml`,
+not a combined collection WeiDU installation or full campaign gameplay.
+The recipe now pins **v0.2.0-alpha.21** (published 2026-11-26 22:16 UTC, annotated tag on public-main
+commit `4e14389` of Modpack PR #29, built by the tagged release workflow, following `v0.2.0-alpha.20`
+commit `099aaf4` of Modpack PR #28). In Chriz Easy BG only, it adds **optional** Challenge Mode
+component `696` (`cbm_no_combat_quickloot`, disable Quick Loot during combat, requiring EEex and
+off in Chris's Recommended) and **default** components `697` (`cbm_watchers_keep_teleporters`,
+Watcher's Keep instant teleporters) and `698` (`cbm_area_effects_clear_on_leave`, clear lingering
+room effects on leaving an area or hazard room, requiring EEex) after `695`; Chriz Easy IWD omits
+all three (`470` stays the sole Modpack component in IWD; `690` stays unoffered and off in both
+installers). Fresh source/package evidence is
+`manifest/evidence/release-intake-20261127-chriz-bg-modpack-v0.2.0-alpha.21-chriz-easy-bg-chriz-easy-iwd.toml`,
+not a combined collection WeiDU installation or full campaign gameplay.
+The recipe now pins **v0.2.0-alpha.22** (annotated tag on public-main commit `283e59e` of Modpack PR #30, built by the tagged release workflow, following `v0.2.0-alpha.21` commit `4e14389` of Modpack PR #29 and `v0.2.0-alpha.20` commit `099aaf4` of Modpack PR #28). Across both Chriz Easy BG and Chriz Easy IWD, it adds **optional mutually exclusive** EEex components `699` (`cbm_unpaused_inventory_always`, always keep game unpaused while Inventory is open) and `700` (`cbm_unpaused_inventory_combat`, keep game unpaused in Inventory during combat only) after `698` in BG and alongside `470` in IWD (both off by default in Chris's Recommended); `695`, `696`, `697`, and `698` stay BG-only, and `690` stays unoffered and off in both installers. Fresh source/package evidence is `manifest/evidence/release-intake-20261127-chriz-bg-modpack-v0.2.0-alpha.22-chriz-easy-bg-chriz-easy-iwd.toml`, not a combined collection WeiDU installation or full campaign gameplay.
+73 current or historical entries; the collection exposes 56. Component `195` already includes the work from standalone component `160`; Hexxat's three class routes are one at-most-one choice, and unpaused inventory `699`/`700` are one at-most-one choice.
 The four ✓ marks record the old reference install, not the new default recipe.
 
 ## Implementation status
@@ -50,7 +84,12 @@ The four ✓ marks record the old reference install, not the new default recipe.
   `188`, `189`, `199`, `220`–`225`, `400`, `410`, `430`, `440`, `450`, `610`, `611`, `620`, `630`, and `640`. It contains no advertised
   FAIL placeholders. Alpha.11 added `237`, `238`, `650`, `651` and `660`; alpha.12 added
   `230`–`234`; alpha.13 added `135`, `239`, `460` and `652`; alpha.14 added none;
-  alpha.15 adds `670`.
+  alpha.15 adds `670`; alpha.16 added none; alpha.17 adds `680`; alpha.18 adds offered default `470` (while `690` remains unoffered/off); alpha.19 adds offered default `695` in Chriz Easy BG (while `690` stays unoffered/off and IWD keeps `470` only); alpha.20 adds offered defaults `697` and `698` in Chriz Easy BG; alpha.21 adds optional Challenge Mode component `696` in Chriz Easy BG; alpha.22 adds optional mutually exclusive unpaused-inventory choices `699` (always) and `700` (combat only) in both Chriz Easy BG and Chriz Easy IWD (while IWD excludes `695`–`698` and both exclude `690`).
+- Unpaused inventory always `699` / in combat only `700` (alpha.22) are **optional, unchecked by default, and mutually exclusive (Christopher's decision, 2026-11-27)** in both Chriz Easy BG and Chriz Easy IWD and require EEex. Component `699` cancels active pause on Inventory open, resumes the simulation timer while Inventory remains open, suppresses pause requests inside Inventory, and leaves the world unpaused on close; component `700` keeps native pause in Inventory out of combat and unpauses / suppresses pausing only while combat is active (auto-unpauses when combat begins in Inventory and restores native pause once combat clears). Verified live in quiet lab on `BuffBot-Dev` (`BG2:EE 2.7.3.0 + EEex v1.3.1`, `11/11` checks across `699` and `700`, `tripped=false`, zero audio leak) plus offline Lua 5.2 / LuaJIT 2.1, Keystone/Unicorn x64 trampoline emulation, `2.7.3.0` EXE checks (`BG:EE`, `BG2:EE`, `IWD:EE`), real WeiDU `249.00` parse/install/exclusivity/uninstall tests, and deterministic archive checks.
+- Disable Quick Loot during combat `696` (alpha.21) is **optional, unchecked and in the Challenge Mode group (Christopher's decision, 2026-11-27)** in Chriz Easy BG only (never offered/installed in IWD) and requires EEex. Disables `WORLD_QUICKLOOT` while in combat across BG:EE, SoD, BG2:EE, EET, and IWD:EE so items must be looted from corpses, ground piles, or containers directly, blocking toggle clicks (with deferred `InfinityUI++` `messagesRect` sync), `OnKeyDown` hotkey pushes, and slot/mass-pick/scroll actions while keeping `WORLD_CONTAINER` intact and automatically restoring Quick Loot once combat ends if open beforehand. Verified live in quiet lab on `BuffBot-Dev` (`BG2:EE 2.7.3.0 + EEex v1.3.1`, open-floor baseline, all 5 checks passing: OOC open, frame-1 combat suppression, toggle block, hotkey push block, OOC restore) plus offline Lua 5.1/5.2/LuaJIT 2.1, synthetic/extracted WeiDU 249 install/uninstall, and archive checks.
+- Watcher's Keep instant teleporters `697` and clear lingering room effects on leave `698` (alpha.20) are **defaults (Christopher's decision, 2026-11-27)** in Chriz Easy BG only (never offered/installed in IWD). Component `697` replaces `FadeToColor`/`Wait`/`FadeFromColor` stalls in Watcher's Keep teleporters (`CUT202A`–`CUT202ZH`, `CUT211A`, `CUT246A`, `ITPORTAL`) while keeping gates, autosaves, and `CUT202Z -> cut207a` intact (no EEex required). Component `698` requires EEex and immediately clears lingering room-pulsed hazard debuffs (`SPIN646` Dead Magic, `SPIN645`/`SPIN778` Wild Magic, `OHNWILDX` Vicross field, `SPIN628`/`SPIN628A` `AR3016` Ice Library freeze) on room/area exit (including while paused + actionbar refresh), leaving combat rays and `OHBANTIM` untouched. Both verified live in `Magic-Lab-20261104` (`BG2:EE 2.7.3.0 + EEex v1.3.1`, `6/6` checks) and across 89 offline/WeiDU/archive checks.
+- BG1 early-party XP boost `695` (alpha.19) is **default (Christopher's decision, 2026-11-26)** in Chriz Easy BG only (never offered/installed in IWD) and requires EEex and EET. For party-divided XP routed through `CInfGame::AddPartyXP` in BG1 (`STATE_DEAD` clear count `N`), it adds `+70%` per additional living companion to the party XP pool (`1.0x` solo, `1.7x` duo, `2.4x` trio, `3.1x` four, `3.8x` five, `4.5x` six -> `100%` down to `75%` per member) until each living character reaches `16,000` total XP (sum of active XP and any retired dual-class threshold / Challenge Mode banked old-class XP for both `Player1` and companions), clipping only the bonus at `16,000` without lowering normal `1/N` shares. Verified offline with real `EEex_PreprocessAssembly` + Keystone/Unicorn emulation and synthetic WeiDU 249 install/uninstall, and verified live in quiet labs (`2026-11-27`) across standalone `BG:EE 2.7.3.0` (`6/6`) and `EET 2.7.3.0` (`21/21`: `N = 2..6`, dead slot `1`, dual-class `XPLEVEL.2DA`, SoD/`CHAPTER` gates, and Challenge Mode `650`/`652` coexistence) with `EEex v1.3.1`; full combined-collection WeiDU installation and full campaign playthrough remain separate.
+- Spell scroll learning RAW fix `470` (alpha.18) is **default (Christopher's decision, 2026-11-23)** in both Chriz Easy BG and Chriz Easy IWD and requires EEex. Restricts the ±15% specialist scribing modifier (`opcode 147`) to Mage-class characters carrying one or more of the 8 wizard specialist bits (`0x0040`–`0x2000`, including custom multi-bit specialists); all Bards (Blade, Jester, Skald, mod kits), Wild Mages, kitted dual-class Mages, and non-Mages stay at 0%. Verified live in quiet labs (`2026-11-23`) on BG2:EE `2.7.3.0` and IWD:EE `2.7.3.0` with EEex `v1.3.1` (`BG:EE / SoD` live lab pass pending).
 - Dorn's ambush fix `135` (alpha.13) is **default (Christopher's decision,
   2026-10-25)**. When Dorn catches up with Senjak and Dorotea in BG1, the cutscene no
   longer locks the camera on Senjak, and Senjak's script releases a lock once he turns
@@ -144,6 +183,11 @@ The four ✓ marks record the old reference install, not the new default recipe.
   the dagger joins the Randomiser's BG1 pool (see [FOLLOW_UPS](FOLLOW_UPS.md)), `670` has to
   move before it.
   Not yet tested in a game: the two Marek fights and the drop.
+- EET world progression and SoD backtracking fixes `680` (alpha.17). **Christopher's decision, 2026-11-22: on only with Challenge Mode, off by default.** It is an optional, unchecked feature and a member of the [Challenge Mode group](../../plans/2026-10-13-challenge-mode-group.md); Chris's Recommended leaves it off. It implements his 2026-11-01 Challenge Mode idea of no travel back into an earlier campaign (see [FOLLOW_UPS](FOLLOW_UPS.md)). Requires EET (`feature:eet:mandatory-components`) and `mod:eet-end`, and runs in `chriz-bg-modpack-bg2` after `670`. It preserves EET's single install and BG1/SoD/SoA/ToB new-game starts while closing cross-campaign backtracking exploits (`AR0020 <-> BG4800`, `BD1000 <-> BG0900`, `AR3000 -> Amn` on ToB entry, and post-SoD `BD4000.BCS` reopening), keeping the SoD Ch.8-10 road open until the Dragonspear assault, and fixing abandoned SoD camp NPC stranding, chest forwarding, Baeloth's pit cleanup, camp sentries, siege audio and duplicate Jegg. All area rules live in `eet_world_progression.2da`.
+  Its Siege of Dragonspear camp fixes do not depend on the travel lock and are planned as their
+  own default component in the next Modpack release (see [FOLLOW_UPS](FOLLOW_UPS.md)); until then
+  they stay off in Recommended.
+  Not yet tested in a game: no full playthrough across the campaign transitions.
 - Kivan quest guard `130` is mandatory with BG1NPC Banters/Quests/Interjections `10`
   and SCS general AI `6000`, after EET import and SCS. It is independent of Kivan's
   Archer choice `198`; never add standalone `KIVAN_QUEST_FIX` alongside it. Its
@@ -245,5 +289,13 @@ The four ✓ marks record the old reference install, not the new default recipe.
 | 652 | Campaign XP caps - chapter-by-chapter XP caps across BG1, SoD, SoA, and ToB (requires 650; experimental) | chriz-bg-modpack: Gameplay tweaks | | | optional |
 | 660 | Degrodel: hand over the Helm of Balduran or keep it and fight him | chriz-bg-modpack: Gameplay tweaks | | | default |
 | 670 | Marek: carry the Boomerang Dagger +2 in BG1 (drops it when he dies) | chriz-bg-modpack: Gameplay tweaks | | | default |
+| 680 | EET: story-consistent campaign boundaries and SoD backtracking fixes | chriz-bg-modpack: Gameplay tweaks | | | optional |
+| 695 | BG1 early-party XP boost: +70% party XP pool per extra companion up to 16,000 XP (BG:EE and EET; Windows EEex) | chriz-bg-modpack: Gameplay tweaks | | | default |
+| 696 | Challenge Mode: disable Quick Loot during combat (BG:EE, SoD, BG2:EE, EET, IWD:EE; EEex) | chriz-bg-modpack: Gameplay tweaks | | | optional |
+| 697 | Watcher's Keep: instant teleporters | chriz-bg-modpack: Gameplay tweaks | | | default |
+| 698 | Clear lingering room effects when leaving an area or hazard room (BG:EE, SoD, BG2:EE, EET; Windows EEex) | chriz-bg-modpack: Gameplay tweaks | | | default |
+| 699 | Inventory: always keep game unpaused while Inventory is open (BG:EE, SoD, BG2:EE, EET, IWD:EE; Windows EEex) | chriz-bg-modpack: Gameplay tweaks | | | optional |
+| 700 | Inventory: keep game unpaused in Inventory during combat only (BG:EE, SoD, BG2:EE, EET, IWD:EE; Windows EEex) | chriz-bg-modpack: Gameplay tweaks | | | optional |
 | 640 | Legacy UI translation helper compatibility | chriz-bg-modpack: Compatibility | | | mandatory |
 | 460 | Party AI Defensive Stance: obey the "Use special abilities" option | chriz-bg-modpack: Compatibility | | | default |
+| 470 | Spell Learning: restrict +/-15% specialist modifier to specialist mages (BG:EE, SoD, BG2:EE, EET, IWD:EE; Windows EEex) | chriz-bg-modpack: Spell and compatibility fixes | | | default |

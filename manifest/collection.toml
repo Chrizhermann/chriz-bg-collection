@@ -13,6 +13,10 @@ members = [
   # Christopher, 2026-11-10: Challenge Mode includes campaign XP caps with chapter caps (Modpack 650 + 652).
   "feature:chriz-bg-modpack:component-650",
   "feature:chriz-bg-modpack:component-652",
+  # Christopher, 2026-11-22: no travel back into an earlier campaign only with Challenge Mode (Modpack 680).
+  "feature:chriz-bg-modpack:component-680",
+  # Christopher, 2026-11-27: Challenge Mode disables Quick Loot during combat so loot must be picked up on the ground (Modpack 696).
+  "feature:chriz-bg-modpack:component-696",
 ]
 # Christopher, 2026-10-14: Challenge Mode picks strict potion uniqueness (Rebalance 330);
 # switching the group off restores the recommended 331.
@@ -381,7 +385,21 @@ args = []
 run_id = "chriz-bg-rebalance-bg2"
 mod_id = "chriz-bg-rebalance"
 phase = "post-eet-end"
-components = [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360]
+components = [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360, 361]
+args = []
+
+[[runs]]
+run_id = "chriz-overhead-text-bg2"
+mod_id = "chriz-overhead-text"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "chriz-multiplayer-fix-bg2"
+mod_id = "chriz-multiplayer-fix"
+phase = "post-eet-end"
+components = [0, 1]
 args = []
 
 [[runs]]
@@ -395,7 +413,7 @@ args = []
 run_id = "chriz-bg-modpack-bg2"
 mod_id = "chriz-bg-modpack"
 phase = "post-eet-end"
-components = [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660, 670]
+components = [130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680, 695, 696, 697, 698, 699, 700]
 args = []
 
 [[runs]]
@@ -1005,6 +1023,42 @@ decision = "default"
 readiness = "ready"
 requires = ["mod:eeex"]
 components = [{ run_id = "bubb-spell-menu-bg2", component = 0 }]
+
+[[features]]
+id = "feature:chriz-overhead-text:component-0"
+title = "Keep overhead text visible with Reveal Details and overhead HP (EEex)"
+description = "Keep spoken overhead lines visible while Tab / Reveal Details or overhead HP labels are shown, stacking the spoken box above the nameplate or HP bar."
+category = "interface"
+source_label = "Chriz Overhead Text"
+group_label = "Interface"
+decision = "default"
+readiness = "ready"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-overhead-text-bg2", component = 0 }]
+
+[[features]]
+id = "feature:chriz-multiplayer-fix:component-0"
+title = "Multiplayer lobby crash fix (EEex)"
+description = "Stops the random crash right after leaving Beamdog's multiplayer lobby, for example on Multiplayer > Local network game > Load."
+category = "fixes"
+source_label = "Chriz Multiplayer Fix"
+group_label = "Fixes"
+decision = "default"
+readiness = "ready"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-multiplayer-fix-bg2", component = 0 }]
+
+[[features]]
+id = "feature:chriz-multiplayer-fix:component-1"
+title = "Copy saves between single player and multiplayer on the Load screen (EEex)"
+description = "Adds a button to the Load screen that copies a save into the other mode's save list, so a party created in multiplayer can continue in single player and back. The original save stays."
+category = "interface"
+source_label = "Chriz Multiplayer Fix"
+group_label = "Interface"
+decision = "default"
+readiness = "ready"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-multiplayer-fix-bg2", component = 1 }]
 
 [[features]]
 id = "feature:bggo:component-0"
@@ -4750,6 +4804,17 @@ requires = ["feature:eeex:mandatory-components"]
 components = [{ run_id = "chriz-bg-rebalance-bg2", component = 360 }]
 
 [[features]]
+id = "feature:chriz-bg-rebalance:component-361"
+title = "Round Clock for personal rounds and stealth cooldowns"
+description = "Time spent travelling, resting or advancing the world clock counts toward the wait after casting a spell, using an item or finishing an attack swing. It also counts toward Hide in Shadows and the next contingency check. When Hide is ready, the Stealth button works even while paused. A transition that advances zero ticks grants no recovery."
+category = "spells"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 361 }]
+
+[[features]]
 id = "feature:chriz-bg-rebalance:component-410"
 title = "Druid weapons"
 description = "Druids and every druid kit may use axes and short bows and put one proficiency point into them; fighter/druids may also use long bows and put up to two points into all three. Higher limits that another mod set stay. The English druid and fighter/druid descriptions name the new weapons. Existing party members get them at their next level-up at the latest."
@@ -5094,6 +5159,17 @@ parent = "mod:chriz-bg-modpack"
 components = [{ run_id = "chriz-bg-modpack-bg2", component = 460 }]
 
 [[features]]
+id = "feature:chriz-bg-modpack:component-470"
+title = "Spell learning: restrict ±15% specialist modifier to specialist mages"
+description = "Fixes the Enhanced Edition opcode 147 bug where kitted Bards (Blade, Jester, Skald, mod kits), Wild Mages, kitted dual-class Mages, and multi-bit custom specialists took an unintended -15% scroll-learning penalty. Only Mage-class characters carrying a wizard specialist school bit receive +15% on own-school scrolls and -15% on other schools; all other kits use the pure INTMOD chance. Requires EEex."
+category = "rules"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 470 }]
+
+[[features]]
 id = "feature:chriz-bg-modpack:component-610"
 title = "Scale utility XP with party progress"
 description = "Progressively scale lock, trap, and spell-learning XP from early BG1 through BG2 using the released default curve."
@@ -5151,6 +5227,86 @@ readiness = "ready"
 parent = "mod:chriz-bg-modpack"
 requires = ["feature:eet:mandatory-components"]
 components = [{ run_id = "chriz-bg-modpack-bg2", component = 670 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-680"
+title = "No travel back into an earlier campaign"
+description = "Once you move on to the next campaign (Baldur's Gate, then Siege of Dragonspear, Shadows of Amn and Throne of Bhaal), you can no longer travel back to the earlier campaign's areas. Watcher's Keep stays open in Shadows of Amn and Throne of Bhaal. Also fixes several Siege of Dragonspear camp problems (companions stranded in an abandoned camp, the storage chest, leftover sentries, a duplicate Jegg). Not yet tested in a full playthrough."
+category = "rules"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:eet:mandatory-components", "mod:eet-end"]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 680 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-695"
+title = "Early-party XP boost in Baldur's Gate 1"
+description = "Scales party-divided XP in Baldur's Gate 1 by +70% per additional living companion (100% solo, 85% duo, down to 75% in a full party of six) until each character reaches 16,000 total XP (including retired dual-class XP for both protagonist and companions). Inactive in solo play, Siege of Dragonspear, Shadows of Amn, and Throne of Bhaal; works standalone and with Challenge Mode XP banking. Requires EEex."
+category = "rules"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:eeex:mandatory-components", "feature:eet:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 695 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-696"
+title = "Disable Quick Loot during combat"
+description = "Closes and blocks the Quick Loot bar while in combat so items must be looted directly from bodies, ground piles, or containers during fights, and automatically restores Quick Loot once combat ends if it was open beforehand. Requires EEex."
+category = "rules"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 696 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-697"
+title = "Watcher's Keep: instant teleporters"
+description = "Removes the multi-second black-screen fade-out and fade-in stalls on Watcher's Keep teleporters across every level and the Carston handoff while keeping portal animations, sound cues, statue/item/key gates, autosaves, and exact destinations intact."
+category = "convenience"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 697 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-698"
+title = "Clear lingering room effects when leaving a room or area"
+description = "Immediately removes lingering room-pulsed hazard debuffs (Dead Magic, Wild Magic, Vicross magic-null field, and Watcher's Keep Ice Library slow/freeze) the instant you teleport, travel, or step outside the hazard room, including while paused, so spellcasting recovers without waiting up to a full round. Requires EEex."
+category = "fixes"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 698 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-699"
+title = "Unpaused inventory: always"
+description = "Cancels any active pause when opening Inventory in singleplayer, keeps the world simulation timer running while Inventory stays open, blocks pause requests inside Inventory, and leaves the game unpaused when closing Inventory. Mutually exclusive with combat-only unpaused inventory (700). Requires EEex."
+category = "convenience"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+choice_group = "choice:chriz-bg-modpack:unpaused-inventory-mode"
+requires = ["feature:eeex:mandatory-components"]
+conflicts = [{ feature_id = "feature:chriz-bg-modpack:component-700", reason = "Choose at most one unpaused-inventory mode: always (699) or combat only (700)." }]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 699 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-700"
+title = "Unpaused inventory: in combat only"
+description = "Keeps the native pause in Inventory out of combat, and unpauses / blocks pausing while combat is active in singleplayer (active battle song counter, combat counter, or a living party member seeing a hostile creature). Automatically unpauses if combat begins while paused in Inventory, and restores native pausing once combat clears. Mutually exclusive with always-unpaused inventory (699). Requires EEex."
+category = "convenience"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+choice_group = "choice:chriz-bg-modpack:unpaused-inventory-mode"
+requires = ["feature:eeex:mandatory-components"]
+conflicts = [{ feature_id = "feature:chriz-bg-modpack:component-699", reason = "Choose at most one unpaused-inventory mode: always (699) or combat only (700)." }]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 700 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-640"

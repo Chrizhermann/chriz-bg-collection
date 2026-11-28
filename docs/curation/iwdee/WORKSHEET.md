@@ -27,6 +27,25 @@ Added later:
 - Klatu Tweaks and Fixes 1.7.4, component 2150 (thieves use their skills in any armor, no added
   penalties), 2026-11-09: on by default as in the BG installer ("Es ist einfach Quality of
   Life"). It runs after every mod that adds armor. His stream game got it the same day.
+- Chriz Overhead Text 0.1.0, component 0 (keep spoken overhead text visible above Reveal Details
+  nameplates and overhead HP labels via EEex), 2026-11-16: on by default in both installers. It
+  copies only `override/M_CZOH.lua` after EEex.
+- Chriz IWD Party Dialog 0.1.0, component 0 (party-wide class, kit, and race checks in world and
+  quest dialogues with speaker/token handover via EEex), 2026-11-17: on by default in Chriz Easy
+  IWD. It copies only `override/M_CIPDLG.lua` after EEex and keeps personal companion talks bound
+  to `Player1`.
+- BG Rebalance v0.8.12, selected 2026-11-18. Both installers enable Round Clock (361) by default
+  with EEex. It is the sole component in the IWD run, immediately after Chriz IWD Party Dialog.
+- Chriz Multiplayer Fix 0.1.0, 2026-11-22: on by default in both installers. Component 0 (the
+  crash fix after leaving the multiplayer lobby) always comes with the mod; component 1 (a Copy
+  button per save on the Load screen, between single player and multiplayer) is on by default
+  and can be turned off. Both need EEex and run directly after Chriz Overhead Text. Existing
+  installations get both through the hotpatch `chriz-multiplayer-fix-0.1.0`.
+- Chriz BG Modpack v0.2.0-alpha.18, 2026-11-23 (Christopher's decision): enables the RAW
+  spell-scroll learning fix (470) by default with EEex (restricting ±15% specialist modifiers to
+  specialist mages; bards, Wild Mages, kitted dual-class mages, and non-mages stay at 0%) in
+  the IWD run, immediately after BG Rebalance (690 Fast Traps stays unoffered). Pinned release
+  updated to v0.2.0-alpha.19 on 2026-11-27 (`0.1.20`), v0.2.0-alpha.21 on 2026-11-27 (`0.1.21`), and v0.2.0-alpha.22 on 2026-11-27 (`0.1.23`), adding optional mutually exclusive EEex unpaused-inventory choices 699 (always) and 700 (combat only), both off by default in Chris's Recommended; components 695, 696, 697, and 698 remain excluded from IWD.
 
 Notes from the selection:
 - The quest mods' compatibility with each other can be tested later; Christopher said

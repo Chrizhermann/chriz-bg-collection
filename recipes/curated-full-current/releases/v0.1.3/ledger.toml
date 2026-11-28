@@ -1,0 +1,19 @@
+schema = 1
+recipe_id = "chriz-bg-collection"
+version = "0.1.3"
+# The planned publication date (UTC), fixed before packaging because the setup bundles this ledger.
+published_at = "2026-11-16T00:00:00Z"
+minimum_app_version = "0.1.2"
+supersedes = "0.1.2"
+
+[[changes]]
+id = "chriz-overhead-text-spoken-lines-above-nameplates"
+title = "Spoken overhead text stays visible above Tab nameplates and HP Over Head"
+summary = "Chriz Overhead Text v0.1.0 keeps spoken overhead lines (DisplayStringHead and VerbalConstant subtitles) visible while Reveal Details (Tab) or HP Over Head is active, stacking the spoken box 4 px above the nameplate or HP bar instead of letting the nameplate hide it. It is on in Chris's Recommended (with EEex) and can be switched off under Interface in Customize. New installations get it; a game in progress keeps its overhead text behaviour."
+save_applicability = "next-playthrough"
+urgency = "informational"
+covers = [
+  "artifact:chriz-overhead-text-0.1.0",
+  "feature:feature:chriz-overhead-text:component-0",
+  "run:chriz-overhead-text-bg2",
+]

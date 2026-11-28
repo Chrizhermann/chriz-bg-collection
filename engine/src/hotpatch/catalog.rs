@@ -601,6 +601,105 @@ mod tests {
         );
     }
 
+    /// Chriz Multiplayer Fix (Christopher, 2026-11-22) reaches every Chriz Easy IWD release
+    /// before collection 0.1.18, which installs it itself: the same pinned release and both
+    /// components as the recipe, unattended, after EEex's core.
+    #[test]
+    fn the_multiplayer_fix_hotpatch_brings_the_recipe_release_to_every_earlier_base() {
+        let catalog = load(&repository().join("hotpatches/iwd")).unwrap();
+        let recipe = crate::Manifest::load(&repository().join("recipes/iwd-current")).unwrap();
+        let hotpatch = catalog.hotpatch("chriz-multiplayer-fix-0.1.0").unwrap();
+        assert_eq!(
+            catalog.hotpatches.last().map(|last| last.id.as_str()),
+            Some("chriz-multiplayer-fix-0.1.0")
+        );
+        assert_eq!(
+            hotpatch.bases,
+            catalog
+                .bases
+                .iter()
+                .map(|base| base.id.clone())
+                .filter(|id| {
+                    !matches!(
+                        id.as_str(),
+                        "iwd-0.1.18"
+                            | "iwd-0.1.19"
+                            | "iwd-0.1.20"
+                            | "iwd-0.1.21"
+                            | "iwd-0.1.22"
+                            | "iwd-0.1.23"
+                    )
+                })
+                .collect::<Vec<_>>()
+        );
+        assert!(catalog.base("iwd-0.1.18").is_some());
+        assert!(catalog.base("iwd-0.1.19").is_some());
+        assert!(catalog.base("iwd-0.1.20").is_some());
+        assert!(catalog.base("iwd-0.1.21").is_some());
+        assert!(catalog.base("iwd-0.1.22").is_some());
+        assert!(catalog.base("iwd-0.1.23").is_some());
+        assert!(catalog.base("iwd-0.1.23").is_some());
+
+        let quest_fix = catalog
+            .hotpatch("chriz-iwd-encounters-0.3.4-quest-counters")
+            .unwrap();
+        assert_eq!(quest_fix.components, [425]);
+        assert_eq!(
+            quest_fix.bases,
+            [
+                "iwd-0.1.16",
+                "iwd-0.1.17",
+                "iwd-0.1.18",
+                "iwd-0.1.19",
+                "iwd-0.1.20",
+                "iwd-0.1.21",
+            ]
+        );
+        assert_eq!(quest_fix.changes.len(), 3);
+        assert!(quest_fix
+            .changes
+            .iter()
+            .all(|change| change.save_applicability == SaveApplicability::CurrentSave));
+        assert!(hotpatch.requires.is_empty());
+        assert_eq!(hotpatch.components, [0, 1]);
+        assert_eq!(
+            hotpatch.requires_components,
+            [ComponentRequirement {
+                mod_id: "eeex".into(),
+                any_of: vec![1],
+            }]
+        );
+        assert_eq!(hotpatch.mod_folder(), "chriz_multiplayer_fix");
+        assert_eq!(
+            &hotpatch.artifact,
+            recipe.artifacts.get("chriz-multiplayer-fix-0.1.0").unwrap()
+        );
+        assert_eq!(
+            &hotpatch.installer,
+            recipe.mods.get("chriz-multiplayer-fix").unwrap()
+        );
+        assert_eq!(hotpatch.changes.len(), 2);
+        assert!(hotpatch
+            .changes
+            .iter()
+            .all(
+                |change| change.save_applicability == SaveApplicability::CurrentSave
+                    && change.condition_note.is_none()
+            ));
+        // What the components install stays outside the runtime files, the pattern database
+        // included: it uses NoCache=1, so the loader never rewrites it, and Undo must remove it
+        // because the loader refuses to start the game when one of its patterns finds nothing.
+        for name in [
+            "override/m_czmp.lua",
+            "override/m_czms.lua",
+            "override/czms.menu",
+            "eeex_scripts/extra_pattern_dbs/czmp.db",
+            "chriz_multiplayer_fix/setup-chriz_multiplayer_fix.tp2",
+        ] {
+            assert!(!catalog.runtime_files.matches(name), "{name}");
+        }
+    }
+
     /// What played IWD installations wrote into the game folder (Christopher's own one, and the
     /// 0.1.1 release lab, 2026-10-29) must not count as the player's changes or block Undo; the
     /// files mods and hotpatches install must stay checked.
@@ -613,6 +712,7 @@ mod tests {
                 "infinityloader.db",
                 "infinityloader.log",
                 "eeex_scripts/extra_pattern_dbs/v2.7.3.0.db",
+                "eeex_scripts/extra_pattern_dbs/v2.6.6.0.db",
                 "eeex_scripts/override",
                 "buffbot_exec.log",
                 "override/bfbtch.spl",
@@ -632,6 +732,12 @@ mod tests {
                 "override/m_eeexrc.lua",
                 "eeex_scripts/extra_pattern_dbs",
                 "eeex_scripts/extra_pattern_dbs/readme.txt",
+                "eeex_scripts/extra_pattern_dbs/czmp.db",
+                "eeex_scripts/extra_pattern_dbs/cbkcmb.db",
+                // A mod's database whose name merely starts with "v" stays checked: only EEex's
+                // version databases (v2.<build>.db) are rewritten by the loader.
+                "eeex_scripts/extra_pattern_dbs/voice.db",
+                "eeex_scripts/extra_pattern_dbs/v1.db",
                 "eeex_scripts/override/eeex_main.lua",
                 "eeex_scripts/eeex_main.lua",
                 "eeex/loader/v2.7.3.0/pattern_dbs/v2.7.3.0.db",

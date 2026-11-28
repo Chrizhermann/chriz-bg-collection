@@ -603,6 +603,9 @@ fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() 
         include_str!(
             "../../manifest/reference/historical-artifacts/bardicwonders-v2.9c-balance.7.toml"
         ),
+        include_str!(
+            "../../manifest/reference/historical-artifacts/bardicwonders-v2.9c-balance.8.toml"
+        ),
     ]
     .into_iter()
     .map(|text| toml::from_str(text).unwrap())
@@ -984,6 +987,34 @@ fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() 
                     max_entry_uncompressed_bytes: 8193400,
                     total_uncompressed_bytes: 42911947,
                     max_compression_ratio: 35,
+                },
+            ),
+        ),
+        (
+            "artisans-kitpack-4.81a-dev.85928f9-chriz.7",
+            (
+                "release-assets.githubusercontent.com",
+                None,
+                ObservedArchiveShape {
+                    max_depth: 7,
+                    entry_count: 3028,
+                    max_entry_uncompressed_bytes: 6_142_193,
+                    total_uncompressed_bytes: 118_400_047,
+                    max_compression_ratio: 432,
+                },
+            ),
+        ),
+        (
+            "bardicwonders-v2.9c-balance.9",
+            (
+                "release-assets.githubusercontent.com",
+                None,
+                ObservedArchiveShape {
+                    max_depth: 5,
+                    entry_count: 856,
+                    max_entry_uncompressed_bytes: 3_311_752,
+                    total_uncompressed_bytes: 33_115_406,
+                    max_compression_ratio: 432,
                 },
             ),
         ),

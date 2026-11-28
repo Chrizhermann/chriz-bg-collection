@@ -97,12 +97,18 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
 
     def test_reviewed_modpack_compatibility_release_preserves_selection(self):
         mod = tomllib.loads((self.output / "mods/chriz-bg-modpack.toml").read_text())
-        # November 8: alpha.16 retains alpha.15's Marek's Boomerang Dagger 670.
-        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.16")
-        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.16.toml").read_text())
-        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.16")
-        self.assertEqual(artifact["source"]["expected_length"], 9529061)
-        self.assertEqual(artifact["source"]["sha256"], "668937ba7ea468834aad1fd1ecc214be72a9b1b0564109a48fc0827dab09e570")
+        # November 22: alpha.17 adds EET world progression and SoD backtracking 680, on only
+        # with Challenge Mode (Christopher, 2026-11-22).
+        # November 23: alpha.18 adds default RAW spell-scroll learning fix 470.
+        # November 27: alpha.19 adds default BG1 early-party XP boost 695.
+        # November 27: alpha.21 adds optional Challenge Mode 696 and defaults 697, 698;
+        # alpha.22 adds optional mutually exclusive unpaused inventory 699 and 700 (both off).
+        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.22")
+        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.22.toml").read_text())
+        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.22")
+        self.assertEqual(artifact["source"]["expected_length"], 9607048)
+        self.assertEqual(artifact["source"]["sha256"], "53044637cbd3259b3eabf8032b53137560aa2ae821074c8ecf8a64a42474a317")
+        self.assertTrue((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.16.toml").exists())
         self.assertTrue((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.14.toml").exists())
         self.assertFalse((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
         # Alpha.18 adds Rebalance 301/302 after alpha.17's interval-save controls;
@@ -143,9 +149,20 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # November 3: the Modpack alpha.15 pin adds default Marek's Boomerang Dagger 670 to
         # the main post-EET_end Modpack run.
         # November 4: Tweaks 3000 and 3010 are no longer defaults (Christopher, 2026-11-04).
-        self.assertEqual(len(without_controls), 465)
-        self.assertEqual(len(selected), 466)
-        self.assertEqual(len({run for run, _ in selected}), 69)
+        # November 16: Chriz Overhead Text adds default component 0 in its own run.
+        # November 18 adds Round Clock 361 to the existing Rebalance run.
+        # Modpack 680 is on only with Challenge Mode (Christopher, 2026-11-22) and adds none.
+        # November 22: Chriz Multiplayer Fix adds default components 0 and 1 in their own run.
+        # November 23: Modpack alpha.18 adds default component 470 with EEex.
+        # November 27: Modpack alpha.19 adds default component 695 with EEex + EET.
+        # November 27: Modpack alpha.20/alpha.21 add optional Challenge Mode 696 (off here) and defaults 697, 698.
+        self.assertEqual(len(without_controls), 473)
+        self.assertEqual(len(selected), 474)
+        self.assertNotIn(("chriz-bg-modpack-bg2", 680), selected)
+        self.assertNotIn(("chriz-bg-modpack-bg2", 696), selected)
+        self.assertNotIn(("chriz-bg-modpack-bg2", 699), selected)
+        self.assertNotIn(("chriz-bg-modpack-bg2", 700), selected)
+        self.assertEqual(len({run for run, _ in selected}), 71)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
         controls_change = next(change for change in controls_ledger["changes"]
@@ -248,7 +265,14 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # November 3: BG1 NPC Project's 8 defaults and Modpack 130 are not; Modpack 670
         # (alpha.15 pin) is.
         # November 4: Tweaks 3000 and 3010 are no longer selected by default.
-        self.assertEqual(len(baseline), 466)
+        # November 16: Chriz Overhead Text 0 is selected by default.
+        # November 18: Rebalance 361 is selected by default.
+        # November 22: Modpack 680 is not (on only with Challenge Mode, Christopher,
+        # 2026-11-22); Chriz Multiplayer Fix 0 and 1 are selected by default.
+        # November 23: Modpack 470 (RAW spell-scroll learning fix) is selected by default.
+        # November 27: Modpack 695 (BG1 early-party XP boost) is selected by default.
+        # November 27: Modpack 696 is off (Challenge Mode); defaults 697 and 698 are selected.
+        self.assertEqual(len(baseline), 474)
         self.assertEqual(self.selected({feature_id: "off"}), baseline)
         baeloth = "feature:chriz-bg-modpack:component-235"
         self.assertEqual(self.features[baeloth]["decision"], "optional")
@@ -268,7 +292,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
     def test_emotion_run_keeps_source_order_including_default_bard_ceilings(self):
         run_id = "chriz-bg-rebalance-bg2"
         self.assertEqual(self.runs[run_id]["components"],
-                         [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360])
+                         [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360, 361])
         for component in (420, 421):
             self.assertNotIn(f"feature:chriz-bg-rebalance:component-{component}", self.features)
             self.assertIn((run_id, component), self.selected())

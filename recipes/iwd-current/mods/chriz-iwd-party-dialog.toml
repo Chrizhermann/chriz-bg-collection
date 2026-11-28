@@ -1,0 +1,11 @@
+id = "chriz-iwd-party-dialog"
+artifact_id = "chriz-iwd-party-dialog-0.1.0"
+name = "Chriz IWD Party Dialog"
+tp2 = "chriz-iwd-party-dialog/setup-chriz-iwd-party-dialog.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Party-Wide Class, Kit & Race Checks in World Dialogues (EEex)"

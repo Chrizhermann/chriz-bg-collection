@@ -2,6 +2,112 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 21 — Chriz Easy IWD 0.1.16 (collection 0.1.17) released
+
+Published from [main at 6b93be3](https://github.com/Chrizhermann/chriz-bg-collection/commit/6b93be33599a49cf4db166c65d8bce3527c5c481)
+after [PR #159](https://github.com/Chrizhermann/chriz-bg-collection/pull/159).
+The IWD release `v0.1.16` went live at `20:42:02 UTC`, the `updates` channel feed
+was verified at `20:42:48 UTC` on 2026-11-21, the distribution `README.md` was updated
+at [b6665c6](https://github.com/Chrizhermann/chriz-easy-iwd/commit/b6665c6a4ea7ee22e3cf94a23dc4852aa9b65035),
+and [website PR #108](https://github.com/Chrizhermann/twitch-setup-chriz/pull/108)
+merged at `ee81b3d3cb44731e4a93f7040f22bdad73a9fdd4` (`bg.chrizfader.org` live verified).
+
+- **Chriz Easy IWD 0.1.16** bundles collection **0.1.17** and hotpatch base
+  `iwd-0.1.17` (`6aceb183900fb7b3640dbedc8f4dd84e931c7cfe1549aa0c31cf115726d397c1`)
+  with **145 default components, 34 runs, 33 mods, and 18 companions**.
+  It pins **Chriz IWD Encounters v0.3.1**, unconditionally restoring Belhifet's original
+  Icewind Dale / Siege of Dragonspear `BELHIFET` sprite (`0xE256`) in component `300`
+  over Stratagems' Pit Fiend replacement while keeping every **v0.3.0** feature intact.
+  - `Chriz.Easy.IWD_0.1.16_x64-setup.exe` (7,147,481 bytes), SHA-256
+    `e2833ad6625d635e3347f3789d7d7f06545bc5839d99ce76582bcd63c384b3cc`.
+  - `updates/latest.json` (1,021 bytes), SHA-256
+    `b4b450b214713daf8e62fd6137c6ef613b53645d9c3fdd5793c2d1f4f6e73d96`.
+  - [Package acceptance](package-acceptance-iwd-0.1.16-2026-11-21.md) and
+    [release notes](release-notes-iwd-0.1.16.md).
+
+## November 21 — Chriz Easy IWD 0.1.15 (collection 0.1.16) released
+
+Published from [main at 2da056b](https://github.com/Chrizhermann/chriz-bg-collection/commit/2da056bf698ae12780cf8c5eb33623e3259caa83)
+after [PR #157](https://github.com/Chrizhermann/chriz-bg-collection/pull/157).
+The IWD release `v0.1.15` went live at `18:50:46 UTC`, the `updates` channel feed
+followed at `18:50:54 UTC` on 2026-11-21, the distribution `README.md` was updated at
+[057155a](https://github.com/Chrizhermann/chriz-easy-iwd/commit/057155a7a18d7f8d2a7953fbcdcc8eafa6b5c6bd),
+and [website PR #107](https://github.com/Chrizhermann/twitch-setup-chriz/pull/107)
+merged at `e75725227aabd56279d772ee0f1e59c3d039168f` (`bg.chrizfader.org` live verified).
+
+- **Chriz Easy IWD 0.1.15** bundles collection **0.1.16** and hotpatch base
+  `iwd-0.1.16` with **145 default components, 34 runs, 33 mods, and 18 companions**.
+  It pins **Chriz IWD Encounters v0.3.0**, adding default BG spell and dispel rules
+  (component `120`) and the Chapter 2–6 main campaign overhaul (component `420`),
+  updating Belhifet/Yxunomei/Poquelin (`300`/`310`/`360`), and offering the optional
+  Heart of Winter & Trials of the Luremaster overhaul (`500`).
+  - `Chriz.Easy.IWD_0.1.15_x64-setup.exe` (7,144,911 bytes), SHA-256
+    `31b7e10aa3aca4a9a5b76713de6f0d05c7d00757b8cf157cf1398aa479920c79`.
+  - `updates/latest.json` (1,024 bytes), SHA-256
+    `93c506d6be037d8c23b6b82a5b05113c4c08d5e813da2dada6abe842922737ec`.
+  - [Package acceptance](package-acceptance-iwd-0.1.15-2026-11-21.md) and
+    [release notes](release-notes-iwd-0.1.15.md).
+
+## November 18 — Chriz Easy BG 0.1.7 (collection 0.1.4) and Chriz Easy IWD 0.1.14 (collection 0.1.15) released
+
+Published from [main at 62f4ab7](https://github.com/Chrizhermann/chriz-bg-collection/commit/62f4ab7bb3f7e64f86d15d3d3d48b3b699b4622f)
+after [PR #153](https://github.com/Chrizhermann/chriz-bg-collection/pull/153).
+The BG and IWD releases went live at 14:59:48 and 15:00:03 UTC, respectively, on 2026-11-18.
+The BG alpha and IWD updates feeds followed at 15:01:18 and 15:01:26 UTC. The IWD release
+README was updated at [cf0d42b](https://github.com/Chrizhermann/chriz-easy-iwd/commit/cf0d42b6eed2bb16ac3b2ef6c64da46c845f64c1).
+The live BG and IWD website pages showed the new versions and setup hashes after
+[website PR #105](https://github.com/Chrizhermann/twitch-setup-chriz/pull/105)
+merged at commit `2d6e30e89a72fff726939142880af29489bc42d9`.
+
+- **Both collections** ship the Italian BuffBot catalog update in v1.16.2
+  ([#149](https://github.com/Chrizhermann/chriz-bg-collection/pull/149)) and BG Rebalance
+  v0.8.12 with Round Clock (component 361), enabled by default with EEex
+  ([#152](https://github.com/Chrizhermann/chriz-bg-collection/pull/152)).
+- **Chriz Easy BG 0.1.7** bundles collection **0.1.4** with **468 default components,
+  70 runs, and 56 mods**. Artisan's Kitpack v4.81a-dev.85928f9-chriz.7 and Bardic Wonders
+  v2.9c-balance.9 fix save/rest blocks caused by passive projectiles
+  ([#151](https://github.com/Chrizhermann/chriz-bg-collection/pull/151)).
+  - `Chriz.Easy.BG_0.1.7_x64-setup.exe` (7,210,124 bytes), SHA-256
+    `40f8a5c011b4a7d4877315a9dd4d5624934cae652e7cd85eebb86873a7e2286e`.
+  - `alpha/latest.json` (1,031 bytes), SHA-256
+    `690dff2354ea0318c1fe4e2599b924c5d8a8b43af05c30352cf2d7075124bd93`.
+  - [Package acceptance](package-acceptance-0.1.7-2026-11-18.md) and
+    [release notes](release-notes-0.1.7.md).
+- **Chriz Easy IWD 0.1.14** bundles collection **0.1.15** and hotpatch base
+  `iwd-0.1.15` with **143 default components, 34 runs, 33 mods, and 18 companions**.
+  Chriz IWD Party Dialog v0.1.0 was introduced in recipe `iwd-0.1.14`
+  ([#150](https://github.com/Chrizhermann/chriz-bg-collection/pull/150)).
+  - `Chriz.Easy.IWD_0.1.14_x64-setup.exe` (7,142,731 bytes), SHA-256
+    `d9fb4f9d30861b2baf9454fc2cbbf27b212216d233989676a69bd5f57a67dc6b`.
+  - `updates/latest.json` (966 bytes), SHA-256
+    `89ec0261a900cf28659b96adbb795d23f855ba7ba1243dff72799cd445374332`.
+  - [Package acceptance](package-acceptance-iwd-0.1.14-2026-11-18.md) and
+    [release notes](release-notes-iwd-0.1.14.md).
+
+## November 16 — Chriz Easy BG 0.1.6 (collection 0.1.3) and Chriz Easy IWD 0.1.13 released
+
+Published on 2026-11-16 at 08:55–08:56 UTC (17:55–17:56 KST) from `main` at `3ff6993`
+(PRs #146 and #147), live on both versioned releases, both update channels (`alpha` on
+`chriz-easy-bg`, `updates` on `chriz-easy-iwd`), `Chrizhermann/chriz-easy-iwd` `README.md`
+(`f3b0663`), and `bg.chrizfader.org` (`twitch-setup-chriz` PR #101):
+
+- **Chriz Overhead Text v0.1.0 added by default to both installers (#146, #147):**
+  - **Chriz Easy BG 0.1.6** (`Chriz.Easy.BG_0.1.6_x64-setup.exe`, 7,222,877 bytes, SHA-256
+    `f1298d90…`; bundled collection **0.1.3** with **467 default components, 70 runs, 56
+    mods**): adds `Chriz Overhead Text v0.1.0` (`Chrizhermann/chriz-overhead-text`, component
+    `0`, default ON with EEex in `post-eet-end` right before `eeexremote-bg2`) so spoken
+    overhead lines (`DisplayStringHead*`, `VerbalConstant` subtitles) stay visible and stack
+    `4 px` cleanly above **Tab / Reveal Details** nameplates and **`HP Over Head`** labels. See
+    [package-acceptance-0.1.6-2026-11-16.md](package-acceptance-0.1.6-2026-11-16.md) and
+    [release-notes-0.1.6.md](release-notes-0.1.6.md).
+  - **Chriz Easy IWD 0.1.13** (`Chriz.Easy.IWD_0.1.13_x64-setup.exe`, 7,139,482 bytes,
+    SHA-256 `b761456b…`; bundled collection **0.1.13** / hotpatch base `iwd-0.1.13` with **31
+    mods, 141 components, and 18 companions**): adds `Chriz Overhead Text v0.1.0` by default
+    right after `buffbot-main` while preserving `iwd-0.1.10` for shipped `0.1.10`–`0.1.12`
+    player installations. See
+    [package-acceptance-iwd-0.1.13-2026-11-16.md](package-acceptance-iwd-0.1.13-2026-11-16.md)
+    and [release-notes-iwd-0.1.13.md](release-notes-iwd-0.1.13.md).
+
 ## November 13 — Chriz Easy BG 0.1.5 and Chriz Easy IWD 0.1.12 released
 
 Published on 2026-11-12 at 23:31–23:32 UTC (2026-11-13 08:31–08:32 KST) from `main` at

@@ -5,6 +5,8 @@ join the Challenge Mode group in both Chriz Easy BG profiles. 652 requires 650; 
 both on with one switch. 651 (the Shadows of Amn cap) conflicts with 652 and stays a separate
 optional choice outside the group. Challenge Mode stays off in Chris's Recommended, so its
 selection and component count do not change. Chriz Easy IWD has no such group.
+Christopher, 2026-11-22: no travel back into an earlier campaign (Modpack 680) also joins the
+group, after 652, and is off in Chris's Recommended.
 Static recipe checks only; nothing here is a game installation.
 """
 
@@ -21,8 +23,15 @@ RUN = "chriz-bg-modpack-campaign-xp-bg2"
 CAMPAIGN_CAPS = "feature:chriz-bg-modpack:component-650"
 SOA_CAP = "feature:chriz-bg-modpack:component-651"
 CHAPTER_CAPS = "feature:chriz-bg-modpack:component-652"
-# Recommended component counts before this change (curated: the 0.1.2 lab installed 466).
-PROFILES = {"manifest": 371, "recipes/curated-full-current": 466}
+WORLD_PROGRESSION = "feature:chriz-bg-modpack:component-680"
+WORLD_PROGRESSION_RUN = "chriz-bg-modpack-bg2"
+# Recommended component counts (curated: 466 in the 0.1.2 lab + Chriz Overhead Text 0 on Nov 16).
+# November 18 adds Round Clock 361. Modpack 680 is a Challenge Mode member and off, so it adds none.
+# November 22 adds the independent Chriz Multiplayer Fix defaults 0 and 1 to both profiles.
+# November 23 adds Modpack alpha.18 default 470 to both profiles.
+# November 27 adds Modpack alpha.19 default 695 to both profiles.
+# November 27 adds Modpack alpha.21 Challenge Mode 696 (off here) and defaults 697, 698.
+PROFILES = {"manifest": 379, "recipes/curated-full-current": 474}
 
 
 def _load(path: Path) -> dict:
@@ -53,6 +62,8 @@ class Nov10ChallengeModeXpBankingTests(unittest.TestCase):
                 # Directly after the authored members of October 13, before the curated-only one.
                 self.assertEqual(members.index(CAMPAIGN_CAPS), 4)
                 self.assertEqual(members.index(CHAPTER_CAPS), 5)
+                # Christopher, 2026-11-22: Modpack 680 follows the XP caps.
+                self.assertEqual(members.index(WORLD_PROGRESSION), 6)
                 features = {feature["id"]: feature for feature in collection["features"]}
                 self.assertEqual(features[CHAPTER_CAPS]["requires"], [CAMPAIGN_CAPS])
                 self.assertEqual([item["feature_id"] for item in features[SOA_CAP]["conflicts"]],
@@ -71,6 +82,7 @@ class Nov10ChallengeModeXpBankingTests(unittest.TestCase):
                                  {(RUN, 650), (RUN, 652)})
                 self.assertNotIn((RUN, 651), on)
                 self.assertEqual(baseline - on, set())
+                self.assertIn((WORLD_PROGRESSION_RUN, 680), on - baseline)
 
     def test_recommended_keeps_challenge_mode_and_xp_caps_off(self):
         for directory, count, collection, preset, group in self._profiles():
@@ -78,17 +90,18 @@ class Nov10ChallengeModeXpBankingTests(unittest.TestCase):
                 self.assertNotIn(GROUP, preset)
                 for member in group["members"]:
                     self.assertNotEqual(preset.get(member, "off"), "on", member)
-                for feature_id in (CAMPAIGN_CAPS, SOA_CAP, CHAPTER_CAPS):
+                for feature_id in (CAMPAIGN_CAPS, SOA_CAP, CHAPTER_CAPS, WORLD_PROGRESSION):
                     self.assertNotIn(feature_id, preset)
                 selected = _selected(collection, preset)
                 self.assertFalse(any(run == RUN for run, _ in selected))
+                self.assertNotIn((WORLD_PROGRESSION_RUN, 680), selected)
                 self.assertEqual(len(selected), count)
 
     def test_chriz_easy_iwd_has_no_challenge_mode_group(self):
         collection = _load(ROOT / "recipes/iwd-current/collection.toml")
         self.assertEqual(collection.get("feature_groups", []), [])
         ids = {feature["id"] for feature in collection["features"]}
-        self.assertFalse({CAMPAIGN_CAPS, SOA_CAP, CHAPTER_CAPS} & ids)
+        self.assertFalse({CAMPAIGN_CAPS, SOA_CAP, CHAPTER_CAPS, WORLD_PROGRESSION} & ids)
 
 
 if __name__ == "__main__":

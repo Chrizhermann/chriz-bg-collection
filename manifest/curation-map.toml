@@ -1,7 +1,7 @@
 # Authored bridge from Christopher's component catalogs to Task 18 recipe targets.
 # Decisions stay authoritative in docs/curation/components; this file never infers them.
 schema = 1
-expected_rows = 1352
+expected_rows = 1364
 expected_choice_groups = 88
 expected_optional_none_groups = 33
 expected_fixed_groups = 12
@@ -204,6 +204,14 @@ excluded = [402, 403, 406, 409]
 [[catalogs]]
 id = "CHRIZ-SOD-REMIX"
 excluded = [291, 901]
+
+[[catalogs]]
+id = "CHRIZ_MULTIPLAYER_FIX"
+excluded = []
+
+[[catalogs]]
+id = "CHRIZ_OVERHEAD_TEXT"
+excluded = []
 
 [[catalogs]]
 id = "CROSSMODBG2"
@@ -4109,6 +4117,12 @@ rows = ["CHRIZ-BG-REBALANCE:360"]
 parent = "mod:chriz-bg-rebalance"
 
 [[targets]]
+id = "feature:chriz-bg-rebalance:component-361"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:361"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
 id = "feature:chriz-bg-rebalance:component-410"
 kind = "feature"
 rows = ["CHRIZ-BG-REBALANCE:410"]
@@ -4199,6 +4213,12 @@ rows = ["CHRIZ-BG-MODPACK:460"]
 parent = "mod:chriz-bg-modpack"
 
 [[targets]]
+id = "feature:chriz-bg-modpack:component-470"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:470"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
 id = "feature:chriz-bg-modpack:component-652"
 kind = "feature"
 rows = ["CHRIZ-BG-MODPACK:652"]
@@ -4214,6 +4234,48 @@ parent = "mod:chriz-bg-modpack"
 id = "feature:chriz-bg-modpack:component-670"
 kind = "feature"
 rows = ["CHRIZ-BG-MODPACK:670"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-680"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:680"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-695"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:695"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-696"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:696"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-697"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:697"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-698"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:698"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-699"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:699"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-700"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:700"]
 parent = "mod:chriz-bg-modpack"
 
 [[targets]]
@@ -4519,6 +4581,21 @@ rows = ["PPE:30"]
 id = "feature:ppe:component-40"
 kind = "feature"
 rows = ["PPE:40"]
+
+[[targets]]
+id = "feature:chriz-overhead-text:component-0"
+kind = "feature"
+rows = ["CHRIZ_OVERHEAD_TEXT:0"]
+
+[[targets]]
+id = "feature:chriz-multiplayer-fix:component-0"
+kind = "feature"
+rows = ["CHRIZ_MULTIPLAYER_FIX:0"]
+
+[[targets]]
+id = "feature:chriz-multiplayer-fix:component-1"
+kind = "feature"
+rows = ["CHRIZ_MULTIPLAYER_FIX:1"]
 
 [[choice_groups]]
 id = "choice:ntotsc:reduce-number-of-shaman-cloaks"

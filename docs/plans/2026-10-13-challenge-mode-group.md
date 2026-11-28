@@ -25,11 +25,16 @@ feature in the next-release recipe:
 | Extra Challenge: Insane bridge sequencers | SoD Remix 257 | Harder sequencers for the SoD bridge mages on Insane | SoD Remix | Settled (Oct 13) |
 | Campaign XP caps with banked XP (experimental) | Modpack 650 | BG1 stops usable XP at 161,000 and SoD at 500,000; the rest is banked for a later campaign | EEex | Settled (Nov 10) |
 | Chapter-by-chapter XP caps (experimental) | Modpack 652 | Usable XP is capped chapter by chapter across BG1, SoD, SoA and ToB; the rest stays banked | Modpack 650 (comes on with the group) | Settled (Nov 10) |
+| No travel back into an earlier campaign | Modpack 680 | Once the next campaign begins, the earlier campaign's areas can't be reached again; also fixes several Siege of Dragonspear camp problems | EET | Settled (Nov 22) |
 | No stealing from fences | Tweaks Anthology 2760 | Fences can't be stolen from, and reputation no longer changes their prices | Tweaks Anthology (curated profile only) | Settled (Oct 14) |
 
 Christopher, November 10: Challenge Mode includes campaign XP caps with chapter caps
 (Modpack `650` + `652`). The Shadows of Amn cap `651` conflicts with `652` and stays a
 separate optional choice outside the group.
+
+Christopher, November 22: no travel back into an earlier campaign only with Challenge
+Mode (Modpack `680`, "Wahrscheinlich besser nur für Challenge Mode"). It is optional and
+off in Chris's Recommended; its area list is still to be checked with him.
 
 Variant (see [below](#variants-switching-a-choice)): Potion uniqueness picks the strict
 Rebalance `330` (Potions of Genius don't stack either) instead of the recommended `331`.

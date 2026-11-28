@@ -85,14 +85,31 @@ class PublicComponentCreditsTests(unittest.TestCase):
         self.assertNotIn("bg1npc-bg1", actual)
         self.assertNotIn(130, actual["chriz-bg-modpack-bg2"])
         # November 3: the Modpack alpha.15 pin adds default Marek's Boomerang Dagger 670 after
-        # Degrodel 660.
-        self.assertEqual(actual["chriz-bg-modpack-bg2"][-2:], [660, 670])
+        # Degrodel 660. Modpack 680 is on only with Challenge Mode (Christopher, 2026-11-22).
+        # November 27: Modpack alpha.19 adds component 695 after 680 in the main post-EET_end run.
+        # November 27: Modpack alpha.21 keeps optional 696 off and adds defaults 697, 698 after 695.
+        self.assertEqual(actual["chriz-bg-modpack-bg2"][-6:], [611, 660, 670, 695, 697, 698])
+        self.assertNotIn(680, actual["chriz-bg-modpack-bg2"])
+        self.assertNotIn(696, actual["chriz-bg-modpack-bg2"])
         # November 4: Tweaks 3000 (maximum HP on level-up) and 3010 (Maximum HP Creatures)
         # leave the defaults; 2999 (Max HP at Level One) stays.
         self.assertTrue({3000, 3010}.isdisjoint(actual["cdtweaks-bg2"]))
         self.assertIn(2999, actual["cdtweaks-bg2"])
-        self.assertEqual(self.result["componentCount"], 466)
-        self.assertEqual(len(actual), 69)
+        # November 16: Chriz Overhead Text adds component 0 in its own default run.
+        self.assertEqual(actual["chriz-overhead-text-bg2"], [0])
+        # Round Clock adds one default to the existing BG Rebalance mod.
+        self.assertIn(361, actual["chriz-bg-rebalance-bg2"])
+        # November 22: Chriz Multiplayer Fix adds components 0 and 1 in its own default run.
+        # November 23: Modpack alpha.18 adds component 470 in the main post-EET_end run.
+        # November 27: Modpack alpha.19 adds component 695 in the main post-EET_end run.
+        # November 27: Modpack alpha.21 adds defaults 697 and 698 in the main post-EET_end run.
+        self.assertEqual(actual["chriz-multiplayer-fix-bg2"], [0, 1])
+        self.assertIn(470, actual["chriz-bg-modpack-bg2"])
+        self.assertIn(695, actual["chriz-bg-modpack-bg2"])
+        self.assertIn(697, actual["chriz-bg-modpack-bg2"])
+        self.assertIn(698, actual["chriz-bg-modpack-bg2"])
+        self.assertEqual(self.result["componentCount"], 474)
+        self.assertEqual(len(actual), 71)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:
         # The app and bundled collection are versioned independently; each field must come from its own source.
@@ -100,7 +117,7 @@ class PublicComponentCreditsTests(unittest.TestCase):
         recipe_version = json.loads((self.recipe / "release.json").read_text(encoding="utf-8"))["version"]
         self.assertEqual(self.result["applicationVersion"], app_version)
         self.assertEqual(self.result["recipeVersion"], recipe_version)
-        self.assertEqual(recipe_version, "0.1.2")
+        self.assertEqual(recipe_version, "0.1.4")
         encoded = json.dumps(self.result).lower()
         for forbidden in ("artifact_id", "source_reference", "expected_filename", ".zip", ".iemod", "c:\\\\", "creator-full"):
             self.assertNotIn(forbidden, encoded)

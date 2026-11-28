@@ -23,7 +23,7 @@ from tools.curation_audit import Decision, RowKey, load_catalogs, load_curation_
 from tools.recipe_presentation import apply_feature_presentations, build_feature_presentations
 
 
-RECIPE_VERSION = "0.1.2"
+RECIPE_VERSION = "0.1.4"
 RECIPE_LABEL = "CEBG curated full setup"
 ADDED_CATALOGS = {
     "BARDICWONDERS",
@@ -69,7 +69,13 @@ NATIVE_RUN_ORDERS = {
     # Alpha.13 declares Dorn's ambush fix 135 after 130 and the party AI fix 460 after
     # 450; the collection offers both from the alpha.14 pin (October 26). Alpha.15
     # (November 3) declares Marek's Boomerang Dagger 670 after 660 and before 650.
-    "chriz-bg-modpack-bg2": [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660, 670],
+    # Alpha.17 adds EET world progression and SoD backtracking 680 after 670.
+    # Alpha.18 adds RAW specialist spell-scroll learning 470 after 460.
+    # Alpha.19 adds BG1 early-party XP boost 695 after 680; alpha.20 adds Watcher's Keep
+    # teleporters 697 and room-effects cleanup 698; alpha.21 adds Challenge Mode combat Quick Loot
+    # disable 696 before 697; alpha.22 adds optional mutually exclusive Unpaused Inventory
+    # choices 699 (always) and 700 (combat only) after 698.
+    "chriz-bg-modpack-bg2": [130, 135, 400, 410, 440, 450, 460, 470, 610, 611, 630, 660, 670, 680, 695, 696, 697, 698, 699, 700],
     # Modpack alpha.13 (October 20) declares EET join XP 239 right after 238; it runs
     # after the NPC mods and EET_end and before the campaign XP run, as 650 requires.
     "chriz-bg-modpack-late-companions-bg2": [189, 237, 238, 239, 620],
@@ -82,7 +88,8 @@ NATIVE_RUN_ORDERS = {
     # the Time Stop and Haste effect clocks 360 after 340. v0.8.8 (October 29) declares
     # Druid weapons 410 and Alaghor of Clangeddin weapons 411 between 302 and 420; v0.8.9
     # (November 2) keeps every component and the order, and so does v0.8.10 (November 3).
-    "chriz-bg-rebalance-bg2": [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360],
+    # v0.8.12 adds Round Clock 361 after True Time Stop 360.
+    "chriz-bg-rebalance-bg2": [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360, 361],
     "chriz-bg-modpack-edwin-bg2": [236],
     "chriz-bg-modpack-baeloth-bg2": [235],
     "randomiser-bg2": [500, 510, 530, 540, 560, 570, 1100, 9000, 10200, 10210, 10300],
@@ -127,18 +134,18 @@ CATEGORY_BY_GROUP = {
 
 
 ARTIFACTS = {
-    "bardicwonders-v2.9c-balance.8.toml": """id = "bardicwonders-v2.9c-balance.8"
+    "bardicwonders-v2.9c-balance.9.toml": """id = "bardicwonders-v2.9c-balance.9"
 name = "Bardic Wonders — Christopher's balance fork"
-version = "2.9c-balance.8"
+version = "2.9c-balance.9"
 acquisition = "fetch-only"
 
 [source]
 kind = "github-release"
-url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.8/Bardic-Wonders-v2.9c-balance.8.zip"
-reference = "v2.9c-balance.8"
-expected_filename = "Bardic-Wonders-v2.9c-balance.8.zip"
-expected_length = 5205399
-sha256 = "fa99ef91f39dfa4ae1fc15d234022e2623c359e991372f24afa116f5053feda1"
+url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.9/Bardic-Wonders-v2.9c-balance.9.zip"
+reference = "v2.9c-balance.9"
+expected_filename = "Bardic-Wonders-v2.9c-balance.9.zip"
+expected_length = 5220111
+sha256 = "e34af0d979e43e95885452d2b8133c009014558c40fd0ea9bfdcd958dbbb5708"
 redirect_hosts = ["release-assets.githubusercontent.com"]
 
 [archive]
@@ -157,8 +164,8 @@ max_compression_ratio = 512
 [provenance]
 homepage = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch"
 license = "Fetch-only Christopher Hermann fork; the collection does not redistribute it"
-url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.8"
-reviewed_on = "2026-10-14"
+url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.9"
+reviewed_on = "2026-11-18"
 """,
     "branwen-8.toml": """id = "branwen-8"
 name = "Branwen for BGII"
@@ -350,7 +357,7 @@ CDTWEAKS_3347_CONFIG = (
 
 
 MOD_SPECS = {
-    "bardicwonders": ("bardicwonders-v2.9c-balance.8", "Bardic Wonders", "BardicWonders/Setup-BardicWonders.tp2", "BARDICWONDERS"),
+    "bardicwonders": ("bardicwonders-v2.9c-balance.9", "Bardic Wonders", "BardicWonders/Setup-BardicWonders.tp2", "BARDICWONDERS"),
     "branwen": ("branwen-8", "Branwen for BGII", "Branwen/branwen.tp2", "BRANWEN"),
     "cdtweaks": ("cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729", "The Tweaks Anthology", "cdtweaks/setup-cdtweaks.tp2", "CDTWEAKS"),
     "evandra": ("evandra-2.2-windows", "Evandra NPC", "evandra/setup-evandra.tp2", "EVANDRA"),
@@ -768,16 +775,16 @@ _EXPANDED_RELEASE_EVIDENCE = {
     "date": "2026-09-16",
     "scope": "Passed focused selection, dependencies, native component ordering and source intake checks; Christopher performs the installation and gameplay acceptance separately.",
 }
-_MODPACK_ALPHA16_EVIDENCE = {
-    "commit": "e0afccd7658c307dca82ad24b1891387b1f16b4d",
-    "test_artifact": "tools/tests/test_nov08_modpack_alpha16_pin_recipe.py",
-    "date": "2026-11-08",
-    "scope": "Static alpha.16 pin, source, component and order assertions only; fresh source/package verification is in release-intake-20261108-chriz-bg-modpack-chriz-easy-bg.toml; not a WeiDU installation or gameplay acceptance.",
+_MODPACK_ALPHA22_EVIDENCE = {
+    "commit": "ba2847db7c7c49d99ee5aa79e31feb4551bfea76",
+    "test_artifact": "tools/tests/test_nov27_modpack_alpha22_unpaused_inventory_recipe.py",
+    "date": "2026-11-27",
+    "scope": "Static alpha.22 pin, source, component (optional mutually exclusive EEex unpaused inventory 699 always / 700 combat only, keeping optional Challenge Mode 696, defaults 697 and 698, and omitting 690) and order assertions only; fresh source/package verification is in release-intake-20261127-chriz-bg-modpack-v0.2.0-alpha.22-chriz-easy-bg-chriz-easy-iwd.toml; not a WeiDU installation or gameplay acceptance.",
 }
 CURATED_SCOPED_RUN_EVIDENCE = {
-    "chriz-bg-modpack-pre-continuity-bg2": _MODPACK_ALPHA16_EVIDENCE,
-    "chriz-bg-modpack-continuity-bg2": _MODPACK_ALPHA16_EVIDENCE,
-    "chriz-bg-modpack-late-companions-bg2": _MODPACK_ALPHA16_EVIDENCE,
+    "chriz-bg-modpack-pre-continuity-bg2": _MODPACK_ALPHA22_EVIDENCE,
+    "chriz-bg-modpack-continuity-bg2": _MODPACK_ALPHA22_EVIDENCE,
+    "chriz-bg-modpack-late-companions-bg2": _MODPACK_ALPHA22_EVIDENCE,
 }
 
 

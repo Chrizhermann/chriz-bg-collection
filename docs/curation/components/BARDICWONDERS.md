@@ -1,10 +1,33 @@
 # BARDICWONDERS — components
 
-Listed at reference version **—**; refreshed for Chris's fork release
-**v2.9c-balance.4** (`37d3e5ab13d3b3520afb3246fa02de125a970b72`).
-Row `3010` comes from the pinned release **v2.9c-balance.6**
-(`7db986160fcc5f466ecb8730eabd6bb226ee71c2`); it did not exist in the reference install.
+Chriz Easy BG's curated recipe pins **v2.9c-balance.9** (tag commit `c0c2e41`,
+2026-11-18), replacing balance.8. Chriz Easy BG's base manifest and Chriz Easy IWD
+have no Bardic Wonders run. The component selection and native order carry forward.
+[balance.9 release](https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.9)
+
+The table records the reference install refreshed for balance.4
+(`37d3e5ab13d3b3520afb3246fa02de125a970b72`). Adapter `3010` first appears in balance.6
+(`7db986160fcc5f466ecb8730eabd6bb226ee71c2`).
 27 entries, 21 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
+
+## Save and rest fix in balance.9
+
+- Save-compatible projectiles cover recurring Blade, Jester, Skald, Abettor, Dancer,
+  Darkbloom, Storm Drummer, Troubadour and Kapellmeister song delivery, Skald's shared
+  Combat Casting and Heroic Inspiration, Strategist's recurring abilities and Bardic
+  Inspirations (`2002`). Hit-triggered combat effects retain their normal save behavior.
+- Bard Song Mechanics Tweak (`2004`) rebuilds owned song wrappers and gives eligible
+  external songs private projectiles that retain their targeting and geometry. Each
+  finite song reserves IDs only once its delivery fits. Symphony can retain its HLA
+  grant when the cue required for the optional party invisibility is unavailable.
+  Bard descriptions follow the active song mode and installed options.
+- IWD:EE's stock songs keep their native modal controls. Their projectile repairs
+  can install independently of finite wrapping with the standalone fork.
+
+The owner verified 211 automated tests, 54 WeiDU 24900 syntax and version checks, and 15
+native fixture checks across BG2:EE, EET and IWD:EE. Live playtesting is pending. The
+standalone Abettor 1.2.0 tail is the same archive published with balance.8 and is
+outside the curated recipe. [balance.9 release](https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.9)
 
 ## Bard progression release and intended default
 
@@ -34,16 +57,15 @@ selected; see the notes below. The reference table below retains its captured pr
 
 - `2001` is not a fix component: it creates the Trademeet vendor Leanne, a store, and a
   large item pack including the powerful Dirge +5 and Lament +5. It is excluded.
-- `1006` is unavailable with Spell Revisions. The fork's `1008`, `1009`, and `2008`
-  still need semantic Spell Revisions fixture coverage before broad compatibility is claimed.
+- `1006` is unavailable with Spell Revisions. Balance.8 added Spell Revisions-like
+  installer fixture coverage for the fork's `1008`, `1009` and `2008` spell copies.
 - `1012` and `2009` require EEex. `3001` requires `1012` or `2009` and installs late.
 - Component `1008` stays selected for the Troubadour kit, but its interactive Garrick
   assignment must be scripted as **No**; Artisan NPC `99001` is the single deterministic
   Garrick assignment.
-- The released fork now includes the selected Skald, Dancer, Jester, Abettor, and
-  shared HLA corrections described in its release README. The complete release has
-  not been validated in live combat; Symphony's intended one-round party
-  invisibility remains a known issue.
+- Symphony's party Invisibility at song start and end is covered by installer
+  fixtures. Verification in the game remains open.
+  [Bardic Wonders issue #5](https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/issues/5)
 - `3010` extends Rebalance's bard spell-level ceilings to Bardic Wonders kits: Dancer
   stops at 6th-level spells, Kapellmeister and Darkbloom reach 8th (bard level 29), the
   other Bardic Wonders bard kits reach 7th (bard level 21). Kits that are not installed

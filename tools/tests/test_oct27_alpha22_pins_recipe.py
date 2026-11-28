@@ -41,9 +41,9 @@ LENGTH = 89_682_621
 TAG_COMMIT = "afa3316cdcf0d9dd8c0678c5e578b2621a3373ee"
 # The October 29 Kitpack intake replaces chriz.4 with chriz.5 for all three installers; its
 # tweak TP2 declares 7205 between 7203 and 8204 (checked against its own record). The
-# November 2 intake replaces chriz.5 with chriz.6, which changes no component.
-KITPACK_SUCCESSOR = "artisans-kitpack-4.81a-dev.85928f9-chriz.6"
-KITPACK_SUCCESSOR_TAG = "v4.81a-dev.85928f9-chriz.6"
+# November 2 and November 18 intakes move to chriz.6 and chriz.7 without changing components.
+KITPACK_SUCCESSOR = "artisans-kitpack-4.81a-dev.85928f9-chriz.7"
+KITPACK_SUCCESSOR_TAG = "v4.81a-dev.85928f9-chriz.7"
 KITPACK_LATER = {"artisanskitpack-tweak": {7205}}
 KITPACK_LATER_ROWS = {"ARTISANSKITPACK_TWEAK": {7205}}
 # Mod id, its TP2 and the catalog that lists its components.
@@ -277,8 +277,9 @@ REBALANCE_COMMIT = "43b8811abe04ad71575c89d5589866919801bdff"
 # v0.8.8, which declares 410 and 411 (checked against its own record). The November 2
 # intake replaces v0.8.8 with v0.8.9, the November 3 intake v0.8.9 with v0.8.10, and the
 # November 8 intake v0.8.10 with v0.8.11; none changes a component.
-REBALANCE_SUCCESSOR = "chriz-bg-rebalance-0.8.11"
-REBALANCE_LATER = {410, 411}
+# November 18 adds Round Clock after 360.
+REBALANCE_SUCCESSOR = "chriz-bg-rebalance-0.8.12"
+REBALANCE_LATER = {410, 411, 361}
 CLOCKS_TITLE = "True Time Stop – fair Haste & Slow"
 REBALANCE_RUN = "chriz-bg-rebalance-bg2"
 CLOCKS = "feature:chriz-bg-rebalance:component-360"
@@ -373,7 +374,7 @@ class Oct28RebalanceV086PinTests(unittest.TestCase):
         native = self.record["native_components"]
         order = [c for c in NATIVE_RUN_ORDERS[REBALANCE_RUN] if c not in REBALANCE_LATER]
         self.assertEqual([c for c in order if c in native], order)
-        self.assertEqual(NATIVE_RUN_ORDERS[REBALANCE_RUN][-2:], [340, 360])
+        self.assertEqual(NATIVE_RUN_ORDERS[REBALANCE_RUN][-3:], [340, 360, 361])
         for name, _, collection, preset in self._each_profile():
             features = {feature["id"]: feature for feature in collection["features"]}
             feature = features[CLOCKS]
@@ -393,7 +394,7 @@ class Oct28RebalanceV086PinTests(unittest.TestCase):
                 self.assertIn(phrase, feature["description"])
             self.assertEqual(preset.get(CLOCKS), "on")
             runs = {run["run_id"]: run for run in collection["runs"]}
-            self.assertEqual(runs[REBALANCE_RUN]["components"][-2:], [340, 360])
+            self.assertEqual(runs[REBALANCE_RUN]["components"][-3:], [340, 360, 361])
             components = [c for c in runs[REBALANCE_RUN]["components"] if c not in REBALANCE_LATER]
             self.assertEqual(components, [c for c in native if c in components])
             self.assertEqual(runs[REBALANCE_RUN]["phase"], "post-eet-end")

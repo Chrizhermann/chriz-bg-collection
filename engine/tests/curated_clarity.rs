@@ -43,7 +43,9 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
     // The October 29 intake adds the default Sirene NPC for BG:EE run.
     // BG1 NPC Project became optional and unselected on November 3, so the bg1npc-bg1
     // run no longer runs by default.
-    assert_eq!(result.plan.runs.len(), 69);
+    // The November 16 intake adds the default Chriz Overhead Text run.
+    // The November 22 intake adds the default Chriz Multiplayer Fix run.
+    assert_eq!(result.plan.runs.len(), 71);
     assert_eq!(
         result
             .plan
@@ -77,7 +79,16 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         // Boomerang Dagger 670.
         // November 4: Tweaks 3000 (maximum HP on level-up) and 3010 (Maximum HP Creatures)
         // become unchecked options.
-        466
+        // November 16: Chriz Overhead Text adds default component 0.
+        // November 18: BG Rebalance adds Round Clock 361.
+        // November 22: Chriz BG Modpack alpha.17 adds EET world progression 680, on only
+        // with Challenge Mode (Christopher, 2026-11-22), so it adds none.
+        // November 22: Chriz Multiplayer Fix adds default components 0 and 1.
+        // November 23: Chriz BG Modpack alpha.18 adds default RAW spell-scroll learning fix 470.
+        // November 27: Chriz BG Modpack alpha.19 adds default BG1 early-party XP boost 695.
+        // November 27: Chriz BG Modpack alpha.20/alpha.21 add default Watcher's Keep teleporters
+        // 697 and lingering room-effects cleanup 698 (plus optional Challenge Mode 696, off here).
+        474
     );
     // Scroll policy 430 hashes the final scrolls and spells, so it follows BuffBot.
     let (tail, rest) = result.plan.runs.split_last().unwrap();
@@ -122,14 +133,14 @@ fn emotion_exclusivity_is_a_ready_optional_choice_with_an_independent_opt_in() {
     assert_eq!(feature.parent.as_deref(), Some("mod:chriz-bg-rebalance"));
     assert_eq!(
         manifest.mods["chriz-bg-rebalance"].artifact_id,
-        "chriz-bg-rebalance-0.8.11"
+        "chriz-bg-rebalance-0.8.12"
     );
     assert_eq!(
         baseline.plan.components_for("chriz-bg-rebalance-bg2"),
         Some(
             &[
                 100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 410,
-                411, 420, 421, 310, 130, 220, 320, 331, 332, 340, 360,
+                411, 420, 421, 310, 130, 220, 320, 331, 332, 340, 360, 361,
             ][..]
         )
     );
@@ -478,6 +489,10 @@ fn bard_spell_ceilings_are_default_and_gate_the_bardic_kit_adapter() {
     const REBALANCE: &str = "chriz-bg-rebalance-bg2";
     const BARDIC: &str = "bardicwonders-progression-bg2";
     let manifest = recipe();
+    assert_eq!(
+        manifest.mods["bardicwonders"].artifact_id,
+        "bardicwonders-v2.9c-balance.9"
+    );
     let baseline = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
     let has = |plan: &bg_engine::resolve::InstallPlan, run: &str, component: u32| {
         plan.components_for(run)

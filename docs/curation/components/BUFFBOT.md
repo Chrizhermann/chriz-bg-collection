@@ -1,6 +1,6 @@
 # BUFFBOT — components
 
-Target release: **v1.16.1**, tag on commit `377bb1d` (pinned 2026-11-08 in both Chriz Easy
+Target release: **v1.16.2**, tag on commit `268af12` (pinned 2026-11-16 in both Chriz Easy
 installers). BuffBot is a default-on parent mod for the alpha experience. Its two implementation
 components are mandatory together and are not exposed as separate checkboxes.
 
@@ -209,4 +209,15 @@ candidate.
   evidence: `manifest/evidence/release-intake-20261108-buffbot-chriz-easy-bg-chriz-easy-iwd.toml`.
   Its owner records 2,123 offline tests and a BG2:EE 2.7.3.0 / EEex 1.3.1 headless suite with
   909 passing checks; the hand-edited wrapper was not tried in a live game.
+- v1.16.2 (released 2026-11-16, tag on commit `268af12`) updates the Italian localization
+  catalog (`buffbot/lang/italian/setup.tra`, contributed by Sauler89 in
+  [bg-eeex-buffbot#119](https://github.com/Chrizhermann/bg-eeex-buffbot/pull/119)) across 72
+  entries so all 252 catalog rows cover current BuffBot features with consistent GAB spell
+  names and cross-referenced option labels. Against v1.16.1 the TP2 changes only `VERSION`
+  (`v1.16.1` -> `v1.16.2`) and `BfBotCor.lua` its version string; no runtime Lua logic, `.menu`
+  layout, component declaration, order, default or save schema changes. Fresh-download
+  evidence: `manifest/evidence/release-intake-20261116-buffbot-chriz-easy-bg-chriz-easy-iwd.toml`.
+  Its owner records 2,124 offline tests (including WeiDU 249 Italian archive install) and a
+  BG2:EE 2.7.3.0 / EEex 1.3.1 headless suite with 909 passing checks plus a live Italian
+  catalog smoke check; alternate resolutions and engines were not visually checked in game.
 

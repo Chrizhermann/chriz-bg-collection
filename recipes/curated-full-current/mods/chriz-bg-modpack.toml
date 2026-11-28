@@ -1,5 +1,5 @@
 id = "chriz-bg-modpack"
-artifact_id = "chriz-bg-modpack-0.2.0-alpha.16"
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.22"
 name = "chriz-bg-modpack"
 tp2 = "setup-chriz-bg-modpack.tp2"
 language = 0
@@ -139,6 +139,10 @@ id = 460
 name = "Party AI Defensive Stance: obey the \"Use special abilities\" option"
 
 [[components]]
+id = 470
+name = "Spell Learning: restrict +/-15% specialist modifier to specialist mages (BG:EE, SoD, BG2:EE, EET, IWD:EE; Windows EEex)"
+
+[[components]]
 id = 610
 name = "Progressive utility XP for locks, traps, and learning spells"
 
@@ -185,6 +189,34 @@ name = "Degrodel: hand over the Helm of Balduran or keep it and fight him"
 [[components]]
 id = 670
 name = "Marek: carry the Boomerang Dagger +2 in BG1 (drops it when he dies)"
+
+[[components]]
+id = 680
+name = "EET: story-consistent campaign boundaries and SoD backtracking fixes"
+
+[[components]]
+id = 695
+name = "BG1 early-party XP boost: +70% party XP pool per extra companion up to 16,000 XP (BG:EE and EET; Windows EEex)"
+
+[[components]]
+id = 696
+name = "Challenge Mode: disable Quick Loot during combat (BG:EE, SoD, BG2:EE, EET, IWD:EE; EEex)"
+
+[[components]]
+id = 697
+name = "Watcher's Keep: instant teleporters"
+
+[[components]]
+id = 698
+name = "Clear lingering room effects when leaving an area or hazard room (BG:EE, SoD, BG2:EE, EET; Windows EEex)"
+
+[[components]]
+id = 699
+name = "Inventory: always keep game unpaused while Inventory is open (BG:EE, SoD, BG2:EE, EET, IWD:EE; Windows EEex)"
+
+[[components]]
+id = 700
+name = "Inventory: keep game unpaused in Inventory during combat only (BG:EE, SoD, BG2:EE, EET, IWD:EE; Windows EEex)"
 
 [[components]]
 id = 650
